@@ -7,6 +7,8 @@
 
 #include <FViz/FViz.h>
 
+int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     char path[] = "/tmp/fviz_reader_fuzz_XXXXXX";
