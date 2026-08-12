@@ -1,0 +1,133 @@
+# FEAViz Roadmap
+
+## Phase 0 — Foundation repository — COMPLETE
+
+- [x] Repository architecture
+- [x] CMake/C17 baseline
+- [x] CMake-first Windows build using NMake + MSVC v145
+- [x] Compiler warning policy
+- [x] Platform/compiler abstraction macros
+- [x] Public/private include boundary
+- [x] DLL/shared-library visibility macros
+- [x] Generated version/config headers
+- [x] Static/shared build option
+- [x] Install/export package support
+- [x] CTest infrastructure
+- [x] Optional ASan/UBSan and LTO hooks
+
+## Phase 1 — Core runtime — COMPLETE in 0.0.6
+
+- [x] Allocator interface and default allocator
+- [x] Allocation/reallocation/free wrappers
+- [x] Opaque object runtime and type identity
+- [x] Atomic reference counting
+- [x] Result/error system
+- [x] Thread-local last-error storage
+- [x] Logging interface
+- [x] Unit/leak/stress/thread tests
+
+## Phase 2 — Core containers — PARTIAL, viewer-critical subset complete
+
+- [x] `FVizBuffer`
+- [x] Ownership-aware zero-copy external buffer wrapping
+- [x] Generic dynamic `FVizArray`
+- [x] `FVizString`
+- [ ] Bit array
+- [ ] Hash map
+
+The remaining BitArray/HashMap work is intentionally retained as debt rather than blocking the first renderable scene milestone.
+
+## Phase 3 — Math — PARTIAL, renderer-critical subset complete
+
+- [x] `FVizVec3`
+- [x] `FVizMat4`
+- [x] Perspective projection
+- [x] Look-at/view matrix
+- [x] Bounds
+- [ ] Vec2 / Vec4
+- [ ] Mat3
+- [ ] Quaternion
+- [ ] Ray / Plane / AABB
+- [ ] General transform object
+
+## Phase 4 — Data foundation — COMPLETE
+
+- [x] Numeric data type enumeration
+- [x] Typed/component-aware `FVizDataArray`
+- [x] Attribute sets
+- [x] Point data / cell data / field data
+- [x] Data object / dataset base types
+
+## Phase 5 — Surface mesh — FIRST USABLE IMPLEMENTATION COMPLETE
+
+- [x] `FVizPolyData`
+- [x] Point storage
+- [x] 32-bit indexed triangles
+- [x] Bounds
+- [x] Mesh validation
+- [x] Smooth vertex-normal generation
+- [x] Dedicated Points / CellArray objects
+- [ ] Lines / vertices / general polygons
+- [ ] 64-bit connectivity path
+
+## Phase 6 — Mesh IO — FIRST USABLE IMPLEMENTATION COMPLETE
+
+- [x] OBJ vertex/face reader
+- [x] OBJ polygon fan triangulation
+- [x] Positive and negative OBJ vertex indices
+- [x] ASCII STL reader
+- [x] Binary STL reader
+- [x] Extension-dispatching mesh reader
+- [ ] PLY
+- [ ] Legacy VTK
+- [ ] VTU
+
+## Phase 7 — Scene and camera — FIRST USABLE IMPLEMENTATION COMPLETE
+
+- [x] Actor
+- [x] Multi-actor Scene
+- [x] Renderer frontend
+- [x] Perspective Camera
+- [x] Scene bounds
+- [x] Fit-camera
+- [x] Orbit / pan / dolly primitives
+
+## Phase 8 — First visible 3D scene — MILESTONE COMPLETE in 0.1.0
+
+- [x] RenderWindow public abstraction
+- [x] Native Windows Win32 window
+- [x] WGL OpenGL context
+- [x] Depth testing and back-face culling
+- [x] Smooth normal lighting
+- [x] Indexed triangle rendering
+- [x] Actor color
+- [x] Wireframe mode
+- [x] Mouse orbit
+- [x] Mouse pan
+- [x] Wheel zoom
+- [x] Fit view hotkey
+- [x] OBJ/STL command-line viewer
+- [x] Built-in cube fallback
+
+### 0.1.0 definition of done
+
+```text
+OBJ/STL file
+    -> FVizPolyData
+    -> FVizActor
+    -> FVizScene
+    -> FVizRenderer + FVizCamera
+    -> FVizRenderWindow
+    -> visible interactive 3D scene on Windows
+```
+
+## Immediate work after 0.1.0
+
+1. Close Phase 2/3 debt: BitArray, HashMap, complete math primitives.
+2. Replace the compatibility renderer internals with an OpenGL 3.3+ VBO/VAO/shader path while preserving the public scene API.
+3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+5. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+6. Add spatial acceleration (BVH, point locator, cell locator) and picking.
+7. Add pipeline/filter execution, then clip/slice/threshold/warp. Threshold cell filter **COMPLETE**.
+8. Add scalar lookup tables and FEA contour coloring.

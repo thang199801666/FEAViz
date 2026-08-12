@@ -1,0 +1,129 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "FVIZ_BUILD_TESTS": "ON",
+        "FVIZ_BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Windows MSVC / NMake - Debug",
+      "description": "CMake CLI build using NMake and the MSVC compiler selected by the active Visual Studio 2026 developer environment. No Visual Studio generator, solution, Ninja, GCC, or MinGW is used.",
+      "inherits": "base",
+      "generator": "NMake Makefiles",
+      "binaryDir": "${sourceDir}/out/build/windows-msvc-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "FVIZ_BUILD_SHARED": "ON",
+        "FVIZ_WARNINGS_AS_ERRORS": "ON",
+        "FVIZ_REQUIRE_MSVC_V145": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows MSVC / NMake - Release",
+      "description": "Release CMake CLI build using NMake and MSVC v145. No Visual Studio generator is involved.",
+      "inherits": "base",
+      "generator": "NMake Makefiles",
+      "binaryDir": "${sourceDir}/out/build/windows-msvc-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "FVIZ_BUILD_SHARED": "ON",
+        "FVIZ_WARNINGS_AS_ERRORS": "ON",
+        "FVIZ_ENABLE_LTO": "ON",
+        "FVIZ_REQUIRE_MSVC_V145": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "portable-ninja-debug",
+      "displayName": "Portable Ninja Debug",
+      "description": "Optional non-Windows/CI development preset.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/portable-ninja-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "portable-ninja-release",
+      "displayName": "Portable Ninja Release",
+      "description": "Optional non-Windows/CI release preset.",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/portable-ninja-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "FVIZ_ENABLE_LTO": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug"
+    },
+    {
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc-release"
+    },
+    {
+      "name": "portable-ninja-debug",
+      "configurePreset": "portable-ninja-debug"
+    },
+    {
+      "name": "portable-ninja-release",
+      "configurePreset": "portable-ninja-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-msvc-debug",
+      "configurePreset": "windows-msvc-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-release",
+      "configurePreset": "windows-msvc-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "portable-ninja-debug",
+      "configurePreset": "portable-ninja-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "portable-ninja-release",
+      "configurePreset": "portable-ninja-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

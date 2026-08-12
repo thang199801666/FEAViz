@@ -1,0 +1,17 @@
+function(fviz_add_example target source)
+    add_executable(${target} ${source})
+    target_link_libraries(${target} PRIVATE FEAViz::FEAViz)
+    fviz_apply_compiler_options(${target})
+    fviz_set_target_output_directories(${target})
+endfunction()
+
+fviz_add_example(FVizExampleVersion 01_Core/version_info.c)
+fviz_add_example(FVizExampleCoreRuntime 01_Core/core_runtime.c)
+fviz_add_example(FVizExampleContainers 02_Data/containers.c)
+fviz_add_example(FVizExamplePolyData 03_Mesh/poly_data.c)
+fviz_add_example(FVizExampleLoadMesh 04_IO/load_mesh.c)
+fviz_add_example(FVizViewer 05_Rendering/viewer.c)
+fviz_add_example(FVizExampleSimpleModel 06_Tutorial/simple_model.c)
+
+set_target_properties(FVizViewer PROPERTIES OUTPUT_NAME "FEAVizViewer")
+set_target_properties(FVizExampleSimpleModel PROPERTIES OUTPUT_NAME "FEAVizSimpleModel")
