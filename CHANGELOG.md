@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.4 - Binary VTU support
+
+- Added a base64 decoder and binary data parsing to `fviz_vtu_read`: the `binary` and `appended` formats (with 8-byte block header) are now decoded and read as typed arrays (Float32/64, Int8..64, UInt8..64) for points, connectivity/offsets/types, and result fields.
+- Result fields are emitted as float32; integer topology arrays support Int64 offsets/connectivity as written by common solvers.
+- Added `assets/testdata/hex_binary.vtu` (binary-encoded points, Int64 connectivity/offsets, UInt8 types, float32 temperature) and extended `FViz.IO.VTUReader` tests to cover it.
+
 ## 0.4.3 - Contour lines
 
 - Added line topology to `FVizPolyData` (`add_line`, `line_count`, `line_indices`) so polydata can carry segment primitives alongside triangles.

@@ -174,9 +174,14 @@ OBJ/STL file
 - [x] GPU line rendering (0.4.3)
 - [x] `FVizContourFilter` isoline extraction (0.4.3)
 
-## Immediate work after 0.4.3
+## Phase 16 — Binary VTU — MILESTONE COMPLETE in 0.4.4
 
-1. Base64/binary VTU support and legacy VTK reader.
+- [x] Base64 decoder + `binary`/`appended` VTU array parsing (0.4.4)
+- [ ] Legacy VTK `.vtk` reader
+
+## Immediate work after 0.4.4
+
+1. Legacy VTK `.vtk` reader.
 2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
 3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
 4. Implement surface extraction from volumetric FE meshes. **COMPLETE**

@@ -71,10 +71,37 @@ static int test_vtu_missing_file(void)
     return 0;
 }
 
+static int test_vtu_binary(void)
+{
+    FVizUnstructuredGrid* grid = NULL;
+    const FVizDataArray* temperature;
+    const float* temp_data;
+    CHECK(fviz_vtu_read(TESTDATA("hex_binary.vtu"), &grid) == FVIZ_OK);
+    CHECK(grid != NULL);
+    CHECK(fviz_unstructured_grid_point_count(grid) == 8u);
+    CHECK(fviz_unstructured_grid_cell_count(grid) == 1u);
+    {
+        const FVizVec3* points = fviz_points_data(fviz_unstructured_grid_points(grid));
+        CHECK(fabsf(points[0].x - 0.0f) < 1.0e-4f);
+        CHECK(fabsf(points[7].y - 1.0f) < 1.0e-4f);
+        CHECK(fabsf(points[7].z - 1.0f) < 1.0e-4f);
+    }
+    temperature = fviz_attribute_set_const_get(fviz_unstructured_grid_point_data(grid), "temperature");
+    CHECK(temperature != NULL);
+    CHECK(fviz_data_array_tuple_count(temperature) == 8u);
+    temp_data = (const float*)fviz_data_array_const_data((FVizDataArray*)temperature);
+    CHECK(fabsf(temp_data[0] - 0.0f) < 1.0e-4f);
+    CHECK(fabsf(temp_data[3] - 30.0f) < 1.0e-4f);
+    CHECK(fabsf(temp_data[7] - 70.0f) < 1.0e-4f);
+    fviz_release(grid);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_vtu_hex() == 0);
     CHECK(test_vtu_surface_scalars() == 0);
     CHECK(test_vtu_missing_file() == 0);
+    CHECK(test_vtu_binary() == 0);
     return 0;
 }

@@ -17,10 +17,55 @@ typedef struct FVizDataArrayBlock
 {
     char name[FVIZ_VTU_MAX_NAME];
     char format[32];
+    char type[32];
     uint32_t components;
     const char* content_begin;
     const char* content_end;
 } FVizDataArrayBlock;
+
+static FVizSize fviz_vtu_type_size(const char* type)
+{
+    if (strcmp(type, "Int8") == 0 || strcmp(type, "UInt8") == 0) return 1u;
+    if (strcmp(type, "Int16") == 0 || strcmp(type, "UInt16") == 0) return 2u;
+    if (strcmp(type, "Int32") == 0 || strcmp(type, "UInt32") == 0 || strcmp(type, "Float32") == 0) return 4u;
+    if (strcmp(type, "Int64") == 0 || strcmp(type, "UInt64") == 0 || strcmp(type, "Float64") == 0) return 8u;
+    return 0u;
+}
+
+static const char* fviz_vtu_b64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static FVizSize fviz_vtu_b64_decode(const char* begin, const char* end, unsigned char* out, FVizSize max_out)
+{
+    FVizSize out_count = 0u;
+    const char* cursor = begin;
+    int buffer = 0;
+    int bits = 0;
+    while (cursor < end)
+    {
+        char c = *cursor++;
+        const char* pos;
+        int value;
+        if (c == '=') break;
+        if (isspace((unsigned char)c)) continue;
+        pos = strchr(fviz_vtu_b64_chars, c);
+        if (pos == NULL) break;
+        value = (int)(pos - fviz_vtu_b64_chars);
+        buffer = (buffer << 6) | value;
+        bits += 6;
+        if (bits >= 8)
+        {
+            bits -= 8;
+            if (out_count < max_out) out[out_count++] = (unsigned char)((buffer >> bits) & 0xFF);
+        }
+    }
+    return out_count;
+}
+
+typedef struct FVizDecodedBuffer
+{
+    unsigned char* data;
+    FVizSize count;
+} FVizDecodedBuffer;
 
 static FVizCellType fviz_vtu_cell_type(int type)
 {
@@ -123,6 +168,138 @@ static FVizSize fviz_parse_ints(const char* begin, const char* end, int32_t* val
     return count;
 }
 
+static double fviz_vtu_read_scalar(const unsigned char* data, FVizSize offset, const char* type)
+{
+    if (strcmp(type, "Int8") == 0) return (double)((int8_t*)data)[offset];
+    if (strcmp(type, "UInt8") == 0) return (double)((uint8_t*)data)[offset];
+    if (strcmp(type, "Int16") == 0) return (double)((int16_t*)data)[offset];
+    if (strcmp(type, "UInt16") == 0) return (double)((uint16_t*)data)[offset];
+    if (strcmp(type, "Int32") == 0) return (double)((int32_t*)data)[offset];
+    if (strcmp(type, "UInt32") == 0) return (double)((uint32_t*)data)[offset];
+    if (strcmp(type, "Int64") == 0) return (double)((int64_t*)data)[offset];
+    if (strcmp(type, "UInt64") == 0) return (double)((uint64_t*)data)[offset];
+    if (strcmp(type, "Float32") == 0) return (double)((float*)data)[offset];
+    if (strcmp(type, "Float64") == 0) return ((double*)data)[offset];
+    return 0.0;
+}
+
+static FVizSize fviz_vtu_decoded_component_count(const FVizDataArrayBlock* block)
+{
+    FVizSize type_size = fviz_vtu_type_size(block->type);
+    FVizSize bytes;
+    FVizSize count;
+    if (type_size == 0u) return 0u;
+    bytes = (FVizSize)(block->content_end - block->content_begin);
+    count = (bytes * 3u) / 4u;
+    if (count > 8u && strcmp(block->format, "appended") == 0)
+    {
+        count -= 8u;
+    }
+    return count / type_size;
+}
+
+static FVizResult fviz_vtu_decode_binary(const FVizDataArrayBlock* block, FVizDecodedBuffer* out_buffer)
+{
+    unsigned char* bytes;
+    FVizSize max_bytes;
+    FVizSize count;
+    if (strcmp(block->format, "binary") == 0 || strcmp(block->format, "appended") == 0)
+    {
+        max_bytes = (FVizSize)(block->content_end - block->content_begin) * 3u / 4u + 8u;
+        bytes = (unsigned char*)fviz_alloc(max_bytes);
+        if (bytes == NULL) return fviz_last_error_code();
+        count = fviz_vtu_b64_decode(block->content_begin, block->content_end, bytes, max_bytes);
+        out_buffer->data = bytes;
+        out_buffer->count = count;
+        return FVIZ_OK;
+    }
+    fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED, "unsupported VTU data format");
+    return FVIZ_ERROR_NOT_SUPPORTED;
+}
+
+static FVizSize fviz_vtu_read_floats(
+    const FVizDataArrayBlock* block,
+    const char* text_end,
+    float* values,
+    FVizSize max_count)
+{
+    if (strcmp(block->format, "ascii") == 0 || strcmp(block->format, "") == 0)
+    {
+        const char* begin = block->content_begin;
+        const char* end = block->content_end < text_end ? block->content_end : text_end;
+        return fviz_parse_floats(begin, end, values, max_count);
+    }
+    if (strcmp(block->format, "binary") == 0 || strcmp(block->format, "appended") == 0)
+    {
+        FVizDecodedBuffer buffer;
+        FVizSize offset = strcmp(block->format, "appended") == 0 ? 8u : 0u;
+        FVizSize count = 0u;
+        FVizSize type_size;
+        if (fviz_vtu_decode_binary(block, &buffer) != FVIZ_OK) return 0u;
+        type_size = fviz_vtu_type_size(block->type);
+        if (type_size == 4u || type_size == 8u)
+        {
+            FVizSize index;
+            FVizSize available = (buffer.count - offset) / type_size;
+            for (index = 0u; index < available && count < max_count; ++index)
+            {
+                values[count++] = (float)fviz_vtu_read_scalar(buffer.data, (offset / type_size) + index, block->type);
+            }
+        }
+        fviz_free(buffer.data);
+        return count;
+    }
+    return 0u;
+}
+
+static FVizSize fviz_vtu_read_ints(
+    const FVizDataArrayBlock* block,
+    const char* text_end,
+    int64_t* values,
+    FVizSize max_count)
+{
+    if (strcmp(block->format, "ascii") == 0 || strcmp(block->format, "") == 0)
+    {
+        const char* begin = block->content_begin;
+        const char* end = block->content_end < text_end ? block->content_end : text_end;
+        FVizSize count = 0u;
+        const char* cursor = begin;
+        while (cursor < end && count < max_count)
+        {
+            char* next = NULL;
+            long long value;
+            while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+            if (cursor >= end) break;
+            value = strtoll(cursor, &next, 10);
+            if (next == cursor) break;
+            values[count++] = (int64_t)value;
+            cursor = next;
+        }
+        return count;
+    }
+    if (strcmp(block->format, "binary") == 0 || strcmp(block->format, "appended") == 0)
+    {
+        FVizDecodedBuffer buffer;
+        FVizSize offset = strcmp(block->format, "appended") == 0 ? 8u : 0u;
+        FVizSize count = 0u;
+        FVizSize type_size;
+        if (fviz_vtu_decode_binary(block, &buffer) != FVIZ_OK) return 0u;
+        type_size = fviz_vtu_type_size(block->type);
+        if (type_size == 1u || type_size == 2u || type_size == 4u || type_size == 8u)
+        {
+            FVizSize index;
+            FVizSize available = (buffer.count - offset) / type_size;
+            for (index = 0u; index < available && count < max_count; ++index)
+            {
+                values[count++] = (int64_t)fviz_vtu_read_scalar(buffer.data, (offset / type_size) + index, block->type);
+            }
+        }
+        fviz_free(buffer.data);
+        return count;
+    }
+    return 0u;
+}
+
 static FVizResult fviz_vtu_parse_points(
     FVizUnstructuredGrid* grid,
     const FVizDataArrayBlock* block,
@@ -131,8 +308,6 @@ static FVizResult fviz_vtu_parse_points(
     float* values;
     FVizSize count;
     FVizSize i;
-    const char* begin = block->content_begin;
-    const char* end = block->content_end < text_end ? block->content_end : text_end;
     (void)grid;
     if (block->components != 3u)
     {
@@ -141,7 +316,7 @@ static FVizResult fviz_vtu_parse_points(
     }
     values = (float*)fviz_alloc(3u * 4096u * sizeof(float));
     if (values == NULL) return fviz_last_error_code();
-    count = fviz_parse_floats(begin, end, values, 3u * 4096u);
+    count = fviz_vtu_read_floats(block, text_end, values, 3u * 4096u);
     for (i = 0u; i + 2u < count; i += 3u)
     {
         if (fviz_unstructured_grid_add_point(grid,
@@ -164,9 +339,9 @@ static FVizResult fviz_vtu_parse_cells(
     const FVizDataArrayBlock* connectivity = NULL;
     const FVizDataArrayBlock* offsets = NULL;
     const FVizDataArrayBlock* types = NULL;
-    int32_t* conn = NULL;
-    int32_t* off = NULL;
-    int32_t* typ = NULL;
+    int64_t* conn = NULL;
+    int64_t* off = NULL;
+    int64_t* typ = NULL;
     FVizSize conn_count = 0u;
     FVizSize off_count = 0u;
     FVizSize typ_count = 0u;
@@ -192,11 +367,11 @@ static FVizResult fviz_vtu_parse_cells(
     for (i = 0u; i < 3u; ++i)
     {
         const FVizDataArrayBlock* block = i == 0u ? connectivity : i == 1u ? offsets : types;
-        FVizSize estimated = (FVizSize)(block->content_end - block->content_begin) / 2u + 8u;
-        int32_t* buffer;
-        if (i == 0u) buffer = (int32_t*)fviz_alloc(estimated * sizeof(int32_t));
-        else if (i == 1u) buffer = (int32_t*)fviz_alloc(estimated * sizeof(int32_t));
-        else buffer = (int32_t*)fviz_alloc(estimated * sizeof(int32_t));
+        FVizSize estimated = (FVizSize)(block->content_end - block->content_begin) / 2u + 16u;
+        int64_t* buffer;
+        if (i == 0u) buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
+        else if (i == 1u) buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
+        else buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
         if (buffer == NULL)
         {
             result = fviz_last_error_code();
@@ -205,17 +380,17 @@ static FVizResult fviz_vtu_parse_cells(
         if (i == 0u)
         {
             conn = buffer;
-            conn_count = fviz_parse_ints(block->content_begin, block->content_end < text_end ? block->content_end : text_end, conn, estimated);
+            conn_count = fviz_vtu_read_ints(block, text_end, conn, estimated);
         }
         else if (i == 1u)
         {
             off = buffer;
-            off_count = fviz_parse_ints(block->content_begin, block->content_end < text_end ? block->content_end : text_end, off, estimated);
+            off_count = fviz_vtu_read_ints(block, text_end, off, estimated);
         }
         else
         {
             typ = buffer;
-            typ_count = fviz_parse_ints(block->content_begin, block->content_end < text_end ? block->content_end : text_end, typ, estimated);
+            typ_count = fviz_vtu_read_ints(block, text_end, typ, estimated);
         }
     }
     if (off_count != typ_count)
@@ -228,10 +403,10 @@ static FVizResult fviz_vtu_parse_cells(
     j = 0u;
     for (i = 0u; i < off_count; ++i)
     {
-        const int32_t end_offset = off[i];
-        const int32_t begin_offset = i == 0u ? 0 : off[i - 1u];
+        const int64_t end_offset = off[i];
+        const int64_t begin_offset = i == 0u ? 0 : off[i - 1u];
         const FVizSize count = (FVizSize)(end_offset - begin_offset);
-        FVizCellType type = fviz_vtu_cell_type(typ[i]);
+        FVizCellType type = fviz_vtu_cell_type((int)typ[i]);
         uint32_t* ids;
         FVizSize k;
         if (type == (FVizCellType)0)
@@ -240,7 +415,7 @@ static FVizResult fviz_vtu_parse_cells(
             result = FVIZ_ERROR_NOT_SUPPORTED;
             goto cleanup;
         }
-        if (begin_offset < 0 || end_offset < begin_offset || (FVizSize)end_offset > conn_count)
+        if (begin_offset < 0 || end_offset < begin_offset || end_offset > (int64_t)conn_count)
         {
             fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "VTU cell offsets are out of range");
             result = FVIZ_ERROR_INVALID_STATE;
@@ -284,12 +459,10 @@ static FVizResult fviz_vtu_parse_data_arrays(
         FVizSize count;
         FVizDataArray* array = NULL;
         FVizSize j;
-        const char* begin = block->content_begin;
-        const char* end = block->content_end < text_end ? block->content_end : text_end;
         FVizSize component_count = block->components == 0u ? 1u : block->components;
         values = (float*)fviz_alloc(component_count * 65536u * sizeof(float));
         if (values == NULL) return fviz_last_error_code();
-        count = fviz_parse_floats(begin, end, values, component_count * 65536u);
+        count = fviz_vtu_read_floats(block, text_end, values, component_count * 65536u);
         if (count == 0u || count % component_count != 0u)
         {
             fviz_free(values);
@@ -419,12 +592,19 @@ FVizResult fviz_vtu_read(const char* file_path, FVizUnstructuredGrid** out_grid)
             {
                 (void)strcpy(block.format, "ascii");
             }
+            if (!fviz_attr_string(tag, "type", block.type, sizeof(block.type)))
+            {
+                (void)strcpy(block.type, "Float32");
+            }
             (void)fviz_attr_long(tag, "NumberOfComponents", &components);
             block.components = components > 0 ? (uint32_t)components : 1u;
             block.content_begin = open_end;
             block.content_end = close;
 
-            if (strcmp(block.format, "ascii") != 0 && strcmp(block.format, "") != 0)
+            if (strcmp(block.format, "ascii") != 0 &&
+                strcmp(block.format, "") != 0 &&
+                strcmp(block.format, "binary") != 0 &&
+                strcmp(block.format, "appended") != 0)
             {
                 cursor = close + strlen("</DataArray>");
                 continue;

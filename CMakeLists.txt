@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(FEAViz
-    VERSION 0.4.3
+    VERSION 0.4.4
     DESCRIPTION "A C17 visualization and FEA data-processing library"
     LANGUAGES C
 )
