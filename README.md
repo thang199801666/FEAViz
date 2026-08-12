@@ -6,14 +6,14 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.9.1** adds automated integrity gates around the first general VTK-style algorithm/executive architecture while preserving FEAViz's opaque C17 API. Filters expose typed output-port proxies, mappers consume any compatible algorithm output, a demand-driven executive records execution/cache state and supports progress/abort, and the existing filter APIs remain compatibility wrappers.
+Version **0.10.0** introduces a real executive-owned traversal and a public C17 custom-algorithm API. Versioned requests carry output, piece, extent, time, and flags; output-specific cache keys avoid unrelated work; and stable diagnostic IDs plus DOT export make pipeline graphs observable. Existing filter APIs remain compatibility wrappers.
 
 The active implementation roadmap is
 [`docs/architecture/VTK_CONVERGENCE_PLAN.md`](docs/architecture/VTK_CONVERGENCE_PLAN.md),
 and the default ownership, error, MTime, and thread-safety rules are documented
 in [`docs/api/PUBLIC_API_CONTRACTS.md`](docs/api/PUBLIC_API_CONTRACTS.md).
 
-## Current 0.9.1 milestone
+## Current 0.10.0 milestone
 
 Implemented:
 
@@ -27,8 +27,8 @@ Implemented:
 - Mesh IO: OBJ and ASCII/binary STL readers.
 - VTK IO: ASCII/binary VTU and ASCII/big-endian binary legacy `.vtk` unstructured grids, preserving named typed point/cell arrays.
 - FEA pipeline: surface extraction, slicing, threshold, warp-by-vector, cell-to-point interpolation, and contour lines.
-- VTK-style filter connections with recursive updates, cached outputs, cycle detection, mutable filter parameters, and typed unstructured-grid or polygonal outputs.
-- General `FVizDataObject`, `FVizAlgorithm`, `FVizAlgorithmOutput`, and `FVizExecutive` foundations with indexed typed ports, repeatable input storage, demand-driven updates, progress, cooperative abort, and cache statistics.
+- VTK-style filter connections with executive-owned traversal, output-specific caching, cycle detection, mutable filter parameters, and typed unstructured-grid or polygonal outputs.
+- Public custom source/filter algorithms with installed-header callbacks, versioned piece/extent/time requests, typed ports, resolved inputs, output publication, progress/cancellation, stable diagnostic IDs, and DOT graph export.
 - Pipeline-aware mappers and renderers: rendering, camera fitting, and picking automatically pull current polygonal data from connected producers.
 - VTK-style mapper, lookup table, scalar coloring, scalar legend, spatial picking, and point probing.
 - Rainbow colormap preset and `FEAVizBentBeam`, a deformed hexahedral cantilever result viewer with a non-GUI validation mode.

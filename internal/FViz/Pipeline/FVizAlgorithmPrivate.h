@@ -25,6 +25,10 @@ typedef struct FVizAlgorithmOutputPort
 {
     FVizAlgorithmPortInfo info;
     FVizDataObject* data;
+    FVizMTime last_input_mtime;
+    FVizMTime last_algorithm_mtime;
+    uint64_t last_request_key;
+    FVizBool updated;
 } FVizAlgorithmOutputPort;
 
 struct FVizAlgorithmOutput
@@ -42,6 +46,9 @@ struct FVizAlgorithm
     FVizAlgorithmOutputPort* output_ports;
     FVizAlgorithmOutput* output_proxies;
     FVizAlgorithmExecuteFn execute;
+    FVizAlgorithmCallbacks callbacks;
+    void* state;
+    FVizBool custom;
     FVizExecutive* executive;
     FVizAlgorithmProgressFn progress_callback;
     void* progress_user_data;
@@ -52,6 +59,7 @@ struct FVizAlgorithm
     FVizBool updated;
     FVizBool updating;
     FVizBool last_update_executed;
+    uint64_t diagnostic_id;
 };
 
 extern const FVizObjectClass g_fviz_algorithm_class;
@@ -81,5 +89,11 @@ FVizResult fviz_internal_algorithm_set_output_data(
     uint32_t port,
     FVizDataObject* data_object);
 FVizResult fviz_internal_algorithm_update_now(FVizAlgorithm* algorithm);
+FVizResult fviz_internal_algorithm_process_request(
+    FVizAlgorithm* algorithm,
+    const FVizPipelineRequestInfo* request,
+    FVizMTime input_mtime,
+    uint64_t request_key,
+    FVizBool* out_executed);
 
 #endif /* FVIZ_INTERNAL_PIPELINE_ALGORITHM_PRIVATE_H */

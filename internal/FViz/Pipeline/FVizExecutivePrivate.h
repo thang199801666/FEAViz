@@ -12,6 +12,7 @@ struct FVizExecutive
     FVizResult last_result;
     uint64_t execution_count;
     uint64_t cache_hit_count;
+    uint64_t last_transaction_id;
 };
 
 FVizResult fviz_internal_executive_create(

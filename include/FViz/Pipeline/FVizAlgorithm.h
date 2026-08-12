@@ -14,6 +14,7 @@ FVIZ_EXTERN_C_BEGIN
 typedef struct FVizAlgorithm FVizAlgorithm;
 typedef struct FVizAlgorithmOutput FVizAlgorithmOutput;
 typedef struct FVizExecutive FVizExecutive;
+typedef struct FVizPipelineRequestInfo FVizPipelineRequestInfo;
 
 #define FVIZ_TYPE_ALGORITHM UINT64_C(0xA6213C94D7E850BF)
 
@@ -28,6 +29,51 @@ typedef void (*FVizAlgorithmProgressFn)(
     FVizAlgorithm* algorithm,
     double progress,
     void* user_data);
+
+typedef FVizResult (*FVizAlgorithmProcessRequestFn)(
+    FVizAlgorithm* algorithm,
+    const FVizPipelineRequestInfo* request,
+    void* state);
+typedef void (*FVizAlgorithmDestroyStateFn)(void* state);
+typedef FVizMTime (*FVizAlgorithmGetStateMTimeFn)(const void* state);
+
+typedef struct FVizAlgorithmCallbacks
+{
+    uint32_t struct_size;
+    FVizAlgorithmProcessRequestFn process_request;
+    FVizAlgorithmDestroyStateFn destroy_state;
+    FVizAlgorithmGetStateMTimeFn get_state_mtime;
+} FVizAlgorithmCallbacks;
+
+FVIZ_API void fviz_algorithm_callbacks_initialize(FVizAlgorithmCallbacks* callbacks);
+FVIZ_API FVizResult fviz_algorithm_create(
+    uint32_t input_port_count,
+    uint32_t output_port_count,
+    const FVizAlgorithmCallbacks* callbacks,
+    void* state,
+    FVizAlgorithm** out_algorithm);
+FVIZ_API void* fviz_algorithm_state(FVizAlgorithm* algorithm);
+FVIZ_API const void* fviz_algorithm_const_state(const FVizAlgorithm* algorithm);
+FVIZ_API uint64_t fviz_algorithm_diagnostic_id(const FVizAlgorithm* algorithm);
+FVIZ_API FVizResult fviz_algorithm_configure_input_port(
+    FVizAlgorithm* algorithm,
+    uint32_t port,
+    FVizTypeId data_type,
+    FVizBool optional,
+    FVizBool repeatable);
+FVIZ_API FVizResult fviz_algorithm_configure_output_port(
+    FVizAlgorithm* algorithm,
+    uint32_t port,
+    FVizTypeId data_type);
+FVIZ_API FVizDataObject* fviz_algorithm_resolved_input(
+    FVizAlgorithm* algorithm,
+    uint32_t port,
+    uint32_t connection);
+FVIZ_API FVizResult fviz_algorithm_set_output_data(
+    FVizAlgorithm* algorithm,
+    uint32_t port,
+    FVizDataObject* data_object);
+FVIZ_API FVizResult fviz_algorithm_report_progress(FVizAlgorithm* algorithm, double progress);
 
 FVIZ_API uint32_t fviz_algorithm_input_port_count(const FVizAlgorithm* algorithm);
 FVIZ_API uint32_t fviz_algorithm_output_port_count(const FVizAlgorithm* algorithm);

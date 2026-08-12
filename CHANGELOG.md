@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.10.0 - Demand-driven executive and custom algorithms
+
+- Moved graph traversal into `FVizExecutive` and dispatch real information,
+  data-object, update-extent, and data request stages.
+- Added a versioned public request descriptor carrying output port, piece,
+  ghost level, extent, time, release/exact flags, and transaction ID.
+- Added public custom algorithm callbacks, user state lifecycle, typed port
+  configuration, resolved input access, output publication, and progress APIs.
+- Added request-aware output caches, stable algorithm diagnostic IDs, and DOT
+  graph export with execution/cache statistics and typed connection labels.
+- Added public-header regressions for diamond graphs, shared-upstream caching,
+  piece/time invalidation, repeatable inputs, and selective multi-output work.
+
 ## 0.9.1 - Integrity and automated quality gates
 
 - Added Windows and Linux CI jobs covering warnings-as-errors builds, CTest,
