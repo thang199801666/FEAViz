@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(FEAViz
-    VERSION 0.3.3
+    VERSION 0.4.0
     DESCRIPTION "A C17 visualization and FEA data-processing library"
     LANGUAGES C
 )
@@ -94,6 +94,9 @@ set(_fviz_sources
     src/FEA/FVizUnstructuredGrid.c
 
     src/Pipeline/FVizFilter.c
+
+    src/Spatial/FVizBVH.c
+    src/Spatial/FVizPointLocator.c
 
     src/IO/FVizMeshReader.c
     src/IO/FVizOBJReader.c

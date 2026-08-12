@@ -6,6 +6,7 @@
 #include <FViz/Core/FVizResult.h>
 #include <FViz/Math/FVizBounds.h>
 #include <FViz/Math/FVizMat4.h>
+#include <FViz/Math/FVizRay.h>
 #include <FViz/Math/FVizVec3.h>
 
 FVIZ_EXTERN_C_BEGIN
@@ -28,6 +29,7 @@ FVIZ_API void fviz_camera_fit_bounds(FVizCamera* camera, const FVizBounds* bound
 FVIZ_API void fviz_camera_orbit(FVizCamera* camera, float yaw_radians, float pitch_radians);
 FVIZ_API void fviz_camera_dolly(FVizCamera* camera, float factor);
 FVIZ_API void fviz_camera_pan(FVizCamera* camera, float right_amount, float up_amount);
+FVIZ_API FVizRay fviz_camera_pick_ray(const FVizCamera* camera, int width, int height, int x, int y);
 
 FVIZ_EXTERN_C_END
 

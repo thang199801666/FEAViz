@@ -4,6 +4,7 @@
 #include <gl/GL.h>
 
 #include <limits.h>
+#include <stdlib.h>
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Rendering/FVizRenderWindow.h>
@@ -527,6 +528,7 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
         }
         case WM_LBUTTONDOWN:
             window->left_mouse_down = FVIZ_TRUE;
+            window->left_mouse_dragged = FVIZ_FALSE;
             window->last_mouse_x = GET_X_LPARAM(lparam);
             window->last_mouse_y = GET_Y_LPARAM(lparam);
             SetCapture(hwnd);
@@ -539,6 +541,19 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
             return 0;
         case WM_LBUTTONUP:
             window->left_mouse_down = FVIZ_FALSE;
+            if (window->left_mouse_dragged == FVIZ_FALSE)
+            {
+                const int x = GET_X_LPARAM(lparam);
+                const int y = GET_Y_LPARAM(lparam);
+                if (window->pick_callback != NULL)
+                {
+                    FVizRayHit hit;
+                    if (fviz_render_window_pick(window, x, y, &hit) == FVIZ_OK)
+                    {
+                        window->pick_callback(window, x, y, &hit, window->pick_user_data);
+                    }
+                }
+            }
             if (window->middle_mouse_down == FVIZ_FALSE) ReleaseCapture();
             return 0;
         case WM_MBUTTONUP:
@@ -554,6 +569,7 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
             FVizCamera* camera = fviz_renderer_camera(window->renderer);
             if (window->left_mouse_down == FVIZ_TRUE)
             {
+                if (abs(dx) > 2 || abs(dy) > 2) window->left_mouse_dragged = FVIZ_TRUE;
                 fviz_camera_orbit(camera, -(float)dx * 0.008f, -(float)dy * 0.008f);
                 InvalidateRect(hwnd, NULL, FALSE);
             }

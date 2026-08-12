@@ -5,7 +5,11 @@
 #include <FViz/Rendering/FVizRenderWindow.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
+#include <FViz/Mesh/FVizPolyDataPrivate.h>
+#include <FViz/Rendering/FVizCamera.h>
 #include <FViz/Rendering/FVizRenderWindowPrivate.h>
+#include <FViz/Rendering/FVizScene.h>
+#include <FViz/Spatial/FVizBVH.h>
 
 static void fviz_render_window_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_render_window_class = {
@@ -21,6 +25,10 @@ static void fviz_render_window_destroy(FVizObject* object)
     fviz_internal_render_window_destroy_platform(window);
     fviz_release(window->renderer);
     window->renderer = NULL;
+    fviz_release(window->pick_bvh);
+    window->pick_bvh = NULL;
+    fviz_release((FVizPolyData*)window->pick_poly_data);
+    window->pick_poly_data = NULL;
     fviz_free(window->title);
     window->title = NULL;
 }
@@ -133,4 +141,86 @@ void* fviz_render_window_native_handle(FVizRenderWindow* window)
 FVizBool fviz_render_window_supported(void)
 {
     return fviz_internal_render_window_supported_platform();
+}
+
+static FVizResult fviz_render_window_ensure_pick_bvh(FVizRenderWindow* window)
+{
+    FVizScene* scene;
+    FVizSize i;
+    if (window == NULL || window->renderer == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    scene = fviz_renderer_scene(window->renderer);
+    if (scene == NULL) return FVIZ_OK;
+    for (i = 0u; i < fviz_scene_actor_count(scene); ++i)
+    {
+        const FVizActor* actor = fviz_scene_const_actor(scene, i);
+        const FVizPolyData* data;
+        uint32_t generation;
+        if (fviz_actor_is_visible(actor) == FVIZ_FALSE) continue;
+        data = fviz_actor_const_poly_data(actor);
+        if (data == NULL || fviz_poly_data_triangle_count(data) == 0u) continue;
+        generation = fviz_internal_poly_data_generation(data);
+        if (window->pick_bvh != NULL &&
+            window->pick_poly_data == data &&
+            window->pick_bvh_generation == generation)
+        {
+            return FVIZ_OK;
+        }
+        if (window->pick_bvh == NULL)
+        {
+            if (fviz_bvh_create(&window->pick_bvh) != FVIZ_OK) return fviz_last_error_code();
+        }
+        if (fviz_bvh_build(window->pick_bvh, data) != FVIZ_OK) return fviz_last_error_code();
+        if (fviz_retain((FVizPolyData*)data) == NULL) return fviz_last_error_code();
+        fviz_release((FVizPolyData*)window->pick_poly_data);
+        window->pick_poly_data = data;
+        window->pick_bvh_generation = generation;
+        return FVIZ_OK;
+    }
+    return FVIZ_OK;
+}
+
+FVizResult fviz_render_window_pick(
+    FVizRenderWindow* window,
+    int x,
+    int y,
+    FVizRayHit* out_hit)
+{
+    FVizCamera* camera;
+    FVizRay ray;
+    FVizResult result;
+    if (window == NULL || out_hit == NULL || window->renderer == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window, renderer and out_hit must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    result = fviz_render_window_ensure_pick_bvh(window);
+    if (result != FVIZ_OK) return result;
+    if (window->pick_bvh == NULL || fviz_bvh_valid(window->pick_bvh) == FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "no pickable geometry in the scene");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    camera = fviz_renderer_camera(window->renderer);
+    if (camera == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "renderer has no camera");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    ray = fviz_camera_pick_ray(camera, window->width, window->height, x, y);
+    if (fviz_bvh_ray_cast(window->pick_bvh, ray, out_hit) == FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "pick ray did not intersect the scene");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    return FVIZ_OK;
+}
+
+void fviz_render_window_set_pick_callback(
+    FVizRenderWindow* window,
+    FVizPickCallbackFn callback,
+    void* user_data)
+{
+    if (window == NULL) return;
+    window->pick_callback = callback;
+    window->pick_user_data = user_data;
 }

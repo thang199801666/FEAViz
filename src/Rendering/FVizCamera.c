@@ -124,3 +124,37 @@ void fviz_camera_pan(FVizCamera* camera, float right_amount, float up_amount)
     camera->position = fviz_vec3_add(camera->position, delta);
     camera->target = fviz_vec3_add(camera->target, delta);
 }
+
+FVizRay fviz_camera_pick_ray(const FVizCamera* camera, int width, int height, int x, int y)
+{
+    FVizVec3 forward;
+    FVizVec3 right;
+    FVizVec3 up;
+    FVizVec3 direction;
+    float half_fov;
+    float aspect;
+    float ndc_x;
+    float ndc_y;
+    FVizRay ray;
+    if (camera == NULL || width <= 0 || height <= 0)
+    {
+        ray.origin = fviz_vec3(0.0f, 0.0f, 0.0f);
+        ray.direction = fviz_vec3(0.0f, 0.0f, -1.0f);
+        return ray;
+    }
+    forward = fviz_vec3_normalize(fviz_vec3_sub(camera->target, camera->position));
+    right = fviz_vec3_normalize(fviz_vec3_cross(forward, camera->up));
+    up = fviz_vec3_normalize(fviz_vec3_cross(right, forward));
+    half_fov = tanf(FVIZ_DEG_TO_RAD_F(camera->fov_degrees) * 0.5f);
+    aspect = (float)width / (float)height;
+    ndc_x = 2.0f * (float)x / (float)width - 1.0f;
+    ndc_y = 1.0f - 2.0f * (float)y / (float)height;
+    direction = fviz_vec3_add(
+        forward,
+        fviz_vec3_add(
+            fviz_vec3_scale(right, ndc_x * half_fov * aspect),
+            fviz_vec3_scale(up, ndc_y * half_fov)));
+    ray.origin = camera->position;
+    ray.direction = fviz_vec3_normalize(direction);
+    return ray;
+}

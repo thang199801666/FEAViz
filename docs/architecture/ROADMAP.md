@@ -149,10 +149,17 @@ OBJ/STL file
 - [x] Cell-data to point-data interpolation for smooth contours (0.3.2)
 - [x] `FVizFilter` pipeline framework with cached, generation-tracked outputs (0.3.3)
 
-## Immediate work after 0.3.3
+## Phase 12 — Spatial index and picking — MILESTONE COMPLETE in 0.4.0
 
-1. Add spatial acceleration (BVH, point locator, cell locator) and picking.
-2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-4. Implement surface extraction from volumetric FE meshes. **COMPLETE**
-5. Scalar legend / color bar overlay for FEA results.
+- [x] `FVizBVH` triangle-mesh spatial index with ray casting (0.4.0)
+- [x] `FVizPointLocator` point-in-cell location + scalar/vector interpolation (0.4.0)
+- [x] `fviz_camera_pick_ray` screen-to-world ray (0.4.0)
+- [x] Render-window pick API + click callback (0.4.0)
+
+## Immediate work after 0.4.0
+
+1. Scalar legend / color bar overlay for FEA results.
+2. VTU (VTK XML unstructured grid) reader for real FEA result files.
+3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+5. Implement surface extraction from volumetric FE meshes. **COMPLETE**

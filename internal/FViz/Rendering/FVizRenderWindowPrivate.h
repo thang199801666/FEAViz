@@ -4,6 +4,8 @@
 #include <FViz/Core/FVizObjectPrivate.h>
 #include <FViz/Rendering/FVizRenderWindow.h>
 
+#include <FViz/Spatial/FVizBVH.h>
+
 struct FVizRenderWindow
 {
     FVizObject base;
@@ -15,6 +17,12 @@ struct FVizRenderWindow
     void* native_dc;
     void* native_gl_context;
     void* gl_device;
+    FVizBVH* pick_bvh;
+    const FVizPolyData* pick_poly_data;
+    uint32_t pick_bvh_generation;
+    FVizPickCallbackFn pick_callback;
+    void* pick_user_data;
+    FVizBool left_mouse_dragged;
     FVizBool gl_modern;
     FVizBool visible;
     FVizBool close_requested;

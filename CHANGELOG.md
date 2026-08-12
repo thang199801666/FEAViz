@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 - Spatial index, point locator and picking
+
+- Added `FVizBVH`: bounding-volume hierarchy over triangle meshes with ray-box and ray-triangle tests, `ray_cast` (closest hit with position/normal/distance/triangle), `ray_cast_any`, and `intersects_bounds`. Built from any `FVizPolyData`; triangle count > 0 required.
+- Added `FVizPointLocator`: point-in-cell location over `FVizUnstructuredGrid` (tetrahedral barycentric + hexahedral Newton shape-function inversion) with `locate_point`, `interpolate_scalar`, and `interpolate_vector` for probing FEA results at arbitrary world points.
+- Added `fviz_camera_pick_ray()`: unprojection-free world ray from screen coordinates.
+- Added `fviz_render_window_pick()` and a `FVizPickCallbackFn` click callback on the render window (click = pick, drag = orbit); picks are BVH-cached per mesh generation.
+- Added `FEAVizPicking` example: click the model to probe and print the interpolated temperature field.
+- Added `FViz.Spatial.BVH` and `FViz.Spatial.PointLocator` tests.
+
 ## 0.3.3 - Filter pipeline and FEA viewer
 
 - Added the `FVizFilter` pipeline framework: `set_input` / `update` / `output` execution model with cached outputs that only re-run when the input grid mutates (generation-tracked).
