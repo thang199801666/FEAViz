@@ -22,11 +22,13 @@ static void fviz_poly_data_destroy(FVizObject* object)
     fviz_release(poly_data->points);
     fviz_release(poly_data->normals);
     fviz_release(poly_data->indices);
+    fviz_release(poly_data->line_indices);
     fviz_release(poly_data->scalars);
     fviz_release(poly_data->point_data);
     poly_data->points = NULL;
     poly_data->normals = NULL;
     poly_data->indices = NULL;
+    poly_data->line_indices = NULL;
     poly_data->scalars = NULL;
     poly_data->point_data = NULL;
 }
@@ -48,6 +50,7 @@ FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
     if (fviz_array_create(sizeof(FVizVec3), &poly_data->points) != FVIZ_OK ||
         fviz_array_create(sizeof(FVizVec3), &poly_data->normals) != FVIZ_OK ||
         fviz_array_create(sizeof(uint32_t), &poly_data->indices) != FVIZ_OK ||
+        fviz_array_create(sizeof(uint32_t), &poly_data->line_indices) != FVIZ_OK ||
         fviz_attribute_set_create(&poly_data->point_data) != FVIZ_OK)
     {
         fviz_release(poly_data);
@@ -72,6 +75,7 @@ void fviz_poly_data_clear(FVizPolyData* poly_data)
     fviz_array_clear(poly_data->points);
     fviz_array_clear(poly_data->normals);
     fviz_array_clear(poly_data->indices);
+    fviz_array_clear(poly_data->line_indices);
     fviz_release(poly_data->scalars);
     poly_data->scalars = NULL;
     fviz_attribute_set_clear(poly_data->point_data);
@@ -154,6 +158,33 @@ FVizSize fviz_poly_data_point_count(const FVizPolyData* poly_data)
 FVizSize fviz_poly_data_triangle_count(const FVizPolyData* poly_data)
 {
     return poly_data != NULL ? fviz_array_count(poly_data->indices) / 3u : 0u;
+}
+
+FVizResult fviz_poly_data_add_line(FVizPolyData* poly_data, uint32_t a, uint32_t b)
+{
+    const FVizSize count = poly_data != NULL ? fviz_array_count(poly_data->points) : 0u;
+    if (poly_data == NULL || a >= count || b >= count)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "line indices must reference existing points");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (fviz_array_push(poly_data->line_indices, &a) != FVIZ_OK ||
+        fviz_array_push(poly_data->line_indices, &b) != FVIZ_OK)
+    {
+        return fviz_last_error_code();
+    }
+    ++poly_data->generation;
+    return FVIZ_OK;
+}
+
+FVizSize fviz_poly_data_line_count(const FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? fviz_array_count(poly_data->line_indices) / 2u : 0u;
+}
+
+const uint32_t* fviz_poly_data_line_indices(const FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? (const uint32_t*)fviz_array_const_data(poly_data->line_indices) : NULL;
 }
 
 const FVizVec3* fviz_poly_data_points(const FVizPolyData* poly_data)

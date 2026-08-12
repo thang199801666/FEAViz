@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.3 - Contour lines
+
+- Added line topology to `FVizPolyData` (`add_line`, `line_count`, `line_indices`) so polydata can carry segment primitives alongside triangles.
+- Extended the GPU renderer to draw line primitives (dark, unlit) on top of triangle geometry from the same resource.
+- Added `FVizContourFilter`: extracts isolines from a scalar field over a triangle mesh at arbitrary levels (marching-edges per triangle, with double-line handling for saddle cases), with a cached generation-tracked `update`.
+- Added `FEAVizContourLines` example (wave scalar field with 9 contour levels over a colored surface) and `FViz.Algorithms.ContourFilter` tests.
+
 ## 0.4.2 - VTU reader
 
 - Added `fviz_vtu_read()`: parses VTK XML UnstructuredGrid (`.vtu`) files into `FVizUnstructuredGrid` — points, connectivity/offsets/types cells, and arbitrary `PointData`/`CellData` result arrays (ascii format, scalar and vector components).

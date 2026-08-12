@@ -17,6 +17,7 @@ fviz_add_example(FVizExampleFEASlice 08_FEASlice/fea_slice.c)
 fviz_add_example(FVizExampleFEAViewer 09_FEAViewer/fea_viewer.c)
 fviz_add_example(FVizExamplePicking 10_Picking/picking.c)
 fviz_add_example(FVizExampleVTUViewer 11_VTUViewer/vtu_viewer.c)
+fviz_add_example(FVizExampleContourLines 12_ContourLines/contour_lines.c)
 
 set_target_properties(FVizViewer PROPERTIES OUTPUT_NAME "FEAVizViewer")
 set_target_properties(FVizExampleSimpleModel PROPERTIES OUTPUT_NAME "FEAVizSimpleModel")
@@ -25,3 +26,4 @@ set_target_properties(FVizExampleFEASlice PROPERTIES OUTPUT_NAME "FEAVizFEASlice
 set_target_properties(FVizExampleFEAViewer PROPERTIES OUTPUT_NAME "FEAVizFEAViewer")
 set_target_properties(FVizExamplePicking PROPERTIES OUTPUT_NAME "FEAVizPicking")
 set_target_properties(FVizExampleVTUViewer PROPERTIES OUTPUT_NAME "FEAVizVTUViewer")
+set_target_properties(FVizExampleContourLines PROPERTIES OUTPUT_NAME "FEAVizContourLines")

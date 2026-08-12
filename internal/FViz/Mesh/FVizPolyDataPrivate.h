@@ -16,6 +16,7 @@ struct FVizPolyData
     FVizArray* points;
     FVizArray* normals;
     FVizArray* indices;
+    FVizArray* line_indices;
     FVizDataArray* scalars;
     FVizAttributeSet* point_data;
     FVizBounds bounds;

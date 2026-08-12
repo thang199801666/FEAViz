@@ -20,6 +20,7 @@
 #include <FViz/Mesh/FVizCellArray.h>
 #include <FViz/FEA/FVizUnstructuredGrid.h>
 #include <FViz/Pipeline/FVizFilter.h>
+#include <FViz/Algorithms/FVizContourFilter.h>
 #include <FViz/Spatial/FVizBVH.h>
 #include <FViz/Spatial/FVizPointLocator.h>
 #include <FViz/IO/FVizMeshReader.h>

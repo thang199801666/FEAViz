@@ -97,8 +97,10 @@ typedef struct FVizGLActorResource
     GLuint normal_buffer;
     GLuint index_buffer;
     GLuint color_buffer;
+    GLuint line_index_buffer;
     FVizBool has_color;
     GLsizei index_count;
+    GLsizei line_index_count;
     uint32_t generation;
     FVizSize point_count;
 } FVizGLActorResource;
@@ -134,6 +136,11 @@ static FVizGLActorResource* fviz_gl_find_actor_resource(FVizGLDevice* device, co
 static void fviz_gl_actor_resource_destroy(FVizGLDevice* device, FVizGLActorResource* resource)
 {
     const FVizGLFunctions* gl = &device->gl;
+    if (resource->line_index_buffer != 0u)
+    {
+        gl->glDeleteBuffers(1, &resource->line_index_buffer);
+        resource->line_index_buffer = 0u;
+    }
     if (resource->color_buffer != 0u)
     {
         gl->glDeleteBuffers(1, &resource->color_buffer);
@@ -161,6 +168,7 @@ static void fviz_gl_actor_resource_destroy(FVizGLDevice* device, FVizGLActorReso
     }
     resource->has_color = FVIZ_FALSE;
     resource->index_count = 0;
+    resource->line_index_count = 0;
     resource->generation = 0u;
     resource->point_count = 0u;
 }
@@ -234,19 +242,22 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     const FVizVec3* points;
     const FVizVec3* normals;
     const uint32_t* indices;
+    const uint32_t* line_indices;
     const FVizGLFunctions* gl = &device->gl;
     FVizGLActorResource* resource;
     FVizSize point_count;
     FVizSize index_count;
+    FVizSize line_index_count;
     uint32_t generation;
 
     poly_data = fviz_actor_const_poly_data(actor);
     if (poly_data == NULL) return FVIZ_OK;
     point_count = fviz_poly_data_point_count(poly_data);
     index_count = fviz_poly_data_triangle_count(poly_data) * 3u;
+    line_index_count = fviz_poly_data_line_count(poly_data) * 2u;
     generation = fviz_internal_poly_data_generation(poly_data);
-    if (point_count == 0u || index_count == 0u) return FVIZ_OK;
-    if (index_count > (FVizSize)INT_MAX)
+    if (point_count == 0u || (index_count == 0u && line_index_count == 0u)) return FVIZ_OK;
+    if (index_count > (FVizSize)INT_MAX || line_index_count > (FVizSize)INT_MAX)
     {
         fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "poly_data index count exceeds OpenGL draw limits");
         return FVIZ_ERROR_OVERFLOW;
@@ -261,7 +272,8 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     points = fviz_poly_data_points(poly_data);
     normals = fviz_poly_data_normals(poly_data);
     indices = fviz_poly_data_triangle_indices(poly_data);
-    if (points == NULL || indices == NULL) return FVIZ_OK;
+    line_indices = fviz_poly_data_line_indices(poly_data);
+    if (points == NULL) return FVIZ_OK;
 
     if (resource == NULL)
     {
@@ -314,12 +326,21 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
 
     (void)fviz_gl_build_color_buffer(device, resource, actor, poly_data, point_count);
 
-    fviz_gl_upload_buffer(device, &resource->index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, indices,
-        (GLsizeiptr)(index_count * sizeof(uint32_t)));
+    if (indices != NULL && index_count > 0u)
+    {
+        fviz_gl_upload_buffer(device, &resource->index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, indices,
+            (GLsizeiptr)(index_count * sizeof(uint32_t)));
+    }
+    if (line_indices != NULL && line_index_count > 0u)
+    {
+        fviz_gl_upload_buffer(device, &resource->line_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, line_indices,
+            (GLsizeiptr)(line_index_count * sizeof(uint32_t)));
+    }
 
     gl->glBindVertexArray(0u);
 
     resource->index_count = (GLsizei)index_count;
+    resource->line_index_count = (GLsizei)line_index_count;
     resource->point_count = point_count;
     resource->generation = generation;
     return FVIZ_OK;
@@ -557,7 +578,7 @@ FVizResult fviz_internal_gl_device_render(
         if (fviz_actor_is_visible(actor) == FVIZ_FALSE) continue;
         if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
         resource = fviz_gl_find_actor_resource(device, actor);
-        if (resource == NULL || resource->index_count == 0) continue;
+        if (resource == NULL || (resource->index_count == 0 && resource->line_index_count == 0)) continue;
 
         mvp_actor = fviz_mat4_multiply(mvp, model);
         gl->glUniformMatrix4fv(device->mvp_location, 1, GL_FALSE, mvp_actor.m);
@@ -584,9 +605,18 @@ FVizResult fviz_internal_gl_device_render(
         light_ambient.z = 0.26f;
         gl->glUniform3fv(device->light_ambient_location, 1, &light_ambient.x);
 
-        glPolygonMode(GL_FRONT_AND_BACK, fviz_actor_wireframe(actor) == FVIZ_TRUE ? GL_LINE : GL_FILL);
         gl->glBindVertexArray(resource->vao);
-        glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
+        if (resource->index_count > 0)
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, fviz_actor_wireframe(actor) == FVIZ_TRUE ? GL_LINE : GL_FILL);
+            glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
+        }
+        if (resource->line_index_count > 0)
+        {
+            gl->glUniform1i(device->scalar_color_location, 0);
+            gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]) {0.05f, 0.05f, 0.05f});
+            glDrawElements(GL_LINES, resource->line_index_count, GL_UNSIGNED_INT, (const void*)0);
+        }
         gl->glBindVertexArray(0u);
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
