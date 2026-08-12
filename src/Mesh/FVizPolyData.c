@@ -6,15 +6,37 @@
 #include <FViz/Mesh/FVizPolyData.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
+#include <FViz/Data/FVizDataObjectPrivate.h>
 #include <FViz/Mesh/FVizPolyDataPrivate.h>
 
 static void fviz_poly_data_destroy(FVizObject* object);
+static FVizMTime fviz_poly_data_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_poly_data_class = {
     FVIZ_TYPE_POLY_DATA,
     "FVizPolyData",
-    &g_fviz_object_class,
-    fviz_poly_data_destroy
+    &g_fviz_data_object_class,
+    fviz_poly_data_destroy,
+    fviz_poly_data_mtime
 };
+
+static FVizMTime fviz_poly_data_mtime(const FVizObject* object)
+{
+    const FVizPolyData* poly_data = (const FVizPolyData*)object;
+    FVizMTime mtime = fviz_internal_object_local_mtime(object);
+    FVizMTime child = fviz_object_mtime((const FVizObject*)poly_data->points);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)poly_data->normals);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)poly_data->indices);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)poly_data->line_indices);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)poly_data->scalars);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)poly_data->point_data);
+    if (child > mtime) mtime = child;
+    return mtime;
+}
 
 static void fviz_poly_data_destroy(FVizObject* object)
 {
@@ -59,14 +81,8 @@ FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
     poly_data->bounds = fviz_bounds_empty();
     poly_data->bounds_dirty = FVIZ_FALSE;
     poly_data->normals_dirty = FVIZ_TRUE;
-    poly_data->generation = 1u;
     *out_poly_data = poly_data;
     return FVIZ_OK;
-}
-
-uint32_t fviz_internal_poly_data_generation(const FVizPolyData* poly_data)
-{
-    return poly_data != NULL ? poly_data->generation : 0u;
 }
 
 void fviz_poly_data_clear(FVizPolyData* poly_data)
@@ -82,7 +98,7 @@ void fviz_poly_data_clear(FVizPolyData* poly_data)
     fviz_bounds_reset(&poly_data->bounds);
     poly_data->bounds_dirty = FVIZ_FALSE;
     poly_data->normals_dirty = FVIZ_TRUE;
-    ++poly_data->generation;
+    fviz_object_modified((FVizObject*)poly_data);
 }
 
 FVizResult fviz_poly_data_reserve(FVizPolyData* poly_data, FVizSize point_capacity, FVizSize triangle_capacity)
@@ -126,7 +142,7 @@ FVizResult fviz_poly_data_add_point(FVizPolyData* poly_data, FVizVec3 point, uin
     }
     fviz_bounds_include_point(&poly_data->bounds, point);
     poly_data->normals_dirty = FVIZ_TRUE;
-    ++poly_data->generation;
+    fviz_object_modified((FVizObject*)poly_data);
     if (out_index != NULL) *out_index = (uint32_t)index;
     return FVIZ_OK;
 }
@@ -146,7 +162,7 @@ FVizResult fviz_poly_data_add_triangle(FVizPolyData* poly_data, uint32_t a, uint
         return fviz_last_error_code();
     }
     poly_data->normals_dirty = FVIZ_TRUE;
-    ++poly_data->generation;
+    fviz_object_modified((FVizObject*)poly_data);
     return FVIZ_OK;
 }
 
@@ -173,7 +189,7 @@ FVizResult fviz_poly_data_add_line(FVizPolyData* poly_data, uint32_t a, uint32_t
     {
         return fviz_last_error_code();
     }
-    ++poly_data->generation;
+    fviz_object_modified((FVizObject*)poly_data);
     return FVIZ_OK;
 }
 
@@ -268,7 +284,7 @@ FVizResult fviz_poly_data_set_scalars(FVizPolyData* poly_data, FVizDataArray* sc
     }
     fviz_release(poly_data->scalars);
     poly_data->scalars = scalars;
-    ++poly_data->generation;
+    fviz_object_modified((FVizObject*)poly_data);
     return FVIZ_OK;
 }
 
@@ -334,6 +350,6 @@ FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data)
         normals[i] = fviz_vec3_normalize(normals[i]);
     }
     poly_data->normals_dirty = FVIZ_FALSE;
-    ++poly_data->generation;
+    fviz_object_modified((FVizObject*)poly_data);
     return FVIZ_OK;
 }

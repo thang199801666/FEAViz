@@ -167,6 +167,7 @@ FVizResult fviz_buffer_resize(FVizBuffer* buffer, FVizSize new_size)
         fviz_allocator_deallocate(&buffer->base.allocator, buffer->data, buffer->size, 0u);
         buffer->data = NULL;
         buffer->size = 0u;
+        fviz_object_modified((FVizObject*)buffer);
         return FVIZ_OK;
     }
 
@@ -181,5 +182,6 @@ FVizResult fviz_buffer_resize(FVizBuffer* buffer, FVizSize new_size)
     }
     buffer->data = (unsigned char*)memory;
     buffer->size = new_size;
+    fviz_object_modified((FVizObject*)buffer);
     return FVIZ_OK;
 }

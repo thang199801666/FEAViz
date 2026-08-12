@@ -4,12 +4,28 @@
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Data/FVizAttributeSetPrivate.h>
+#include <FViz/Data/FVizDataObjectPrivate.h>
 #include <FViz/Data/FVizDataSetPrivate.h>
 
 static void fviz_data_set_destroy(FVizObject* object);
+static FVizMTime fviz_data_set_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_data_set_class = {
-    FVIZ_TYPE_DATA_SET, "FVizDataSet", &g_fviz_object_class, fviz_data_set_destroy
+    FVIZ_TYPE_DATA_SET, "FVizDataSet", &g_fviz_data_object_class,
+    fviz_data_set_destroy, fviz_data_set_mtime
 };
+
+static FVizMTime fviz_data_set_mtime(const FVizObject* object)
+{
+    const FVizDataSet* data_set = (const FVizDataSet*)object;
+    FVizMTime mtime = fviz_internal_object_local_mtime(object);
+    const FVizMTime point_mtime = fviz_object_mtime((const FVizObject*)data_set->point_data);
+    const FVizMTime cell_mtime = fviz_object_mtime((const FVizObject*)data_set->cell_data);
+    const FVizMTime field_mtime = fviz_object_mtime((const FVizObject*)data_set->field_data);
+    if (point_mtime > mtime) mtime = point_mtime;
+    if (cell_mtime > mtime) mtime = cell_mtime;
+    if (field_mtime > mtime) mtime = field_mtime;
+    return mtime;
+}
 
 static void fviz_data_set_destroy(FVizObject* object)
 {
@@ -57,7 +73,11 @@ static FVizResult fviz_data_set_set_count(FVizDataSet* data_set, FVizSize count,
             return FVIZ_ERROR_INVALID_STATE;
         }
     }
-    *destination = count;
+    if (*destination != count)
+    {
+        *destination = count;
+        fviz_object_modified((FVizObject*)data_set);
+    }
     return FVIZ_OK;
 }
 

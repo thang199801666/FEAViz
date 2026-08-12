@@ -74,6 +74,29 @@ static int test_plane(void)
     return 0;
 }
 
+static int test_transform(void)
+{
+    FVizTransform* transform = NULL;
+    FVizVec3 point;
+    FVizVec3 vector;
+    FVizMTime before;
+    CHECK(fviz_transform_create(&transform) == FVIZ_OK);
+    CHECK(fviz_object_type_id((const FVizObject*)transform) == FVIZ_TYPE_TRANSFORM);
+    before = fviz_object_mtime((const FVizObject*)transform);
+    fviz_transform_translate(transform, fviz_vec3(2.0f, 3.0f, 4.0f));
+    fviz_transform_scale(transform, fviz_vec3(2.0f, 2.0f, 2.0f));
+    CHECK(fviz_object_mtime((const FVizObject*)transform) > before);
+    point = fviz_transform_point(transform, fviz_vec3(1.0f, 0.0f, 0.0f));
+    vector = fviz_transform_vector(transform, fviz_vec3(1.0f, 0.0f, 0.0f));
+    CHECK(fabsf(point.x - 4.0f) < 1.0e-5f && fabsf(point.y - 3.0f) < 1.0e-5f);
+    CHECK(fabsf(vector.x - 2.0f) < 1.0e-5f && fabsf(vector.y) < 1.0e-5f);
+    fviz_transform_identity(transform);
+    point = fviz_transform_point(transform, fviz_vec3(1.0f, 2.0f, 3.0f));
+    CHECK(point.x == 1.0f && point.y == 2.0f && point.z == 3.0f);
+    fviz_release(transform);
+    return 0;
+}
+
 int main(void)
 {
     FVizVec3 x = fviz_vec3(1,0,0);
@@ -93,5 +116,6 @@ int main(void)
     CHECK(test_mat3() == 0);
     CHECK(test_ray() == 0);
     CHECK(test_plane() == 0);
+    CHECK(test_transform() == 0);
     return 0;
 }

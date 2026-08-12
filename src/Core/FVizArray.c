@@ -142,6 +142,7 @@ FVizResult fviz_array_resize(FVizArray* array, FVizSize count)
         (void)memset(array->data + old_count * array->stride, 0, (count - old_count) * array->stride);
     }
     array->count = count;
+    if (count != old_count) fviz_object_modified((FVizObject*)array);
     return FVIZ_OK;
 }
 
@@ -161,6 +162,7 @@ FVizResult fviz_array_push_uninitialized(FVizArray* array, void** out_slot)
     }
     *out_slot = array->data + array->count * array->stride;
     array->count += 1u;
+    fviz_object_modified((FVizObject*)array);
     return FVIZ_OK;
 }
 
@@ -185,6 +187,8 @@ void fviz_array_clear(FVizArray* array)
 {
     if (array != NULL)
     {
+        const FVizBool changed = array->count != 0u ? FVIZ_TRUE : FVIZ_FALSE;
         array->count = 0u;
+        if (changed == FVIZ_TRUE) fviz_object_modified((FVizObject*)array);
     }
 }

@@ -9,9 +9,25 @@
 #include <FViz/Data/FVizAttributeSetPrivate.h>
 
 static void fviz_attribute_set_destroy(FVizObject* object);
+static FVizMTime fviz_attribute_set_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_attribute_set_class = {
-    FVIZ_TYPE_ATTRIBUTE_SET, "FVizAttributeSet", &g_fviz_object_class, fviz_attribute_set_destroy
+    FVIZ_TYPE_ATTRIBUTE_SET, "FVizAttributeSet", &g_fviz_object_class,
+    fviz_attribute_set_destroy, fviz_attribute_set_mtime
 };
+
+static FVizMTime fviz_attribute_set_mtime(const FVizObject* object)
+{
+    const FVizAttributeSet* set = (const FVizAttributeSet*)object;
+    FVizMTime mtime = fviz_internal_object_local_mtime(object);
+    FVizSize i;
+    for (i = 0u; i < fviz_attribute_set_count(set); ++i)
+    {
+        const FVizMTime child_mtime = fviz_object_mtime(
+            (const FVizObject*)fviz_attribute_set_const_array_at(set, i));
+        if (child_mtime > mtime) mtime = child_mtime;
+    }
+    return mtime;
+}
 
 static void fviz_attribute_set_destroy(FVizObject* object)
 {
@@ -24,7 +40,9 @@ static void fviz_attribute_set_destroy(FVizObject* object)
 void fviz_attribute_set_clear(FVizAttributeSet* set)
 {
     FVizSize i;
+    FVizBool changed;
     if (set == NULL) return;
+    changed = fviz_array_count(set->entries) != 0u ? FVIZ_TRUE : FVIZ_FALSE;
     for (i = 0u; i < fviz_array_count(set->entries); ++i)
     {
         FVizAttributeEntry* entry = (FVizAttributeEntry*)fviz_array_at(set->entries, i);
@@ -32,6 +50,7 @@ void fviz_attribute_set_clear(FVizAttributeSet* set)
         fviz_release(entry->array);
     }
     fviz_array_clear(set->entries);
+    if (changed == FVIZ_TRUE) fviz_object_modified((FVizObject*)set);
 }
 
 FVizResult fviz_attribute_set_create(FVizAttributeSet** out_set)
@@ -113,6 +132,7 @@ FVizResult fviz_attribute_set_add(FVizAttributeSet* set, const char* name, FVizD
         fviz_retain(array);
         fviz_release(old->array);
         old->array = array;
+        fviz_object_modified((FVizObject*)set);
         return FVIZ_OK;
     }
     if (fviz_string_create_from(name, &entry.name) != FVIZ_OK) return fviz_last_error_code();
@@ -123,6 +143,7 @@ FVizResult fviz_attribute_set_add(FVizAttributeSet* set, const char* name, FVizD
         fviz_release(entry.array);
         return fviz_last_error_code();
     }
+    fviz_object_modified((FVizObject*)set);
     return FVIZ_OK;
 }
 
@@ -143,5 +164,7 @@ FVizResult fviz_attribute_set_remove(FVizAttributeSet* set, const char* name)
     fviz_release(entry->array);
     count = fviz_array_count(set->entries);
     if (index + 1u < count) memmove(entry, entry + 1, (count - index - 1u) * sizeof(*entry));
-    return fviz_array_resize(set->entries, count - 1u);
+    if (fviz_array_resize(set->entries, count - 1u) != FVIZ_OK) return fviz_last_error_code();
+    fviz_object_modified((FVizObject*)set);
+    return FVIZ_OK;
 }

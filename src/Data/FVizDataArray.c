@@ -59,9 +59,23 @@ FVizSize fviz_data_array_tuple_count(const FVizDataArray* array) { return array 
 FVizSize fviz_data_array_tuple_stride(const FVizDataArray* array) { return array != NULL ? array->tuple_stride : 0u; }
 void* fviz_data_array_data(FVizDataArray* array) { return array != NULL ? fviz_array_data(array->storage) : NULL; }
 const void* fviz_data_array_const_data(const FVizDataArray* array) { return array != NULL ? fviz_array_const_data(array->storage) : NULL; }
-FVizResult fviz_data_array_resize(FVizDataArray* array, FVizSize tuple_count) { return array != NULL ? fviz_array_resize(array->storage, tuple_count) : FVIZ_ERROR_INVALID_ARGUMENT; }
+FVizResult fviz_data_array_resize(FVizDataArray* array, FVizSize tuple_count)
+{
+    FVizResult result;
+    FVizSize old_count;
+    if (array == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    old_count = fviz_data_array_tuple_count(array);
+    result = fviz_array_resize(array->storage, tuple_count);
+    if (result == FVIZ_OK && old_count != tuple_count) fviz_object_modified((FVizObject*)array);
+    return result;
+}
 FVizResult fviz_data_array_reserve(FVizDataArray* array, FVizSize tuple_capacity) { return array != NULL ? fviz_array_reserve(array->storage, tuple_capacity) : FVIZ_ERROR_INVALID_ARGUMENT; }
-FVizResult fviz_data_array_append_tuple(FVizDataArray* array, const void* tuple) { return array != NULL ? fviz_array_push(array->storage, tuple) : FVIZ_ERROR_INVALID_ARGUMENT; }
+FVizResult fviz_data_array_append_tuple(FVizDataArray* array, const void* tuple)
+{
+    FVizResult result = array != NULL ? fviz_array_push(array->storage, tuple) : FVIZ_ERROR_INVALID_ARGUMENT;
+    if (result == FVIZ_OK) fviz_object_modified((FVizObject*)array);
+    return result;
+}
 
 FVizResult fviz_data_array_set_tuple(FVizDataArray* array, FVizSize index, const void* tuple)
 {
@@ -73,6 +87,7 @@ FVizResult fviz_data_array_set_tuple(FVizDataArray* array, FVizSize index, const
     }
     destination = fviz_array_at(array->storage, index);
     (void)memcpy(destination, tuple, array->tuple_stride);
+    fviz_object_modified((FVizObject*)array);
     return FVIZ_OK;
 }
 void* fviz_data_array_tuple(FVizDataArray* array, FVizSize index) { return array != NULL ? fviz_array_at(array->storage, index) : NULL; }

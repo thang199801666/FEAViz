@@ -104,6 +104,7 @@ FVizResult fviz_string_set(FVizString* string, const char* text)
     }
     (void)memcpy(string->data, text, length + 1u);
     string->length = length;
+    fviz_object_modified((FVizObject*)string);
     return FVIZ_OK;
 }
 
@@ -128,6 +129,7 @@ FVizResult fviz_string_append(FVizString* string, const char* text)
     }
     (void)memcpy(string->data + string->length, text, extra + 1u);
     string->length += extra;
+    if (extra != 0u) fviz_object_modified((FVizObject*)string);
     return FVIZ_OK;
 }
 
@@ -135,7 +137,9 @@ void fviz_string_clear(FVizString* string)
 {
     if (string != NULL && string->data != NULL)
     {
+        const FVizBool changed = string->length != 0u ? FVIZ_TRUE : FVIZ_FALSE;
         string->data[0] = '\0';
         string->length = 0u;
+        if (changed == FVIZ_TRUE) fviz_object_modified((FVizObject*)string);
     }
 }

@@ -7,18 +7,33 @@
 #include <FViz/Rendering/FVizMapperPrivate.h>
 
 static void fviz_actor_destroy(FVizObject* object);
+static FVizMTime fviz_actor_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_actor_class = {
     FVIZ_TYPE_ACTOR,
     "FVizActor",
     &g_fviz_object_class,
-    fviz_actor_destroy
+    fviz_actor_destroy,
+    fviz_actor_mtime
 };
+
+static FVizMTime fviz_actor_mtime(const FVizObject* object)
+{
+    const FVizActor* actor = (const FVizActor*)object;
+    FVizMTime mtime = fviz_internal_object_local_mtime(object);
+    FVizMTime child = fviz_object_mtime((const FVizObject*)actor->mapper);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)actor->user_transform);
+    if (child > mtime) mtime = child;
+    return mtime;
+}
 
 static void fviz_actor_destroy(FVizObject* object)
 {
     FVizActor* actor = (FVizActor*)object;
     fviz_release(actor->mapper);
+    fviz_release(actor->user_transform);
     actor->mapper = NULL;
+    actor->user_transform = NULL;
 }
 
 FVizResult fviz_actor_create(FVizActor** out_actor)
@@ -138,5 +153,26 @@ FVizMat4 fviz_actor_transform_matrix(const FVizActor* actor)
     result.m[12] = actor->position.x;
     result.m[13] = actor->position.y;
     result.m[14] = actor->position.z;
-    return result;
+    return actor->user_transform != NULL
+        ? fviz_mat4_multiply(fviz_transform_matrix(actor->user_transform), result)
+        : result;
+}
+
+FVizResult fviz_actor_set_user_transform(FVizActor* actor, FVizTransform* transform)
+{
+    if (actor == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "actor must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (transform != NULL && fviz_retain(transform) == NULL) return fviz_last_error_code();
+    fviz_release(actor->user_transform);
+    actor->user_transform = transform;
+    fviz_object_modified((FVizObject*)actor);
+    return FVIZ_OK;
+}
+
+FVizTransform* fviz_actor_user_transform(FVizActor* actor)
+{
+    return actor != NULL ? actor->user_transform : NULL;
 }

@@ -6,7 +6,6 @@
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Algorithms/FVizContourFilterPrivate.h>
-#include <FViz/Mesh/FVizPolyDataPrivate.h>
 
 static void fviz_contour_filter_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_contour_filter_class = {
@@ -52,7 +51,7 @@ FVizResult fviz_contour_filter_create(
     filter->scalar_name[sizeof(filter->scalar_name) - 1u] = '\0';
     filter->input = NULL;
     filter->output = NULL;
-    filter->input_generation = 0u;
+    filter->input_mtime = 0u;
     filter->updated = FVIZ_FALSE;
     *out_filter = filter;
     return FVIZ_OK;
@@ -69,6 +68,7 @@ FVizResult fviz_contour_filter_set_input(FVizContourFilter* filter, const FVizPo
     fviz_release(filter->input);
     filter->input = (FVizPolyData*)poly_data;
     filter->updated = FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)filter);
     return FVIZ_OK;
 }
 
@@ -210,7 +210,7 @@ fail:
 
 FVizResult fviz_contour_filter_update(FVizContourFilter* filter)
 {
-    uint32_t generation;
+    FVizMTime input_mtime;
     if (filter == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "filter must not be NULL");
@@ -221,8 +221,8 @@ FVizResult fviz_contour_filter_update(FVizContourFilter* filter)
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "filter has no input");
         return FVIZ_ERROR_INVALID_STATE;
     }
-    generation = fviz_internal_poly_data_generation(filter->input);
-    if (filter->updated == FVIZ_TRUE && filter->input_generation == generation)
+    input_mtime = fviz_object_mtime((const FVizObject*)filter->input);
+    if (filter->updated == FVIZ_TRUE && filter->input_mtime == input_mtime)
     {
         return FVIZ_OK;
     }
@@ -230,6 +230,6 @@ FVizResult fviz_contour_filter_update(FVizContourFilter* filter)
         FVizResult result = fviz_contour_execute(filter);
         if (result != FVIZ_OK) return result;
     }
-    filter->input_generation = generation;
+    filter->input_mtime = input_mtime;
     return FVIZ_OK;
 }

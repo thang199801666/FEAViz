@@ -1,3 +1,4 @@
+#include <math.h>
 #include <string.h>
 
 #include <FViz/Core/FVizError.h>
@@ -51,6 +52,9 @@ FVizResult fviz_lookup_table_create(FVizSize table_size, FVizLookupTable** out_t
     table->size = table_size;
     table->range_min = 0.0f;
     table->range_max = 1.0f;
+    table->nan_color[0] = 1.0f;
+    table->nan_color[1] = 0.0f;
+    table->nan_color[2] = 1.0f;
     fviz_lookup_table_build(table);
     *out_table = table;
     return FVIZ_OK;
@@ -70,6 +74,7 @@ void fviz_lookup_table_set_range(FVizLookupTable* table, float minimum, float ma
     }
     table->range_min = minimum;
     table->range_max = maximum;
+    fviz_object_modified((FVizObject*)table);
 }
 
 void fviz_lookup_table_get_range(const FVizLookupTable* table, float* minimum, float* maximum)
@@ -89,6 +94,7 @@ FVizResult fviz_lookup_table_set_color(FVizLookupTable* table, FVizSize index, f
     table->colors[index * 3u + 0u] = red;
     table->colors[index * 3u + 1u] = green;
     table->colors[index * 3u + 2u] = blue;
+    fviz_object_modified((FVizObject*)table);
     return FVIZ_OK;
 }
 
@@ -100,22 +106,19 @@ void fviz_lookup_table_get_color(const FVizLookupTable* table, FVizSize index, f
     if (blue != NULL) *blue = table->colors[index * 3u + 2u];
 }
 
-void fviz_lookup_table_build(FVizLookupTable* table)
+static void fviz_lookup_table_build_control_points(
+    FVizLookupTable* table,
+    const float (*control_points)[3],
+    FVizSize control_point_count)
 {
-    static const float control_points[5][3] = {
-        {0.230f, 0.299f, 0.754f},
-        {0.086f, 0.627f, 0.521f},
-        {0.387f, 0.404f, 0.322f},
-        {0.831f, 0.550f, 0.145f},
-        {0.706f, 0.015f, 0.150f}
-    };
     FVizSize i;
-    if (table == NULL || table->size == 0u) return;
+    if (table == NULL || table->size == 0u || control_points == NULL || control_point_count < 2u) return;
     for (i = 0u; i < table->size; ++i)
     {
         const float position = table->size == 1u ? 0.0f : (float)i / (float)(table->size - 1u);
-        const float segment = position * 4.0f;
-        const FVizSize segment_index = (FVizSize)segment < 4u ? (FVizSize)segment : 3u;
+        const float segment = position * (float)(control_point_count - 1u);
+        const FVizSize segment_index =
+            (FVizSize)segment < control_point_count - 1u ? (FVizSize)segment : control_point_count - 2u;
         const float fraction = segment - (float)segment_index;
         const float* start = control_points[segment_index];
         const float* end = control_points[segment_index + 1u];
@@ -125,12 +128,112 @@ void fviz_lookup_table_build(FVizLookupTable* table)
     }
 }
 
+FVizResult fviz_lookup_table_build_preset(FVizLookupTable* table, FVizColorMapPreset preset)
+{
+    static const float diverging[5][3] = {
+        {0.230f, 0.299f, 0.754f},
+        {0.086f, 0.627f, 0.521f},
+        {0.387f, 0.404f, 0.322f},
+        {0.831f, 0.550f, 0.145f},
+        {0.706f, 0.015f, 0.150f}
+    };
+    static const float rainbow[5][3] = {
+        {0.000f, 0.000f, 1.000f},
+        {0.000f, 1.000f, 1.000f},
+        {0.000f, 1.000f, 0.000f},
+        {1.000f, 1.000f, 0.000f},
+        {1.000f, 0.000f, 0.000f}
+    };
+    if (table == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "lookup table must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    switch (preset)
+    {
+        case FVIZ_COLOR_MAP_DIVERGING:
+            fviz_lookup_table_build_control_points(table, diverging, 5u);
+            fviz_object_modified((FVizObject*)table);
+            return FVIZ_OK;
+        case FVIZ_COLOR_MAP_RAINBOW:
+            fviz_lookup_table_build_control_points(table, rainbow, 5u);
+            fviz_object_modified((FVizObject*)table);
+            return FVIZ_OK;
+        default:
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "unknown lookup table color-map preset");
+            return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+}
+
+void fviz_lookup_table_set_nan_color(
+    FVizLookupTable* table, float red, float green, float blue)
+{
+    if (table == NULL) return;
+    table->nan_color[0] = red;
+    table->nan_color[1] = green;
+    table->nan_color[2] = blue;
+    fviz_object_modified((FVizObject*)table);
+}
+
+void fviz_lookup_table_set_below_range_color(
+    FVizLookupTable* table, float red, float green, float blue, FVizBool enabled)
+{
+    if (table == NULL) return;
+    table->below_range_color[0] = red;
+    table->below_range_color[1] = green;
+    table->below_range_color[2] = blue;
+    table->use_below_range_color = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)table);
+}
+
+void fviz_lookup_table_set_above_range_color(
+    FVizLookupTable* table, float red, float green, float blue, FVizBool enabled)
+{
+    if (table == NULL) return;
+    table->above_range_color[0] = red;
+    table->above_range_color[1] = green;
+    table->above_range_color[2] = blue;
+    table->use_above_range_color = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)table);
+}
+
+static void fviz_lookup_table_copy_color(
+    const float color[3],
+    float* red,
+    float* green,
+    float* blue)
+{
+    if (red != NULL) *red = color[0];
+    if (green != NULL) *green = color[1];
+    if (blue != NULL) *blue = color[2];
+}
+
+void fviz_lookup_table_build(FVizLookupTable* table)
+{
+    (void)fviz_lookup_table_build_preset(table, FVIZ_COLOR_MAP_DIVERGING);
+}
+
 void fviz_lookup_table_map_scalar(const FVizLookupTable* table, float value, float* red, float* green, float* blue)
 {
     float position;
     FVizSize index;
     float fraction;
     if (table == NULL || table->size == 0u) return;
+    if (isnan(value))
+    {
+        fviz_lookup_table_copy_color(table->nan_color, red, green, blue);
+        return;
+    }
+    if (value < table->range_min && table->use_below_range_color == FVIZ_TRUE)
+    {
+        fviz_lookup_table_copy_color(table->below_range_color, red, green, blue);
+        return;
+    }
+    if (value > table->range_max && table->use_above_range_color == FVIZ_TRUE)
+    {
+        fviz_lookup_table_copy_color(table->above_range_color, red, green, blue);
+        return;
+    }
     if (value <= table->range_min)
     {
         position = 0.0f;

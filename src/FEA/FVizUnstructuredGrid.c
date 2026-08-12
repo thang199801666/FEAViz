@@ -4,11 +4,14 @@
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
 #include <FViz/FEA/FVizUnstructuredGrid.h>
+#include <FViz/Parallel/FVizParallel.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Core/FVizArray.h>
+#include <FViz/Data/FVizDataObjectPrivate.h>
 #include <FViz/FEA/FVizUnstructuredGridPrivate.h>
 #include <FViz/FEA/FVizSurfaceFacePrivate.h>
+#include <FViz/Mesh/FVizPointsPrivate.h>
 
 typedef struct FVizSurfaceDefinition
 {
@@ -19,9 +22,24 @@ typedef struct FVizSurfaceDefinition
 } FVizSurfaceDefinition;
 
 static void fviz_unstructured_grid_destroy(FVizObject* object);
+static FVizMTime fviz_unstructured_grid_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_unstructured_grid_class = {
-    FVIZ_TYPE_UNSTRUCTURED_GRID, "FVizUnstructuredGrid", &g_fviz_object_class, fviz_unstructured_grid_destroy
+    FVIZ_TYPE_UNSTRUCTURED_GRID, "FVizUnstructuredGrid", &g_fviz_data_object_class,
+    fviz_unstructured_grid_destroy, fviz_unstructured_grid_mtime
 };
+
+static FVizMTime fviz_unstructured_grid_mtime(const FVizObject* object)
+{
+    const FVizUnstructuredGrid* grid = (const FVizUnstructuredGrid*)object;
+    FVizMTime mtime = fviz_internal_object_local_mtime(object);
+    const FVizMTime points = fviz_object_mtime((const FVizObject*)grid->points);
+    const FVizMTime cells = fviz_object_mtime((const FVizObject*)grid->cells);
+    const FVizMTime data_set = fviz_object_mtime((const FVizObject*)grid->data_set);
+    if (points > mtime) mtime = points;
+    if (cells > mtime) mtime = cells;
+    if (data_set > mtime) mtime = data_set;
+    return mtime;
+}
 
 static void fviz_unstructured_grid_destroy(FVizObject* object)
 {
@@ -50,14 +68,8 @@ FVizResult fviz_unstructured_grid_create(FVizUnstructuredGrid** out_grid)
         fviz_release(grid);
         return fviz_last_error_code();
     }
-    grid->generation = 1u;
     *out_grid = grid;
     return FVIZ_OK;
-}
-
-uint32_t fviz_internal_unstructured_grid_generation(const FVizUnstructuredGrid* grid)
-{
-    return grid != NULL ? grid->generation : 0u;
 }
 
 void fviz_unstructured_grid_clear(FVizUnstructuredGrid* grid)
@@ -70,7 +82,7 @@ void fviz_unstructured_grid_clear(FVizUnstructuredGrid* grid)
     fviz_attribute_set_clear(fviz_data_set_field_data(grid->data_set));
     (void)fviz_data_set_set_point_count(grid->data_set, 0u);
     (void)fviz_data_set_set_cell_count(grid->data_set, 0u);
-    ++grid->generation;
+    fviz_object_modified((FVizObject*)grid);
 }
 
 FVizPoints* fviz_unstructured_grid_points(FVizUnstructuredGrid* grid) { return grid != NULL ? grid->points : NULL; }
@@ -85,7 +97,10 @@ FVizResult fviz_unstructured_grid_add_point(FVizUnstructuredGrid* grid, FVizVec3
     }
     result = fviz_points_append(grid->points, point, out_id);
     if (result == FVIZ_OK) result = fviz_data_set_set_point_count(grid->data_set, fviz_points_count(grid->points));
-    if (result == FVIZ_OK) ++grid->generation;
+    if (result == FVIZ_OK)
+    {
+        fviz_object_modified((FVizObject*)grid);
+    }
     return result;
 }
 
@@ -99,7 +114,10 @@ FVizResult fviz_unstructured_grid_add_cell(FVizUnstructuredGrid* grid, FVizCellT
     }
     result = fviz_cell_array_append(grid->cells, type, point_count, point_ids);
     if (result == FVIZ_OK) result = fviz_data_set_set_cell_count(grid->data_set, fviz_cell_array_count(grid->cells));
-    if (result == FVIZ_OK) ++grid->generation;
+    if (result == FVIZ_OK)
+    {
+        fviz_object_modified((FVizObject*)grid);
+    }
     return result;
 }
 FVizAttributeSet* fviz_unstructured_grid_point_data(FVizUnstructuredGrid* grid) { return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL; }
@@ -287,6 +305,59 @@ fail:
     return fviz_last_error_code();
 }
 
+FVizResult fviz_unstructured_grid_transform(
+    const FVizUnstructuredGrid* grid,
+    const FVizTransform* transform,
+    FVizUnstructuredGrid** out_grid)
+{
+    FVizUnstructuredGrid* result = NULL;
+    FVizSize i;
+    if (grid == NULL || transform == NULL || out_grid == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "grid, transform and out_grid must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_grid = NULL;
+    if (fviz_clone_topology(grid, &result) != FVIZ_OK) return fviz_last_error_code();
+    result->points->bounds = fviz_bounds_empty();
+    for (i = 0u; i < fviz_points_count(result->points); ++i)
+    {
+        FVizVec3* point = (FVizVec3*)fviz_array_data(result->points->data);
+        point[i] = fviz_transform_point(transform, point[i]);
+        fviz_bounds_include_point(&result->points->bounds, point[i]);
+    }
+    fviz_object_modified((FVizObject*)result->points->data);
+    *out_grid = result;
+    return FVIZ_OK;
+}
+
+typedef struct FVizWarpRangeContext
+{
+    const FVizVec3* points;
+    const FVizDataArray* vectors;
+    FVizVec3* displaced;
+    double scale;
+} FVizWarpRangeContext;
+
+static void fviz_warp_point_range(FVizSize begin, FVizSize end, void* user_data)
+{
+    FVizWarpRangeContext* context = (FVizWarpRangeContext*)user_data;
+    FVizSize i;
+    for (i = begin; i < end; ++i)
+    {
+        double vx = 0.0;
+        double vy = 0.0;
+        double vz = 0.0;
+        (void)fviz_component_value(context->vectors, i, 0u, &vx);
+        (void)fviz_component_value(context->vectors, i, 1u, &vy);
+        (void)fviz_component_value(context->vectors, i, 2u, &vz);
+        context->displaced[i] = fviz_vec3(
+            context->points[i].x + (float)(vx * context->scale),
+            context->points[i].y + (float)(vy * context->scale),
+            context->points[i].z + (float)(vz * context->scale));
+    }
+}
+
 FVizResult fviz_unstructured_grid_warp_by_vector(
     const FVizUnstructuredGrid* grid,
     const char* vector_name,
@@ -295,7 +366,10 @@ FVizResult fviz_unstructured_grid_warp_by_vector(
 {
     const FVizDataArray* vectors;
     const FVizVec3* points;
+    FVizVec3* displaced_points = NULL;
     FVizUnstructuredGrid* result = NULL;
+    FVizWarpRangeContext context;
+    const FVizSize point_count = grid != NULL ? fviz_points_count(grid->points) : 0u;
     FVizSize i;
     if (grid == NULL || vector_name == NULL || vector_name[0] == '\0' || out_grid == NULL)
     {
@@ -313,30 +387,35 @@ FVizResult fviz_unstructured_grid_warp_by_vector(
     }
     if (fviz_unstructured_grid_create(&result) != FVIZ_OK) return fviz_last_error_code();
     points = fviz_points_data(grid->points);
-    for (i = 0u; i < fviz_points_count(grid->points); ++i)
+    if (point_count > 0u)
     {
-        double vx;
-        double vy;
-        double vz;
-        FVizVec3 displaced;
-        if (!fviz_component_value(vectors, i, 0u, &vx) ||
-            !fviz_component_value(vectors, i, 1u, &vy) ||
-            !fviz_component_value(vectors, i, 2u, &vz))
-        {
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "warp vector type is unsupported");
-            fviz_release(result);
-            return FVIZ_ERROR_INVALID_ARGUMENT;
-        }
-        displaced = fviz_vec3(
-            points[i].x + (float)(vx * scale),
-            points[i].y + (float)(vy * scale),
-            points[i].z + (float)(vz * scale));
-        if (fviz_unstructured_grid_add_point(result, displaced, NULL) != FVIZ_OK)
+        displaced_points = (FVizVec3*)fviz_alloc(point_count * sizeof(FVizVec3));
+        if (displaced_points == NULL)
         {
             fviz_release(result);
             return fviz_last_error_code();
         }
+        context.points = points;
+        context.vectors = vectors;
+        context.displaced = displaced_points;
+        context.scale = scale;
+        if (fviz_parallel_for(0u, point_count, 256u, fviz_warp_point_range, &context) != FVIZ_OK)
+        {
+            fviz_free(displaced_points);
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
     }
+    for (i = 0u; i < point_count; ++i)
+    {
+        if (fviz_unstructured_grid_add_point(result, displaced_points[i], NULL) != FVIZ_OK)
+        {
+            fviz_free(displaced_points);
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
+    }
+    fviz_free(displaced_points);
     for (i = 0u; i < fviz_cell_array_count(grid->cells); ++i)
     {
         if (fviz_unstructured_grid_add_cell(result, fviz_cell_array_type(grid->cells, i),
@@ -548,13 +627,15 @@ static FVizResult fviz_transfer_point_scalars(const FVizUnstructuredGrid* grid, 
         for (j = 0u; j < fviz_data_array_tuple_count(array); ++j)
         {
             double value;
+            float output_value;
             if (!fviz_scalar_value(array, j, &value))
             {
                 fviz_release(output);
                 fviz_internal_set_error(FVIZ_ERROR_INTERNAL, "point scalar type is unsupported");
                 return FVIZ_ERROR_INTERNAL;
             }
-            if (fviz_data_array_append_tuple(output, &value) != FVIZ_OK)
+            output_value = (float)value;
+            if (fviz_data_array_append_tuple(output, &output_value) != FVIZ_OK)
             {
                 fviz_release(output);
                 return fviz_last_error_code();

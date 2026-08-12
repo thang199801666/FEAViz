@@ -22,9 +22,6 @@ struct FVizPolyData
     FVizBounds bounds;
     FVizBool bounds_dirty;
     FVizBool normals_dirty;
-    uint32_t generation;
 };
-
-uint32_t fviz_internal_poly_data_generation(const FVizPolyData* poly_data);
 
 #endif /* FVIZ_INTERNAL_MESH_POLY_DATA_PRIVATE_H */

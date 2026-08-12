@@ -12,6 +12,9 @@ struct FVizRenderer
     FVizCamera* camera;
     FVizScalarLegend* scalar_legend;
     float background[3];
+    float viewport[4];
+    int layer;
+    FVizBool interactive;
 };
 
 #endif /* FVIZ_INTERNAL_RENDERING_RENDERER_PRIVATE_H */

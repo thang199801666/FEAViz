@@ -81,6 +81,8 @@ int main(void)
     TrackingAllocatorState state;
     FVizAllocator allocator;
     FVizObject* object = NULL;
+    FVizMTime initial_mtime;
+    FVizMTime modified_mtime;
     FVizSize i;
 
     state.backing = fviz_allocator_default();
@@ -102,6 +104,12 @@ int main(void)
     if (!require_true(fviz_object_is_type(object, FVIZ_TYPE_OBJECT) == FVIZ_TRUE, "object type query failed")) return 1;
     if (!require_true(fviz_object_type_name(object) != NULL, "object type name is NULL")) return 1;
     if (!require_true(fviz_object_ref_count(object) == 1u, "initial ref count should be one")) return 1;
+    initial_mtime = fviz_object_mtime(object);
+    if (!require_true(initial_mtime != 0u, "initial modification time should be non-zero")) return 1;
+    fviz_object_modified(object);
+    modified_mtime = fviz_object_mtime(object);
+    if (!require_true(modified_mtime > initial_mtime, "Modified should advance modification time")) return 1;
+    if (!require_true(fviz_object_mtime(NULL) == 0u, "NULL modification time should be zero")) return 1;
 
     for (i = 0u; i < 100000u; ++i)
     {
@@ -114,6 +122,7 @@ int main(void)
         fviz_release(object);
     }
     if (!require_true(fviz_object_ref_count(object) == 1u, "ref count after release stress mismatch")) return 1;
+    if (!require_true(fviz_object_mtime(object) == modified_mtime, "retain/release should not modify MTime")) return 1;
 
     fviz_release(object);
     object = NULL;

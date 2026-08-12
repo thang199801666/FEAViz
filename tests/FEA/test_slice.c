@@ -85,6 +85,11 @@ static int test_extract_surface_scalars(void)
     CHECK(transferred != NULL);
     CHECK(fviz_data_array_tuple_count(transferred) == fviz_poly_data_point_count(surface));
     CHECK(fviz_attribute_set_const_get(fviz_poly_data_const_point_data(surface), "stress") != NULL);
+    {
+        const float* values = (const float*)fviz_data_array_const_data(transferred);
+        CHECK(fabsf(values[0] - 0.0f) < 1.0e-6f);
+        CHECK(fabsf(values[26] - 26.0f) < 1.0e-6f);
+    }
     fviz_release(surface);
     fviz_release(stress);
     fviz_release(grid);

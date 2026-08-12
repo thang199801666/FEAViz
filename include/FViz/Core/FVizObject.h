@@ -11,6 +11,7 @@
 FVIZ_EXTERN_C_BEGIN
 
 typedef uint64_t FVizTypeId;
+typedef uint64_t FVizMTime;
 typedef struct FVizObject FVizObject;
 
 #define FVIZ_TYPE_OBJECT UINT64_C(0x87547DE558BA7349)
@@ -29,6 +30,9 @@ FVIZ_API FVizTypeId fviz_object_type_id(const FVizObject* object);
 FVIZ_API const char* fviz_object_type_name(const FVizObject* object);
 FVIZ_API FVizBool fviz_object_is_type(const FVizObject* object, FVizTypeId type_id);
 FVIZ_API uint32_t fviz_object_ref_count(const FVizObject* object);
+/* Mutable raw-data access cannot be observed automatically; call Modified after writing through it. */
+FVIZ_API void fviz_object_modified(FVizObject* object);
+FVIZ_API FVizMTime fviz_object_mtime(const FVizObject* object);
 
 FVIZ_EXTERN_C_END
 

@@ -13,13 +13,20 @@
 #define FVIZ_OBJECT_MAGIC UINT32_C(0x46564F42)
 
 static void fviz_base_object_destroy(FVizObject* object);
+static FVizAtomicU64 g_fviz_next_mtime = {0};
 
 const FVizObjectClass g_fviz_object_class = {
     FVIZ_TYPE_OBJECT,
     "FVizObject",
     NULL,
-    fviz_base_object_destroy
+    fviz_base_object_destroy,
+    NULL
 };
+
+static FVizMTime fviz_object_next_mtime(void)
+{
+    return fviz_atomic_u64_fetch_add(&g_fviz_next_mtime, 1u) + 1u;
+}
 
 static FVizBool fviz_object_is_valid(const FVizObject* object)
 {
@@ -85,6 +92,7 @@ FVizObject* fviz_internal_object_allocate(
     (void)memset(object, 0, object_size);
     object->magic = FVIZ_OBJECT_MAGIC;
     object->ref_count.value = 1;
+    object->mtime.value = (int64_t)fviz_object_next_mtime();
     object->object_class = object_class;
     object->allocator = selected_allocator;
     object->allocation_size = object_size;
@@ -300,4 +308,40 @@ uint32_t fviz_object_ref_count(const FVizObject* object)
     }
 
     return fviz_atomic_u32_load(&object->ref_count);
+}
+
+FVizMTime fviz_internal_object_local_mtime(const FVizObject* object)
+{
+    return object != NULL ? fviz_atomic_u64_load(&object->mtime) : 0u;
+}
+
+void fviz_object_modified(FVizObject* object)
+{
+    FVizMTime expected;
+    FVizMTime modified;
+    if (fviz_object_is_valid(object) == FVIZ_FALSE)
+    {
+        if (object != NULL)
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "object is not a valid FEAViz object");
+        return;
+    }
+    modified = fviz_object_next_mtime();
+    expected = fviz_atomic_u64_load(&object->mtime);
+    while (expected < modified &&
+        !fviz_atomic_u64_compare_exchange(&object->mtime, &expected, modified))
+    {
+    }
+}
+
+FVizMTime fviz_object_mtime(const FVizObject* object)
+{
+    if (fviz_object_is_valid(object) == FVIZ_FALSE)
+    {
+        if (object != NULL)
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "object is not a valid FEAViz object");
+        return 0u;
+    }
+    return object->object_class->get_mtime != NULL
+        ? object->object_class->get_mtime(object)
+        : fviz_internal_object_local_mtime(object);
 }

@@ -11,6 +11,11 @@ typedef struct FVizAtomicU32
     volatile long value;
 } FVizAtomicU32;
 
+typedef struct FVizAtomicU64
+{
+    volatile __int64 value;
+} FVizAtomicU64;
+
 typedef struct FVizSpinLock
 {
     volatile long value;
@@ -34,6 +39,11 @@ static __forceinline uint32_t fviz_atomic_u32_fetch_sub(FVizAtomicU32* atomic_va
     return (uint32_t)_InterlockedExchangeAdd(&atomic_value->value, -(long)value);
 }
 
+static __forceinline uint32_t fviz_atomic_u32_exchange(FVizAtomicU32* atomic_value, uint32_t value)
+{
+    return (uint32_t)_InterlockedExchange(&atomic_value->value, (long)value);
+}
+
 static __forceinline int fviz_atomic_u32_compare_exchange(
     FVizAtomicU32* atomic_value,
     uint32_t* expected,
@@ -48,6 +58,38 @@ static __forceinline int fviz_atomic_u32_compare_exchange(
         return 1;
     }
     *expected = (uint32_t)previous;
+    return 0;
+}
+
+static __forceinline uint64_t fviz_atomic_u64_load(const FVizAtomicU64* atomic_value)
+{
+    return (uint64_t)_InterlockedCompareExchange64(
+        (volatile __int64*)&atomic_value->value,
+        0,
+        0);
+}
+
+static __forceinline uint64_t fviz_atomic_u64_fetch_add(FVizAtomicU64* atomic_value, uint64_t value)
+{
+    return (uint64_t)_InterlockedExchangeAdd64(&atomic_value->value, (__int64)value);
+}
+
+static __forceinline uint64_t fviz_atomic_u64_exchange(FVizAtomicU64* atomic_value, uint64_t value)
+{
+    return (uint64_t)_InterlockedExchange64(&atomic_value->value, (__int64)value);
+}
+
+static __forceinline int fviz_atomic_u64_compare_exchange(
+    FVizAtomicU64* atomic_value,
+    uint64_t* expected,
+    uint64_t desired)
+{
+    const __int64 previous = _InterlockedCompareExchange64(
+        &atomic_value->value,
+        (__int64)desired,
+        (__int64)*expected);
+    if ((uint64_t)previous == *expected) return 1;
+    *expected = (uint64_t)previous;
     return 0;
 }
 
@@ -71,6 +113,11 @@ typedef struct FVizAtomicU32
     uint32_t value;
 } FVizAtomicU32;
 
+typedef struct FVizAtomicU64
+{
+    uint64_t value;
+} FVizAtomicU64;
+
 typedef struct FVizSpinLock
 {
     uint32_t value;
@@ -91,10 +138,44 @@ static inline uint32_t fviz_atomic_u32_fetch_sub(FVizAtomicU32* atomic_value, ui
     return __atomic_fetch_sub(&atomic_value->value, value, __ATOMIC_ACQ_REL);
 }
 
+static inline uint32_t fviz_atomic_u32_exchange(FVizAtomicU32* atomic_value, uint32_t value)
+{
+    return __atomic_exchange_n(&atomic_value->value, value, __ATOMIC_ACQ_REL);
+}
+
 static inline int fviz_atomic_u32_compare_exchange(
     FVizAtomicU32* atomic_value,
     uint32_t* expected,
     uint32_t desired)
+{
+    return __atomic_compare_exchange_n(
+        &atomic_value->value,
+        expected,
+        desired,
+        0,
+        __ATOMIC_ACQ_REL,
+        __ATOMIC_ACQUIRE);
+}
+
+static inline uint64_t fviz_atomic_u64_load(const FVizAtomicU64* atomic_value)
+{
+    return __atomic_load_n(&atomic_value->value, __ATOMIC_ACQUIRE);
+}
+
+static inline uint64_t fviz_atomic_u64_fetch_add(FVizAtomicU64* atomic_value, uint64_t value)
+{
+    return __atomic_fetch_add(&atomic_value->value, value, __ATOMIC_ACQ_REL);
+}
+
+static inline uint64_t fviz_atomic_u64_exchange(FVizAtomicU64* atomic_value, uint64_t value)
+{
+    return __atomic_exchange_n(&atomic_value->value, value, __ATOMIC_ACQ_REL);
+}
+
+static inline int fviz_atomic_u64_compare_exchange(
+    FVizAtomicU64* atomic_value,
+    uint64_t* expected,
+    uint64_t desired)
 {
     return __atomic_compare_exchange_n(
         &atomic_value->value,

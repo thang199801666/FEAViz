@@ -7,6 +7,8 @@
 struct FVizMapper
 {
     FVizObject base;
+    FVizAlgorithm* input_algorithm;
+    uint32_t input_port;
     FVizPolyData* poly_data;
     FVizLookupTable* lookup_table;
     FVizBool scalar_visibility;

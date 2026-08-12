@@ -16,7 +16,6 @@
 #include <FViz/Rendering/FVizScene.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
-#include <FViz/Mesh/FVizPolyDataPrivate.h>
 #include <FViz/Rendering/FVizGL.h>
 #include <FViz/Rendering/FVizGLDevice.h>
 
@@ -92,6 +91,7 @@ static const char* const k_fviz_gl2d_fragment_shader_source =
 typedef struct FVizGLActorResource
 {
     const FVizActor* actor;
+    const FVizPolyData* poly_data;
     GLuint vao;
     GLuint position_buffer;
     GLuint normal_buffer;
@@ -101,7 +101,7 @@ typedef struct FVizGLActorResource
     FVizBool has_color;
     GLsizei index_count;
     GLsizei line_index_count;
-    uint32_t generation;
+    FVizMTime mtime;
     FVizSize point_count;
 } FVizGLActorResource;
 
@@ -167,9 +167,10 @@ static void fviz_gl_actor_resource_destroy(FVizGLDevice* device, FVizGLActorReso
         resource->vao = 0u;
     }
     resource->has_color = FVIZ_FALSE;
+    resource->poly_data = NULL;
     resource->index_count = 0;
     resource->line_index_count = 0;
-    resource->generation = 0u;
+    resource->mtime = 0u;
     resource->point_count = 0u;
 }
 
@@ -248,14 +249,14 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     FVizSize point_count;
     FVizSize index_count;
     FVizSize line_index_count;
-    uint32_t generation;
+    FVizMTime mtime;
 
     poly_data = fviz_actor_const_poly_data(actor);
     if (poly_data == NULL) return FVIZ_OK;
     point_count = fviz_poly_data_point_count(poly_data);
     index_count = fviz_poly_data_triangle_count(poly_data) * 3u;
     line_index_count = fviz_poly_data_line_count(poly_data) * 2u;
-    generation = fviz_internal_poly_data_generation(poly_data);
+    mtime = fviz_object_mtime((const FVizObject*)poly_data);
     if (point_count == 0u || (index_count == 0u && line_index_count == 0u)) return FVIZ_OK;
     if (index_count > (FVizSize)INT_MAX || line_index_count > (FVizSize)INT_MAX)
     {
@@ -264,7 +265,7 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     }
 
     resource = fviz_gl_find_actor_resource(device, actor);
-    if (resource != NULL && resource->generation == generation)
+    if (resource != NULL && resource->poly_data == poly_data && resource->mtime == mtime)
     {
         return FVIZ_OK;
     }
@@ -342,7 +343,8 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     resource->index_count = (GLsizei)index_count;
     resource->line_index_count = (GLsizei)line_index_count;
     resource->point_count = point_count;
-    resource->generation = generation;
+    resource->poly_data = poly_data;
+    resource->mtime = mtime;
     return FVIZ_OK;
 }
 
@@ -608,13 +610,24 @@ FVizResult fviz_internal_gl_device_render(
         gl->glBindVertexArray(resource->vao);
         if (resource->index_count > 0)
         {
+            gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->index_buffer);
             glPolygonMode(GL_FRONT_AND_BACK, fviz_actor_wireframe(actor) == FVIZ_TRUE ? GL_LINE : GL_FILL);
+            if (resource->line_index_count > 0 && fviz_actor_wireframe(actor) == FVIZ_FALSE)
+            {
+                glEnable(GL_POLYGON_OFFSET_FILL);
+                glPolygonOffset(1.0f, 1.0f);
+            }
             glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
+            if (resource->line_index_count > 0 && fviz_actor_wireframe(actor) == FVIZ_FALSE)
+            {
+                glDisable(GL_POLYGON_OFFSET_FILL);
+            }
         }
         if (resource->line_index_count > 0)
         {
             gl->glUniform1i(device->scalar_color_location, 0);
             gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]) {0.05f, 0.05f, 0.05f});
+            gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->line_index_buffer);
             glDrawElements(GL_LINES, resource->line_index_count, GL_UNSIGNED_INT, (const void*)0);
         }
         gl->glBindVertexArray(0u);

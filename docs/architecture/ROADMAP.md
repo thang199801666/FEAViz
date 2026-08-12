@@ -77,7 +77,7 @@
 - [x] Binary STL reader
 - [x] Extension-dispatching mesh reader
 - [ ] PLY
-- [ ] Legacy VTK
+- [x] Legacy VTK (ASCII in 0.4.5, binary in 0.4.6)
 - [ ] VTU
 
 ## Phase 7 — Scene and camera — FIRST USABLE IMPLEMENTATION COMPLETE
@@ -127,7 +127,7 @@ OBJ/STL file
 - [x] GLSL 330 per-pixel lighting program (Lambert + ambient)
 - [x] Flat-shading fallback for meshes without computed normals
 - [x] Per-actor GPU cache (VAO + position/normal VBO + index EBO)
-- [x] Cache invalidation via `FVizPolyData` generation counter
+- [x] Cache invalidation via composite `FVizPolyData` MTime (generation counter superseded in 0.8.0)
 - [x] Wireframe mode preserved through `glPolygonMode`
 - [x] Public scene API unchanged
 - [x] Per-actor model transform (position/orientation/scale) with normal matrix (0.2.1)
@@ -147,7 +147,7 @@ OBJ/STL file
 - [x] Interior slice/cut-plane filter with scalar interpolation (0.3.1)
 - [x] Warp-by-vector deformation filter (0.3.2)
 - [x] Cell-data to point-data interpolation for smooth contours (0.3.2)
-- [x] `FVizFilter` pipeline framework with cached, generation-tracked outputs (0.3.3)
+- [x] `FVizFilter` pipeline framework with cached, composite-MTime-tracked outputs (generation tracking superseded in 0.8.0)
 
 ## Phase 12 — Spatial index and picking — MILESTONE COMPLETE in 0.4.0
 
@@ -166,7 +166,7 @@ OBJ/STL file
 - [x] `fviz_vtu_read` parses VTK XML UnstructuredGrid (ascii) into `FVizUnstructuredGrid` (0.4.2)
 - [x] PointData/CellData result arrays preserved with original names (0.4.2)
 - [ ] Base64/binary VTU format support
-- [ ] Legacy VTK `.vtk` reader
+- [x] Legacy VTK `.vtk` reader
 
 ## Phase 15 — Contour lines — MILESTONE COMPLETE in 0.4.3
 
@@ -182,9 +182,134 @@ OBJ/STL file
 
 - [x] `fviz_vtk_legacy_read` ASCII unstructured grid + point/cell scalars/vectors (0.4.5)
 
-## Immediate work after 0.4.5
+## Phase 18 — Binary and typed legacy VTK — MILESTONE COMPLETE in 0.4.6
 
-1. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-2. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-3. Implement surface extraction from volumetric FE meshes. **COMPLETE**
-4. Binary legacy VTK and PLY readers.
+- [x] Big-endian binary points, cells, cell types, and data arrays
+- [x] Original attribute names and numeric types preserved
+- [x] Multiple scalar/color/vector/tensor/texture-coordinate arrays
+- [x] FIELD arrays and strict topology/count validation
+
+## Phase 19 — Rainbow bent-beam FEA example — MILESTONE COMPLETE in 0.4.7
+
+- [x] Reusable Rainbow lookup-table preset
+- [x] Structured 32×4×4 HEX8 cantilever mesh
+- [x] Analytical bending displacement and Von Mises stress fields
+- [x] Deformed colored surface with visible hexahedral grid edges
+- [x] Interactive viewer and headless CTest validation
+
+## Phase 20 — Interaction/widget/parallel foundation — MILESTONE COMPLETE in 0.5.0
+
+- [x] Platform-neutral interaction event model
+- [x] Render-window interactor with replaceable style ownership
+- [x] Trackball-camera style: orbit, pan, dolly, fit and representation keys
+- [x] Win32 backend reduced to native-event translation
+- [x] Renderer widget facade for window/renderer/interactor lifecycle
+- [x] Portable parallel-for with hardware detection, limits and grain size
+- [x] Parallel warp-by-vector point kernel
+
+## Phase 21 — Demand-driven connected pipeline — MILESTONE COMPLETE in 0.6.0
+
+- [x] Retained filter-to-filter input connections and recursive updates
+- [x] Cycle detection and cached execution
+- [x] Mutable threshold, warp, surface and slice parameters
+- [x] Explicit unstructured-grid and polygonal filter output types
+- [x] Surface and slice producer filters
+- [x] Mapper producer connections
+- [x] Automatic renderer pull before render, fit and picking
+- [x] End-to-end connected HEX8 FEA pipeline test
+
+## Phase 22 — Interaction observers — MILESTONE COMPLETE in 0.7.0
+
+- [x] Multiple observers with stable handles
+- [x] Event-type filtering and wildcard observation
+- [x] Stable priority ordering and consumable propagation
+- [x] Safe add/remove during nested event dispatch
+- [x] Renderer-widget observer facade
+- [x] Observer lifecycle and reentrancy tests
+
+## Phase 23 — Object MTime and composite invalidation — MILESTONE COMPLETE in 0.8.0
+
+- [x] Global monotonic 64-bit object modification time
+- [x] Automatic Modified calls from mutable core/data APIs
+- [x] Composite MTime for attributes, datasets, grids and PolyData
+- [x] MTime-based connected filter and contour caching
+- [x] MTime-based OpenGL and picking BVH cache invalidation
+- [x] Displacement/scalar mutation regression coverage
+
+## Phase 24 - General algorithm and port model - MILESTONE COMPLETE in 0.9.0
+
+- [x] `FVizDataObject` pipeline base
+- [x] `FVizAlgorithm` source/filter/sink abstraction
+- [x] `FVizAlgorithmOutput` producer/port proxy
+- [x] Typed, optional, and repeatable input-port contracts
+- [x] Indexed multiple input and output port infrastructure
+- [x] Compatibility wrappers for current filter and mapper connections
+- [x] Port-based connected HEX8 FEA regression test
+
+## Phase 25 - Demand-driven executive - FOUNDATION in 0.9.0, planned completion in 0.10.0
+
+- [x] Central graph traversal and execution state
+- [x] Information, allocation, extent/piece, and data request states
+- [x] Progress reporting and cooperative cancellation entry points
+- [ ] Shared-upstream cache and branch fan-out correctness
+- [ ] Pipeline graph diagnostics
+
+## Phase 26 - Persistent parallel runtime - FOUNDATION in 0.9.0, planned completion in 0.11.0
+
+- [x] Bounded persistent worker pool with reusable dispatch
+- [ ] Task groups, cooperative cancellation, and thread-local scratch storage
+- [x] Nested `parallel_for` serial fallback and thread-limit tests
+- [ ] Parallel surface, cell-to-point, contour/slice, and BVH phases
+- [ ] Serial/parallel equivalence tests and large HEX8 benchmarks
+
+## Phase 27 - Renderer/window/widget architecture - FOUNDATION in 0.9.0, planned completion in 0.12.0
+
+- [x] Multiple renderers, normalized viewports, and layers
+- [ ] Opaque, translucent, line, selection, and overlay passes
+- [ ] World/view/display coordinate conversion
+- [ ] Offscreen and host-controlled render-window lifecycle
+- [ ] Offscreen and embedded/host-native `FVizRendererWidget` operation
+- [x] Non-blocking Win32/widget event processing
+
+## Phase 28 - Interaction, selection, and widgets - FOUNDATION in 0.9.0, planned completion in 0.13.0
+
+- [x] Interactor initialize/enable/disable/done lifecycle and update-rate control
+- [ ] One-shot and repeating interactor timers
+- [ ] Multi-viewport event routing
+- [x] Multi-viewport mouse routing and poked-renderer tracking
+- [x] Actor/point/cell selection result and CPU rectangle-selection fallback
+- [ ] Trackball-actor style
+- [x] Rubber-band rectangle style and synthetic-event tests
+- [ ] Selection highlight and orientation-axes widget
+
+## Phase 29 - Data/rendering/IO completeness - FOUNDATION in 0.9.0, planned completion in 0.14.0
+
+- [x] Transform pipeline algorithm
+- [x] General transform object and actor user-transform integration
+- [ ] Complete polygonal topology and 64-bit connectivity path
+- [ ] Mapper point/cell array selection by name, association, and component
+- [x] NaN, below-range, and above-range lookup-table colors
+- [ ] Opacity, edges, and clipping planes
+- [ ] PLY and compressed VTU read/write paths
+
+## Phase 30 - Stable public release - PLANNED for 1.0.0
+
+- [ ] ABI-1 API, ownership, thread-safety, and error-contract audit
+- [x] Shared/static install-tree consumer tests
+- [ ] Sanitizer, performance, and visual-regression release gates
+- [ ] API, migration, architecture, and FEA workflow documentation
+
+The detailed milestone scope, validation plan, dependencies, work packages,
+release gates, and risk register are in
+[`VTK_CONVERGENCE_PLAN.md`](VTK_CONVERGENCE_PLAN.md). The original compact
+0.9-to-1.0 proposal remains in
+[`DEVELOPMENT_PLAN_0_9_TO_1_0.md`](DEVELOPMENT_PLAN_0_9_TO_1_0.md).
+
+## Immediate work after 0.8.0
+
+1. Implement `FVizDataObject`, `FVizAlgorithm`, and `FVizAlgorithmOutput`.
+2. Generalize connections to indexed, type-checked input and output ports.
+3. Preserve current `FVizFilter`/mapper APIs as compatibility wrappers.
+4. Move graph traversal into `FVizExecutive` after the port contract stabilizes.
+5. Build the persistent scheduler before parallelizing more topology algorithms.
+6. Build renderer viewports/layers before rubber-band selection and orientation widgets.

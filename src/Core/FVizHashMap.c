@@ -222,6 +222,7 @@ FVizResult fviz_hash_map_set(FVizHashMap* map, FVizId key, void* value)
     if (slot != (FVizSize)-1 && map->states[slot] == FVIZ_HASH_MAP_SLOT_OCCUPIED)
     {
         map->values[slot] = value;
+        fviz_object_modified((FVizObject*)map);
         return FVIZ_OK;
     }
     if ((map->count + map->tombstones + 1u) * FVIZ_HASH_MAP_LOAD_DENOM >= map->capacity * FVIZ_HASH_MAP_MAX_LOAD)
@@ -242,6 +243,7 @@ FVizResult fviz_hash_map_set(FVizHashMap* map, FVizId key, void* value)
     map->values[slot] = value;
     map->states[slot] = FVIZ_HASH_MAP_SLOT_OCCUPIED;
     map->count += 1u;
+    fviz_object_modified((FVizObject*)map);
     return FVIZ_OK;
 }
 
@@ -277,15 +279,17 @@ FVizBool fviz_hash_map_erase(FVizHashMap* map, FVizId key)
     map->values[slot] = NULL;
     map->count -= 1u;
     map->tombstones += 1u;
+    fviz_object_modified((FVizObject*)map);
     return FVIZ_TRUE;
 }
 
 void fviz_hash_map_clear(FVizHashMap* map)
 {
-    if (map == NULL || map->capacity == 0u) return;
+    if (map == NULL || map->capacity == 0u || map->count == 0u) return;
     (void)memset(map->states, FVIZ_HASH_MAP_SLOT_EMPTY, map->capacity);
     map->count = 0u;
     map->tombstones = 0u;
+    fviz_object_modified((FVizObject*)map);
 }
 
 FVizBool fviz_hash_map_iterate(FVizHashMap* map, FVizSize* cursor, FVizId* out_key, void** out_value)

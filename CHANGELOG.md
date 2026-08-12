@@ -1,5 +1,74 @@
 # Changelog
 
+## 0.9.0 - General pipeline and architecture preview
+
+- Added `FVizDataObject`, `FVizAlgorithm`, and borrowed `FVizAlgorithmOutput` proxies with indexed, type-checked input/output ports, direct data, repeatable connection storage, ownership retention, and generalized cycle detection.
+- Migrated filters and mappers onto algorithm ports while retaining the 0.8 filter/mapper connection functions as compatibility wrappers.
+- Added `FVizExecutive` request state, execution/cache-hit statistics, progress callbacks, and atomic cooperative abort; renderer pulls now enter the pipeline through the executive.
+- Replaced per-call thread creation in `fviz_parallel_for()` with a lazily initialized persistent worker pool, serialized dispatch, nested-call serial fallback, thread limits, and dispatch statistics.
+- Added multiple renderers per render window, normalized viewports, ordered layers, viewport-aware picking and mouse routing, plus non-blocking render-window/widget event processing.
+- Added interactor enable/disable/done/render lifecycle state, update-rate hints, poked-renderer tracking, and a synthetic-event-testable rubber-band style.
+- Added `FVizSelection` actor/point/cell records and viewport-aware CPU rectangle selection of projected triangle centroids as a backend-neutral fallback for future hardware selection.
+- Added `FVizTransform`, actor user transforms with composite MTime, and special NaN/below-range/above-range lookup-table colors.
+- Added a transform pipeline filter for unstructured grids; editing its retained transform invalidates the executive cache through composite filter MTime.
+- Extended the connected HEX8 regression to use generic algorithm ports and kept the complete MSVC warnings-as-errors suite green.
+
+## 0.8.0 - Modification time and correct cache invalidation
+
+- Added global monotonic 64-bit `FVizMTime` to every `FVizObject`, with public `fviz_object_modified()` and `fviz_object_mtime()` APIs.
+- Added automatic Modified tracking to core arrays, buffers, bit arrays, hash maps, strings, numeric data arrays, attribute sets, datasets, points, cells, unstructured grids, polygonal data, and filter parameter/input setters.
+- Added composite MTime propagation: attribute sets include their arrays; datasets include all attribute associations; grids include points, cells, and dataset attributes; polygonal data includes topology, normals, scalars, and point attributes.
+- Migrated connected filters and contour filters from local generation counters to composite input MTime.
+- Migrated OpenGL geometry/scalar uploads and picking BVH cache identity to composite PolyData MTime, removing the legacy mesh/grid generation counters.
+- Added regressions proving that changing a displacement tuple recomputes the complete grid-to-surface renderer pipeline, and changing scalar tuples invalidates dataset, PolyData, contour, and GPU-facing cache identity.
+- Made concurrent `Modified()` calls preserve monotonically increasing per-object time using 64-bit atomic compare/exchange.
+
+## 0.7.0 - Interaction observers
+
+- Added multiple observers to `FVizRenderWindowInteractor`, with stable IDs, event-type filtering or `FVIZ_INTERACTION_EVENT_ANY`, and deterministic high-to-low priority ordering.
+- Observer callbacks can consume an event before the active interactor style; the existing single callback API remains compatible and executes first.
+- Observer removal during dispatch takes effect immediately, while observers added during a callback become active on the next outermost dispatch.
+- Added remove-one, remove-all, and observer-count APIs with safe compaction after nested/reentrant dispatch.
+- Added `FVizRendererWidget` convenience APIs for observer registration and removal.
+- Extended native widget tests to cover filtering, ordering, consumption, duplicate removal errors, removal during dispatch, and deferred activation during dispatch.
+
+## 0.6.0 - Demand-driven connected pipeline
+
+- Added retained filter-to-filter input connections with recursive update propagation, cycle rejection, output caching, and runtime cycle protection.
+- Added mutable parameters for threshold, warp, surface, and slice filters; parameter changes invalidate their cached output.
+- Added `FVizSurfaceFilter` and `FVizSliceFilter` with explicit polygonal output typing, while volumetric filters continue to produce unstructured grids.
+- Added mapper input connections for polygonal producers and renderer-wide pipeline updates before rendering, camera fitting, and picking.
+- Corrected the OpenGL actor cache identity to include the polygonal-data object as well as its generation, preventing stale GPU geometry when a producer replaces its cached output.
+- Added an end-to-end HEX8 pipeline test covering cell-to-point interpolation, deformation, surface extraction, scalar transfer, normals, mapper/renderer pull updates, caching, parameter invalidation, slicing, type validation, and cycle detection.
+
+## 0.5.0 - Interaction, renderer widget and parallel runtime
+
+- Added platform-neutral `FVizInteractionEvent` mouse/key/resize events and moved camera manipulation out of the Win32 backend.
+- Added `FVizRenderWindowInteractor` with a replaceable `FVizInteractorStyleTrackballCamera`: left-drag orbit, middle-drag pan, right-drag dolly, wheel zoom, F/R fit, W wireframe, S surface, and Escape close.
+- Every render window now owns a default interactor while the interactor keeps a detachable weak window reference, avoiding ownership cycles.
+- Added a consumable interactor event callback so applications can layer selection, measurements, menus, and custom hotkeys ahead of the active style.
+- Added `FVizRendererWidget`, a high-level facade owning the render window and exposing its renderer/interactor with add-actor, style, show, render, and start APIs.
+- Added portable `fviz_parallel_for()`, hardware-thread detection, configurable thread limits, grain-size range partitioning, synchronous fallback when thread creation fails, and a 64-thread safety cap.
+- Parallelized the point-deformation kernel in `fviz_unstructured_grid_warp_by_vector()` while keeping topology mutation sequential and deterministic.
+- Migrated `FEAVizBentBeam` to `FVizRendererWidget`; added interaction, parallel-range, and hidden native widget/context tests.
+
+## 0.4.7 - Rainbow bent-beam FEA viewer
+
+- Added `FVIZ_COLOR_MAP_RAINBOW` and `fviz_lookup_table_build_preset()`; the Rainbow preset maps blue → cyan → green → yellow → red and can be shared by mappers and scalar legends.
+- Added `FEAVizBentBeam`: a cantilever beam built from a 32×4×4 mesh (512 HEX8 elements), deformed using an Euler–Bernoulli displacement field and colored by 0–250 MPa Von Mises stress.
+- The deformed surface includes 1,088 visible hexahedral boundary edges and a matching Rainbow scalar legend.
+- Added `FEAVizBentBeam --validate` and the `FViz.Examples.BentBeam` CTest for non-GUI verification of mesh counts, surface topology, tip deflection and stress extrema.
+- Fixed surface scalar transfer to convert numeric values to float32 correctly instead of copying bytes from a temporary double; added a regression value check.
+- Fixed mixed triangle/line GPU rendering by binding the correct element buffer before each draw; filled surfaces now render correctly with polygon-offset mesh edges overlaid.
+
+## 0.4.6 - Binary and typed legacy VTK compatibility
+
+- Extended `fviz_vtk_legacy_read()` with big-endian `BINARY` legacy VTK support for points, cell connectivity/types, and result arrays.
+- Preserves original attribute names, numeric types, tuple counts, and component counts instead of renaming and coercing every result to float32.
+- Supports multiple `SCALARS`, `COLOR_SCALARS`, `VECTORS`, `NORMALS`, `TENSORS`, `TEXTURE_COORDINATES`, and `FIELD` arrays in point/cell/field data sections.
+- Added strict topology/count validation, endian conversion, truncated-input diagnostics, and a generated binary fixture covering float32, float64, int32, vectors, and fields.
+- Verified the MSVC v145 warnings-as-errors build and all 29 CTest tests.
+
 ## 0.4.5 - Legacy VTK reader
 
 - Added `fviz_vtk_legacy_read()`: parses ASCII legacy `.vtk` files (`DATASET UNSTRUCTURED_GRID`) into `FVizUnstructuredGrid` — POINTS, CELLS + CELL_TYPES, and POINT_DATA/CELL_DATA SCALARS and VECTORS.

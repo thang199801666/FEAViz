@@ -49,6 +49,7 @@ static int test_contour_lines(void)
     FVizDataArray* scalars = NULL;
     FVizContourFilter* filter = NULL;
     FVizPolyData* output = NULL;
+    FVizPolyData* updated_output;
     const float levels[1] = {3.0f};
     CHECK(build_height_field(&data, &scalars) == FVIZ_OK);
     CHECK(fviz_contour_filter_create("height", levels, 1u, &filter) == FVIZ_OK);
@@ -76,6 +77,18 @@ static int test_contour_lines(void)
     }
     CHECK(fviz_contour_filter_update(filter) == FVIZ_OK);
     CHECK(fviz_contour_filter_output(filter) == output);
+    CHECK(fviz_retain(output) == output);
+    {
+        FVizSize i;
+        const float zero = 0.0f;
+        for (i = 0u; i < fviz_data_array_tuple_count(scalars); ++i)
+            CHECK(fviz_data_array_set_tuple(scalars, i, &zero) == FVIZ_OK);
+    }
+    CHECK(fviz_contour_filter_update(filter) == FVIZ_OK);
+    updated_output = fviz_contour_filter_output(filter);
+    CHECK(updated_output != NULL && updated_output != output);
+    CHECK(fviz_poly_data_line_count(updated_output) == 0u);
+    fviz_release(output);
     fviz_release(filter);
     fviz_release(scalars);
     fviz_release(data);

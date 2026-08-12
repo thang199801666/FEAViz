@@ -12,7 +12,7 @@ struct FVizContourFilter
     char scalar_name[128];
     float* levels;
     FVizSize level_count;
-    uint32_t input_generation;
+    FVizMTime input_mtime;
     FVizBool updated;
 };
 

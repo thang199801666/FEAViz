@@ -18,6 +18,7 @@ fviz_add_example(FVizExampleFEAViewer 09_FEAViewer/fea_viewer.c)
 fviz_add_example(FVizExamplePicking 10_Picking/picking.c)
 fviz_add_example(FVizExampleVTUViewer 11_VTUViewer/vtu_viewer.c)
 fviz_add_example(FVizExampleContourLines 12_ContourLines/contour_lines.c)
+fviz_add_example(FVizExampleBentBeam 13_BentBeam/bent_beam.c)
 
 set_target_properties(FVizViewer PROPERTIES OUTPUT_NAME "FEAVizViewer")
 set_target_properties(FVizExampleSimpleModel PROPERTIES OUTPUT_NAME "FEAVizSimpleModel")
@@ -27,3 +28,8 @@ set_target_properties(FVizExampleFEAViewer PROPERTIES OUTPUT_NAME "FEAVizFEAView
 set_target_properties(FVizExamplePicking PROPERTIES OUTPUT_NAME "FEAVizPicking")
 set_target_properties(FVizExampleVTUViewer PROPERTIES OUTPUT_NAME "FEAVizVTUViewer")
 set_target_properties(FVizExampleContourLines PROPERTIES OUTPUT_NAME "FEAVizContourLines")
+set_target_properties(FVizExampleBentBeam PROPERTIES OUTPUT_NAME "FEAVizBentBeam")
+
+if(FVIZ_BUILD_TESTS)
+    add_test(NAME FViz.Examples.BentBeam COMMAND FVizExampleBentBeam --validate)
+endif()

@@ -24,6 +24,11 @@ FVizResult fviz_internal_render_window_run_platform(FVizRenderWindow* window)
     FVIZ_UNUSED(window);
     return FVIZ_ERROR_NOT_SUPPORTED;
 }
+FVizResult fviz_internal_render_window_process_events_platform(FVizRenderWindow* window)
+{
+    FVIZ_UNUSED(window);
+    return FVIZ_ERROR_NOT_SUPPORTED;
+}
 void fviz_internal_render_window_destroy_platform(FVizRenderWindow* window) { FVIZ_UNUSED(window); }
 void fviz_internal_render_window_request_close_platform(FVizRenderWindow* window) { FVIZ_UNUSED(window); }
 FVizBool fviz_internal_render_window_supported_platform(void) { return FVIZ_FALSE; }

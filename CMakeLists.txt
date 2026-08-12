@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(FEAViz
-    VERSION 0.4.5
+    VERSION 0.9.0
     DESCRIPTION "A C17 visualization and FEA data-processing library"
     LANGUAGES C
 )
+
+find_package(Threads REQUIRED)
 
 set(FVIZ_ABI_VERSION 1 CACHE STRING "FEAViz ABI version")
 
@@ -75,6 +77,7 @@ set(_fviz_sources
     src/Data/FVizDataArray.c
     src/Data/FVizDataType.c
     src/Data/FVizAttributeSet.c
+    src/Data/FVizDataObject.c
     src/Data/FVizDataSet.c
 
     src/Math/FVizVec2.c
@@ -86,6 +89,7 @@ set(_fviz_sources
     src/Math/FVizQuat.c
     src/Math/FVizRay.c
     src/Math/FVizPlane.c
+    src/Math/FVizTransform.c
 
     src/Mesh/FVizPolyData.c
     src/Mesh/FVizPoints.c
@@ -93,7 +97,15 @@ set(_fviz_sources
 
     src/FEA/FVizUnstructuredGrid.c
 
+    src/Pipeline/FVizAlgorithm.c
+    src/Pipeline/FVizExecutive.c
     src/Pipeline/FVizFilter.c
+
+    src/Parallel/FVizParallel.c
+
+    src/Interaction/FVizInteractorStyle.c
+    src/Interaction/FVizRenderWindowInteractor.c
+    src/Interaction/FVizSelection.c
 
     src/Algorithms/FVizContourFilter.c
 
@@ -113,6 +125,7 @@ set(_fviz_sources
     src/Rendering/FVizScalarLegend.c
     src/Rendering/FVizScene.c
     src/Rendering/FVizRenderer.c
+    src/Rendering/FVizRendererWidget.c
     src/Rendering/FVizRenderWindow.c
 )
 
@@ -163,12 +176,12 @@ target_include_directories(FEAViz
 )
 
 if(WIN32)
-    target_link_libraries(FEAViz PRIVATE user32 gdi32 opengl32)
+    target_link_libraries(FEAViz PRIVATE Threads::Threads user32 gdi32 opengl32)
     if(MSVC)
         target_compile_definitions(FEAViz PRIVATE _CRT_SECURE_NO_WARNINGS=1)
     endif()
 elseif(UNIX)
-    target_link_libraries(FEAViz PRIVATE m)
+    target_link_libraries(FEAViz PRIVATE Threads::Threads m)
 endif()
 
 fviz_apply_compiler_options(FEAViz)

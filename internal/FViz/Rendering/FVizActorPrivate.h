@@ -16,6 +16,7 @@ struct FVizActor
     FVizVec3 position;
     FVizQuat orientation;
     FVizVec3 scale;
+    FVizTransform* user_transform;
 };
 
 #endif /* FVIZ_INTERNAL_RENDERING_ACTOR_PRIVATE_H */

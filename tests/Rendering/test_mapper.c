@@ -1,4 +1,5 @@
 #include <FViz/FViz.h>
+#include <math.h>
 
 #define CHECK(expr) do { if (!(expr)) return __LINE__; } while (0)
 
@@ -23,6 +24,33 @@ static int test_lookup_table(void)
     CHECK(fviz_lookup_table_set_color(table, 0u, 1.0f, 0.0f, 0.0f) == FVIZ_OK);
     fviz_lookup_table_get_color(table, 0u, &r0, &g0, &b0);
     CHECK(r0 == 1.0f && g0 == 0.0f && b0 == 0.0f);
+    fviz_lookup_table_set_nan_color(table, 0.25f, 0.5f, 0.75f);
+    fviz_lookup_table_map_scalar(table, NAN, &r, &g, &b);
+    CHECK(r == 0.25f && g == 0.5f && b == 0.75f);
+    fviz_lookup_table_set_below_range_color(table, 0.1f, 0.2f, 0.3f, FVIZ_TRUE);
+    fviz_lookup_table_map_scalar(table, -100.0f, &r, &g, &b);
+    CHECK(r == 0.1f && g == 0.2f && b == 0.3f);
+    fviz_lookup_table_set_above_range_color(table, 0.7f, 0.8f, 0.9f, FVIZ_TRUE);
+    fviz_lookup_table_map_scalar(table, 100.0f, &r, &g, &b);
+    CHECK(r == 0.7f && g == 0.8f && b == 0.9f);
+    fviz_release(table);
+    return 0;
+}
+
+static int test_rainbow_lookup_table(void)
+{
+    FVizLookupTable* table = NULL;
+    float r, g, b;
+    CHECK(fviz_lookup_table_create(257u, &table) == FVIZ_OK);
+    CHECK(fviz_lookup_table_build_preset(table, FVIZ_COLOR_MAP_RAINBOW) == FVIZ_OK);
+    fviz_lookup_table_set_range(table, 0.0f, 100.0f);
+    fviz_lookup_table_map_scalar(table, 0.0f, &r, &g, &b);
+    CHECK(r == 0.0f && g == 0.0f && b == 1.0f);
+    fviz_lookup_table_map_scalar(table, 50.0f, &r, &g, &b);
+    CHECK(r == 0.0f && g == 1.0f && b == 0.0f);
+    fviz_lookup_table_map_scalar(table, 100.0f, &r, &g, &b);
+    CHECK(r == 1.0f && g == 0.0f && b == 0.0f);
+    CHECK(fviz_lookup_table_build_preset(table, (FVizColorMapPreset)99) == FVIZ_ERROR_INVALID_ARGUMENT);
     fviz_release(table);
     return 0;
 }
@@ -88,6 +116,7 @@ static int test_mapper(void)
 int main(void)
 {
     CHECK(test_lookup_table() == 0);
+    CHECK(test_rainbow_lookup_table() == 0);
     CHECK(test_mapper() == 0);
     return 0;
 }

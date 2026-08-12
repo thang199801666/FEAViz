@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <FViz/Core/FVizError.h>
+#include <FViz/Interaction/FVizRenderWindowInteractor.h>
 #include <FViz/Rendering/FVizRenderWindow.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
@@ -49,7 +50,11 @@ static PFNFVIZWGLCREATECONTEXTATTRIBSARBPROC fviz_wgl_create_context_attribs_arb
 
 static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
 static void fviz_win32_release_gl_context(FVizRenderWindow* window, HWND hwnd);
-static void fviz_win32_render_legacy_scene(FVizRenderWindow* window, FVizRenderer* renderer);
+static void fviz_win32_render_legacy_scene(
+    FVizRenderWindow* window,
+    FVizRenderer* renderer,
+    int viewport_width,
+    int viewport_height);
 
 static FVizResult fviz_win32_register_class(void)
 {
@@ -367,10 +372,11 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
 {
     HDC dc = (HDC)window->native_dc;
     HGLRC context = (HGLRC)window->native_gl_context;
-    FVizRenderer* renderer = window->renderer;
-    float background[3];
+    FVizSize renderer_count = fviz_render_window_renderer_count(window);
+    FVizSize rendered_count = 0u;
+    int last_layer = -1;
 
-    if (dc == NULL || context == NULL || renderer == NULL)
+    if (dc == NULL || context == NULL || renderer_count == 0u)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "render window has no valid OpenGL context or renderer");
         return FVIZ_ERROR_INVALID_STATE;
@@ -380,28 +386,73 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
         fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to activate FEAViz OpenGL context");
         return FVIZ_ERROR_GRAPHICS;
     }
-
     if (window->height <= 0) window->height = 1;
     glViewport(0, 0, window->width, window->height);
-    fviz_renderer_get_background(renderer, &background[0], &background[1], &background[2]);
-    glClearColor(background[0], background[1], background[2], 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_SCISSOR_TEST);
 
-    if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
+    while (rendered_count < renderer_count)
     {
-        (void)fviz_internal_gl_device_render((FVizGLDevice*)window->gl_device, renderer, (float)window->width / (float)window->height);
+        FVizSize i;
+        int current_layer = INT_MAX;
+        for (i = 0u; i < renderer_count; ++i)
         {
-            FVizScalarLegend* legend = fviz_renderer_scalar_legend(renderer);
-            if (legend != NULL)
-            {
-                (void)fviz_internal_gl_device_render_legend((FVizGLDevice*)window->gl_device, legend, window->width, window->height);
-            }
+            FVizRenderer* renderer = fviz_render_window_renderer_at(window, i);
+            const int layer = fviz_renderer_layer(renderer);
+            if (layer > last_layer && layer < current_layer) current_layer = layer;
         }
+        if (current_layer == INT_MAX && last_layer == INT_MAX) break;
+        for (i = 0u; i < renderer_count; ++i)
+        {
+            FVizRenderer* renderer = fviz_render_window_renderer_at(window, i);
+            float viewport[4];
+            float background[3];
+            int viewport_x;
+            int viewport_y;
+            int viewport_width;
+            int viewport_height;
+            FVizScalarLegend* legend;
+            if (fviz_renderer_layer(renderer) != current_layer) continue;
+            if (fviz_renderer_update(renderer) != FVIZ_OK)
+            {
+                glDisable(GL_SCISSOR_TEST);
+                return fviz_last_error_code();
+            }
+            fviz_renderer_get_viewport(
+                renderer, &viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+            viewport_x = (int)(viewport[0] * (float)window->width);
+            viewport_y = (int)(viewport[1] * (float)window->height);
+            viewport_width = (int)((viewport[2] - viewport[0]) * (float)window->width);
+            viewport_height = (int)((viewport[3] - viewport[1]) * (float)window->height);
+            if (viewport_width < 1) viewport_width = 1;
+            if (viewport_height < 1) viewport_height = 1;
+            glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
+            glScissor(viewport_x, viewport_y, viewport_width, viewport_height);
+            if (current_layer == 0)
+            {
+                fviz_renderer_get_background(renderer, &background[0], &background[1], &background[2]);
+                glClearColor(background[0], background[1], background[2], 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            }
+            if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
+                (void)fviz_internal_gl_device_render(
+                    (FVizGLDevice*)window->gl_device,
+                    renderer,
+                    (float)viewport_width / (float)viewport_height);
+            else
+                fviz_win32_render_legacy_scene(
+                    window, renderer, viewport_width, viewport_height);
+            legend = fviz_renderer_scalar_legend(renderer);
+            if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL && legend != NULL)
+                (void)fviz_internal_gl_device_render_legend(
+                    (FVizGLDevice*)window->gl_device, legend, viewport_width, viewport_height);
+            ++rendered_count;
+        }
+        if (current_layer == INT_MAX) break;
+        last_layer = current_layer;
     }
-    else
-    {
-        fviz_win32_render_legacy_scene(window, renderer);
-    }
+    glDisable(GL_SCISSOR_TEST);
 
     if (SwapBuffers(dc) == FALSE)
     {
@@ -411,7 +462,11 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
     return FVIZ_OK;
 }
 
-static void fviz_win32_render_legacy_scene(FVizRenderWindow* window, FVizRenderer* renderer)
+static void fviz_win32_render_legacy_scene(
+    FVizRenderWindow* window,
+    FVizRenderer* renderer,
+    int viewport_width,
+    int viewport_height)
 {
     FVizCamera* camera;
     FVizScene* scene;
@@ -423,7 +478,9 @@ static void fviz_win32_render_legacy_scene(FVizRenderWindow* window, FVizRendere
     GLfloat light_ambient[4] = {0.22f, 0.22f, 0.25f, 1.0f};
 
     camera = fviz_renderer_camera(renderer);
-    projection = fviz_camera_projection_matrix(camera, (float)window->width / (float)window->height);
+    (void)window;
+    projection = fviz_camera_projection_matrix(
+        camera, (float)viewport_width / (float)viewport_height);
     view = fviz_camera_view_matrix(camera);
     glMatrixMode(GL_PROJECTION);
     glLoadMatrixf(projection.m);
@@ -496,15 +553,39 @@ void fviz_internal_render_window_request_close_platform(FVizRenderWindow* window
 
 FVizBool fviz_internal_render_window_supported_platform(void) { return FVIZ_TRUE; }
 
-static void fviz_win32_toggle_wireframe(FVizRenderWindow* window)
+static FVizInteractionEvent fviz_win32_interaction_event(
+    FVizInteractionEventType type,
+    FVizMouseButton button,
+    int x,
+    int y)
 {
-    FVizScene* scene = fviz_renderer_scene(window->renderer);
-    FVizSize i;
-    for (i = 0u; scene != NULL && i < fviz_scene_actor_count(scene); ++i)
+    FVizInteractionEvent event;
+    ZeroMemory(&event, sizeof(event));
+    event.type = type;
+    event.button = button;
+    event.x = x;
+    event.y = y;
+    event.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0 ? FVIZ_TRUE : FVIZ_FALSE;
+    event.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0 ? FVIZ_TRUE : FVIZ_FALSE;
+    event.alt = (GetKeyState(VK_MENU) & 0x8000) != 0 ? FVIZ_TRUE : FVIZ_FALSE;
+    return event;
+}
+
+FVizResult fviz_internal_render_window_process_events_platform(FVizRenderWindow* window)
+{
+    MSG message;
+    if (window == NULL)
     {
-        FVizActor* actor = fviz_scene_actor(scene, i);
-        fviz_actor_set_wireframe(actor, fviz_actor_wireframe(actor) == FVIZ_TRUE ? FVIZ_FALSE : FVIZ_TRUE);
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    while (PeekMessageA(&message, NULL, 0u, 0u, PM_REMOVE) != FALSE)
+    {
+        if (message.message == WM_QUIT) window->close_requested = FVIZ_TRUE;
+        TranslateMessage(&message);
+        DispatchMessageA(&message);
+    }
+    return FVIZ_OK;
 }
 
 static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -523,10 +604,17 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
         case WM_ERASEBKGND:
             return 1;
         case WM_SIZE:
+        {
+            FVizInteractionEvent event;
             window->width = (int)LOWORD(lparam);
             window->height = (int)HIWORD(lparam);
+            event = fviz_win32_interaction_event(FVIZ_INTERACTION_RESIZE, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
+            event.width = window->width;
+            event.height = window->height;
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
             if (window->width > 0 && window->height > 0) (void)fviz_internal_render_window_render_platform(window);
             return 0;
+        }
         case WM_PAINT:
         {
             PAINTSTRUCT paint;
@@ -536,24 +624,55 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
             return 0;
         }
         case WM_LBUTTONDOWN:
+        {
+            FVizInteractionEvent event;
             window->left_mouse_down = FVIZ_TRUE;
             window->left_mouse_dragged = FVIZ_FALSE;
             window->last_mouse_x = GET_X_LPARAM(lparam);
             window->last_mouse_y = GET_Y_LPARAM(lparam);
+            event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_LEFT,
+                window->last_mouse_x, window->last_mouse_y);
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
             SetCapture(hwnd);
             return 0;
+        }
         case WM_MBUTTONDOWN:
+        {
+            FVizInteractionEvent event;
             window->middle_mouse_down = FVIZ_TRUE;
             window->last_mouse_x = GET_X_LPARAM(lparam);
             window->last_mouse_y = GET_Y_LPARAM(lparam);
+            event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_MIDDLE,
+                window->last_mouse_x, window->last_mouse_y);
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
             SetCapture(hwnd);
             return 0;
+        }
+        case WM_RBUTTONDOWN:
+        {
+            FVizInteractionEvent event;
+            window->right_mouse_down = FVIZ_TRUE;
+            window->last_mouse_x = GET_X_LPARAM(lparam);
+            window->last_mouse_y = GET_Y_LPARAM(lparam);
+            event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_RIGHT,
+                window->last_mouse_x, window->last_mouse_y);
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
+            SetCapture(hwnd);
+            return 0;
+        }
         case WM_LBUTTONUP:
+        {
+            const int x = GET_X_LPARAM(lparam);
+            const int y = GET_Y_LPARAM(lparam);
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_BUTTON_UP, FVIZ_MOUSE_BUTTON_LEFT, x, y);
             window->left_mouse_down = FVIZ_FALSE;
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
             if (window->left_mouse_dragged == FVIZ_FALSE)
             {
-                const int x = GET_X_LPARAM(lparam);
-                const int y = GET_Y_LPARAM(lparam);
                 if (window->pick_callback != NULL)
                 {
                     FVizRayHit hit;
@@ -563,32 +682,44 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
                     }
                 }
             }
-            if (window->middle_mouse_down == FVIZ_FALSE) ReleaseCapture();
+            if (window->middle_mouse_down == FVIZ_FALSE && window->right_mouse_down == FVIZ_FALSE) ReleaseCapture();
             return 0;
+        }
         case WM_MBUTTONUP:
+        {
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_BUTTON_UP, FVIZ_MOUSE_BUTTON_MIDDLE,
+                GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
             window->middle_mouse_down = FVIZ_FALSE;
-            if (window->left_mouse_down == FVIZ_FALSE) ReleaseCapture();
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
+            if (window->left_mouse_down == FVIZ_FALSE && window->right_mouse_down == FVIZ_FALSE) ReleaseCapture();
             return 0;
+        }
+        case WM_RBUTTONUP:
+        {
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_BUTTON_UP, FVIZ_MOUSE_BUTTON_RIGHT,
+                GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+            window->right_mouse_down = FVIZ_FALSE;
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
+            if (window->left_mouse_down == FVIZ_FALSE && window->middle_mouse_down == FVIZ_FALSE) ReleaseCapture();
+            return 0;
+        }
         case WM_MOUSEMOVE:
         {
             const int x = GET_X_LPARAM(lparam);
             const int y = GET_Y_LPARAM(lparam);
             const int dx = x - window->last_mouse_x;
             const int dy = y - window->last_mouse_y;
-            FVizCamera* camera = fviz_renderer_camera(window->renderer);
+            FVizInteractionEvent event;
             if (window->left_mouse_down == FVIZ_TRUE)
             {
                 if (abs(dx) > 2 || abs(dy) > 2) window->left_mouse_dragged = FVIZ_TRUE;
-                fviz_camera_orbit(camera, -(float)dx * 0.008f, -(float)dy * 0.008f);
-                InvalidateRect(hwnd, NULL, FALSE);
             }
-            else if (window->middle_mouse_down == FVIZ_TRUE)
-            {
-                const float distance = fviz_vec3_length(fviz_vec3_sub(fviz_camera_position(camera), fviz_camera_target(camera)));
-                const float scale = distance * 0.0015f;
-                fviz_camera_pan(camera, -(float)dx * scale, (float)dy * scale);
+            event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_MOVE, FVIZ_MOUSE_BUTTON_NONE, x, y);
+            if (fviz_render_window_interactor_process_event(window->interactor, &event) == FVIZ_TRUE)
                 InvalidateRect(hwnd, NULL, FALSE);
-            }
             window->last_mouse_x = x;
             window->last_mouse_y = y;
             return 0;
@@ -596,30 +727,25 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
         case WM_MOUSEWHEEL:
         {
             const short delta = GET_WHEEL_DELTA_WPARAM(wparam);
-            FVizCamera* camera = fviz_renderer_camera(window->renderer);
-            fviz_camera_dolly(camera, delta > 0 ? 0.85f : 1.18f);
-            InvalidateRect(hwnd, NULL, FALSE);
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_MOUSE_WHEEL, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
+            event.wheel_delta = (float)delta / (float)WHEEL_DELTA;
+            if (fviz_render_window_interactor_process_event(window->interactor, &event) == FVIZ_TRUE)
+                InvalidateRect(hwnd, NULL, FALSE);
             return 0;
         }
         case WM_KEYDOWN:
-            if (wparam == VK_ESCAPE)
+        {
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_KEY_DOWN, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
+            event.key = wparam == VK_ESCAPE ? FVIZ_KEY_ESCAPE : (int)wparam;
+            if (fviz_render_window_interactor_process_event(window->interactor, &event) == FVIZ_TRUE)
             {
-                PostMessageA(hwnd, WM_CLOSE, 0, 0);
-                return 0;
-            }
-            if (wparam == 'F')
-            {
-                fviz_renderer_fit_camera(window->renderer, 1.2f);
-                InvalidateRect(hwnd, NULL, FALSE);
-                return 0;
-            }
-            if (wparam == 'W')
-            {
-                fviz_win32_toggle_wireframe(window);
                 InvalidateRect(hwnd, NULL, FALSE);
                 return 0;
             }
             break;
+        }
         case WM_CLOSE:
             window->close_requested = FVIZ_TRUE;
             DestroyWindow(hwnd);

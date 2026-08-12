@@ -117,6 +117,7 @@ FVizResult fviz_bit_array_set(FVizBitArray* bit_array, FVizSize index, FVizBool 
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     fviz_bit_array_set_bit(bit_array, index, value);
+    fviz_object_modified((FVizObject*)bit_array);
     return FVIZ_OK;
 }
 
@@ -137,13 +138,15 @@ FVizResult fviz_bit_array_resize(FVizBitArray* bit_array, FVizSize bit_count)
 {
     FVizSize old_word_count;
     FVizSize new_word_count;
+    FVizSize old_bit_count;
     FVizResult result;
     if (bit_array == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "bit_array must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    old_word_count = fviz_bit_array_word_count(bit_array->bit_count);
+    old_bit_count = bit_array->bit_count;
+    old_word_count = fviz_bit_array_word_count(old_bit_count);
     new_word_count = fviz_bit_array_word_count(bit_count);
     result = fviz_bit_array_reserve_words(bit_array, new_word_count);
     if (result != FVIZ_OK)
@@ -163,6 +166,7 @@ FVizResult fviz_bit_array_resize(FVizBitArray* bit_array, FVizSize bit_count)
             bit_array->words[new_word_count - 1u] &= (UINT64_C(1) << last_word_bits) - UINT64_C(1);
         }
     }
+    if (old_bit_count != bit_count) fviz_object_modified((FVizObject*)bit_array);
     return FVIZ_OK;
 }
 
@@ -172,6 +176,7 @@ void fviz_bit_array_clear(FVizBitArray* bit_array)
     if (bit_array->capacity_words > 0u)
     {
         (void)memset(bit_array->words, 0, bit_array->capacity_words * sizeof(uint64_t));
+        fviz_object_modified((FVizObject*)bit_array);
     }
 }
 
@@ -193,6 +198,7 @@ void fviz_bit_array_set_all(FVizBitArray* bit_array, FVizBool value)
     {
         (void)memset(bit_array->words, 0, word_count * sizeof(uint64_t));
     }
+    fviz_object_modified((FVizObject*)bit_array);
 }
 
 static FVizSize fviz_bit_array_word_pop_count(uint64_t word)

@@ -7,6 +7,7 @@
 #include <FViz/Core/FVizTypes.h>
 #include <FViz/Math/FVizMat4.h>
 #include <FViz/Math/FVizQuat.h>
+#include <FViz/Math/FVizTransform.h>
 #include <FViz/Math/FVizVec3.h>
 #include <FViz/Mesh/FVizPolyData.h>
 #include <FViz/Rendering/FVizMapper.h>
@@ -35,6 +36,8 @@ FVIZ_API FVizQuat fviz_actor_orientation(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_scale(FVizActor* actor, FVizVec3 scale);
 FVIZ_API FVizVec3 fviz_actor_scale(const FVizActor* actor);
 FVIZ_API FVizMat4 fviz_actor_transform_matrix(const FVizActor* actor);
+FVIZ_API FVizResult fviz_actor_set_user_transform(FVizActor* actor, FVizTransform* transform);
+FVIZ_API FVizTransform* fviz_actor_user_transform(FVizActor* actor);
 
 FVIZ_EXTERN_C_END
 

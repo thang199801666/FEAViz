@@ -6,9 +6,19 @@
 #include <FViz/Mesh/FVizPointsPrivate.h>
 
 static void fviz_points_destroy(FVizObject* object);
+static FVizMTime fviz_points_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_points_class = {
-    FVIZ_TYPE_POINTS, "FVizPoints", &g_fviz_object_class, fviz_points_destroy
+    FVIZ_TYPE_POINTS, "FVizPoints", &g_fviz_object_class,
+    fviz_points_destroy, fviz_points_mtime
 };
+
+static FVizMTime fviz_points_mtime(const FVizObject* object)
+{
+    const FVizPoints* points = (const FVizPoints*)object;
+    const FVizMTime local = fviz_internal_object_local_mtime(object);
+    const FVizMTime data = fviz_object_mtime((const FVizObject*)points->data);
+    return data > local ? data : local;
+}
 
 static void fviz_points_destroy(FVizObject* object)
 {
@@ -43,6 +53,7 @@ void fviz_points_clear(FVizPoints* points)
     if (points == NULL) return;
     fviz_array_clear(points->data);
     points->bounds = fviz_bounds_empty();
+    fviz_object_modified((FVizObject*)points);
 }
 
 FVizResult fviz_points_reserve(FVizPoints* points, FVizSize capacity)
@@ -67,6 +78,7 @@ FVizResult fviz_points_append(FVizPoints* points, FVizVec3 point, uint32_t* out_
     if (id > UINT32_MAX) return FVIZ_ERROR_OVERFLOW;
     if (fviz_array_push(points->data, &point) != FVIZ_OK) return fviz_last_error_code();
     fviz_bounds_include_point(&points->bounds, point);
+    fviz_object_modified((FVizObject*)points);
     if (out_id != NULL) *out_id = (uint32_t)id;
     return FVIZ_OK;
 }

@@ -6,9 +6,9 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.1.4** adds the modern GPU renderer. FEAViz can load triangle surface meshes from OBJ/STL, place them in an Actor/Scene/Renderer hierarchy, fit a camera, and display the scene through the native Windows OpenGL viewer backend.
+Version **0.9.0** adds the first general VTK-style algorithm/executive architecture while preserving FEAViz's opaque C17 API. Filters expose typed output-port proxies, mappers consume any compatible algorithm output, a demand-driven executive records execution/cache state and supports progress/abort, and the existing filter APIs remain compatibility wrappers.
 
-## Current 0.1.4 milestone
+## Current 0.9.0 milestone
 
 Implemented:
 
@@ -16,9 +16,24 @@ Implemented:
 - Phase 1 allocator, object runtime, atomic reference counting, TLS error state, logging.
 - Core container foundation: `FVizBuffer`, zero-copy external buffer wrapping, `FVizArray`, `FVizString`.
 - Typed numeric `FVizDataArray` for future FEA fields.
+- Global monotonic 64-bit `FVizMTime`, automatic mutation tracking, and composite child MTime propagation through attributes, datasets, grids, and polygonal data.
 - Math foundation: `FVizVec3`, `FVizMat4`, perspective/view matrices, `FVizBounds`.
 - Triangle surface model: `FVizPolyData`, bounds, validation, smooth vertex normals.
 - Mesh IO: OBJ and ASCII/binary STL readers.
+- VTK IO: ASCII/binary VTU and ASCII/big-endian binary legacy `.vtk` unstructured grids, preserving named typed point/cell arrays.
+- FEA pipeline: surface extraction, slicing, threshold, warp-by-vector, cell-to-point interpolation, and contour lines.
+- VTK-style filter connections with recursive updates, cached outputs, cycle detection, mutable filter parameters, and typed unstructured-grid or polygonal outputs.
+- General `FVizDataObject`, `FVizAlgorithm`, `FVizAlgorithmOutput`, and `FVizExecutive` foundations with indexed typed ports, repeatable input storage, demand-driven updates, progress, cooperative abort, and cache statistics.
+- Pipeline-aware mappers and renderers: rendering, camera fitting, and picking automatically pull current polygonal data from connected producers.
+- VTK-style mapper, lookup table, scalar coloring, scalar legend, spatial picking, and point probing.
+- Rainbow colormap preset and `FEAVizBentBeam`, a deformed hexahedral cantilever result viewer with a non-GUI validation mode.
+- `FVizRenderWindowInteractor` with replaceable `FVizInteractorStyleTrackballCamera`; native backends translate events instead of owning camera behavior.
+- VTK-style interactor observers with event filtering, stable priority ordering, consumable propagation, observer IDs, and mutation-safe dispatch.
+- `FVizRendererWidget`, a VTK-widget-style facade for renderer/window/interactor ownership and lifecycle.
+- Persistent-worker `fviz_parallel_for` with hardware-thread detection, configurable limits, nested-call safety, dispatch statistics, and serial fallback; warp-by-vector uses it for point deformation.
+- Multi-renderer windows with normalized viewports, layers, viewport-aware picking/event routing, and non-blocking widget event processing.
+- Interactor lifecycle/render gating and a headless-testable rubber-band style.
+- General `FVizTransform` composition with actor user transforms, plus NaN/below/above-range lookup-table colors.
 - Scene model: `FVizActor`, `FVizScene`, `FVizRenderer`, `FVizCamera`.
 - Windows native render window using Win32/WGL and OpenGL.
 - Viewer interaction: orbit, pan, zoom, fit, wireframe toggle.
@@ -26,6 +41,33 @@ Implemented:
 - CTest coverage for core/data/math/mesh/IO/scene.
 
 The renderer requests an OpenGL 3.3 core-profile context at startup (probe-context based, using `wglChoosePixelFormatARB`/`wglCreateContextAttribsARB`) and only falls back to the legacy fixed-function path when a 3.3 context is unavailable. Geometry is uploaded to the GPU once per mesh and reused every frame, rebuilding only when the underlying `FVizPolyData` changes.
+
+## Connected pipeline
+
+The renderer is the demand-driven endpoint. No manual update is required before rendering:
+
+```c
+FVizFilter* smooth = NULL;
+FVizFilter* warp = NULL;
+FVizFilter* surface = NULL;
+FVizActor* actor = NULL;
+
+fviz_cell_data_to_point_filter_create(&smooth);
+fviz_warp_filter_create("displacement", 2.0, &warp);
+fviz_surface_filter_create(FVIZ_TRUE, &surface);
+fviz_actor_create(&actor);
+
+fviz_filter_set_input(smooth, grid);
+fviz_filter_set_input_connection(warp, smooth);
+fviz_filter_set_input_connection(surface, warp);
+fviz_mapper_set_input_connection(fviz_actor_mapper(actor), surface);
+fviz_scene_add_actor(fviz_renderer_scene(renderer), actor);
+fviz_render_window_render(window);
+```
+
+Changing a parameter such as `fviz_warp_filter_set_scale()` invalidates that stage. The next renderer update recomputes only the affected downstream path. See `docs/design/CONNECTION_PIPELINE.md` for ownership and update semantics.
+
+Mutating APIs call `fviz_object_modified()` automatically. After writing through a mutable raw-data pointer returned by the library, call `fviz_object_modified()` on the owning object so pipeline and rendering caches observe the change. See `docs/design/MODIFICATION_TIME.md`.
 
 ## Windows build baseline
 
@@ -86,14 +128,28 @@ Load STL:
 out\build\windows-msvc-release\bin\FEAVizViewer.exe D:\Models\part.stl
 ```
 
+Run the bent-beam FEA result viewer:
+
+```text
+out\build\windows-msvc-release\bin\FEAVizBentBeam.exe
+```
+
+Validate its generated HEX8 mesh, deformation, stresses, surface and grid edges without opening a window:
+
+```text
+out\build\windows-msvc-release\bin\FEAVizBentBeam.exe --validate
+```
+
 Controls:
 
 ```text
 Left mouse drag    Orbit
 Middle mouse drag  Pan
+Right mouse drag   Dolly
 Mouse wheel         Zoom/dolly
-F                   Fit scene
-W                   Toggle wireframe
+F / R               Fit scene
+W                   Wireframe
+S                   Surface
 Esc                 Close
 ```
 

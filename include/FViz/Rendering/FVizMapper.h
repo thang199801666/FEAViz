@@ -6,6 +6,7 @@
 #include <FViz/Core/FVizResult.h>
 #include <FViz/Core/FVizTypes.h>
 #include <FViz/Mesh/FVizPolyData.h>
+#include <FViz/Pipeline/FVizFilter.h>
 #include <FViz/Rendering/FVizLookupTable.h>
 
 FVIZ_EXTERN_C_BEGIN
@@ -15,6 +16,13 @@ typedef struct FVizMapper FVizMapper;
 
 FVIZ_API FVizResult fviz_mapper_create(FVizMapper** out_mapper);
 FVIZ_API FVizResult fviz_mapper_set_poly_data(FVizMapper* mapper, FVizPolyData* poly_data);
+FVIZ_API FVizResult fviz_mapper_set_algorithm_connection(
+    FVizMapper* mapper,
+    FVizAlgorithmOutput* output);
+FVIZ_API FVizAlgorithmOutput* fviz_mapper_algorithm_connection(FVizMapper* mapper);
+FVIZ_API FVizResult fviz_mapper_set_input_connection(FVizMapper* mapper, FVizFilter* producer);
+FVIZ_API FVizFilter* fviz_mapper_input_connection(FVizMapper* mapper);
+FVIZ_API FVizResult fviz_mapper_update(FVizMapper* mapper);
 FVIZ_API FVizPolyData* fviz_mapper_poly_data(FVizMapper* mapper);
 FVIZ_API const FVizPolyData* fviz_mapper_const_poly_data(const FVizMapper* mapper);
 FVIZ_API void fviz_mapper_set_lookup_table(FVizMapper* mapper, FVizLookupTable* table);

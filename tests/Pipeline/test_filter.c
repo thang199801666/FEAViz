@@ -145,10 +145,154 @@ static int test_cell_to_point_filter(void)
     return 0;
 }
 
+static int test_transform_filter(void)
+{
+    FVizUnstructuredGrid* grid = NULL;
+    FVizDataArray* stress = NULL;
+    FVizDataArray* displacement = NULL;
+    FVizTransform* transform = NULL;
+    FVizFilter* filter = NULL;
+    FVizUnstructuredGrid* first_output;
+    FVizUnstructuredGrid* second_output;
+    const FVizVec3* points;
+    CHECK(build_grid(&grid, &stress, &displacement) == FVIZ_OK);
+    CHECK(fviz_transform_create(&transform) == FVIZ_OK);
+    fviz_transform_translate(transform, fviz_vec3(2.0f, 0.0f, 0.0f));
+    CHECK(fviz_transform_filter_create(transform, &filter) == FVIZ_OK);
+    CHECK(fviz_transform_filter_transform(filter) == transform);
+    CHECK(fviz_filter_set_input(filter, grid) == FVIZ_OK);
+    CHECK(fviz_filter_update(filter) == FVIZ_OK);
+    first_output = fviz_filter_output(filter);
+    CHECK(first_output != NULL);
+    CHECK(fviz_retain(first_output) == first_output);
+    points = fviz_points_data(fviz_unstructured_grid_points(first_output));
+    CHECK(fabsf(points[0].x - 2.0f) < 1.0e-5f);
+    CHECK(fviz_unstructured_grid_cell_count(first_output) ==
+        fviz_unstructured_grid_cell_count(grid));
+    fviz_transform_translate(transform, fviz_vec3(3.0f, 0.0f, 0.0f));
+    CHECK(fviz_filter_update(filter) == FVIZ_OK);
+    second_output = fviz_filter_output(filter);
+    CHECK(second_output != NULL && second_output != first_output);
+    points = fviz_points_data(fviz_unstructured_grid_points(second_output));
+    CHECK(fabsf(points[0].x - 5.0f) < 1.0e-5f);
+    fviz_release(first_output);
+    fviz_release(filter);
+    fviz_release(transform);
+    fviz_release(displacement);
+    fviz_release(stress);
+    fviz_release(grid);
+    return 0;
+}
+
+static int test_connected_render_pipeline(void)
+{
+    FVizUnstructuredGrid* grid = NULL;
+    FVizDataArray* stress = NULL;
+    FVizDataArray* displacement = NULL;
+    FVizFilter* smooth = NULL;
+    FVizFilter* warp = NULL;
+    FVizFilter* surface = NULL;
+    FVizFilter* slice = NULL;
+    FVizActor* actor = NULL;
+    FVizRenderer* renderer = NULL;
+    FVizMapper* mapper;
+    FVizPolyData* first_surface;
+    FVizPolyData* second_surface;
+    FVizPolyData* mutated_surface;
+    const FVizVec3* points;
+    FVizMTime grid_mtime;
+    CHECK(fviz_filter_output_type(NULL) == FVIZ_FILTER_OUTPUT_NONE);
+    CHECK(build_grid(&grid, &stress, &displacement) == FVIZ_OK);
+    CHECK(fviz_cell_data_to_point_filter_create(&smooth) == FVIZ_OK);
+    CHECK(fviz_warp_filter_create("displacement", 2.0, &warp) == FVIZ_OK);
+    CHECK(fviz_surface_filter_create(FVIZ_TRUE, &surface) == FVIZ_OK);
+    CHECK(fviz_slice_filter_create(
+        fviz_plane_from_point_normal(fviz_vec3(0.0f, 1.0f, 0.0f), fviz_vec3(0.0f, 1.0f, 0.0f)),
+        &slice) == FVIZ_OK);
+    CHECK(fviz_filter_output_type(smooth) == FVIZ_FILTER_OUTPUT_UNSTRUCTURED_GRID);
+    CHECK(fviz_filter_output_type(surface) == FVIZ_FILTER_OUTPUT_POLY_DATA);
+    CHECK(fviz_algorithm_set_input_data(
+        fviz_filter_algorithm(smooth), 0u, (FVizDataObject*)grid) == FVIZ_OK);
+    CHECK(fviz_algorithm_set_input_connection(
+        fviz_filter_algorithm(warp), 0u, fviz_filter_output_port(smooth)) == FVIZ_OK);
+    CHECK(fviz_algorithm_set_input_connection(
+        fviz_filter_algorithm(surface), 0u, fviz_filter_output_port(warp)) == FVIZ_OK);
+    CHECK(fviz_filter_set_input_connection(slice, warp) == FVIZ_OK);
+    CHECK(fviz_filter_input_connection(warp) == smooth);
+    CHECK(fviz_algorithm_set_input_connection(
+        fviz_filter_algorithm(smooth), 0u, fviz_filter_output_port(warp)) ==
+        FVIZ_ERROR_INVALID_ARGUMENT);
+
+    CHECK(fviz_actor_create(&actor) == FVIZ_OK);
+    mapper = fviz_actor_mapper(actor);
+    CHECK(fviz_mapper_set_algorithm_connection(mapper, fviz_filter_output_port(warp)) ==
+        FVIZ_ERROR_INVALID_ARGUMENT);
+    CHECK(fviz_mapper_set_algorithm_connection(mapper, fviz_filter_output_port(surface)) == FVIZ_OK);
+    CHECK(fviz_mapper_input_connection(mapper) == surface);
+    CHECK(fviz_renderer_create(&renderer) == FVIZ_OK);
+    CHECK(fviz_scene_add_actor(fviz_renderer_scene(renderer), actor) == FVIZ_OK);
+    CHECK(fviz_renderer_update(renderer) == FVIZ_OK);
+    first_surface = fviz_mapper_poly_data(mapper);
+    CHECK(first_surface != NULL);
+    CHECK(fviz_retain(first_surface) == first_surface);
+    CHECK(first_surface == fviz_filter_poly_data_output(surface));
+    CHECK(fviz_poly_data_triangle_count(first_surface) == 48u);
+    CHECK(fviz_poly_data_has_normals(first_surface) == FVIZ_TRUE);
+    CHECK(fviz_poly_data_const_scalars(first_surface) != NULL);
+    points = fviz_poly_data_points(first_surface);
+    CHECK(fabsf(points[2].x - 2.4f) < 1.0e-4f);
+    CHECK(fviz_renderer_update(renderer) == FVIZ_OK);
+    CHECK(fviz_mapper_poly_data(mapper) == first_surface);
+
+    CHECK(fviz_warp_filter_set_scale(warp, 3.0) == FVIZ_OK);
+    CHECK(fviz_renderer_update(renderer) == FVIZ_OK);
+    second_surface = fviz_mapper_poly_data(mapper);
+    CHECK(second_surface != NULL && second_surface != first_surface);
+    CHECK(fviz_retain(second_surface) == second_surface);
+    points = fviz_poly_data_points(second_surface);
+    CHECK(fabsf(points[2].x - 2.6f) < 1.0e-4f);
+    fviz_release(first_surface);
+    first_surface = NULL;
+
+    grid_mtime = fviz_object_mtime((const FVizObject*)grid);
+    {
+        const float changed_displacement[3] = {1.0f, 0.0f, 0.0f};
+        CHECK(fviz_data_array_set_tuple(displacement, 2u, changed_displacement) == FVIZ_OK);
+    }
+    CHECK(fviz_object_mtime((const FVizObject*)grid) > grid_mtime);
+    CHECK(fviz_renderer_update(renderer) == FVIZ_OK);
+    mutated_surface = fviz_mapper_poly_data(mapper);
+    CHECK(mutated_surface != NULL && mutated_surface != second_surface);
+    points = fviz_poly_data_points(mutated_surface);
+    CHECK(fabsf(points[2].x - 5.0f) < 1.0e-4f);
+    fviz_release(second_surface);
+    second_surface = NULL;
+
+    CHECK(fviz_filter_update(slice) == FVIZ_OK);
+    CHECK(fviz_filter_poly_data_output(slice) != NULL);
+    CHECK(fviz_poly_data_triangle_count(fviz_filter_poly_data_output(slice)) > 0u);
+    CHECK(fviz_slice_filter_set_plane(slice,
+        fviz_plane_from_point_normal(fviz_vec3(0.0f, 0.5f, 0.0f), fviz_vec3(0.0f, 1.0f, 0.0f))) == FVIZ_OK);
+    CHECK(fviz_filter_update(slice) == FVIZ_OK);
+
+    fviz_release(renderer);
+    fviz_release(actor);
+    fviz_release(slice);
+    fviz_release(surface);
+    fviz_release(warp);
+    fviz_release(smooth);
+    fviz_release(displacement);
+    fviz_release(stress);
+    fviz_release(grid);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_threshold_filter() == 0);
     CHECK(test_warp_filter() == 0);
     CHECK(test_cell_to_point_filter() == 0);
+    CHECK(test_transform_filter() == 0);
+    CHECK(test_connected_render_pipeline() == 0);
     return 0;
 }

@@ -12,6 +12,7 @@
 #include <FViz/Core/FVizString.h>
 #include <FViz/Data/FVizDataArray.h>
 #include <FViz/Data/FVizAttributeSet.h>
+#include <FViz/Data/FVizDataObject.h>
 #include <FViz/Data/FVizDataSet.h>
 #include <FViz/Data/FVizDataType.h>
 #include <FViz/Math/FVizMath.h>
@@ -19,7 +20,11 @@
 #include <FViz/Mesh/FVizPoints.h>
 #include <FViz/Mesh/FVizCellArray.h>
 #include <FViz/FEA/FVizUnstructuredGrid.h>
+#include <FViz/Interaction/FVizInteraction.h>
 #include <FViz/Pipeline/FVizFilter.h>
+#include <FViz/Pipeline/FVizAlgorithm.h>
+#include <FViz/Pipeline/FVizExecutive.h>
+#include <FViz/Parallel/FVizParallelModule.h>
 #include <FViz/Algorithms/FVizContourFilter.h>
 #include <FViz/Spatial/FVizBVH.h>
 #include <FViz/Spatial/FVizPointLocator.h>

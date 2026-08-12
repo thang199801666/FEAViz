@@ -8,6 +8,7 @@
 #include <FViz/Data/FVizAttributeSet.h>
 #include <FViz/Math/FVizBounds.h>
 #include <FViz/Math/FVizPlane.h>
+#include <FViz/Math/FVizTransform.h>
 #include <FViz/Mesh/FVizCellArray.h>
 #include <FViz/Mesh/FVizPoints.h>
 #include <FViz/Mesh/FVizPolyData.h>
@@ -51,6 +52,10 @@ FVIZ_API FVizResult fviz_unstructured_grid_warp_by_vector(
     FVizUnstructuredGrid** out_grid);
 FVIZ_API FVizResult fviz_unstructured_grid_cell_data_to_point_data(
     const FVizUnstructuredGrid* grid,
+    FVizUnstructuredGrid** out_grid);
+FVIZ_API FVizResult fviz_unstructured_grid_transform(
+    const FVizUnstructuredGrid* grid,
+    const FVizTransform* transform,
     FVizUnstructuredGrid** out_grid);
 
 FVIZ_EXTERN_C_END

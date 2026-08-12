@@ -9,6 +9,7 @@ int main(void)
     FVizActor* actor = NULL;
     FVizScene* scene = NULL;
     FVizRenderer* renderer = NULL;
+    FVizTransform* user_transform = NULL;
     uint32_t a,b,c;
     FVizBounds bounds;
 
@@ -55,7 +56,16 @@ int main(void)
         FVizMat4 transform = fviz_actor_transform_matrix(actor);
         CHECK(transform.m[0] == 1.0f && transform.m[5] == 1.0f && transform.m[10] == 1.0f);
     }
+    CHECK(fviz_transform_create(&user_transform) == FVIZ_OK);
+    fviz_transform_translate(user_transform, fviz_vec3(5.0f, 0.0f, 0.0f));
+    CHECK(fviz_actor_set_user_transform(actor, user_transform) == FVIZ_OK);
+    CHECK(fviz_actor_user_transform(actor) == user_transform);
+    {
+        FVizMat4 transform = fviz_actor_transform_matrix(actor);
+        CHECK(transform.m[12] == 5.0f);
+    }
 
+    fviz_release(user_transform);
     fviz_release(renderer);
     fviz_release(scene);
     fviz_release(actor);

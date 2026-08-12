@@ -6,9 +6,24 @@
 #include <FViz/Mesh/FVizCellArrayPrivate.h>
 
 static void fviz_cell_array_destroy(FVizObject* object);
+static FVizMTime fviz_cell_array_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_cell_array_class = {
-    FVIZ_TYPE_CELL_ARRAY, "FVizCellArray", &g_fviz_object_class, fviz_cell_array_destroy
+    FVIZ_TYPE_CELL_ARRAY, "FVizCellArray", &g_fviz_object_class,
+    fviz_cell_array_destroy, fviz_cell_array_mtime
 };
+
+static FVizMTime fviz_cell_array_mtime(const FVizObject* object)
+{
+    const FVizCellArray* cells = (const FVizCellArray*)object;
+    FVizMTime mtime = fviz_internal_object_local_mtime(object);
+    const FVizMTime types = fviz_object_mtime((const FVizObject*)cells->types);
+    const FVizMTime offsets = fviz_object_mtime((const FVizObject*)cells->offsets);
+    const FVizMTime connectivity = fviz_object_mtime((const FVizObject*)cells->connectivity);
+    if (types > mtime) mtime = types;
+    if (offsets > mtime) mtime = offsets;
+    if (connectivity > mtime) mtime = connectivity;
+    return mtime;
+}
 
 static FVizSize fviz_cell_type_points(FVizCellType type)
 {
@@ -66,6 +81,7 @@ void fviz_cell_array_clear(FVizCellArray* cells)
     fviz_array_clear(cells->offsets);
     fviz_array_clear(cells->connectivity);
     (void)fviz_array_push(cells->offsets, &zero);
+    fviz_object_modified((FVizObject*)cells);
 }
 
 FVizResult fviz_cell_array_reserve(FVizCellArray* cells, FVizSize cell_capacity, FVizSize connectivity_capacity)
@@ -104,6 +120,7 @@ FVizResult fviz_cell_array_append(FVizCellArray* cells, FVizCellType type, FVizS
     if (fviz_array_push(cells->types, &type) != FVIZ_OK ||
         fviz_array_push(cells->offsets, &(FVizSize){offset + point_count}) != FVIZ_OK)
         return fviz_last_error_code();
+    fviz_object_modified((FVizObject*)cells);
     return FVIZ_OK;
 }
 
