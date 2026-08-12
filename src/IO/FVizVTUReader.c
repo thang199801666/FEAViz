@@ -150,24 +150,6 @@ static FVizSize fviz_parse_floats(const char* begin, const char* end, float* val
     return count;
 }
 
-static FVizSize fviz_parse_ints(const char* begin, const char* end, int32_t* values, FVizSize max_count)
-{
-    const char* cursor = begin;
-    FVizSize count = 0u;
-    while (cursor < end && count < max_count)
-    {
-        char* next = NULL;
-        long value;
-        while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
-        if (cursor >= end) break;
-        value = strtol(cursor, &next, 10);
-        if (next == cursor) break;
-        values[count++] = (int32_t)value;
-        cursor = next;
-    }
-    return count;
-}
-
 static double fviz_vtu_read_scalar(const unsigned char* data, FVizSize offset, const char* type)
 {
     if (strcmp(type, "Int8") == 0) return (double)((int8_t*)data)[offset];
@@ -181,21 +163,6 @@ static double fviz_vtu_read_scalar(const unsigned char* data, FVizSize offset, c
     if (strcmp(type, "Float32") == 0) return (double)((float*)data)[offset];
     if (strcmp(type, "Float64") == 0) return ((double*)data)[offset];
     return 0.0;
-}
-
-static FVizSize fviz_vtu_decoded_component_count(const FVizDataArrayBlock* block)
-{
-    FVizSize type_size = fviz_vtu_type_size(block->type);
-    FVizSize bytes;
-    FVizSize count;
-    if (type_size == 0u) return 0u;
-    bytes = (FVizSize)(block->content_end - block->content_begin);
-    count = (bytes * 3u) / 4u;
-    if (count > 8u && strcmp(block->format, "appended") == 0)
-    {
-        count -= 8u;
-    }
-    return count / type_size;
 }
 
 static FVizResult fviz_vtu_decode_binary(const FVizDataArrayBlock* block, FVizDecodedBuffer* out_buffer)
