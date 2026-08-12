@@ -19,6 +19,7 @@
 #include <FViz/Mesh/FVizPoints.h>
 #include <FViz/Mesh/FVizCellArray.h>
 #include <FViz/FEA/FVizUnstructuredGrid.h>
+#include <FViz/Pipeline/FVizFilter.h>
 #include <FViz/IO/FVizMeshReader.h>
 #include <FViz/IO/FVizOBJReader.h>
 #include <FViz/IO/FVizSTLReader.h>

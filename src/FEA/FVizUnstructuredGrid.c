@@ -50,8 +50,14 @@ FVizResult fviz_unstructured_grid_create(FVizUnstructuredGrid** out_grid)
         fviz_release(grid);
         return fviz_last_error_code();
     }
+    grid->generation = 1u;
     *out_grid = grid;
     return FVIZ_OK;
+}
+
+uint32_t fviz_internal_unstructured_grid_generation(const FVizUnstructuredGrid* grid)
+{
+    return grid != NULL ? grid->generation : 0u;
 }
 
 void fviz_unstructured_grid_clear(FVizUnstructuredGrid* grid)
@@ -64,6 +70,7 @@ void fviz_unstructured_grid_clear(FVizUnstructuredGrid* grid)
     fviz_attribute_set_clear(fviz_data_set_field_data(grid->data_set));
     (void)fviz_data_set_set_point_count(grid->data_set, 0u);
     (void)fviz_data_set_set_cell_count(grid->data_set, 0u);
+    ++grid->generation;
 }
 
 FVizPoints* fviz_unstructured_grid_points(FVizUnstructuredGrid* grid) { return grid != NULL ? grid->points : NULL; }
@@ -78,6 +85,7 @@ FVizResult fviz_unstructured_grid_add_point(FVizUnstructuredGrid* grid, FVizVec3
     }
     result = fviz_points_append(grid->points, point, out_id);
     if (result == FVIZ_OK) result = fviz_data_set_set_point_count(grid->data_set, fviz_points_count(grid->points));
+    if (result == FVIZ_OK) ++grid->generation;
     return result;
 }
 
@@ -91,6 +99,7 @@ FVizResult fviz_unstructured_grid_add_cell(FVizUnstructuredGrid* grid, FVizCellT
     }
     result = fviz_cell_array_append(grid->cells, type, point_count, point_ids);
     if (result == FVIZ_OK) result = fviz_data_set_set_cell_count(grid->data_set, fviz_cell_array_count(grid->cells));
+    if (result == FVIZ_OK) ++grid->generation;
     return result;
 }
 FVizAttributeSet* fviz_unstructured_grid_point_data(FVizUnstructuredGrid* grid) { return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL; }

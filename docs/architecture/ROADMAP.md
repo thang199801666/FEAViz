@@ -147,12 +147,12 @@ OBJ/STL file
 - [x] Interior slice/cut-plane filter with scalar interpolation (0.3.1)
 - [x] Warp-by-vector deformation filter (0.3.2)
 - [x] Cell-data to point-data interpolation for smooth contours (0.3.2)
-- [ ] General pipeline/filter framework
+- [x] `FVizFilter` pipeline framework with cached, generation-tracked outputs (0.3.3)
 
-## Immediate work after 0.3.2
+## Immediate work after 0.3.3
 
-1. General `FVizAlgorithm`/filter framework + a complete FEA viewer example (Batch 7).
-2. Add spatial acceleration (BVH, point locator, cell locator) and picking.
-3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-5. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+1. Add spatial acceleration (BVH, point locator, cell locator) and picking.
+2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+4. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+5. Scalar legend / color bar overlay for FEA results.

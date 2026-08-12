@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.3 - Filter pipeline and FEA viewer
+
+- Added the `FVizFilter` pipeline framework: `set_input` / `update` / `output` execution model with cached outputs that only re-run when the input grid mutates (generation-tracked).
+- Added concrete grid filters: `fviz_threshold_filter_create`, `fviz_warp_filter_create`, and `fviz_cell_data_to_point_filter_create` (each with a dedicated object type id).
+- Added a mutation generation counter to `FVizUnstructuredGrid` for filter cache invalidation.
+- Added `FEAVizFEAViewer`: a complete FEA visualization pipeline example — cell stress is smoothed to points, the grid is deformed by displacement, then both the deformed surface and an interior slice are rendered colored by stress.
+- Added `FViz.Pipeline.Filter` tests covering the three filters and the update/caching behavior.
+
 ## 0.3.2 - FEA deformation and field interpolation
 
 - Added `fviz_unstructured_grid_warp_by_vector()`: deforms a grid by displacing every point along a named three-component vector field scaled by a factor, preserving topology and all point/cell/field data.
