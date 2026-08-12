@@ -6,14 +6,14 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.10.0** introduces a real executive-owned traversal and a public C17 custom-algorithm API. Versioned requests carry output, piece, extent, time, and flags; output-specific cache keys avoid unrelated work; and stable diagnostic IDs plus DOT export make pipeline graphs observable. Existing filter APIs remain compatibility wrappers.
+Version **0.11.0** adds complete point/cell/field associations for polygonal FEA results, active attribute roles, unified mapper array selection, 64-bit provenance through surface extraction, checked wide-ID boundaries, and explicit shallow/deep/structure copy contracts.
 
 The active implementation roadmap is
 [`docs/architecture/VTK_CONVERGENCE_PLAN.md`](docs/architecture/VTK_CONVERGENCE_PLAN.md),
 and the default ownership, error, MTime, and thread-safety rules are documented
 in [`docs/api/PUBLIC_API_CONTRACTS.md`](docs/api/PUBLIC_API_CONTRACTS.md).
 
-## Current 0.10.0 milestone
+## Current 0.11.0 milestone
 
 Implemented:
 

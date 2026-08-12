@@ -315,6 +315,177 @@ const FVizAttributeSet* fviz_poly_data_const_point_data(const FVizPolyData* poly
     return poly_data != NULL ? poly_data->point_data : NULL;
 }
 
+static FVizResult fviz_poly_data_copy_attributes(
+    const FVizAttributeSet* source,
+    FVizAttributeSet* destination,
+    FVizBool deep)
+{
+    FVizSize i;
+    for (i = 0u; i < fviz_attribute_set_count(source); ++i)
+    {
+        const char* name = fviz_attribute_set_name_at(source, i);
+        const FVizDataArray* array = fviz_attribute_set_const_array_at(source, i);
+        FVizDataArray* copied = (FVizDataArray*)array;
+        FVizAttributeRole role;
+        if (deep == FVIZ_TRUE)
+        {
+            if (fviz_data_array_create(
+                    fviz_data_array_type(array), fviz_data_array_components(array), &copied) != FVIZ_OK ||
+                fviz_data_array_resize(copied, fviz_data_array_tuple_count(array)) != FVIZ_OK)
+            {
+                fviz_release(copied);
+                return fviz_last_error_code();
+            }
+            (void)memcpy(
+                fviz_data_array_data(copied),
+                fviz_data_array_const_data(array),
+                fviz_data_array_tuple_count(array) * fviz_data_array_tuple_stride(array));
+        }
+        if (fviz_attribute_set_add(destination, name, copied) != FVIZ_OK)
+        {
+            if (deep == FVIZ_TRUE) fviz_release(copied);
+            return fviz_last_error_code();
+        }
+        if (deep == FVIZ_TRUE) fviz_release(copied);
+        for (role = FVIZ_ATTRIBUTE_SCALARS; role < FVIZ_ATTRIBUTE_ROLE_COUNT; ++role)
+        {
+            const char* active = fviz_attribute_set_active_name(source, role);
+            if (active != NULL && strcmp(active, name) == 0 &&
+                fviz_attribute_set_set_active(destination, role, name) != FVIZ_OK)
+                return fviz_last_error_code();
+        }
+    }
+    return FVIZ_OK;
+}
+
+FVizResult fviz_poly_data_shallow_copy(
+    const FVizPolyData* source,
+    FVizPolyData** out_copy)
+{
+    FVizPolyData* copy = NULL;
+    if (source == NULL || out_copy == NULL)
+    {
+        if (out_copy != NULL) *out_copy = NULL;
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "poly data shallow copy requires source and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_copy = NULL;
+    if (fviz_poly_data_create(&copy) != FVIZ_OK) return fviz_last_error_code();
+#define FVIZ_SHARE_CHILD(field) \
+    do { fviz_release(copy->field); copy->field = fviz_retain(source->field); } while (0)
+    FVIZ_SHARE_CHILD(points);
+    FVIZ_SHARE_CHILD(normals);
+    FVIZ_SHARE_CHILD(indices);
+    FVIZ_SHARE_CHILD(line_indices);
+    FVIZ_SHARE_CHILD(point_data);
+    FVIZ_SHARE_CHILD(cell_data);
+    FVIZ_SHARE_CHILD(field_data);
+#undef FVIZ_SHARE_CHILD
+    copy->scalars = (FVizDataArray*)fviz_retain(source->scalars);
+    copy->bounds = source->bounds;
+    copy->bounds_dirty = source->bounds_dirty;
+    copy->normals_dirty = source->normals_dirty;
+    *out_copy = copy;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_poly_data_copy_structure(
+    const FVizPolyData* source,
+    FVizPolyData** out_copy)
+{
+    FVizPolyData* copy = NULL;
+    FVizSize i;
+    const FVizVec3* points;
+    const uint32_t* triangles;
+    const uint32_t* lines;
+    if (source == NULL || out_copy == NULL)
+    {
+        if (out_copy != NULL) *out_copy = NULL;
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "poly data structure copy requires source and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_copy = NULL;
+    if (fviz_poly_data_create(&copy) != FVIZ_OK) return fviz_last_error_code();
+    points = fviz_poly_data_points(source);
+    triangles = fviz_poly_data_triangle_indices(source);
+    lines = fviz_poly_data_line_indices(source);
+    for (i = 0u; i < fviz_poly_data_point_count(source); ++i)
+        if (fviz_poly_data_add_point(copy, points[i], NULL) != FVIZ_OK) goto fail;
+    for (i = 0u; i < fviz_poly_data_triangle_count(source); ++i)
+        if (fviz_poly_data_add_triangle(
+                copy, triangles[i * 3u], triangles[i * 3u + 1u], triangles[i * 3u + 2u]) != FVIZ_OK) goto fail;
+    for (i = 0u; i < fviz_poly_data_line_count(source); ++i)
+        if (fviz_poly_data_add_line(copy, lines[i * 2u], lines[i * 2u + 1u]) != FVIZ_OK) goto fail;
+    *out_copy = copy;
+    return FVIZ_OK;
+fail:
+    fviz_release(copy);
+    return fviz_last_error_code();
+}
+
+FVizResult fviz_poly_data_deep_copy(
+    const FVizPolyData* source,
+    FVizPolyData** out_copy)
+{
+    FVizPolyData* copy = NULL;
+    if (fviz_poly_data_copy_structure(source, &copy) != FVIZ_OK) return fviz_last_error_code();
+    if (fviz_poly_data_copy_attributes(source->point_data, copy->point_data, FVIZ_TRUE) != FVIZ_OK ||
+        fviz_poly_data_copy_attributes(source->cell_data, copy->cell_data, FVIZ_TRUE) != FVIZ_OK ||
+        fviz_poly_data_copy_attributes(source->field_data, copy->field_data, FVIZ_TRUE) != FVIZ_OK)
+    {
+        fviz_release(copy);
+        return fviz_last_error_code();
+    }
+    if (source->scalars != NULL)
+    {
+        FVizDataArray* scalars = NULL;
+        if (fviz_data_array_create(
+                fviz_data_array_type(source->scalars),
+                fviz_data_array_components(source->scalars), &scalars) != FVIZ_OK ||
+            fviz_data_array_resize(scalars, fviz_data_array_tuple_count(source->scalars)) != FVIZ_OK)
+        {
+            fviz_release(scalars);
+            fviz_release(copy);
+            return fviz_last_error_code();
+        }
+        (void)memcpy(
+            fviz_data_array_data(scalars),
+            fviz_data_array_const_data(source->scalars),
+            fviz_data_array_tuple_count(source->scalars) * fviz_data_array_tuple_stride(source->scalars));
+        if (fviz_poly_data_set_scalars(copy, scalars) != FVIZ_OK)
+        {
+            fviz_release(scalars);
+            fviz_release(copy);
+            return fviz_last_error_code();
+        }
+        fviz_release(scalars);
+    }
+    *out_copy = copy;
+    return FVIZ_OK;
+}
+
+FVizSize fviz_poly_data_memory_size(const FVizPolyData* poly_data)
+{
+    FVizSize total;
+    FVizSize i;
+    if (poly_data == NULL) return 0u;
+    total = sizeof(*poly_data) +
+        fviz_poly_data_point_count(poly_data) * sizeof(FVizVec3) +
+        fviz_poly_data_triangle_count(poly_data) * 3u * sizeof(uint32_t) +
+        fviz_poly_data_line_count(poly_data) * 2u * sizeof(uint32_t);
+    for (i = 0u; i < fviz_attribute_set_count(poly_data->point_data); ++i)
+    {
+        const FVizDataArray* array = fviz_attribute_set_const_array_at(poly_data->point_data, i);
+        total += fviz_data_array_tuple_count(array) * fviz_data_array_tuple_stride(array);
+    }
+    for (i = 0u; i < fviz_attribute_set_count(poly_data->cell_data); ++i)
+    {
+        const FVizDataArray* array = fviz_attribute_set_const_array_at(poly_data->cell_data, i);
+        total += fviz_data_array_tuple_count(array) * fviz_data_array_tuple_stride(array);
+    }
+    return total;
+}
+
 FVizAttributeSet* fviz_poly_data_cell_data(FVizPolyData* poly_data)
 {
     return poly_data != NULL ? poly_data->cell_data : NULL;

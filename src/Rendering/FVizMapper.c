@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <FViz/Core/FVizError.h>
 #include <FViz/Rendering/FVizMapper.h>
 
@@ -12,6 +14,15 @@ static const FVizObjectClass g_fviz_mapper_class = {
     fviz_mapper_destroy,
     NULL
 };
+
+void fviz_array_selection_initialize(FVizArraySelection* selection)
+{
+    if (selection == NULL) return;
+    (void)memset(selection, 0, sizeof(*selection));
+    selection->struct_size = (uint32_t)sizeof(*selection);
+    selection->association = FVIZ_ASSOCIATION_POINTS;
+    selection->component_mode = FVIZ_COMPONENT_DIRECT;
+}
 
 static void fviz_mapper_destroy(FVizObject* object)
 {
@@ -40,6 +51,8 @@ FVizResult fviz_mapper_create(FVizMapper** out_mapper)
     }
     mapper->scalar_visibility = FVIZ_FALSE;
     mapper->scalar_range_valid = FVIZ_FALSE;
+    mapper->association = FVIZ_ASSOCIATION_POINTS;
+    mapper->component_mode = FVIZ_COMPONENT_DIRECT;
     if (fviz_lookup_table_create(256u, &mapper->lookup_table) != FVIZ_OK)
     {
         fviz_release(mapper);
@@ -193,4 +206,64 @@ void fviz_mapper_get_scalar_range(const FVizMapper* mapper, float* minimum, floa
 FVizBool fviz_mapper_scalar_range_valid(const FVizMapper* mapper)
 {
     return mapper != NULL ? mapper->scalar_range_valid : FVIZ_FALSE;
+}
+
+FVizResult fviz_mapper_set_array_selection(
+    FVizMapper* mapper,
+    const FVizArraySelection* selection)
+{
+    FVizSize length;
+    if (mapper == NULL || selection == NULL ||
+        selection->struct_size < sizeof(FVizArraySelection) ||
+        selection->name == NULL || selection->name[0] == '\0' ||
+        selection->association < FVIZ_ASSOCIATION_POINTS ||
+        selection->association > FVIZ_ASSOCIATION_FIELD ||
+        selection->component_mode < FVIZ_COMPONENT_DIRECT ||
+        selection->component_mode > FVIZ_COMPONENT_COLOR)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "mapper array selection is invalid");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    length = (FVizSize)strlen(selection->name);
+    if (length >= sizeof(mapper->array_name))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "mapper array name is too long");
+        return FVIZ_ERROR_OVERFLOW;
+    }
+    (void)memcpy(mapper->array_name, selection->name, length + 1u);
+    mapper->association = selection->association;
+    mapper->component_mode = selection->component_mode;
+    mapper->component = selection->component;
+    fviz_object_modified((FVizObject*)mapper);
+    return FVIZ_OK;
+}
+
+FVizResult fviz_mapper_get_array_selection(
+    const FVizMapper* mapper,
+    FVizArraySelection* out_selection)
+{
+    if (mapper == NULL || out_selection == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "mapper and output selection are required");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    fviz_array_selection_initialize(out_selection);
+    out_selection->association = mapper->association;
+    out_selection->name = mapper->array_name[0] != '\0' ? mapper->array_name : NULL;
+    out_selection->component_mode = mapper->component_mode;
+    out_selection->component = mapper->component;
+    return FVIZ_OK;
+}
+
+const FVizDataArray* fviz_mapper_selected_array(const FVizMapper* mapper)
+{
+    const FVizAttributeSet* attributes;
+    if (mapper == NULL || mapper->poly_data == NULL || mapper->array_name[0] == '\0') return NULL;
+    if (mapper->association == FVIZ_ASSOCIATION_POINTS)
+        attributes = fviz_poly_data_const_point_data(mapper->poly_data);
+    else if (mapper->association == FVIZ_ASSOCIATION_CELLS)
+        attributes = fviz_poly_data_const_cell_data(mapper->poly_data);
+    else
+        attributes = fviz_poly_data_const_field_data(mapper->poly_data);
+    return fviz_attribute_set_const_get(attributes, mapper->array_name);
 }

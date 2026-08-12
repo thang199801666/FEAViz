@@ -65,6 +65,8 @@ static int test_mapper(void)
     float values[3] = {0.0f, 5.0f, 10.0f};
     FVizSize i;
     uint32_t a, b, c;
+    FVizArraySelection selection;
+    FVizArraySelection selected;
 
     CHECK(fviz_mapper_create(&mapper) == FVIZ_OK);
     CHECK(fviz_mapper_scalar_visibility(mapper) == FVIZ_FALSE);
@@ -83,10 +85,20 @@ static int test_mapper(void)
         CHECK(fviz_data_array_set_tuple(scalars, i, &values[i]) == FVIZ_OK);
     }
     CHECK(fviz_poly_data_set_scalars(data, scalars) == FVIZ_OK);
+    CHECK(fviz_attribute_set_add(fviz_poly_data_point_data(data), "temperature", scalars) == FVIZ_OK);
     CHECK(fviz_poly_data_const_scalars(data) == scalars);
 
     CHECK(fviz_mapper_set_poly_data(mapper, data) == FVIZ_OK);
     CHECK(fviz_mapper_const_poly_data(mapper) == data);
+    fviz_array_selection_initialize(&selection);
+    selection.name = "temperature";
+    selection.component_mode = FVIZ_COMPONENT_MAGNITUDE;
+    CHECK(fviz_mapper_set_array_selection(mapper, &selection) == FVIZ_OK);
+    CHECK(fviz_mapper_selected_array(mapper) == scalars);
+    CHECK(fviz_mapper_get_array_selection(mapper, &selected) == FVIZ_OK);
+    CHECK(selected.association == FVIZ_ASSOCIATION_POINTS &&
+        selected.component_mode == FVIZ_COMPONENT_MAGNITUDE &&
+        selected.name != NULL);
     fviz_mapper_set_scalar_visibility(mapper, FVIZ_TRUE);
     CHECK(fviz_mapper_scalar_visibility(mapper) == FVIZ_TRUE);
     fviz_mapper_set_scalar_range(mapper, 0.0f, 10.0f);

@@ -15,6 +15,10 @@ struct FVizMapper
     FVizBool scalar_range_valid;
     float scalar_min;
     float scalar_max;
+    FVizDataAssociation association;
+    FVizComponentMode component_mode;
+    uint32_t component;
+    char array_name[128];
 };
 
 #endif /* FVIZ_INTERNAL_RENDERING_MAPPER_PRIVATE_H */

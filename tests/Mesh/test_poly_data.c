@@ -11,6 +11,9 @@ int main(void)
     const FVizVec3* normals;
     float scalar = 1.0f;
     FVizMTime poly_mtime;
+    FVizPolyData* shallow = NULL;
+    FVizPolyData* deep = NULL;
+    FVizPolyData* structure = NULL;
     CHECK(fviz_poly_data_create(&data) == FVIZ_OK);
     CHECK(fviz_poly_data_add_point(data, fviz_vec3(0,0,0), &a) == FVIZ_OK);
     CHECK(fviz_poly_data_add_point(data, fviz_vec3(1,0,0), &b) == FVIZ_OK);
@@ -31,6 +34,28 @@ int main(void)
     scalar = 2.0f;
     CHECK(fviz_data_array_set_tuple(scalars, 1u, &scalar) == FVIZ_OK);
     CHECK(fviz_object_mtime((const FVizObject*)data) > poly_mtime);
+    CHECK(fviz_attribute_set_add(fviz_poly_data_point_data(data), "result", scalars) == FVIZ_OK);
+    CHECK(fviz_poly_data_shallow_copy(data, &shallow) == FVIZ_OK);
+    CHECK(fviz_poly_data_deep_copy(data, &deep) == FVIZ_OK);
+    CHECK(fviz_poly_data_copy_structure(data, &structure) == FVIZ_OK);
+    CHECK(fviz_poly_data_points(shallow) == fviz_poly_data_points(data));
+    CHECK(fviz_attribute_set_const_get(
+        fviz_poly_data_const_point_data(shallow), "result") == scalars);
+    CHECK(fviz_poly_data_points(deep) != fviz_poly_data_points(data));
+    CHECK(fviz_attribute_set_const_get(
+        fviz_poly_data_const_point_data(deep), "result") != scalars);
+    CHECK(fviz_attribute_set_count(fviz_poly_data_const_point_data(structure)) == 0u);
+    CHECK(fviz_poly_data_triangle_count(structure) == 1u);
+    CHECK(fviz_poly_data_memory_size(data) >= 3u * sizeof(FVizVec3));
+    scalar = 7.0f;
+    CHECK(fviz_data_array_set_tuple(scalars, 0u, &scalar) == FVIZ_OK);
+    CHECK(*(const float*)fviz_data_array_const_tuple(
+        fviz_attribute_set_const_get(fviz_poly_data_const_point_data(shallow), "result"), 0u) == 7.0f);
+    CHECK(*(const float*)fviz_data_array_const_tuple(
+        fviz_attribute_set_const_get(fviz_poly_data_const_point_data(deep), "result"), 0u) != 7.0f);
+    fviz_release(structure);
+    fviz_release(deep);
+    fviz_release(shallow);
     fviz_release(scalars);
     fviz_release(data);
     return 0;

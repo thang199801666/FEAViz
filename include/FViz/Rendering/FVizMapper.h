@@ -14,6 +14,31 @@ FVIZ_EXTERN_C_BEGIN
 typedef struct FVizMapper FVizMapper;
 #define FVIZ_TYPE_MAPPER UINT64_C(0x8A2C6F51D7B40E93)
 
+typedef enum FVizDataAssociation
+{
+    FVIZ_ASSOCIATION_POINTS = 0,
+    FVIZ_ASSOCIATION_CELLS = 1,
+    FVIZ_ASSOCIATION_FIELD = 2
+} FVizDataAssociation;
+
+typedef enum FVizComponentMode
+{
+    FVIZ_COMPONENT_DIRECT = 0,
+    FVIZ_COMPONENT_MAGNITUDE = 1,
+    FVIZ_COMPONENT_COLOR = 2
+} FVizComponentMode;
+
+typedef struct FVizArraySelection
+{
+    uint32_t struct_size;
+    FVizDataAssociation association;
+    const char* name;
+    FVizComponentMode component_mode;
+    uint32_t component;
+} FVizArraySelection;
+
+FVIZ_API void fviz_array_selection_initialize(FVizArraySelection* selection);
+
 FVIZ_API FVizResult fviz_mapper_create(FVizMapper** out_mapper);
 FVIZ_API FVizResult fviz_mapper_set_poly_data(FVizMapper* mapper, FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_mapper_set_algorithm_connection(
@@ -32,6 +57,13 @@ FVIZ_API FVizBool fviz_mapper_scalar_visibility(const FVizMapper* mapper);
 FVIZ_API void fviz_mapper_set_scalar_range(FVizMapper* mapper, float minimum, float maximum);
 FVIZ_API void fviz_mapper_get_scalar_range(const FVizMapper* mapper, float* minimum, float* maximum);
 FVIZ_API FVizBool fviz_mapper_scalar_range_valid(const FVizMapper* mapper);
+FVIZ_API FVizResult fviz_mapper_set_array_selection(
+    FVizMapper* mapper,
+    const FVizArraySelection* selection);
+FVIZ_API FVizResult fviz_mapper_get_array_selection(
+    const FVizMapper* mapper,
+    FVizArraySelection* out_selection);
+FVIZ_API const FVizDataArray* fviz_mapper_selected_array(const FVizMapper* mapper);
 
 FVIZ_EXTERN_C_END
 

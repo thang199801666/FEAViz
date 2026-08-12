@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.0 - Data associations and FEA provenance
+
+- Completed point, cell, and field attribute associations on polygonal data,
+  including active scalar, vector, normal, tensor, and global-ID roles.
+- Added unified mapper array selection by association, name, component mode,
+  and component index.
+- Surface extraction now emits 64-bit original point, cell, and face IDs so a
+  rendered triangle can resolve to its source FEA entity.
+- Added checked `FVizId` topology entry points that reject unsupported wide IDs
+  rather than silently narrowing them.
+- Added shallow, deep, and structure-only PolyData copy contracts, aliasing
+  regressions, and memory-size estimation.
+
 ## 0.10.0 - Demand-driven executive and custom algorithms
 
 - Moved graph traversal into `FVizExecutive` and dispatch real information,

@@ -18,6 +18,16 @@ typedef struct FVizPolyData FVizPolyData;
 #define FVIZ_TYPE_POLY_DATA UINT64_C(0xCC28638594EC02C7)
 
 FVIZ_API FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data);
+FVIZ_API FVizResult fviz_poly_data_shallow_copy(
+    const FVizPolyData* source,
+    FVizPolyData** out_copy);
+FVIZ_API FVizResult fviz_poly_data_deep_copy(
+    const FVizPolyData* source,
+    FVizPolyData** out_copy);
+FVIZ_API FVizResult fviz_poly_data_copy_structure(
+    const FVizPolyData* source,
+    FVizPolyData** out_copy);
+FVIZ_API FVizSize fviz_poly_data_memory_size(const FVizPolyData* poly_data);
 FVIZ_API void fviz_poly_data_clear(FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_poly_data_reserve(FVizPolyData* poly_data, FVizSize point_capacity, FVizSize triangle_capacity);
 FVIZ_API FVizResult fviz_poly_data_add_point(FVizPolyData* poly_data, FVizVec3 point, uint32_t* out_index);
