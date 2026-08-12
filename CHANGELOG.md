@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.16.0 - API and ABI release-candidate stabilization
+
+- Added per-header standalone compilation gates for both strict C17 and C++17.
+- Fixed ABI 1 as the shared-library SOVERSION and made the install consumer
+  verify both semantic and ABI versions.
+- Published ownership, thread-safety, support, IO, migration, and host-integration
+  contracts for the 1.0 release candidate.
+- Reconciled the active roadmap with the implemented 0.13-0.15 subsystems and
+  recorded optional/deferred capabilities explicitly.
+
 ## 0.15.0 - Typed VTU round trips and interchange writers
 
 - Added VTU ASCII and appended-raw writers with 32/64-bit headers, typed

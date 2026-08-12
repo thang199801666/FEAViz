@@ -6,16 +6,17 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.15.0** adds typed VTU ASCII/appended-raw round trips with 64-bit
-headers and IDs, active-role and field-data preservation, configurable parser
-limits, plus ASCII/binary PLY export.
+Version **0.16.0** is the ABI-1 release candidate: public headers are gated as
+standalone C17 and C++17, package consumers verify semantic/ABI versions, and
+ownership, thread-safety, support, IO, migration, and host-integration contracts
+are published.
 
 The active implementation roadmap is
 [`docs/architecture/VTK_CONVERGENCE_PLAN.md`](docs/architecture/VTK_CONVERGENCE_PLAN.md),
 and the default ownership, error, MTime, and thread-safety rules are documented
 in [`docs/api/PUBLIC_API_CONTRACTS.md`](docs/api/PUBLIC_API_CONTRACTS.md).
 
-## Current 0.15.0 milestone
+## Current 0.16.0 milestone
 
 Implemented:
 
