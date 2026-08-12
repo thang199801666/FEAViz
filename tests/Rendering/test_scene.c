@@ -1,3 +1,4 @@
+#include <math.h>
 #include <FViz/FViz.h>
 
 #define CHECK(expr) do { if (!(expr)) return __LINE__; } while (0)
@@ -30,6 +31,30 @@ int main(void)
     CHECK(fviz_vec3_length(fviz_vec3_sub(fviz_camera_position(fviz_renderer_camera(renderer)), fviz_camera_target(fviz_renderer_camera(renderer)))) > 0.0f);
     CHECK(fviz_scene_remove_actor(scene, actor) == FVIZ_OK);
     CHECK(fviz_scene_actor_count(scene) == 0u);
+
+    fviz_actor_set_position(actor, fviz_vec3(1.0f, 2.0f, 3.0f));
+    CHECK(fviz_actor_position(actor).x == 1.0f && fviz_actor_position(actor).y == 2.0f);
+    fviz_actor_set_orientation(actor, fviz_quat_from_axis_angle(fviz_vec3(0, 1, 0), FVIZ_PI_F * 0.5f));
+    fviz_actor_set_scale(actor, fviz_vec3(2.0f, 2.0f, 2.0f));
+    {
+        FVizMat4 transform = fviz_actor_transform_matrix(actor);
+        CHECK(transform.m[12] == 1.0f && transform.m[13] == 2.0f && transform.m[14] == 3.0f);
+        CHECK(fabsf(transform.m[2] + 2.0f) < 1.0e-5f);
+        CHECK(fabsf(transform.m[5] - 2.0f) < 1.0e-5f);
+        CHECK(fabsf(transform.m[8] - 2.0f) < 1.0e-5f);
+    }
+    fviz_actor_set_orientation(actor, fviz_quat_identity());
+    fviz_actor_set_scale(actor, fviz_vec3(2.0f, 2.0f, 2.0f));
+    {
+        FVizMat4 transform = fviz_actor_transform_matrix(actor);
+        CHECK(transform.m[0] == 2.0f && transform.m[5] == 2.0f && transform.m[10] == 2.0f);
+    }
+    fviz_actor_set_scale(actor, fviz_vec3(1.0f, 1.0f, 1.0f));
+    fviz_actor_set_position(actor, fviz_vec3(0.0f, 0.0f, 0.0f));
+    {
+        FVizMat4 transform = fviz_actor_transform_matrix(actor);
+        CHECK(transform.m[0] == 1.0f && transform.m[5] == 1.0f && transform.m[10] == 1.0f);
+    }
 
     fviz_release(renderer);
     fviz_release(scene);

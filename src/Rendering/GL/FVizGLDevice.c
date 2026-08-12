@@ -4,6 +4,7 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
+#include <FViz/Math/FVizMat3.h>
 #include <FViz/Math/FVizMat4.h>
 #include <FViz/Rendering/FVizActor.h>
 #include <FViz/Rendering/FVizCamera.h>
@@ -23,13 +24,15 @@ static const char* const k_fviz_gl_vertex_shader_source =
     "layout(location = 0) in vec3 aPosition;\n"
     "layout(location = 1) in vec3 aNormal;\n"
     "uniform mat4 uMvp;\n"
+    "uniform mat4 uModel;\n"
+    "uniform mat3 uNormalMatrix;\n"
     "out vec3 vNormal;\n"
     "out vec3 vWorldPos;\n"
     "void main()\n"
     "{\n"
     "    gl_Position = uMvp * vec4(aPosition, 1.0);\n"
-    "    vNormal = aNormal;\n"
-    "    vWorldPos = aPosition;\n"
+    "    vNormal = normalize(uNormalMatrix * aNormal);\n"
+    "    vWorldPos = vec3(uModel * vec4(aPosition, 1.0));\n"
     "}\n";
 
 static const char* const k_fviz_gl_fragment_shader_source =
@@ -70,6 +73,8 @@ struct FVizGLDevice
     FVizGLFunctions gl;
     GLuint program;
     GLint mvp_location;
+    GLint model_location;
+    GLint normal_matrix_location;
     GLint diffuse_location;
     GLint light_position_location;
     GLint light_ambient_location;
@@ -298,6 +303,8 @@ static FVizResult fviz_gl_create_program(FVizGLDevice* device)
     }
 
     device->mvp_location = gl->glGetUniformLocation(device->program, "uMvp");
+    device->model_location = gl->glGetUniformLocation(device->program, "uModel");
+    device->normal_matrix_location = gl->glGetUniformLocation(device->program, "uNormalMatrix");
     device->diffuse_location = gl->glGetUniformLocation(device->program, "uDiffuse");
     device->light_position_location = gl->glGetUniformLocation(device->program, "uLightPosition");
     device->light_ambient_location = gl->glGetUniformLocation(device->program, "uLightAmbient");
@@ -389,6 +396,9 @@ FVizResult fviz_internal_gl_device_render(
     {
         const FVizActor* actor = fviz_scene_const_actor(scene, i);
         FVizGLActorResource* resource;
+        FVizMat4 model = fviz_actor_transform_matrix(actor);
+        FVizMat3 normal_matrix;
+        FVizMat4 mvp_actor;
         float red;
         float green;
         float blue;
@@ -397,6 +407,23 @@ FVizResult fviz_internal_gl_device_render(
         if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
         resource = fviz_gl_find_actor_resource(device, actor);
         if (resource == NULL || resource->index_count == 0) continue;
+
+        mvp_actor = fviz_mat4_multiply(mvp, model);
+        gl->glUniformMatrix4fv(device->mvp_location, 1, GL_FALSE, mvp_actor.m);
+        gl->glUniformMatrix4fv(device->model_location, 1, GL_FALSE, model.m);
+
+        {
+            const FVizVec3 scale = fviz_actor_scale(actor);
+            FVizMat3 rotation = fviz_mat3_from_quaternion(fviz_actor_orientation(actor));
+            FVizMat3 scale_matrix = fviz_mat3_identity();
+            FVizMat3 model3;
+            scale_matrix.m[0] = scale.x;
+            scale_matrix.m[4] = scale.y;
+            scale_matrix.m[8] = scale.z;
+            model3 = fviz_mat3_multiply(rotation, scale_matrix);
+            normal_matrix = fviz_mat3_transpose(fviz_mat3_inverse(model3));
+        }
+        gl->glUniformMatrix3fv(device->normal_matrix_location, 1, GL_FALSE, normal_matrix.m);
 
         fviz_actor_get_color(actor, &red, &green, &blue);
         gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]) {red, green, blue});

@@ -59,6 +59,7 @@ typedef void (APIENTRY* FVizGLDeleteProgramFn)(GLuint program);
 typedef void (APIENTRY* FVizGLUseProgramFn)(GLuint program);
 typedef GLint (APIENTRY* FVizGLGetUniformLocationFn)(GLuint program, const char* name);
 typedef void (APIENTRY* FVizGLUniformMatrix4fvFn)(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value);
+typedef void (APIENTRY* FVizGLUniformMatrix3fvFn)(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value);
 typedef void (APIENTRY* FVizGLUniform3fvFn)(GLint location, GLsizei count, const GLfloat* value);
 typedef void (APIENTRY* FVizGLUniform1iFn)(GLint location, GLint v0);
 
@@ -90,6 +91,7 @@ typedef struct FVizGLFunctions
     FVizGLUseProgramFn glUseProgram;
     FVizGLGetUniformLocationFn glGetUniformLocation;
     FVizGLUniformMatrix4fvFn glUniformMatrix4fv;
+    FVizGLUniformMatrix3fvFn glUniformMatrix3fv;
     FVizGLUniform3fvFn glUniform3fv;
     FVizGLUniform1iFn glUniform1i;
 } FVizGLFunctions;

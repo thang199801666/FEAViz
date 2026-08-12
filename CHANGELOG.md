@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 - Per-actor transforms
+
+- Added `FVizActor` transform state: position, orientation (`FVizQuat`), and scale with public setters/getters.
+- Added `fviz_actor_transform_matrix()` composing the model matrix as T * R * S.
+- Extended the GLSL 330 renderer with per-actor `uModel` matrix and a `uNormalMatrix` (transpose-inverse of the model 3x3, including non-uniform scale) for correct lighting under transforms.
+- Added a matrix-uniform path (`glUniformMatrix3fv`) to the internal GL function loader.
+- Extended `FViz.Rendering.Scene` tests with transform matrix validation.
+
 ## 0.2.0 - Complete core containers and math primitives
 
 - Added `FVizBitArray`: compact 64-bit-word backed bit storage with set/test, resize, clear, set-all, and hardware pop-count.

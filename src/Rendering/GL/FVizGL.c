@@ -55,6 +55,7 @@ FVizResult fviz_internal_gl_load(FVizGLFunctions* functions)
     functions->glUseProgram = (FVizGLUseProgramFn)fviz_gl_lookup_symbol("glUseProgram");
     functions->glGetUniformLocation = (FVizGLGetUniformLocationFn)fviz_gl_lookup_symbol("glGetUniformLocation");
     functions->glUniformMatrix4fv = (FVizGLUniformMatrix4fvFn)fviz_gl_lookup_symbol("glUniformMatrix4fv");
+    functions->glUniformMatrix3fv = (FVizGLUniformMatrix3fvFn)fviz_gl_lookup_symbol("glUniformMatrix3fv");
     functions->glUniform3fv = (FVizGLUniform3fvFn)fviz_gl_lookup_symbol("glUniform3fv");
     functions->glUniform1i = (FVizGLUniform1iFn)fviz_gl_lookup_symbol("glUniform1i");
 
@@ -84,6 +85,7 @@ FVizResult fviz_internal_gl_load(FVizGLFunctions* functions)
         functions->glUseProgram == NULL ||
         functions->glGetUniformLocation == NULL ||
         functions->glUniformMatrix4fv == NULL ||
+        functions->glUniformMatrix3fv == NULL ||
         functions->glUniform3fv == NULL ||
         functions->glUniform1i == NULL)
     {

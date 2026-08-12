@@ -130,13 +130,13 @@ OBJ/STL file
 - [x] Cache invalidation via `FVizPolyData` generation counter
 - [x] Wireframe mode preserved through `glPolygonMode`
 - [x] Public scene API unchanged
+- [x] Per-actor model transform (position/orientation/scale) with normal matrix (0.2.1)
 
-## Immediate work after 0.2.0
+## Immediate work after 0.2.1
 
-1. Per-actor model transform (uniform scale/rotation/translation) with proper normal matrix in the shader.
-2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-4. Implement surface extraction from volumetric FE meshes. **COMPLETE**
-5. Add spatial acceleration (BVH, point locator, cell locator) and picking.
-6. Add pipeline/filter execution, then clip/slice/threshold/warp. Threshold cell filter **COMPLETE**.
-7. Add scalar lookup tables and FEA contour coloring.
+1. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+2. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+3. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+4. Add spatial acceleration (BVH, point locator, cell locator) and picking.
+5. Add pipeline/filter execution, then clip/slice/threshold/warp. Threshold cell filter **COMPLETE**.
+6. Add scalar lookup tables and FEA contour coloring.

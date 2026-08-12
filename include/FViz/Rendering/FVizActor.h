@@ -5,6 +5,9 @@
 #include <FViz/Core/FVizObject.h>
 #include <FViz/Core/FVizResult.h>
 #include <FViz/Core/FVizTypes.h>
+#include <FViz/Math/FVizMat4.h>
+#include <FViz/Math/FVizQuat.h>
+#include <FViz/Math/FVizVec3.h>
 #include <FViz/Mesh/FVizPolyData.h>
 
 FVIZ_EXTERN_C_BEGIN
@@ -22,6 +25,13 @@ FVIZ_API void fviz_actor_set_visible(FVizActor* actor, FVizBool visible);
 FVIZ_API FVizBool fviz_actor_is_visible(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_wireframe(FVizActor* actor, FVizBool enabled);
 FVIZ_API FVizBool fviz_actor_wireframe(const FVizActor* actor);
+FVIZ_API void fviz_actor_set_position(FVizActor* actor, FVizVec3 position);
+FVIZ_API FVizVec3 fviz_actor_position(const FVizActor* actor);
+FVIZ_API void fviz_actor_set_orientation(FVizActor* actor, FVizQuat orientation);
+FVIZ_API FVizQuat fviz_actor_orientation(const FVizActor* actor);
+FVIZ_API void fviz_actor_set_scale(FVizActor* actor, FVizVec3 scale);
+FVIZ_API FVizVec3 fviz_actor_scale(const FVizActor* actor);
+FVIZ_API FVizMat4 fviz_actor_transform_matrix(const FVizActor* actor);
 
 FVIZ_EXTERN_C_END
 
