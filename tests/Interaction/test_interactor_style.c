@@ -128,10 +128,45 @@ static int test_rubber_band_style(void)
     return 0;
 }
 
+static int test_trackball_actor(void)
+{
+    FVizRenderer* renderer = NULL;
+    FVizInteractorStyle* style = NULL;
+    FVizActor* actor = NULL;
+    FVizInteractionEvent event;
+    FVizQuat before;
+    FVizQuat after;
+    FVizVec3 scale;
+    CHECK(fviz_renderer_create(&renderer) == FVIZ_OK);
+    CHECK(fviz_actor_create(&actor) == FVIZ_OK);
+    CHECK(fviz_interactor_style_trackball_actor_create(&style) == FVIZ_OK);
+    CHECK(fviz_interactor_style_trackball_actor_set_actor(style, actor) == FVIZ_OK);
+    CHECK(fviz_interactor_style_trackball_actor_actor(style) == actor);
+    before = fviz_actor_orientation(actor);
+    event = event_at(FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_LEFT, 10, 10);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    event = event_at(FVIZ_INTERACTION_MOUSE_MOVE, FVIZ_MOUSE_BUTTON_NONE, 30, 20);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    event = event_at(FVIZ_INTERACTION_MOUSE_BUTTON_UP, FVIZ_MOUSE_BUTTON_LEFT, 30, 20);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    after = fviz_actor_orientation(actor);
+    CHECK(fabsf(fviz_quat_dot(before, after)) < 0.999f);
+    event = event_at(FVIZ_INTERACTION_MOUSE_WHEEL, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
+    event.wheel_delta = 1.0f;
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    scale = fviz_actor_scale(actor);
+    CHECK(scale.x > 1.0f && scale.y > 1.0f && scale.z > 1.0f);
+    fviz_release(style);
+    fviz_release(actor);
+    fviz_release(renderer);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_trackball_camera() == 0);
     CHECK(test_keyboard_style() == 0);
     CHECK(test_rubber_band_style() == 0);
+    CHECK(test_trackball_actor() == 0);
     return 0;
 }

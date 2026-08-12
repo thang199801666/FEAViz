@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.14.0 - Deterministic interaction and FEA inspection
+
+- Added host-driven one-shot/repeating timers with stable IDs, reset/destroy,
+  deterministic catch-up, and native Win32 event-loop polling.
+- Added enter/leave, expose, focus, and timer events plus viewport capture during
+  drag sequences and safe retained-style dispatch under nested observer changes.
+- Added a trackball-actor style alongside the camera and rubber-band styles.
+- Expanded selection records with rendered and original IDs, output MTime,
+  persistent re-resolution, invalidation state, world position, and scalar/vector
+  probe tuples.
+- Added depth-aware actor/point/cell click selection with GPU and CPU paths.
+- Added source-preserving selection highlight geometry and a multi-viewport
+  orientation-axes overlay widget.
+- Added synthetic regressions for timers, capture, actor manipulation, persistent
+  FEA selections, probes, highlighting, axes, and point/cell picking.
+
 ## 0.13.0 - Render passes, offscreen lifecycle, and hardware selection
 
 - Added an ordered, backend-neutral render-pass pipeline for clear, opaque,

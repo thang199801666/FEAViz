@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(FEAViz
-    VERSION 0.13.0
+    VERSION 0.14.0
     DESCRIPTION "A C17 visualization and FEA data-processing library"
     LANGUAGES C
 )
@@ -108,6 +108,7 @@ set(_fviz_sources
     src/Interaction/FVizInteractorStyle.c
     src/Interaction/FVizRenderWindowInteractor.c
     src/Interaction/FVizSelection.c
+    src/Interaction/FVizFEAWidget.c
 
     src/Algorithms/FVizContourFilter.c
 

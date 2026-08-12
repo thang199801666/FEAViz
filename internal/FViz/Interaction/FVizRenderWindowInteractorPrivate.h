@@ -16,6 +16,15 @@ typedef struct FVizInteractorObserver
     FVizBool active;
 } FVizInteractorObserver;
 
+typedef struct FVizInteractorTimer
+{
+    FVizTimerId id;
+    double interval_seconds;
+    double next_fire_seconds;
+    FVizBool repeating;
+    FVizBool active;
+} FVizInteractorTimer;
+
 struct FVizRenderWindowInteractor
 {
     FVizObject base;
@@ -31,6 +40,11 @@ struct FVizRenderWindowInteractor
     uint64_t dispatch_serial;
     uint32_t dispatch_depth;
     FVizRenderer* poked_renderer;
+    FVizRenderer* captured_renderer;
+    FVizInteractorTimer* timers;
+    FVizSize timer_count;
+    FVizSize timer_capacity;
+    FVizTimerId next_timer_id;
     double desired_update_rate;
     double still_update_rate;
     FVizBool initialized;
@@ -39,6 +53,7 @@ struct FVizRenderWindowInteractor
     FVizBool render_enabled;
     FVizBool observers_need_compaction;
     FVizBool observers_need_sort;
+    FVizBool has_focus;
 };
 
 FVizResult fviz_internal_render_window_interactor_create(

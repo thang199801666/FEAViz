@@ -35,6 +35,7 @@ struct FVizRenderWindow
     FVizBool left_mouse_down;
     FVizBool middle_mouse_down;
     FVizBool right_mouse_down;
+    FVizBool mouse_inside;
     int last_mouse_x;
     int last_mouse_y;
 };

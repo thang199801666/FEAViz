@@ -785,3 +785,92 @@ FVizResult fviz_render_window_select_rectangle(
     *out_selection = selection;
     return FVIZ_OK;
 }
+
+FVizResult fviz_render_window_select_at(
+    FVizRenderWindow* window,
+    int x,
+    int y,
+    FVizSelectionAssociation association,
+    FVizSelection** out_selection)
+{
+    FVizHardwarePick hardware_pick;
+    FVizRayHit cpu_hit;
+    FVizRenderer* renderer;
+    FVizActor* actor = NULL;
+    FVizSize rendered_id = 0u;
+    FVizSelection* selection = NULL;
+    FVizResult result;
+    if (window == NULL || out_selection == NULL || x < 0 || y < 0 ||
+        x >= window->width || y >= window->height ||
+        association < FVIZ_SELECTION_ACTOR || association > FVIZ_SELECTION_CELL)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    *out_selection = NULL;
+    renderer = fviz_render_window_find_renderer(window, x, y);
+    if (renderer == NULL) return FVIZ_ERROR_NOT_FOUND;
+    result = fviz_render_window_hardware_pick(window, x, y, &hardware_pick);
+    if (result == FVIZ_OK)
+    {
+        actor = hardware_pick.actor;
+        rendered_id = hardware_pick.rendered_primitive_id;
+    }
+    else if (result == FVIZ_ERROR_NOT_SUPPORTED)
+    {
+        FVizScene* scene;
+        FVizSize i;
+        if (fviz_render_window_pick(window, x, y, &cpu_hit) != FVIZ_OK)
+            return fviz_last_error_code();
+        rendered_id = cpu_hit.triangle_index;
+        scene = fviz_renderer_scene(renderer);
+        for (i = 0u; scene != NULL && i < fviz_scene_actor_count(scene); ++i)
+            if (fviz_actor_const_poly_data(fviz_scene_actor(scene, i)) == window->pick_poly_data)
+            {
+                actor = fviz_scene_actor(scene, i);
+                break;
+            }
+    }
+    else
+        return result;
+    if (actor == NULL) return FVIZ_ERROR_NOT_FOUND;
+    if (association == FVIZ_SELECTION_POINT)
+    {
+        const FVizPolyData* data = fviz_actor_const_poly_data(actor);
+        const uint32_t* triangle;
+        const FVizVec3* points;
+        FVizSize best_point = SIZE_MAX;
+        int best_distance = INT_MAX;
+        FVizSize corner;
+        if (data == NULL || rendered_id >= fviz_poly_data_triangle_count(data))
+            return FVIZ_ERROR_NOT_FOUND;
+        triangle = fviz_poly_data_triangle_indices(data) + rendered_id * 3u;
+        points = fviz_poly_data_points(data);
+        for (corner = 0u; corner < 3u; ++corner)
+        {
+            int point_x;
+            int point_y;
+            if (fviz_render_window_project_point(renderer, actor, points[triangle[corner]],
+                    window->width, window->height, &point_x, &point_y) != FVIZ_FALSE)
+            {
+                const int dx = point_x - x;
+                const int dy = point_y - y;
+                const int distance = dx * dx + dy * dy;
+                if (distance < best_distance)
+                {
+                    best_distance = distance;
+                    best_point = triangle[corner];
+                }
+            }
+        }
+        if (best_point == SIZE_MAX) return FVIZ_ERROR_NOT_FOUND;
+        rendered_id = best_point;
+    }
+    else if (association == FVIZ_SELECTION_ACTOR)
+        rendered_id = 0u;
+    if (fviz_selection_create(&selection) != FVIZ_OK ||
+        fviz_selection_add(selection, actor, association, rendered_id) != FVIZ_OK)
+    {
+        fviz_release(selection);
+        return fviz_last_error_code();
+    }
+    *out_selection = selection;
+    return FVIZ_OK;
+}

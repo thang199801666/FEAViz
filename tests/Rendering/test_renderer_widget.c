@@ -82,13 +82,30 @@ static FVizBool observe_reentrant(
     return FVIZ_FALSE;
 }
 
+static FVizBool observe_timer(
+    FVizRenderWindowInteractor* interactor,
+    const FVizInteractionEvent* event,
+    void* user_data)
+{
+    int* count = (int*)user_data;
+    (void)interactor;
+    if (event->timer_id != FVIZ_TIMER_ID_INVALID) ++(*count);
+    return FVIZ_TRUE;
+}
+
 int main(void)
 {
     FVizRendererWidget* widget = NULL;
     FVizInteractorStyle* style = NULL;
     FVizActor* actor = NULL;
     FVizPolyData* selection_data = NULL;
+    FVizPolyData* replacement_data = NULL;
+    FVizDataArray* original_ids = NULL;
+    FVizDataArray* replacement_ids = NULL;
+    FVizDataArray* result_values = NULL;
     FVizSelection* selection = NULL;
+    FVizSelectionHighlight* highlight = NULL;
+    FVizOrientationAxesWidget* axes_widget = NULL;
     FVizRenderer* second_renderer = NULL;
     FVizRenderer* overlay_renderer = NULL;
     FVizRenderWindow* window;
@@ -115,6 +132,10 @@ int main(void)
     ObserverProbe nested_added = {order, &order_count, 9, FVIZ_FALSE, FVIZ_OBSERVER_ID_INVALID, NULL, NULL};
     ReentrantProbe reentrant = {order, &order_count, FVIZ_FALSE, &nested_added, &nested_added_id};
     int callback_count = 0;
+    int timer_count = 0;
+    FVizObserverId timer_observer = FVIZ_OBSERVER_ID_INVALID;
+    FVizTimerId one_shot_timer = FVIZ_TIMER_ID_INVALID;
+    FVizTimerId repeating_timer = FVIZ_TIMER_ID_INVALID;
     if (fviz_render_window_supported() == FVIZ_FALSE) return 0;
     CHECK(fviz_renderer_widget_create(64, 64, "FEAViz widget test", &widget) == FVIZ_OK);
     CHECK(widget != NULL);
@@ -232,16 +253,67 @@ int main(void)
     CHECK(order_count == 2 && order[0] == 9 && order[1] == 8);
     fviz_render_window_interactor_remove_all_observers(interactor);
 
+    CHECK(fviz_render_window_interactor_add_observer(interactor,
+        FVIZ_INTERACTION_TIMER, 0, observe_timer, &timer_count, &timer_observer) == FVIZ_OK);
+    CHECK(fviz_render_window_interactor_create_timer(
+        interactor, 0.5, FVIZ_FALSE, 10.0, &one_shot_timer) == FVIZ_OK);
+    CHECK(fviz_render_window_interactor_create_timer(
+        interactor, 0.25, FVIZ_TRUE, 10.0, &repeating_timer) == FVIZ_OK);
+    CHECK(fviz_render_window_interactor_process_timers(interactor, 10.24) == 0u);
+    CHECK(fviz_render_window_interactor_process_timers(interactor, 10.25) == 1u);
+    CHECK(fviz_render_window_interactor_process_timers(interactor, 10.50) == 2u);
+    CHECK(timer_count == 3);
+    CHECK(fviz_render_window_interactor_process_timers(interactor, 11.0) == 1u);
+    CHECK(timer_count == 4);
+    CHECK(fviz_render_window_interactor_reset_timer(interactor, one_shot_timer, 11.0) == FVIZ_OK);
+    CHECK(fviz_render_window_interactor_process_timers(interactor, 11.5) == 2u);
+    CHECK(timer_count == 6);
+    CHECK(fviz_render_window_interactor_destroy_timer(interactor, one_shot_timer) == FVIZ_OK);
+    CHECK(fviz_render_window_interactor_destroy_timer(interactor, repeating_timer) == FVIZ_OK);
+    CHECK(fviz_render_window_interactor_destroy_timer(interactor, repeating_timer) == FVIZ_ERROR_NOT_FOUND);
+    fviz_render_window_interactor_remove_all_observers(interactor);
+
+    event.type = FVIZ_INTERACTION_MOUSE_BUTTON_DOWN;
+    event.button = FVIZ_MOUSE_BUTTON_LEFT;
+    event.x = 8;
+    event.y = 32;
+    CHECK(fviz_render_window_interactor_process_event(interactor, &event) == FVIZ_TRUE);
+    CHECK(fviz_render_window_interactor_has_focus(interactor) == FVIZ_TRUE);
+    CHECK(fviz_render_window_interactor_captured_renderer(interactor) ==
+        fviz_renderer_widget_renderer(widget));
+    event.type = FVIZ_INTERACTION_MOUSE_MOVE;
+    event.button = FVIZ_MOUSE_BUTTON_NONE;
+    event.x = 56;
+    CHECK(fviz_render_window_interactor_process_event(interactor, &event) == FVIZ_TRUE);
+    CHECK(fviz_render_window_interactor_poked_renderer(interactor) ==
+        fviz_renderer_widget_renderer(widget));
+    event.type = FVIZ_INTERACTION_MOUSE_BUTTON_UP;
+    event.button = FVIZ_MOUSE_BUTTON_LEFT;
+    CHECK(fviz_render_window_interactor_process_event(interactor, &event) == FVIZ_TRUE);
+    CHECK(fviz_render_window_interactor_captured_renderer(interactor) == NULL);
+    fviz_render_window_interactor_release_focus(interactor);
+    CHECK(fviz_render_window_interactor_has_focus(interactor) == FVIZ_FALSE);
+
     CHECK(fviz_actor_create(&actor) == FVIZ_OK);
     CHECK(fviz_poly_data_create(&selection_data) == FVIZ_OK);
     {
         uint32_t a;
         uint32_t b;
         uint32_t c;
+        const uint64_t original_id = 42u;
+        const float result_tuple[3] = {12.5f, 2.0f, -4.0f};
         CHECK(fviz_poly_data_add_point(selection_data, fviz_vec3(-1.0f, -1.0f, 0.0f), &a) == FVIZ_OK);
         CHECK(fviz_poly_data_add_point(selection_data, fviz_vec3(1.0f, -1.0f, 0.0f), &b) == FVIZ_OK);
         CHECK(fviz_poly_data_add_point(selection_data, fviz_vec3(0.0f, 1.0f, 0.0f), &c) == FVIZ_OK);
         CHECK(fviz_poly_data_add_triangle(selection_data, a, b, c) == FVIZ_OK);
+        CHECK(fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &original_ids) == FVIZ_OK);
+        CHECK(fviz_data_array_append_tuple(original_ids, &original_id) == FVIZ_OK);
+        CHECK(fviz_attribute_set_add(fviz_poly_data_cell_data(selection_data),
+            "FVizOriginalCellIds", original_ids) == FVIZ_OK);
+        CHECK(fviz_data_array_create(FVIZ_DATA_FLOAT32, 3u, &result_values) == FVIZ_OK);
+        CHECK(fviz_data_array_append_tuple(result_values, result_tuple) == FVIZ_OK);
+        CHECK(fviz_attribute_set_add(fviz_poly_data_cell_data(selection_data),
+            "Stress", result_values) == FVIZ_OK);
     }
     CHECK(fviz_actor_set_poly_data(actor, selection_data) == FVIZ_OK);
     CHECK(fviz_renderer_widget_add_actor(widget, actor) == FVIZ_OK);
@@ -252,13 +324,75 @@ int main(void)
     CHECK(fviz_selection_actor(selection, 0u) == actor);
     CHECK(fviz_selection_association(selection, 0u) == FVIZ_SELECTION_CELL);
     CHECK(fviz_selection_id(selection, 0u) == 0u);
+    {
+        FVizSelection* click_selection = NULL;
+        CHECK(fviz_renderer_widget_render(widget) == FVIZ_OK);
+        CHECK(fviz_render_window_select_at(
+            window, 16, 32, FVIZ_SELECTION_CELL, &click_selection) == FVIZ_OK);
+        CHECK(fviz_selection_count(click_selection) == 1u);
+        CHECK(fviz_selection_actor(click_selection, 0u) == actor);
+        fviz_release(click_selection);
+        click_selection = NULL;
+        CHECK(fviz_render_window_select_at(
+            window, 16, 32, FVIZ_SELECTION_POINT, &click_selection) == FVIZ_OK);
+        CHECK(fviz_selection_association(click_selection, 0u) == FVIZ_SELECTION_POINT);
+        fviz_release(click_selection);
+    }
+    CHECK(fviz_selection_probe(selection, 0u, "Stress") == FVIZ_OK);
+    {
+        FVizSelectionRecord record;
+        CHECK(fviz_selection_get_record(selection, 0u, &record) == FVIZ_OK);
+        CHECK(record.has_world_position == FVIZ_TRUE);
+        CHECK(record.scalar_component_count == 3u);
+        CHECK(record.scalar_tuple[0] == 12.5 && record.scalar_tuple[2] == -4.0);
+    }
+    CHECK(fviz_selection_highlight_create(
+        fviz_renderer_widget_renderer(widget), selection, &highlight) == FVIZ_OK);
+    CHECK(fviz_poly_data_triangle_count(
+        fviz_actor_const_poly_data(fviz_selection_highlight_actor(highlight))) == 1u);
+    fviz_selection_highlight_set_color(highlight, 1.0f, 0.25f, 0.0f);
+    fviz_selection_highlight_set_enabled(highlight, FVIZ_FALSE);
+    CHECK(fviz_selection_highlight_enabled(highlight) == FVIZ_FALSE);
+    fviz_selection_highlight_set_enabled(highlight, FVIZ_TRUE);
+    CHECK(fviz_orientation_axes_widget_create(
+        window, fviz_renderer_widget_renderer(widget), &axes_widget) == FVIZ_OK);
+    CHECK(fviz_render_window_renderer_count(window) == 3u);
+    CHECK(fviz_renderer_interactive(fviz_orientation_axes_widget_renderer(axes_widget)) == FVIZ_FALSE);
+    CHECK(fviz_orientation_axes_widget_update(axes_widget) == FVIZ_OK);
+    fviz_orientation_axes_widget_set_enabled(axes_widget, FVIZ_FALSE);
+    CHECK(fviz_orientation_axes_widget_enabled(axes_widget) == FVIZ_FALSE);
+    fviz_orientation_axes_widget_set_enabled(axes_widget, FVIZ_TRUE);
+    CHECK(fviz_renderer_widget_render(widget) == FVIZ_OK);
+    {
+        FVizSelectionRecord record;
+        const uint64_t ids[2] = {99u, 42u};
+        CHECK(fviz_selection_get_record(selection, 0u, &record) == FVIZ_OK);
+        CHECK(record.persistent == FVIZ_TRUE && record.original_cell_id == 42u);
+        CHECK(fviz_poly_data_create(&replacement_data) == FVIZ_OK);
+        CHECK(fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &replacement_ids) == FVIZ_OK);
+        CHECK(fviz_data_array_append_tuple(replacement_ids, &ids[0]) == FVIZ_OK);
+        CHECK(fviz_data_array_append_tuple(replacement_ids, &ids[1]) == FVIZ_OK);
+        CHECK(fviz_attribute_set_add(fviz_poly_data_cell_data(replacement_data),
+            "FVizOriginalCellIds", replacement_ids) == FVIZ_OK);
+        CHECK(fviz_actor_set_poly_data(actor, replacement_data) == FVIZ_OK);
+        CHECK(fviz_selection_refresh(selection) == FVIZ_OK);
+        CHECK(fviz_selection_state(selection, 0u) == FVIZ_SELECTION_VALID);
+        CHECK(fviz_selection_id(selection, 0u) == 1u);
+        CHECK(fviz_selection_highlight_update(highlight) == FVIZ_OK);
+    }
     CHECK(fviz_selection_add(selection, actor, FVIZ_SELECTION_POINT, 2u) == FVIZ_OK);
     CHECK(fviz_selection_count(selection) == 2u);
     fviz_selection_clear(selection);
     CHECK(fviz_selection_count(selection) == 0u);
     fviz_release(actor);
+    fviz_release(axes_widget);
+    fviz_release(highlight);
     fviz_release(selection);
     fviz_release(selection_data);
+    fviz_release(replacement_data);
+    fviz_release(original_ids);
+    fviz_release(replacement_ids);
+    fviz_release(result_values);
     fviz_release(overlay_renderer);
     fviz_release(second_renderer);
     fviz_release(style);

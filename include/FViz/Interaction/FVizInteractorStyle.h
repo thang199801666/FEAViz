@@ -10,11 +10,18 @@
 FVIZ_EXTERN_C_BEGIN
 
 typedef struct FVizInteractorStyle FVizInteractorStyle;
+typedef struct FVizActor FVizActor;
 #define FVIZ_TYPE_INTERACTOR_STYLE UINT64_C(0x71B932DE4A6C850F)
 #define FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_CAMERA UINT64_C(0x2F8C4D71A9E630B5)
 #define FVIZ_TYPE_INTERACTOR_STYLE_RUBBER_BAND UINT64_C(0xC5087D31E9A642BF)
+#define FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_ACTOR UINT64_C(0x8DC5F3A1274BE690)
 
 FVIZ_API FVizResult fviz_interactor_style_trackball_camera_create(FVizInteractorStyle** out_style);
+FVIZ_API FVizResult fviz_interactor_style_trackball_actor_create(FVizInteractorStyle** out_style);
+FVIZ_API FVizResult fviz_interactor_style_trackball_actor_set_actor(
+    FVizInteractorStyle* style,
+    FVizActor* actor);
+FVIZ_API FVizActor* fviz_interactor_style_trackball_actor_actor(FVizInteractorStyle* style);
 FVIZ_API FVizResult fviz_interactor_style_rubber_band_create(FVizInteractorStyle** out_style);
 FVIZ_API FVizBool fviz_interactor_style_rubber_band_active(const FVizInteractorStyle* style);
 FVIZ_API FVizBool fviz_interactor_style_rubber_band_completed(const FVizInteractorStyle* style);

@@ -620,6 +620,7 @@ static FVizInteractionEvent fviz_win32_interaction_event(
     event.button = button;
     event.x = x;
     event.y = y;
+    event.timestamp_seconds = (double)GetTickCount64() / 1000.0;
     event.shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0 ? FVIZ_TRUE : FVIZ_FALSE;
     event.control = (GetKeyState(VK_CONTROL) & 0x8000) != 0 ? FVIZ_TRUE : FVIZ_FALSE;
     event.alt = (GetKeyState(VK_MENU) & 0x8000) != 0 ? FVIZ_TRUE : FVIZ_FALSE;
@@ -640,6 +641,8 @@ FVizResult fviz_internal_render_window_process_events_platform(FVizRenderWindow*
         TranslateMessage(&message);
         DispatchMessageA(&message);
     }
+    (void)fviz_render_window_interactor_process_timers(
+        window->interactor, (double)GetTickCount64() / 1000.0);
     return FVIZ_OK;
 }
 
@@ -771,9 +774,26 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
         case WM_PAINT:
         {
             PAINTSTRUCT paint;
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_EXPOSE, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
             BeginPaint(hwnd, &paint);
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
             (void)fviz_internal_render_window_render_platform(window);
             EndPaint(hwnd, &paint);
+            return 0;
+        }
+        case WM_SETFOCUS:
+        {
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_FOCUS_IN, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
+            return 0;
+        }
+        case WM_KILLFOCUS:
+        {
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_FOCUS_OUT, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
             return 0;
         }
         case WM_LBUTTONDOWN:
@@ -865,6 +885,19 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
             const int dx = x - window->last_mouse_x;
             const int dy = y - window->last_mouse_y;
             FVizInteractionEvent event;
+            if (window->mouse_inside == FVIZ_FALSE)
+            {
+                TRACKMOUSEEVENT tracking;
+                FVizInteractionEvent enter_event = fviz_win32_interaction_event(
+                    FVIZ_INTERACTION_ENTER, FVIZ_MOUSE_BUTTON_NONE, x, y);
+                ZeroMemory(&tracking, sizeof(tracking));
+                tracking.cbSize = sizeof(tracking);
+                tracking.dwFlags = TME_LEAVE;
+                tracking.hwndTrack = hwnd;
+                (void)TrackMouseEvent(&tracking);
+                window->mouse_inside = FVIZ_TRUE;
+                (void)fviz_render_window_interactor_process_event(window->interactor, &enter_event);
+            }
             if (window->left_mouse_down == FVIZ_TRUE)
             {
                 if (abs(dx) > 2 || abs(dy) > 2) window->left_mouse_dragged = FVIZ_TRUE;
@@ -885,6 +918,15 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
             event.wheel_delta = (float)delta / (float)WHEEL_DELTA;
             if (fviz_render_window_interactor_process_event(window->interactor, &event) == FVIZ_TRUE)
                 InvalidateRect(hwnd, NULL, FALSE);
+            return 0;
+        }
+        case WM_MOUSELEAVE:
+        {
+            FVizInteractionEvent event = fviz_win32_interaction_event(
+                FVIZ_INTERACTION_LEAVE, FVIZ_MOUSE_BUTTON_NONE,
+                window->last_mouse_x, window->last_mouse_y);
+            window->mouse_inside = FVIZ_FALSE;
+            (void)fviz_render_window_interactor_process_event(window->interactor, &event);
             return 0;
         }
         case WM_KEYDOWN:

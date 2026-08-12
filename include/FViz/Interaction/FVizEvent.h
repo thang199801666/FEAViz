@@ -14,7 +14,13 @@ typedef enum FVizInteractionEventType
     FVIZ_INTERACTION_MOUSE_WHEEL = 4,
     FVIZ_INTERACTION_KEY_DOWN = 5,
     FVIZ_INTERACTION_KEY_UP = 6,
-    FVIZ_INTERACTION_RESIZE = 7
+    FVIZ_INTERACTION_RESIZE = 7,
+    FVIZ_INTERACTION_ENTER = 8,
+    FVIZ_INTERACTION_LEAVE = 9,
+    FVIZ_INTERACTION_EXPOSE = 10,
+    FVIZ_INTERACTION_FOCUS_IN = 11,
+    FVIZ_INTERACTION_FOCUS_OUT = 12,
+    FVIZ_INTERACTION_TIMER = 13
 } FVizInteractionEventType;
 
 typedef enum FVizMouseButton
@@ -41,6 +47,8 @@ typedef struct FVizInteractionEvent
     int height;
     int key;
     float wheel_delta;
+    FVizId timer_id;
+    double timestamp_seconds;
     FVizBool shift;
     FVizBool control;
     FVizBool alt;

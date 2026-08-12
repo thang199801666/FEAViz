@@ -1,3 +1,4 @@
+#include <math.h>
 #include <string.h>
 
 #include <FViz/Core/FVizError.h>
@@ -12,10 +13,14 @@ static void fviz_render_window_interactor_destroy(FVizObject* object)
 {
     FVizRenderWindowInteractor* interactor = (FVizRenderWindowInteractor*)object;
     fviz_free(interactor->observers);
+    fviz_free(interactor->timers);
     fviz_release(interactor->style);
     interactor->observers = NULL;
     interactor->observer_count = 0u;
     interactor->observer_capacity = 0u;
+    interactor->timers = NULL;
+    interactor->timer_count = 0u;
+    interactor->timer_capacity = 0u;
     interactor->style = NULL;
     interactor->window = NULL;
 }
@@ -44,6 +49,7 @@ FVizResult fviz_internal_render_window_interactor_create(
     if (interactor == NULL) return fviz_last_error_code();
     interactor->window = window;
     interactor->next_observer_id = 1u;
+    interactor->next_timer_id = 1u;
     interactor->next_observer_sequence = 1u;
     interactor->desired_update_rate = 30.0;
     interactor->still_update_rate = 0.0001;
@@ -148,6 +154,162 @@ FVizRenderer* fviz_render_window_interactor_poked_renderer(
     FVizRenderWindowInteractor* interactor)
 {
     return interactor != NULL ? interactor->poked_renderer : NULL;
+}
+
+FVizRenderer* fviz_render_window_interactor_captured_renderer(
+    FVizRenderWindowInteractor* interactor)
+{
+    return interactor != NULL ? interactor->captured_renderer : NULL;
+}
+
+void fviz_render_window_interactor_grab_focus(FVizRenderWindowInteractor* interactor)
+{
+    if (interactor != NULL) interactor->has_focus = FVIZ_TRUE;
+}
+
+void fviz_render_window_interactor_release_focus(FVizRenderWindowInteractor* interactor)
+{
+    if (interactor == NULL) return;
+    interactor->has_focus = FVIZ_FALSE;
+    interactor->captured_renderer = NULL;
+}
+
+FVizBool fviz_render_window_interactor_has_focus(
+    const FVizRenderWindowInteractor* interactor)
+{
+    return interactor != NULL ? interactor->has_focus : FVIZ_FALSE;
+}
+
+static FVizResult fviz_interactor_timers_reserve(
+    FVizRenderWindowInteractor* interactor,
+    FVizSize required)
+{
+    FVizInteractorTimer* timers;
+    FVizSize capacity;
+    FVizSize bytes;
+    if (required <= interactor->timer_capacity) return FVIZ_OK;
+    capacity = interactor->timer_capacity == 0u ? 4u : interactor->timer_capacity;
+    while (capacity < required)
+    {
+        if (capacity > SIZE_MAX / 2u) return FVIZ_ERROR_OVERFLOW;
+        capacity *= 2u;
+    }
+    if (fviz_size_multiply(capacity, sizeof(*timers), &bytes) != FVIZ_OK)
+        return fviz_last_error_code();
+    timers = (FVizInteractorTimer*)fviz_realloc(interactor->timers, bytes);
+    if (timers == NULL) return fviz_last_error_code();
+    interactor->timers = timers;
+    interactor->timer_capacity = capacity;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_render_window_interactor_create_timer(
+    FVizRenderWindowInteractor* interactor,
+    double interval_seconds,
+    FVizBool repeating,
+    double now_seconds,
+    FVizTimerId* out_timer_id)
+{
+    FVizInteractorTimer* timer;
+    if (out_timer_id != NULL) *out_timer_id = FVIZ_TIMER_ID_INVALID;
+    if (interactor == NULL || out_timer_id == NULL || interval_seconds <= 0.0 ||
+        isfinite(interval_seconds) == 0 || isfinite(now_seconds) == 0)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (interactor->next_timer_id == FVIZ_TIMER_ID_INVALID) return FVIZ_ERROR_OVERFLOW;
+    if (fviz_interactor_timers_reserve(interactor, interactor->timer_count + 1u) != FVIZ_OK)
+        return fviz_last_error_code();
+    timer = &interactor->timers[interactor->timer_count++];
+    timer->id = interactor->next_timer_id++;
+    timer->interval_seconds = interval_seconds;
+    timer->next_fire_seconds = now_seconds + interval_seconds;
+    timer->repeating = repeating != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    timer->active = FVIZ_TRUE;
+    *out_timer_id = timer->id;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_render_window_interactor_reset_timer(
+    FVizRenderWindowInteractor* interactor,
+    FVizTimerId timer_id,
+    double now_seconds)
+{
+    FVizSize i;
+    if (interactor == NULL || timer_id == FVIZ_TIMER_ID_INVALID || isfinite(now_seconds) == 0)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    for (i = 0u; i < interactor->timer_count; ++i)
+        if (interactor->timers[i].id == timer_id)
+        {
+            interactor->timers[i].next_fire_seconds =
+                now_seconds + interactor->timers[i].interval_seconds;
+            interactor->timers[i].active = FVIZ_TRUE;
+            return FVIZ_OK;
+        }
+    return FVIZ_ERROR_NOT_FOUND;
+}
+
+FVizResult fviz_render_window_interactor_destroy_timer(
+    FVizRenderWindowInteractor* interactor,
+    FVizTimerId timer_id)
+{
+    FVizSize i;
+    if (interactor == NULL || timer_id == FVIZ_TIMER_ID_INVALID)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    for (i = 0u; i < interactor->timer_count; ++i)
+        if (interactor->timers[i].id == timer_id)
+        {
+            if (i + 1u < interactor->timer_count)
+                (void)memmove(&interactor->timers[i], &interactor->timers[i + 1u],
+                    (interactor->timer_count - i - 1u) * sizeof(*interactor->timers));
+            --interactor->timer_count;
+            return FVIZ_OK;
+        }
+    return FVIZ_ERROR_NOT_FOUND;
+}
+
+FVizSize fviz_render_window_interactor_process_timers(
+    FVizRenderWindowInteractor* interactor,
+    double now_seconds)
+{
+    FVizTimerId* due_ids;
+    FVizSize due_count = 0u;
+    FVizSize i;
+    FVizSize fired = 0u;
+    if (interactor == NULL || isfinite(now_seconds) == 0) return 0u;
+    if (interactor->timer_count == 0u) return 0u;
+    due_ids = (FVizTimerId*)fviz_alloc(interactor->timer_count * sizeof(*due_ids));
+    if (due_ids == NULL) return 0u;
+    for (i = 0u; i < interactor->timer_count; ++i)
+        if (interactor->timers[i].active != FVIZ_FALSE &&
+            now_seconds >= interactor->timers[i].next_fire_seconds)
+            due_ids[due_count++] = interactor->timers[i].id;
+    for (i = 0u; i < due_count; ++i)
+    {
+        FVizSize timer_index;
+        for (timer_index = 0u; timer_index < interactor->timer_count; ++timer_index)
+            if (interactor->timers[timer_index].id == due_ids[i]) break;
+        if (timer_index < interactor->timer_count)
+        {
+            FVizInteractorTimer* timer = &interactor->timers[timer_index];
+            FVizInteractionEvent event;
+            const FVizTimerId id = timer->id;
+            (void)memset(&event, 0, sizeof(event));
+            event.type = FVIZ_INTERACTION_TIMER;
+            event.timer_id = id;
+            event.timestamp_seconds = now_seconds;
+            if (timer->repeating != FVIZ_FALSE)
+            {
+                const double elapsed = now_seconds - timer->next_fire_seconds;
+                timer->next_fire_seconds +=
+                    (floor(elapsed / timer->interval_seconds) + 1.0) * timer->interval_seconds;
+            }
+            else
+                timer->active = FVIZ_FALSE;
+            (void)fviz_render_window_interactor_process_event(interactor, &event);
+            ++fired;
+        }
+    }
+    fviz_free(due_ids);
+    return fired;
 }
 
 FVizResult fviz_render_window_interactor_set_style(
@@ -264,7 +426,7 @@ FVizResult fviz_render_window_interactor_add_observer(
     FVizInteractorObserver* observer;
     if (out_observer_id != NULL) *out_observer_id = FVIZ_OBSERVER_ID_INVALID;
     if (interactor == NULL || callback == NULL || out_observer_id == NULL ||
-        event_type < FVIZ_INTERACTION_EVENT_ANY || event_type > FVIZ_INTERACTION_RESIZE)
+        event_type < FVIZ_INTERACTION_EVENT_ANY || event_type > FVIZ_INTERACTION_TIMER)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "invalid interactor observer arguments");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -376,9 +538,12 @@ FVizBool fviz_render_window_interactor_process_event(
         fviz_render_window_request_close(interactor->window);
         handled = FVIZ_TRUE;
     }
+    if (event->type == FVIZ_INTERACTION_FOCUS_IN) interactor->has_focus = FVIZ_TRUE;
+    else if (event->type == FVIZ_INTERACTION_FOCUS_OUT) fviz_render_window_interactor_release_focus(interactor);
     if (handled == FVIZ_FALSE)
     {
-        renderer = event->type == FVIZ_INTERACTION_MOUSE_BUTTON_DOWN ||
+        renderer = interactor->captured_renderer;
+        if (renderer == NULL) renderer = event->type == FVIZ_INTERACTION_MOUSE_BUTTON_DOWN ||
             event->type == FVIZ_INTERACTION_MOUSE_BUTTON_UP ||
             event->type == FVIZ_INTERACTION_MOUSE_MOVE ||
             event->type == FVIZ_INTERACTION_MOUSE_WHEEL
@@ -387,7 +552,19 @@ FVizBool fviz_render_window_interactor_process_event(
         if (renderer == NULL) renderer = interactor->poked_renderer;
         if (renderer == NULL) renderer = fviz_render_window_renderer(interactor->window);
         interactor->poked_renderer = renderer;
-        handled = fviz_interactor_style_process_event(interactor->style, renderer, event);
+        if (event->type == FVIZ_INTERACTION_MOUSE_BUTTON_DOWN && renderer != NULL)
+        {
+            interactor->captured_renderer = renderer;
+            interactor->has_focus = FVIZ_TRUE;
+        }
+        if (interactor->style != NULL && fviz_retain(interactor->style) != NULL)
+        {
+            FVizInteractorStyle* dispatch_style = interactor->style;
+            handled = fviz_interactor_style_process_event(dispatch_style, renderer, event);
+            fviz_release(dispatch_style);
+        }
+        if (event->type == FVIZ_INTERACTION_MOUSE_BUTTON_UP)
+            interactor->captured_renderer = NULL;
     }
     --interactor->dispatch_depth;
     if (top_level == FVIZ_TRUE) fviz_interactor_observers_maintain(interactor);

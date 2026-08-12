@@ -21,6 +21,7 @@ struct FVizInteractorStyle
     int rubber_end_y;
     FVizBool rubber_active;
     FVizBool rubber_completed;
+    FVizActor* actor;
 };
 
 #endif /* FVIZ_INTERNAL_INTERACTION_INTERACTOR_STYLE_PRIVATE_H */

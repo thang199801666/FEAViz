@@ -270,25 +270,26 @@ OBJ/STL file
 - [ ] Parallel surface, cell-to-point, contour/slice, and BVH phases
 - [ ] Serial/parallel equivalence tests and large HEX8 benchmarks
 
-## Phase 27 - Renderer/window/widget architecture - FOUNDATION in 0.9.0, planned completion in 0.12.0
+## Phase 27 - Renderer/window/widget architecture - COMPLETED in 0.13.0
 
 - [x] Multiple renderers, normalized viewports, and layers
-- [ ] Opaque, translucent, line, selection, and overlay passes
-- [ ] World/view/display coordinate conversion
-- [ ] Offscreen and host-controlled render-window lifecycle
-- [ ] Offscreen and embedded/host-native `FVizRendererWidget` operation
+- [x] Opaque, translucent, line, selection, and overlay passes
+- [x] World/view/display coordinate conversion
+- [x] Offscreen and host-controlled render-window lifecycle
+- [x] Offscreen and embedded/host-native `FVizRendererWidget` operation
 - [x] Non-blocking Win32/widget event processing
 
-## Phase 28 - Interaction, selection, and widgets - FOUNDATION in 0.9.0, planned completion in 0.13.0
+## Phase 28 - Interaction, selection, and widgets - COMPLETED in 0.14.0
 
 - [x] Interactor initialize/enable/disable/done lifecycle and update-rate control
-- [ ] One-shot and repeating interactor timers
-- [ ] Multi-viewport event routing
+- [x] One-shot and repeating interactor timers
+- [x] Multi-viewport event routing and drag capture
 - [x] Multi-viewport mouse routing and poked-renderer tracking
 - [x] Actor/point/cell selection result and CPU rectangle-selection fallback
-- [ ] Trackball-actor style
+- [x] Trackball-actor style
 - [x] Rubber-band rectangle style and synthetic-event tests
-- [ ] Selection highlight and orientation-axes widget
+- [x] Persistent original-ID selection records and scalar/vector probes
+- [x] Selection highlight and orientation-axes widget
 
 ## Phase 29 - Data/rendering/IO completeness - FOUNDATION in 0.9.0, planned completion in 0.14.0
 

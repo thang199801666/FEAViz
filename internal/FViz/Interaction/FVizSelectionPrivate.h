@@ -7,9 +7,7 @@
 
 typedef struct FVizSelectionItem
 {
-    FVizActor* actor;
-    FVizSelectionAssociation association;
-    FVizSize id;
+    FVizSelectionRecord record;
 } FVizSelectionItem;
 
 struct FVizSelection

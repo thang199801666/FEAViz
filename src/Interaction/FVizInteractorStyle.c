@@ -3,13 +3,16 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Interaction/FVizInteractorStyle.h>
+#include <FViz/Rendering/FVizActor.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Interaction/FVizInteractorStylePrivate.h>
 
 static void fviz_interactor_style_destroy(FVizObject* object)
 {
-    FVIZ_UNUSED(object);
+    FVizInteractorStyle* style = (FVizInteractorStyle*)object;
+    fviz_release(style->actor);
+    style->actor = NULL;
 }
 
 static const FVizObjectClass g_fviz_interactor_style_class = {
@@ -36,7 +39,17 @@ static const FVizObjectClass g_fviz_interactor_style_rubber_band_class = {
     NULL
 };
 
-FVizResult fviz_interactor_style_trackball_camera_create(FVizInteractorStyle** out_style)
+static const FVizObjectClass g_fviz_interactor_style_trackball_actor_class = {
+    FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_ACTOR,
+    "FVizInteractorStyleTrackballActor",
+    &g_fviz_interactor_style_class,
+    fviz_interactor_style_destroy,
+    NULL
+};
+
+static FVizResult fviz_interactor_style_create_with_class(
+    const FVizObjectClass* object_class,
+    FVizInteractorStyle** out_style)
 {
     FVizInteractorStyle* style;
     if (out_style == NULL)
@@ -46,13 +59,47 @@ FVizResult fviz_interactor_style_trackball_camera_create(FVizInteractorStyle** o
     }
     *out_style = NULL;
     style = (FVizInteractorStyle*)fviz_internal_object_allocate(
-        sizeof(FVizInteractorStyle), &g_fviz_interactor_style_trackball_camera_class, NULL);
+        sizeof(FVizInteractorStyle), object_class, NULL);
     if (style == NULL) return fviz_last_error_code();
     style->orbit_sensitivity = 0.008f;
     style->pan_sensitivity = 0.0015f;
     style->dolly_factor = 0.85f;
     *out_style = style;
     return FVIZ_OK;
+}
+
+FVizResult fviz_interactor_style_trackball_camera_create(FVizInteractorStyle** out_style)
+{
+    return fviz_interactor_style_create_with_class(
+        &g_fviz_interactor_style_trackball_camera_class, out_style);
+}
+
+FVizResult fviz_interactor_style_trackball_actor_create(FVizInteractorStyle** out_style)
+{
+    return fviz_interactor_style_create_with_class(
+        &g_fviz_interactor_style_trackball_actor_class, out_style);
+}
+
+FVizResult fviz_interactor_style_trackball_actor_set_actor(
+    FVizInteractorStyle* style,
+    FVizActor* actor)
+{
+    if (style == NULL ||
+        fviz_object_is_type((const FVizObject*)style,
+            FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_ACTOR) == FVIZ_FALSE)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (actor != NULL && fviz_retain(actor) == NULL) return fviz_last_error_code();
+    fviz_release(style->actor);
+    style->actor = actor;
+    fviz_object_modified((FVizObject*)style);
+    return FVIZ_OK;
+}
+
+FVizActor* fviz_interactor_style_trackball_actor_actor(FVizInteractorStyle* style)
+{
+    return style != NULL && fviz_object_is_type((const FVizObject*)style,
+        FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_ACTOR) != FVIZ_FALSE
+        ? style->actor : NULL;
 }
 
 FVizResult fviz_interactor_style_rubber_band_create(FVizInteractorStyle** out_style)
@@ -169,6 +216,75 @@ FVizBool fviz_interactor_style_process_event(
 {
     FVizCamera* camera;
     if (style == NULL || renderer == NULL || event == NULL) return FVIZ_FALSE;
+    if (fviz_object_is_type(
+            (const FVizObject*)style, FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_ACTOR) == FVIZ_TRUE)
+    {
+        FVizActor* actor = style->actor;
+        if (actor == NULL) return FVIZ_FALSE;
+        switch (event->type)
+        {
+            case FVIZ_INTERACTION_MOUSE_BUTTON_DOWN:
+                if (event->button == FVIZ_MOUSE_BUTTON_LEFT) style->left_down = FVIZ_TRUE;
+                else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE) style->middle_down = FVIZ_TRUE;
+                else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT) style->right_down = FVIZ_TRUE;
+                else return FVIZ_FALSE;
+                style->last_x = event->x;
+                style->last_y = event->y;
+                return FVIZ_TRUE;
+            case FVIZ_INTERACTION_MOUSE_BUTTON_UP:
+                if (event->button == FVIZ_MOUSE_BUTTON_LEFT) style->left_down = FVIZ_FALSE;
+                else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE) style->middle_down = FVIZ_FALSE;
+                else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT) style->right_down = FVIZ_FALSE;
+                else return FVIZ_FALSE;
+                style->last_x = event->x;
+                style->last_y = event->y;
+                return FVIZ_TRUE;
+            case FVIZ_INTERACTION_MOUSE_MOVE:
+            {
+                const int dx = event->x - style->last_x;
+                const int dy = event->y - style->last_y;
+                FVizBool handled = FVIZ_FALSE;
+                if (style->left_down != FVIZ_FALSE)
+                {
+                    const FVizQuat yaw = fviz_quat_from_axis_angle(
+                        fviz_vec3(0.0f, 1.0f, 0.0f), -(float)dx * style->orbit_sensitivity);
+                    const FVizQuat pitch = fviz_quat_from_axis_angle(
+                        fviz_vec3(1.0f, 0.0f, 0.0f), -(float)dy * style->orbit_sensitivity);
+                    fviz_actor_set_orientation(actor, fviz_quat_normalize(fviz_quat_multiply(
+                        yaw, fviz_quat_multiply(pitch, fviz_actor_orientation(actor)))));
+                    handled = FVIZ_TRUE;
+                }
+                else if (style->middle_down != FVIZ_FALSE)
+                {
+                    const FVizVec3 position = fviz_actor_position(actor);
+                    fviz_actor_set_position(actor, fviz_vec3(
+                        position.x + (float)dx * style->pan_sensitivity,
+                        position.y - (float)dy * style->pan_sensitivity,
+                        position.z));
+                    handled = FVIZ_TRUE;
+                }
+                else if (style->right_down != FVIZ_FALSE)
+                {
+                    const float factor = powf(style->dolly_factor, (float)dy * 0.1f);
+                    fviz_actor_set_scale(actor, fviz_vec3_scale(fviz_actor_scale(actor), factor));
+                    handled = FVIZ_TRUE;
+                }
+                style->last_x = event->x;
+                style->last_y = event->y;
+                return handled;
+            }
+            case FVIZ_INTERACTION_MOUSE_WHEEL:
+            {
+                const float factor = event->wheel_delta > 0.0f
+                    ? 1.0f / style->dolly_factor : style->dolly_factor;
+                if (event->wheel_delta == 0.0f) return FVIZ_FALSE;
+                fviz_actor_set_scale(actor, fviz_vec3_scale(fviz_actor_scale(actor), factor));
+                return FVIZ_TRUE;
+            }
+            default:
+                return FVIZ_FALSE;
+        }
+    }
     if (fviz_object_is_type(
             (const FVizObject*)style, FVIZ_TYPE_INTERACTOR_STYLE_RUBBER_BAND) == FVIZ_TRUE)
     {

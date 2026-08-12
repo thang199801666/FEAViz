@@ -12,8 +12,10 @@ FVIZ_EXTERN_C_BEGIN
 typedef struct FVizRenderWindow FVizRenderWindow;
 typedef struct FVizRenderWindowInteractor FVizRenderWindowInteractor;
 typedef FVizId FVizObserverId;
+typedef FVizId FVizTimerId;
 #define FVIZ_TYPE_RENDER_WINDOW_INTERACTOR UINT64_C(0xC43E17A962B850DF)
 #define FVIZ_OBSERVER_ID_INVALID UINT64_C(0)
+#define FVIZ_TIMER_ID_INVALID UINT64_C(0)
 
 typedef FVizBool (*FVizInteractorEventCallbackFn)(
     FVizRenderWindowInteractor* interactor,
@@ -42,6 +44,28 @@ FVIZ_API void fviz_render_window_interactor_get_update_rates(
     double* still);
 FVIZ_API FVizRenderer* fviz_render_window_interactor_poked_renderer(
     FVizRenderWindowInteractor* interactor);
+FVIZ_API FVizRenderer* fviz_render_window_interactor_captured_renderer(
+    FVizRenderWindowInteractor* interactor);
+FVIZ_API void fviz_render_window_interactor_grab_focus(FVizRenderWindowInteractor* interactor);
+FVIZ_API void fviz_render_window_interactor_release_focus(FVizRenderWindowInteractor* interactor);
+FVIZ_API FVizBool fviz_render_window_interactor_has_focus(
+    const FVizRenderWindowInteractor* interactor);
+FVIZ_API FVizResult fviz_render_window_interactor_create_timer(
+    FVizRenderWindowInteractor* interactor,
+    double interval_seconds,
+    FVizBool repeating,
+    double now_seconds,
+    FVizTimerId* out_timer_id);
+FVIZ_API FVizResult fviz_render_window_interactor_reset_timer(
+    FVizRenderWindowInteractor* interactor,
+    FVizTimerId timer_id,
+    double now_seconds);
+FVIZ_API FVizResult fviz_render_window_interactor_destroy_timer(
+    FVizRenderWindowInteractor* interactor,
+    FVizTimerId timer_id);
+FVIZ_API FVizSize fviz_render_window_interactor_process_timers(
+    FVizRenderWindowInteractor* interactor,
+    double now_seconds);
 FVIZ_API FVizResult fviz_render_window_interactor_set_style(
     FVizRenderWindowInteractor* interactor,
     FVizInteractorStyle* style);

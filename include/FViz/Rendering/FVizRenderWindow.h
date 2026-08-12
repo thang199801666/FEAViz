@@ -116,6 +116,12 @@ FVIZ_API FVizResult fviz_render_window_select_rectangle(
     int end_x,
     int end_y,
     FVizSelection** out_selection);
+FVIZ_API FVizResult fviz_render_window_select_at(
+    FVizRenderWindow* window,
+    int x,
+    int y,
+    FVizSelectionAssociation association,
+    FVizSelection** out_selection);
 FVIZ_API void fviz_render_window_set_pick_callback(
     FVizRenderWindow* window,
     FVizPickCallbackFn callback,
