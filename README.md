@@ -6,9 +6,14 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.9.0** adds the first general VTK-style algorithm/executive architecture while preserving FEAViz's opaque C17 API. Filters expose typed output-port proxies, mappers consume any compatible algorithm output, a demand-driven executive records execution/cache state and supports progress/abort, and the existing filter APIs remain compatibility wrappers.
+Version **0.9.1** adds automated integrity gates around the first general VTK-style algorithm/executive architecture while preserving FEAViz's opaque C17 API. Filters expose typed output-port proxies, mappers consume any compatible algorithm output, a demand-driven executive records execution/cache state and supports progress/abort, and the existing filter APIs remain compatibility wrappers.
 
-## Current 0.9.0 milestone
+The active implementation roadmap is
+[`docs/architecture/VTK_CONVERGENCE_PLAN.md`](docs/architecture/VTK_CONVERGENCE_PLAN.md),
+and the default ownership, error, MTime, and thread-safety rules are documented
+in [`docs/api/PUBLIC_API_CONTRACTS.md`](docs/api/PUBLIC_API_CONTRACTS.md).
+
+## Current 0.9.1 milestone
 
 Implemented:
 

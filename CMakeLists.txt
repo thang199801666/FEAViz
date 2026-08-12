@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(FEAViz
-    VERSION 0.9.0
+    VERSION 0.9.1
     DESCRIPTION "A C17 visualization and FEA data-processing library"
     LANGUAGES C
 )
@@ -17,6 +17,7 @@ option(FVIZ_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(FVIZ_ENABLE_ASAN "Enable AddressSanitizer where supported" OFF)
 option(FVIZ_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer where supported" OFF)
 option(FVIZ_ENABLE_LTO "Enable interprocedural optimization for release-like builds" OFF)
+option(FVIZ_BUILD_FUZZERS "Build Clang libFuzzer targets" OFF)
 option(FVIZ_REQUIRE_MSVC_V145 "Require the Visual Studio 2026/v145 MSVC compiler for Windows MSVC builds" ON)
 
 # Keep runtime artifacts together. This is especially important on Windows:
@@ -195,6 +196,10 @@ endif()
 
 if(FVIZ_BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+if(FVIZ_BUILD_FUZZERS)
+    add_subdirectory(fuzz)
 endif()
 
 fviz_configure_install(FEAViz)

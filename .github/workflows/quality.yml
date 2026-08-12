@@ -1,0 +1,109 @@
+name: FEAViz quality
+
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows MSVC ${{ matrix.linkage }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [shared, static]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Configure
+        shell: cmd
+        run: >-
+          cmake -S . -B build -G "NMake Makefiles"
+          -DCMAKE_BUILD_TYPE=Debug
+          -DFVIZ_BUILD_SHARED=${{ matrix.linkage == 'shared' && 'ON' || 'OFF' }}
+          -DFVIZ_BUILD_TESTS=ON
+          -DFVIZ_BUILD_EXAMPLES=ON
+          -DFVIZ_WARNINGS_AS_ERRORS=ON
+          -DFVIZ_REQUIRE_MSVC_V145=OFF
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Install
+        run: cmake --install build --prefix install
+      - name: Configure consumer
+        shell: cmd
+        run: >-
+          cmake -S tests/install_consumer -B consumer -G "NMake Makefiles"
+          -DCMAKE_BUILD_TYPE=Debug
+          -DFEAViz_DIR="${{ github.workspace }}/install/lib/cmake/FEAViz"
+      - name: Build consumer
+        run: cmake --build consumer
+      - name: Run consumer
+        shell: pwsh
+        run: |
+          $env:PATH = "${{ github.workspace }}\install\bin;$env:PATH"
+          & "${{ github.workspace }}\consumer\FEAVizInstallConsumer.exe"
+
+  linux:
+    name: Linux Clang ${{ matrix.linkage }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [shared, static]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        env:
+          CC: clang
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DFVIZ_BUILD_SHARED=${{ matrix.linkage == 'shared' && 'ON' || 'OFF' }}
+          -DFVIZ_BUILD_TESTS=ON
+          -DFVIZ_BUILD_EXAMPLES=OFF
+          -DFVIZ_WARNINGS_AS_ERRORS=ON
+      - name: Build and test
+        run: cmake --build build && ctest --test-dir build --output-on-failure
+      - name: Install and consume
+        run: |
+          cmake --install build --prefix install
+          cmake -S tests/install_consumer -B consumer -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DFEAViz_DIR="$PWD/install/lib/cmake/FEAViz"
+          cmake --build consumer
+          LD_LIBRARY_PATH="$PWD/install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+            ./consumer/FEAVizInstallConsumer
+
+  sanitizers-and-fuzz:
+    name: Linux Clang ASan UBSan and fuzz smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        env:
+          CC: clang
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DFVIZ_BUILD_SHARED=OFF
+          -DFVIZ_BUILD_TESTS=ON
+          -DFVIZ_BUILD_EXAMPLES=OFF
+          -DFVIZ_WARNINGS_AS_ERRORS=ON
+          -DFVIZ_ENABLE_ASAN=ON
+          -DFVIZ_ENABLE_UBSAN=ON
+          -DFVIZ_BUILD_FUZZERS=ON
+      - name: Build
+        run: cmake --build build
+      - name: Sanitizer tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Reader fuzz smoke
+        run: ./build/fuzz/FVizFuzzReaders -runs=2000 -max_len=1048576

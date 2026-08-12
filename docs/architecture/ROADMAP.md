@@ -46,7 +46,7 @@
 - [x] Mat3
 - [x] Quaternion
 - [x] Ray / Plane / AABB
-- [ ] General transform object
+- [x] General transform object (0.9.0)
 
 ## Phase 4 — Data foundation — COMPLETE
 
@@ -78,7 +78,7 @@
 - [x] Extension-dispatching mesh reader
 - [ ] PLY
 - [x] Legacy VTK (ASCII in 0.4.5, binary in 0.4.6)
-- [ ] VTU
+- [x] VTU unstructured-grid reader (ASCII 0.4.2, binary/appended 0.4.4)
 
 ## Phase 7 — Scene and camera — FIRST USABLE IMPLEMENTATION COMPLETE
 
@@ -165,7 +165,7 @@ OBJ/STL file
 
 - [x] `fviz_vtu_read` parses VTK XML UnstructuredGrid (ascii) into `FVizUnstructuredGrid` (0.4.2)
 - [x] PointData/CellData result arrays preserved with original names (0.4.2)
-- [ ] Base64/binary VTU format support
+- [x] Base64/binary VTU format support (0.4.4)
 - [x] Legacy VTK `.vtk` reader
 
 ## Phase 15 — Contour lines — MILESTONE COMPLETE in 0.4.3
@@ -246,6 +246,14 @@ OBJ/STL file
 - [x] Compatibility wrappers for current filter and mapper connections
 - [x] Port-based connected HEX8 FEA regression test
 
+## Integrity gate - COMPLETE in 0.9.1
+
+- [x] Reconciled roadmap and VTK convergence plan
+- [x] Public ownership, failure, MTime, and thread-safety contract
+- [x] Architecture decisions for requests, IDs, render passes, and cancellation
+- [x] Windows/Linux shared/static CI and clean install consumers
+- [x] Clang ASan/UBSan job and bounded reader fuzz smoke target
+
 ## Phase 25 - Demand-driven executive - FOUNDATION in 0.9.0, planned completion in 0.10.0
 
 - [x] Central graph traversal and execution state
@@ -305,11 +313,10 @@ release gates, and risk register are in
 0.9-to-1.0 proposal remains in
 [`DEVELOPMENT_PLAN_0_9_TO_1_0.md`](DEVELOPMENT_PLAN_0_9_TO_1_0.md).
 
-## Immediate work after 0.8.0
+## Immediate work after 0.9.1
 
-1. Implement `FVizDataObject`, `FVizAlgorithm`, and `FVizAlgorithmOutput`.
-2. Generalize connections to indexed, type-checked input and output ports.
-3. Preserve current `FVizFilter`/mapper APIs as compatibility wrappers.
-4. Move graph traversal into `FVizExecutive` after the port contract stabilizes.
-5. Build the persistent scheduler before parallelizing more topology algorithms.
-6. Build renderer viewports/layers before rubber-band selection and orientation widgets.
+1. Add executable request descriptors and output-specific request keys.
+2. Expose public custom source/filter/sink callbacks.
+3. Move all graph traversal into an executive transaction.
+4. Prove shared-upstream fan-out, multi-input, and multi-output behavior.
+5. Add progress/cancellation propagation and graph diagnostics.

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.1 - Integrity and automated quality gates
+
+- Added Windows and Linux CI jobs covering warnings-as-errors builds, CTest,
+  shared/static installation, and clean `find_package(FEAViz)` consumers.
+- Added a Linux Clang ASan/UBSan job and a bounded libFuzzer smoke target for
+  the VTU and legacy VTK readers.
+- Defined public ownership, failure-atomicity, MTime, and thread-safety rules,
+  plus architecture decisions for pipeline requests, 64-bit IDs, render passes,
+  and cooperative cancellation.
+- Reconciled stale roadmap entries and made the VTK convergence plan the active
+  implementation roadmap.
+
 ## 0.9.0 - General pipeline and architecture preview
 
 - Added `FVizDataObject`, `FVizAlgorithm`, and borrowed `FVizAlgorithmOutput` proxies with indexed, type-checked input/output ports, direct data, repeatable connection storage, ownership retention, and generalized cycle detection.
