@@ -139,12 +139,21 @@ OBJ/STL file
 - [x] Actor owns a default mapper; `set_poly_data` API preserved
 - [x] Per-point scalars on `FVizPolyData`
 - [x] Per-vertex scalar coloring through the shader color attribute
-- [ ] Pipeline/filter execution (clip/slice/threshold/warp) Threshold cell filter **COMPLETE**
+- [ ] Pipeline/filter execution (clip/slice/threshold/warp) Threshold cell filter **COMPLETE**, slice filter **COMPLETE in 0.3.1**
 
-## Immediate work after 0.3.0
+## Phase 11 — FEA result visualization — MILESTONE PARTIAL in 0.3.1
 
-1. Add spatial acceleration (BVH, point locator, cell locator) and picking.
-2. Add pipeline/filter execution, then clip/slice/warp filters.
-3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-5. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+- [x] Surface extraction with point scalar transfer (0.3.1)
+- [x] Interior slice/cut-plane filter with scalar interpolation (0.3.1)
+- [ ] Warp-by-vector deformation filter
+- [ ] Cell-data to point-data interpolation for smooth stress contours
+- [ ] General pipeline/filter framework
+
+## Immediate work after 0.3.1
+
+1. Warp-by-vector deformation filter and cell-data to point-data interpolation (Batch 6).
+2. General `FVizAlgorithm`/filter framework + a complete FEA viewer example (Batch 7).
+3. Add spatial acceleration (BVH, point locator, cell locator) and picking.
+4. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+5. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+6. Implement surface extraction from volumetric FE meshes. **COMPLETE**

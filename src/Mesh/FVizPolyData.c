@@ -23,10 +23,12 @@ static void fviz_poly_data_destroy(FVizObject* object)
     fviz_release(poly_data->normals);
     fviz_release(poly_data->indices);
     fviz_release(poly_data->scalars);
+    fviz_release(poly_data->point_data);
     poly_data->points = NULL;
     poly_data->normals = NULL;
     poly_data->indices = NULL;
     poly_data->scalars = NULL;
+    poly_data->point_data = NULL;
 }
 
 FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
@@ -45,7 +47,8 @@ FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
     }
     if (fviz_array_create(sizeof(FVizVec3), &poly_data->points) != FVIZ_OK ||
         fviz_array_create(sizeof(FVizVec3), &poly_data->normals) != FVIZ_OK ||
-        fviz_array_create(sizeof(uint32_t), &poly_data->indices) != FVIZ_OK)
+        fviz_array_create(sizeof(uint32_t), &poly_data->indices) != FVIZ_OK ||
+        fviz_attribute_set_create(&poly_data->point_data) != FVIZ_OK)
     {
         fviz_release(poly_data);
         return fviz_last_error_code();
@@ -69,6 +72,9 @@ void fviz_poly_data_clear(FVizPolyData* poly_data)
     fviz_array_clear(poly_data->points);
     fviz_array_clear(poly_data->normals);
     fviz_array_clear(poly_data->indices);
+    fviz_release(poly_data->scalars);
+    poly_data->scalars = NULL;
+    fviz_attribute_set_clear(poly_data->point_data);
     fviz_bounds_reset(&poly_data->bounds);
     poly_data->bounds_dirty = FVIZ_FALSE;
     poly_data->normals_dirty = FVIZ_TRUE;
@@ -238,6 +244,16 @@ FVizResult fviz_poly_data_set_scalars(FVizPolyData* poly_data, FVizDataArray* sc
 const FVizDataArray* fviz_poly_data_const_scalars(const FVizPolyData* poly_data)
 {
     return poly_data != NULL ? poly_data->scalars : NULL;
+}
+
+FVizAttributeSet* fviz_poly_data_point_data(FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->point_data : NULL;
+}
+
+const FVizAttributeSet* fviz_poly_data_const_point_data(const FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->point_data : NULL;
 }
 
 FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data)

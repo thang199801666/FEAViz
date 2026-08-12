@@ -7,6 +7,7 @@
 #include <FViz/Core/FVizTypes.h>
 #include <FViz/Data/FVizAttributeSet.h>
 #include <FViz/Math/FVizBounds.h>
+#include <FViz/Math/FVizPlane.h>
 #include <FViz/Mesh/FVizCellArray.h>
 #include <FViz/Mesh/FVizPoints.h>
 #include <FViz/Mesh/FVizPolyData.h>
@@ -30,6 +31,13 @@ FVIZ_API FVizSize fviz_unstructured_grid_cell_count(const FVizUnstructuredGrid* 
 FVIZ_API FVizBounds fviz_unstructured_grid_bounds(const FVizUnstructuredGrid* grid);
 FVIZ_API FVizResult fviz_unstructured_grid_validate(const FVizUnstructuredGrid* grid);
 FVIZ_API FVizResult fviz_unstructured_grid_extract_surface(const FVizUnstructuredGrid* grid, FVizPolyData** out_surface);
+FVIZ_API FVizResult fviz_unstructured_grid_extract_surface_scalars(
+    const FVizUnstructuredGrid* grid,
+    FVizPolyData** out_surface);
+FVIZ_API FVizResult fviz_unstructured_grid_slice(
+    const FVizUnstructuredGrid* grid,
+    FVizPlane plane,
+    FVizPolyData** out_slice);
 FVIZ_API FVizResult fviz_unstructured_grid_threshold_cells(
     const FVizUnstructuredGrid* grid,
     const char* scalar_name,

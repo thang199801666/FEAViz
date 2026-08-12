@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 - FEA result visualization: slicing and surface scalars
+
+- Added `FVizPolyData` point attribute storage (`FVizAttributeSet* point_data`) with `point_data`/`const_point_data` accessors so named per-point fields (stress, displacement, ...) can live on rendered surfaces.
+- Added `fviz_unstructured_grid_slice()`: cut-plane filter through volume cells (tet/hex/wedge/pyramid) that emits a triangle mesh of the interior cross-section, with per-point scalar fields interpolated along cut edges and an active scalar set for coloring.
+- Added `fviz_unstructured_grid_extract_surface_scalars()`: surface extraction that also transfers all one-component point scalar arrays onto the surface for scalar coloring.
+- Robust handling of planes passing exactly through grid vertices (on-plane vertices become part of the intersection polygon).
+- Added `FViz.FEA.Slice` tests (mid-plane, offset plane, miss, surface scalars) and the `FEAVizFEASlice` example showing surface + interior slice colored by stress.
+
 ## 0.3.0 - VTK-style mapper pipeline and scalar coloring
 
 - Added `FVizLookupTable`: scalar-to-color mapping with configurable range, a default divergent color map, per-entry colors, and interpolated `map_scalar`.
