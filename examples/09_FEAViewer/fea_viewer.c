@@ -106,6 +106,7 @@ int main(void)
     FVizUnstructuredGrid* warped = NULL;
     FVizPolyData* surface = NULL;
     FVizPolyData* slice = NULL;
+    FVizScalarLegend* legend = NULL;
     FVizRenderer* renderer = NULL;
     FVizRenderWindow* window = NULL;
     FVizResult result;
@@ -182,6 +183,15 @@ int main(void)
 
     fviz_renderer_set_background(renderer, 0.08f, 0.09f, 0.12f);
     fviz_renderer_fit_camera(renderer, 1.5f);
+
+    if (fviz_scalar_legend_create(&legend) == FVIZ_OK)
+    {
+        fviz_scalar_legend_set_range(legend, 0.0f, 1.0f);
+        fviz_scalar_legend_set_title(legend, "Stress");
+        fviz_renderer_set_scalar_legend(renderer, legend);
+        fviz_release(legend);
+    }
+
     printf("Deformed surface (left) and interior slice (right), colored by cell stress (smoothed to points)\n");
     printf("Controls: LMB orbit | MMB pan | wheel zoom | F fit | W wireframe | Esc close\n");
     result = fviz_render_window_run(window);

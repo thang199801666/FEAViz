@@ -31,6 +31,7 @@ fviz_add_test(FVizTestBVH Spatial/test_bvh.c FViz.Spatial.BVH)
 fviz_add_test(FVizTestPointLocator Spatial/test_point_locator.c FViz.Spatial.PointLocator)
 fviz_add_test(FVizTestScene Rendering/test_scene.c FViz.Rendering.Scene)
 fviz_add_test(FVizTestMapper Rendering/test_mapper.c FViz.Rendering.Mapper)
+fviz_add_test(FVizTestScalarLegend Rendering/test_scalar_legend.c FViz.Rendering.ScalarLegend)
 
 add_executable(FVizTestMeshReader IO/test_mesh_reader.c)
 target_link_libraries(FVizTestMeshReader PRIVATE FEAViz::FEAViz)

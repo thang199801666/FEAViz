@@ -156,10 +156,14 @@ OBJ/STL file
 - [x] `fviz_camera_pick_ray` screen-to-world ray (0.4.0)
 - [x] Render-window pick API + click callback (0.4.0)
 
-## Immediate work after 0.4.0
+## Phase 13 — Scalar legend overlay — MILESTONE COMPLETE in 0.4.1
 
-1. Scalar legend / color bar overlay for FEA results.
-2. VTU (VTK XML unstructured grid) reader for real FEA result files.
-3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-5. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+- [x] `FVizScalarLegend` metadata object (0.4.1)
+- [x] Renderer hook + orthographic 2D overlay color-bar pass (0.4.1)
+
+## Immediate work after 0.4.1
+
+1. VTU (VTK XML unstructured grid) reader for real FEA result files.
+2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+4. Implement surface extraction from volumetric FE meshes. **COMPLETE**

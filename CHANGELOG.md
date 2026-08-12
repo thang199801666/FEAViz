@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.1 - Scalar legend overlay
+
+- Added `FVizScalarLegend`: color-bar overlay metadata with a `FVizLookupTable`, value range, corner position, visibility, and title.
+- Added `fviz_renderer_set_scalar_legend()` / `fviz_renderer_scalar_legend()` to attach a legend to a renderer.
+- Added a second GLSL 2D overlay program to the GPU renderer that draws the legend as an orthographic color-bar (gradient strips from the lookup table plus frame and min/max ticks) on top of the 3D scene.
+- Wired the legend pass into the modern Windows render path after the scene draw.
+- Updated `FEAVizFEAViewer` to display a "Stress" legend; added `FViz.Rendering.ScalarLegend` tests.
+
 ## 0.4.0 - Spatial index, point locator and picking
 
 - Added `FVizBVH`: bounding-volume hierarchy over triangle meshes with ray-box and ray-triangle tests, `ray_cast` (closest hit with position/normal/distance/triangle), `ray_cast_any`, and `intersects_bounds`. Built from any `FVizPolyData`; triangle count > 0 required.

@@ -12,6 +12,7 @@
 #include <FViz/Rendering/FVizLookupTable.h>
 #include <FViz/Rendering/FVizMapper.h>
 #include <FViz/Rendering/FVizRenderer.h>
+#include <FViz/Rendering/FVizScalarLegend.h>
 #include <FViz/Rendering/FVizScene.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
@@ -67,6 +68,27 @@ static const char* const k_fviz_gl_fragment_shader_source =
     "    outColor = vec4(color, 1.0);\n"
     "}\n";
 
+static const char* const k_fviz_gl2d_vertex_shader_source =
+    "#version 330 core\n"
+    "layout(location = 0) in vec2 aPosition;\n"
+    "layout(location = 1) in vec3 aColor;\n"
+    "uniform mat4 uMvp;\n"
+    "out vec3 vColor;\n"
+    "void main()\n"
+    "{\n"
+    "    gl_Position = uMvp * vec4(aPosition, 0.0, 1.0);\n"
+    "    vColor = aColor;\n"
+    "}\n";
+
+static const char* const k_fviz_gl2d_fragment_shader_source =
+    "#version 330 core\n"
+    "in vec3 vColor;\n"
+    "out vec4 outColor;\n"
+    "void main()\n"
+    "{\n"
+    "    outColor = vec4(vColor, 1.0);\n"
+    "}\n";
+
 typedef struct FVizGLActorResource
 {
     const FVizActor* actor;
@@ -92,6 +114,8 @@ struct FVizGLDevice
     GLint light_position_location;
     GLint light_ambient_location;
     GLint scalar_color_location;
+    GLuint program_2d;
+    GLint mvp_location_2d;
     FVizGLActorResource* actors;
     FVizSize actor_count;
     FVizSize actor_capacity;
@@ -384,6 +408,54 @@ static FVizResult fviz_gl_create_program(FVizGLDevice* device)
     return FVIZ_OK;
 }
 
+static FVizResult fviz_gl_create_2d_program(FVizGLDevice* device)
+{
+    const FVizGLFunctions* gl = &device->gl;
+    GLuint vertex_shader;
+    GLuint fragment_shader;
+    char info_log[2048];
+    GLint status = GL_FALSE;
+    vertex_shader = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
+        k_fviz_gl2d_vertex_shader_source, info_log, sizeof(info_log));
+    if (vertex_shader == 0u)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz 2D vertex shader failed to compile");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
+        k_fviz_gl2d_fragment_shader_source, info_log, sizeof(info_log));
+    if (fragment_shader == 0u)
+    {
+        gl->glDeleteShader(vertex_shader);
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz 2D fragment shader failed to compile");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    device->program_2d = gl->glCreateProgram();
+    if (device->program_2d == 0u)
+    {
+        gl->glDeleteShader(vertex_shader);
+        gl->glDeleteShader(fragment_shader);
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to create FEAViz 2D shader program");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    gl->glAttachShader(device->program_2d, vertex_shader);
+    gl->glAttachShader(device->program_2d, fragment_shader);
+    gl->glLinkProgram(device->program_2d);
+    gl->glGetProgramiv(device->program_2d, FVIZ_GL_LINK_STATUS, &status);
+    gl->glDeleteShader(vertex_shader);
+    gl->glDeleteShader(fragment_shader);
+    if (status != GL_TRUE)
+    {
+        gl->glGetProgramInfoLog(device->program_2d, (GLsizei)sizeof(info_log), NULL, info_log);
+        gl->glDeleteProgram(device->program_2d);
+        device->program_2d = 0u;
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz 2D shader program failed to link");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    device->mvp_location_2d = gl->glGetUniformLocation(device->program_2d, "uMvp");
+    return FVIZ_OK;
+}
+
 FVizGLDevice* fviz_internal_gl_device_create(const FVizGLFunctions* functions)
 {
     FVizGLDevice* device;
@@ -399,9 +471,10 @@ FVizGLDevice* fviz_internal_gl_device_create(const FVizGLFunctions* functions)
     }
     (void)memset(device, 0, sizeof(*device));
     device->gl = *functions;
-    if (fviz_gl_create_program(device) != FVIZ_OK)
+    if (fviz_gl_create_program(device) != FVIZ_OK ||
+        fviz_gl_create_2d_program(device) != FVIZ_OK)
     {
-        fviz_free(device);
+        fviz_internal_gl_device_destroy(device);
         return NULL;
     }
     return device;
@@ -419,6 +492,11 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device)
     {
         device->gl.glDeleteProgram(device->program);
         device->program = 0u;
+    }
+    if (device->program_2d != 0u)
+    {
+        device->gl.glDeleteProgram(device->program_2d);
+        device->program_2d = 0u;
     }
     fviz_free(device->actors);
     device->actors = NULL;
@@ -513,5 +591,143 @@ FVizResult fviz_internal_gl_device_render(
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     gl->glUseProgram(0u);
+    return FVIZ_OK;
+}
+
+typedef struct FVizGL2DVertex
+{
+    float x;
+    float y;
+    float r;
+    float g;
+    float b;
+} FVizGL2DVertex;
+
+static void fviz_gl2d_emit_quad(
+    FVizGL2DVertex* vertices,
+    FVizSize* count,
+    float x0,
+    float y0,
+    float x1,
+    float y1,
+    float r,
+    float g,
+    float b)
+{
+    const FVizSize index = *count;
+    vertices[index + 0u] = (FVizGL2DVertex){x0, y0, r, g, b};
+    vertices[index + 1u] = (FVizGL2DVertex){x1, y0, r, g, b};
+    vertices[index + 2u] = (FVizGL2DVertex){x1, y1, r, g, b};
+    vertices[index + 3u] = (FVizGL2DVertex){x0, y0, r, g, b};
+    vertices[index + 4u] = (FVizGL2DVertex){x1, y1, r, g, b};
+    vertices[index + 5u] = (FVizGL2DVertex){x0, y1, r, g, b};
+    *count += 6u;
+}
+
+FVizResult fviz_internal_gl_device_render_legend(
+    FVizGLDevice* device,
+    const FVizScalarLegend* legend,
+    int width,
+    int height)
+{
+    const FVizGLFunctions* gl;
+    FVizGL2DVertex* vertices;
+    FVizSize vertex_count = 0u;
+    FVizSize max_vertices;
+    GLuint vbo = 0u;
+    FVizMat4 ortho;
+    FVizLookupTable* table;
+    float bar_x;
+    float bar_y;
+    float bar_w;
+    float bar_h;
+    float margin = 16.0f;
+    FVizSize i;
+    const FVizSize segments = 32u;
+
+    if (device == NULL || legend == NULL || width <= 0 || height <= 0)
+    {
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (fviz_scalar_legend_is_visible(legend) == FVIZ_FALSE) return FVIZ_OK;
+    table = fviz_scalar_legend_lookup_table((FVizScalarLegend*)legend);
+    if (table == NULL) return FVIZ_OK;
+
+    bar_w = 22.0f;
+    bar_h = (float)height * 0.5f;
+    if (bar_h > 420.0f) bar_h = 420.0f;
+    switch (fviz_scalar_legend_position(legend))
+    {
+        case FVIZ_LEGEND_TOP_LEFT: bar_x = margin; bar_y = margin; break;
+        case FVIZ_LEGEND_BOTTOM_RIGHT: bar_x = (float)width - margin - bar_w; bar_y = (float)height - margin - bar_h; break;
+        case FVIZ_LEGEND_BOTTOM_LEFT: bar_x = margin; bar_y = (float)height - margin - bar_h; break;
+        case FVIZ_LEGEND_TOP_RIGHT:
+        default: bar_x = (float)width - margin - bar_w; bar_y = margin; break;
+    }
+
+    max_vertices = (segments + 2u) * 6u + 6u;
+    vertices = (FVizGL2DVertex*)fviz_alloc(max_vertices * sizeof(FVizGL2DVertex));
+    if (vertices == NULL) return fviz_last_error_code();
+
+    fviz_gl2d_emit_quad(vertices, &vertex_count,
+        bar_x - 4.0f, bar_y - 4.0f,
+        bar_x + bar_w + 4.0f, bar_y + bar_h + 4.0f,
+        0.10f, 0.11f, 0.14f);
+
+    {
+        float range_min;
+        float range_max;
+        fviz_lookup_table_get_range(table, &range_min, &range_max);
+        for (i = 0u; i < segments; ++i)
+        {
+            const float f0 = (float)i / (float)segments;
+            const float f1 = (float)(i + 1) / (float)segments;
+            const float value = range_min + (f0 + (f1 - f0) * 0.5f) * (range_max - range_min);
+            float r;
+            float g;
+            float b;
+            fviz_lookup_table_map_scalar(table, value, &r, &g, &b);
+            fviz_gl2d_emit_quad(vertices, &vertex_count,
+                bar_x, bar_y + f0 * bar_h,
+                bar_x + bar_w, bar_y + f1 * bar_h,
+                r, g, b);
+        }
+        fviz_gl2d_emit_quad(vertices, &vertex_count,
+            bar_x - 2.0f, bar_y,
+            bar_x + bar_w + 2.0f, bar_y + 2.0f,
+            0.85f, 0.85f, 0.9f);
+        fviz_gl2d_emit_quad(vertices, &vertex_count,
+            bar_x - 2.0f, bar_y + bar_h - 2.0f,
+            bar_x + bar_w + 2.0f, bar_y + bar_h,
+            0.85f, 0.85f, 0.9f);
+    }
+
+    (void)memset(&ortho, 0, sizeof(ortho));
+    ortho.m[0] = 2.0f / (float)width;
+    ortho.m[5] = 2.0f / (float)height;
+    ortho.m[10] = -1.0f;
+    ortho.m[12] = -1.0f;
+    ortho.m[13] = -1.0f;
+    ortho.m[15] = 1.0f;
+
+    gl = &device->gl;
+    gl->glUseProgram(device->program_2d);
+    gl->glUniformMatrix4fv(device->mvp_location_2d, 1, GL_FALSE, ortho.m);
+    glDisable(GL_DEPTH_TEST);
+    gl->glGenBuffers(1, &vbo);
+    gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, vbo);
+    gl->glBufferData(FVIZ_GL_ARRAY_BUFFER, (GLsizeiptr)(vertex_count * sizeof(FVizGL2DVertex)), vertices, FVIZ_GL_STATIC_DRAW);
+    gl->glVertexAttribPointer(0u, 2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGL2DVertex), (const void*)0);
+    gl->glEnableVertexAttribArray(0u);
+    gl->glVertexAttribPointer(1u, 3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGL2DVertex), (const void*)(2 * sizeof(float)));
+    gl->glEnableVertexAttribArray(1u);
+    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)vertex_count);
+    gl->glDisableVertexAttribArray(0u);
+    gl->glDisableVertexAttribArray(1u);
+    gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, 0u);
+    gl->glDeleteBuffers(1, &vbo);
+    glEnable(GL_DEPTH_TEST);
+    gl->glUseProgram(0u);
+    fviz_free(vertices);
     return FVIZ_OK;
 }

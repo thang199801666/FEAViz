@@ -12,6 +12,8 @@
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Rendering/FVizGL.h>
 #include <FViz/Rendering/FVizGLDevice.h>
+#include <FViz/Rendering/FVizRenderer.h>
+#include <FViz/Rendering/FVizScalarLegend.h>
 #include <FViz/Rendering/FVizRenderWindowPrivate.h>
 
 #define FVIZ_WINDOW_CLASS_NAME "FEAVizRenderWindowClass"
@@ -388,6 +390,13 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
     if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
     {
         (void)fviz_internal_gl_device_render((FVizGLDevice*)window->gl_device, renderer, (float)window->width / (float)window->height);
+        {
+            FVizScalarLegend* legend = fviz_renderer_scalar_legend(renderer);
+            if (legend != NULL)
+            {
+                (void)fviz_internal_gl_device_render_legend((FVizGLDevice*)window->gl_device, legend, window->width, window->height);
+            }
+        }
     }
     else
     {

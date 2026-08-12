@@ -7,6 +7,7 @@
 #include <FViz/Rendering/FVizMapper.h>
 #include <FViz/Rendering/FVizRenderer.h>
 #include <FViz/Rendering/FVizRenderWindow.h>
+#include <FViz/Rendering/FVizScalarLegend.h>
 #include <FViz/Rendering/FVizScene.h>
 
 #endif /* FVIZ_RENDERING_RENDERING_H */

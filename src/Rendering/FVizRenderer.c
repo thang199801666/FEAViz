@@ -3,6 +3,7 @@
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Rendering/FVizRendererPrivate.h>
+#include <FViz/Rendering/FVizScalarLegendPrivate.h>
 
 static void fviz_renderer_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_renderer_class = {
@@ -17,8 +18,10 @@ static void fviz_renderer_destroy(FVizObject* object)
     FVizRenderer* renderer = (FVizRenderer*)object;
     fviz_release(renderer->scene);
     fviz_release(renderer->camera);
+    fviz_release(renderer->scalar_legend);
     renderer->scene = NULL;
     renderer->camera = NULL;
+    renderer->scalar_legend = NULL;
 }
 
 FVizResult fviz_renderer_create(FVizRenderer** out_renderer)
@@ -78,4 +81,17 @@ void fviz_renderer_fit_camera(FVizRenderer* renderer, float padding)
         const FVizBounds bounds = fviz_scene_bounds(renderer->scene);
         fviz_camera_fit_bounds(renderer->camera, &bounds, padding);
     }
+}
+
+void fviz_renderer_set_scalar_legend(FVizRenderer* renderer, FVizScalarLegend* legend)
+{
+    if (renderer == NULL) return;
+    if (legend != NULL && fviz_retain(legend) == NULL) return;
+    fviz_release(renderer->scalar_legend);
+    renderer->scalar_legend = legend;
+}
+
+FVizScalarLegend* fviz_renderer_scalar_legend(FVizRenderer* renderer)
+{
+    return renderer != NULL ? renderer->scalar_legend : NULL;
 }
