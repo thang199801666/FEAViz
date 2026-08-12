@@ -4,6 +4,7 @@
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Rendering/FVizActorPrivate.h>
+#include <FViz/Rendering/FVizMapperPrivate.h>
 
 static void fviz_actor_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_actor_class = {
@@ -16,8 +17,8 @@ static const FVizObjectClass g_fviz_actor_class = {
 static void fviz_actor_destroy(FVizObject* object)
 {
     FVizActor* actor = (FVizActor*)object;
-    fviz_release(actor->poly_data);
-    actor->poly_data = NULL;
+    fviz_release(actor->mapper);
+    actor->mapper = NULL;
 }
 
 FVizResult fviz_actor_create(FVizActor** out_actor)
@@ -31,6 +32,11 @@ FVizResult fviz_actor_create(FVizActor** out_actor)
     *out_actor = NULL;
     actor = (FVizActor*)fviz_internal_object_allocate(sizeof(FVizActor), &g_fviz_actor_class, NULL);
     if (actor == NULL) return fviz_last_error_code();
+    if (fviz_mapper_create(&actor->mapper) != FVIZ_OK)
+    {
+        fviz_release(actor);
+        return fviz_last_error_code();
+    }
     actor->color[0] = 0.72f;
     actor->color[1] = 0.78f;
     actor->color[2] = 0.88f;
@@ -43,6 +49,21 @@ FVizResult fviz_actor_create(FVizActor** out_actor)
     return FVIZ_OK;
 }
 
+FVizResult fviz_actor_set_mapper(FVizActor* actor, FVizMapper* mapper)
+{
+    if (actor == NULL || mapper == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "actor and mapper must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (fviz_retain(mapper) == NULL) return fviz_last_error_code();
+    fviz_release(actor->mapper);
+    actor->mapper = mapper;
+    return FVIZ_OK;
+}
+
+FVizMapper* fviz_actor_mapper(FVizActor* actor) { return actor != NULL ? actor->mapper : NULL; }
+
 FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data)
 {
     if (actor == NULL)
@@ -50,17 +71,11 @@ FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data)
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "actor must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    if (poly_data != NULL && fviz_retain(poly_data) == NULL)
-    {
-        return fviz_last_error_code();
-    }
-    fviz_release(actor->poly_data);
-    actor->poly_data = poly_data;
-    return FVIZ_OK;
+    return fviz_mapper_set_poly_data(actor->mapper, poly_data);
 }
 
-FVizPolyData* fviz_actor_poly_data(FVizActor* actor) { return actor != NULL ? actor->poly_data : NULL; }
-const FVizPolyData* fviz_actor_const_poly_data(const FVizActor* actor) { return actor != NULL ? actor->poly_data : NULL; }
+FVizPolyData* fviz_actor_poly_data(FVizActor* actor) { return actor != NULL ? fviz_mapper_poly_data(actor->mapper) : NULL; }
+const FVizPolyData* fviz_actor_const_poly_data(const FVizActor* actor) { return actor != NULL ? fviz_mapper_const_poly_data(actor->mapper) : NULL; }
 
 void fviz_actor_set_color(FVizActor* actor, float red, float green, float blue)
 {

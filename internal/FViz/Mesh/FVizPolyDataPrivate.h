@@ -6,6 +6,7 @@
 #include <FViz/Core/FVizArray.h>
 #include <FViz/Core/FVizObjectPrivate.h>
 #include <FViz/Core/FVizTypes.h>
+#include <FViz/Data/FVizDataArray.h>
 #include <FViz/Mesh/FVizPolyData.h>
 
 struct FVizPolyData
@@ -14,6 +15,7 @@ struct FVizPolyData
     FVizArray* points;
     FVizArray* normals;
     FVizArray* indices;
+    FVizDataArray* scalars;
     FVizBounds bounds;
     FVizBool bounds_dirty;
     FVizBool normals_dirty;

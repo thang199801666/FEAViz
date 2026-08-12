@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - VTK-style mapper pipeline and scalar coloring
+
+- Added `FVizLookupTable`: scalar-to-color mapping with configurable range, a default divergent color map, per-entry colors, and interpolated `map_scalar`.
+- Added `FVizMapper`: VTK-style data source bridge holding the `FVizPolyData`, an optional `FVizLookupTable`, and scalar coloring configuration (visibility + scalar range with auto-range from data).
+- Reworked `FVizActor` to own a `FVizMapper` (created by default); the existing `set_poly_data`/`poly_data` API remains source compatible.
+- Added `FVizPolyData` per-point scalar support (`set_scalars`/`const_scalars`, float32 single-component, count must match points, bumps the mutation generation).
+- Extended the GLSL 330 renderer with an optional per-vertex `aColor` attribute and `uScalarColorEnabled` uniform; scalar colors are baked into a per-mesh color VBO through the lookup table, otherwise the actor color is used.
+- Added `FViz.Rendering.Mapper` tests for the lookup table, mapper wiring, and actor/mapper integration.
+
 ## 0.2.1 - Per-actor transforms
 
 - Added `FVizActor` transform state: position, orientation (`FVizQuat`), and scale with public setters/getters.

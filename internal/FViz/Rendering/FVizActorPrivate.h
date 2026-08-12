@@ -9,7 +9,7 @@
 struct FVizActor
 {
     FVizObject base;
-    FVizPolyData* poly_data;
+    FVizMapper* mapper;
     float color[3];
     FVizBool visible;
     FVizBool wireframe;

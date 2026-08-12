@@ -25,6 +25,7 @@ fviz_add_test(FVizTestUnstructuredGrid FEA/test_unstructured_grid.c FViz.FEA.Uns
 fviz_add_test(FVizTestSurfaceExtraction FEA/test_surface_extraction.c FViz.FEA.SurfaceExtraction)
 fviz_add_test(FVizTestThreshold FEA/test_threshold.c FViz.FEA.Threshold)
 fviz_add_test(FVizTestScene Rendering/test_scene.c FViz.Rendering.Scene)
+fviz_add_test(FVizTestMapper Rendering/test_mapper.c FViz.Rendering.Mapper)
 
 add_executable(FVizTestMeshReader IO/test_mesh_reader.c)
 target_link_libraries(FVizTestMeshReader PRIVATE FEAViz::FEAViz)

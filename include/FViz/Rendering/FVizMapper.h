@@ -1,0 +1,30 @@
+#ifndef FVIZ_RENDERING_MAPPER_H
+#define FVIZ_RENDERING_MAPPER_H
+
+#include <FViz/Core/FVizApi.h>
+#include <FViz/Core/FVizObject.h>
+#include <FViz/Core/FVizResult.h>
+#include <FViz/Core/FVizTypes.h>
+#include <FViz/Mesh/FVizPolyData.h>
+#include <FViz/Rendering/FVizLookupTable.h>
+
+FVIZ_EXTERN_C_BEGIN
+
+typedef struct FVizMapper FVizMapper;
+#define FVIZ_TYPE_MAPPER UINT64_C(0x8A2C6F51D7B40E93)
+
+FVIZ_API FVizResult fviz_mapper_create(FVizMapper** out_mapper);
+FVIZ_API FVizResult fviz_mapper_set_poly_data(FVizMapper* mapper, FVizPolyData* poly_data);
+FVIZ_API FVizPolyData* fviz_mapper_poly_data(FVizMapper* mapper);
+FVIZ_API const FVizPolyData* fviz_mapper_const_poly_data(const FVizMapper* mapper);
+FVIZ_API void fviz_mapper_set_lookup_table(FVizMapper* mapper, FVizLookupTable* table);
+FVIZ_API FVizLookupTable* fviz_mapper_lookup_table(FVizMapper* mapper);
+FVIZ_API void fviz_mapper_set_scalar_visibility(FVizMapper* mapper, FVizBool visible);
+FVIZ_API FVizBool fviz_mapper_scalar_visibility(const FVizMapper* mapper);
+FVIZ_API void fviz_mapper_set_scalar_range(FVizMapper* mapper, float minimum, float maximum);
+FVIZ_API void fviz_mapper_get_scalar_range(const FVizMapper* mapper, float* minimum, float* maximum);
+FVIZ_API FVizBool fviz_mapper_scalar_range_valid(const FVizMapper* mapper);
+
+FVIZ_EXTERN_C_END
+
+#endif /* FVIZ_RENDERING_MAPPER_H */

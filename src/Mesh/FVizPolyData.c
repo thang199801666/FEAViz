@@ -22,9 +22,11 @@ static void fviz_poly_data_destroy(FVizObject* object)
     fviz_release(poly_data->points);
     fviz_release(poly_data->normals);
     fviz_release(poly_data->indices);
+    fviz_release(poly_data->scalars);
     poly_data->points = NULL;
     poly_data->normals = NULL;
     poly_data->indices = NULL;
+    poly_data->scalars = NULL;
 }
 
 FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
@@ -201,6 +203,41 @@ FVizResult fviz_poly_data_validate(const FVizPolyData* poly_data)
         }
     }
     return FVIZ_OK;
+}
+
+FVizResult fviz_poly_data_set_scalars(FVizPolyData* poly_data, FVizDataArray* scalars)
+{
+    if (poly_data == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "poly_data must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (scalars != NULL)
+    {
+        if (fviz_data_array_type(scalars) != FVIZ_DATA_FLOAT32 || fviz_data_array_components(scalars) != 1u)
+        {
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "poly_data scalars must be a float32 single-component array");
+            return FVIZ_ERROR_INVALID_ARGUMENT;
+        }
+        if (fviz_data_array_tuple_count(scalars) != fviz_poly_data_point_count(poly_data))
+        {
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "poly_data scalars count must match point count");
+            return FVIZ_ERROR_INVALID_ARGUMENT;
+        }
+        if (fviz_retain(scalars) == NULL)
+        {
+            return fviz_last_error_code();
+        }
+    }
+    fviz_release(poly_data->scalars);
+    poly_data->scalars = scalars;
+    ++poly_data->generation;
+    return FVIZ_OK;
+}
+
+const FVizDataArray* fviz_poly_data_const_scalars(const FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->scalars : NULL;
 }
 
 FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data)

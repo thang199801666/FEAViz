@@ -7,6 +7,7 @@
 #include <FViz/Core/FVizObject.h>
 #include <FViz/Core/FVizResult.h>
 #include <FViz/Core/FVizTypes.h>
+#include <FViz/Data/FVizDataArray.h>
 #include <FViz/Math/FVizBounds.h>
 #include <FViz/Math/FVizVec3.h>
 
@@ -29,6 +30,8 @@ FVIZ_API FVizBool fviz_poly_data_has_normals(const FVizPolyData* poly_data);
 FVIZ_API FVizBounds fviz_poly_data_bounds(const FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_poly_data_validate(const FVizPolyData* poly_data);
+FVIZ_API FVizResult fviz_poly_data_set_scalars(FVizPolyData* poly_data, FVizDataArray* scalars);
+FVIZ_API const FVizDataArray* fviz_poly_data_const_scalars(const FVizPolyData* poly_data);
 
 FVIZ_EXTERN_C_END
 

@@ -132,11 +132,19 @@ OBJ/STL file
 - [x] Public scene API unchanged
 - [x] Per-actor model transform (position/orientation/scale) with normal matrix (0.2.1)
 
-## Immediate work after 0.2.1
+## Phase 10 — VTK-style mapper pipeline — MILESTONE COMPLETE in 0.3.0
 
-1. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-2. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-3. Implement surface extraction from volumetric FE meshes. **COMPLETE**
-4. Add spatial acceleration (BVH, point locator, cell locator) and picking.
-5. Add pipeline/filter execution, then clip/slice/threshold/warp. Threshold cell filter **COMPLETE**.
-6. Add scalar lookup tables and FEA contour coloring.
+- [x] `FVizLookupTable` with range, divergent colormap, and interpolated scalar mapping
+- [x] `FVizMapper` data source with lookup table and scalar coloring configuration
+- [x] Actor owns a default mapper; `set_poly_data` API preserved
+- [x] Per-point scalars on `FVizPolyData`
+- [x] Per-vertex scalar coloring through the shader color attribute
+- [ ] Pipeline/filter execution (clip/slice/threshold/warp) Threshold cell filter **COMPLETE**
+
+## Immediate work after 0.3.0
+
+1. Add spatial acceleration (BVH, point locator, cell locator) and picking.
+2. Add pipeline/filter execution, then clip/slice/warp filters.
+3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+5. Implement surface extraction from volumetric FE meshes. **COMPLETE**

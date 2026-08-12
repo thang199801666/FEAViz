@@ -4,10 +4,13 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
+#include <FViz/Data/FVizDataArray.h>
 #include <FViz/Math/FVizMat3.h>
 #include <FViz/Math/FVizMat4.h>
 #include <FViz/Rendering/FVizActor.h>
 #include <FViz/Rendering/FVizCamera.h>
+#include <FViz/Rendering/FVizLookupTable.h>
+#include <FViz/Rendering/FVizMapper.h>
 #include <FViz/Rendering/FVizRenderer.h>
 #include <FViz/Rendering/FVizScene.h>
 
@@ -18,33 +21,41 @@
 
 #define FVIZ_GL_POSITION_ATTRIBUTE_INDEX 0u
 #define FVIZ_GL_NORMAL_ATTRIBUTE_INDEX 1u
+#define FVIZ_GL_COLOR_ATTRIBUTE_INDEX 2u
 
 static const char* const k_fviz_gl_vertex_shader_source =
     "#version 330 core\n"
     "layout(location = 0) in vec3 aPosition;\n"
     "layout(location = 1) in vec3 aNormal;\n"
+    "layout(location = 2) in vec3 aColor;\n"
     "uniform mat4 uMvp;\n"
     "uniform mat4 uModel;\n"
     "uniform mat3 uNormalMatrix;\n"
+    "uniform int uScalarColorEnabled;\n"
     "out vec3 vNormal;\n"
     "out vec3 vWorldPos;\n"
+    "out vec3 vColor;\n"
     "void main()\n"
     "{\n"
     "    gl_Position = uMvp * vec4(aPosition, 1.0);\n"
     "    vNormal = normalize(uNormalMatrix * aNormal);\n"
     "    vWorldPos = vec3(uModel * vec4(aPosition, 1.0));\n"
+    "    vColor = aColor;\n"
     "}\n";
 
 static const char* const k_fviz_gl_fragment_shader_source =
     "#version 330 core\n"
     "in vec3 vNormal;\n"
     "in vec3 vWorldPos;\n"
+    "in vec3 vColor;\n"
     "uniform vec3 uDiffuse;\n"
     "uniform vec3 uLightPosition;\n"
     "uniform vec3 uLightAmbient;\n"
+    "uniform int uScalarColorEnabled;\n"
     "out vec4 outColor;\n"
     "void main()\n"
     "{\n"
+    "    vec3 baseColor = uScalarColorEnabled == 1 ? vColor : uDiffuse;\n"
     "    vec3 n = normalize(vNormal);\n"
     "    if (length(n) < 0.5)\n"
     "    {\n"
@@ -52,7 +63,7 @@ static const char* const k_fviz_gl_fragment_shader_source =
     "    }\n"
     "    vec3 l = normalize(uLightPosition - vWorldPos);\n"
     "    float diffuse = max(dot(n, l), 0.0);\n"
-    "    vec3 color = uDiffuse * (uLightAmbient + 0.9 * diffuse);\n"
+    "    vec3 color = baseColor * (uLightAmbient + 0.9 * diffuse);\n"
     "    outColor = vec4(color, 1.0);\n"
     "}\n";
 
@@ -63,6 +74,8 @@ typedef struct FVizGLActorResource
     GLuint position_buffer;
     GLuint normal_buffer;
     GLuint index_buffer;
+    GLuint color_buffer;
+    FVizBool has_color;
     GLsizei index_count;
     uint32_t generation;
     FVizSize point_count;
@@ -78,6 +91,7 @@ struct FVizGLDevice
     GLint diffuse_location;
     GLint light_position_location;
     GLint light_ambient_location;
+    GLint scalar_color_location;
     FVizGLActorResource* actors;
     FVizSize actor_count;
     FVizSize actor_capacity;
@@ -96,6 +110,11 @@ static FVizGLActorResource* fviz_gl_find_actor_resource(FVizGLDevice* device, co
 static void fviz_gl_actor_resource_destroy(FVizGLDevice* device, FVizGLActorResource* resource)
 {
     const FVizGLFunctions* gl = &device->gl;
+    if (resource->color_buffer != 0u)
+    {
+        gl->glDeleteBuffers(1, &resource->color_buffer);
+        resource->color_buffer = 0u;
+    }
     if (resource->index_buffer != 0u)
     {
         gl->glDeleteBuffers(1, &resource->index_buffer);
@@ -116,6 +135,7 @@ static void fviz_gl_actor_resource_destroy(FVizGLDevice* device, FVizGLActorReso
         gl->glDeleteVertexArrays(1, &resource->vao);
         resource->vao = 0u;
     }
+    resource->has_color = FVIZ_FALSE;
     resource->index_count = 0;
     resource->generation = 0u;
     resource->point_count = 0u;
@@ -132,6 +152,56 @@ static void fviz_gl_upload_buffer(
     if (*buffer == 0u) gl->glGenBuffers(1, buffer);
     gl->glBindBuffer(target, *buffer);
     gl->glBufferData(target, size, data, FVIZ_GL_STATIC_DRAW);
+}
+
+static FVizResult fviz_gl_build_color_buffer(
+    FVizGLDevice* device,
+    FVizGLActorResource* resource,
+    const FVizActor* actor,
+    const FVizPolyData* poly_data,
+    FVizSize point_count)
+{
+    const FVizGLFunctions* gl = &device->gl;
+    FVizMapper* mapper = fviz_actor_mapper((FVizActor*)actor);
+    const FVizLookupTable* table;
+    const FVizDataArray* scalars;
+    const float* scalar_data;
+    FVizVec3* colors;
+    FVizSize i;
+    if (mapper == NULL || fviz_mapper_scalar_visibility(mapper) == FVIZ_FALSE) return FVIZ_OK;
+    table = fviz_mapper_lookup_table(mapper);
+    scalars = fviz_poly_data_const_scalars(poly_data);
+    if (table == NULL || scalars == NULL || point_count == 0u) return FVIZ_OK;
+    scalar_data = (const float*)fviz_data_array_const_data((FVizDataArray*)scalars);
+    if (scalar_data == NULL) return FVIZ_OK;
+
+    if (fviz_mapper_scalar_range_valid(mapper) == FVIZ_FALSE)
+    {
+        float minimum = scalar_data[0];
+        float maximum = scalar_data[0];
+        for (i = 1u; i < point_count; ++i)
+        {
+            if (scalar_data[i] < minimum) minimum = scalar_data[i];
+            if (scalar_data[i] > maximum) maximum = scalar_data[i];
+        }
+        if (maximum <= minimum) maximum = minimum + 1.0f;
+        fviz_mapper_set_scalar_range(mapper, minimum, maximum);
+    }
+
+    colors = (FVizVec3*)fviz_alloc(point_count * sizeof(FVizVec3));
+    if (colors == NULL) return fviz_last_error_code();
+    for (i = 0u; i < point_count; ++i)
+    {
+        fviz_lookup_table_map_scalar(table, scalar_data[i], &colors[i].x, &colors[i].y, &colors[i].z);
+    }
+    fviz_gl_upload_buffer(device, &resource->color_buffer, FVIZ_GL_ARRAY_BUFFER, colors,
+        (GLsizeiptr)(point_count * sizeof(FVizVec3)));
+    fviz_free(colors);
+    gl->glVertexAttribPointer(FVIZ_GL_COLOR_ATTRIBUTE_INDEX, 3, GL_FLOAT, GL_FALSE,
+        (GLsizei)sizeof(FVizVec3), (const void*)0);
+    gl->glEnableVertexAttribArray(FVIZ_GL_COLOR_ATTRIBUTE_INDEX);
+    resource->has_color = FVIZ_TRUE;
+    return FVIZ_OK;
 }
 
 static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FVizActor* actor)
@@ -217,6 +287,8 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     gl->glVertexAttribPointer(FVIZ_GL_NORMAL_ATTRIBUTE_INDEX, 3, GL_FLOAT, GL_FALSE,
         (GLsizei)sizeof(FVizVec3), (const void*)0);
     gl->glEnableVertexAttribArray(FVIZ_GL_NORMAL_ATTRIBUTE_INDEX);
+
+    (void)fviz_gl_build_color_buffer(device, resource, actor, poly_data, point_count);
 
     fviz_gl_upload_buffer(device, &resource->index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, indices,
         (GLsizeiptr)(index_count * sizeof(uint32_t)));
@@ -308,6 +380,7 @@ static FVizResult fviz_gl_create_program(FVizGLDevice* device)
     device->diffuse_location = gl->glGetUniformLocation(device->program, "uDiffuse");
     device->light_position_location = gl->glGetUniformLocation(device->program, "uLightPosition");
     device->light_ambient_location = gl->glGetUniformLocation(device->program, "uLightAmbient");
+    device->scalar_color_location = gl->glGetUniformLocation(device->program, "uScalarColorEnabled");
     return FVIZ_OK;
 }
 
@@ -427,6 +500,7 @@ FVizResult fviz_internal_gl_device_render(
 
         fviz_actor_get_color(actor, &red, &green, &blue);
         gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]) {red, green, blue});
+        gl->glUniform1i(device->scalar_color_location, resource->has_color == FVIZ_TRUE ? 1 : 0);
         light_ambient.x = 0.22f;
         light_ambient.y = 0.22f;
         light_ambient.z = 0.26f;

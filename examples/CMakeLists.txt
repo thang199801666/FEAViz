@@ -12,6 +12,8 @@ fviz_add_example(FVizExamplePolyData 03_Mesh/poly_data.c)
 fviz_add_example(FVizExampleLoadMesh 04_IO/load_mesh.c)
 fviz_add_example(FVizViewer 05_Rendering/viewer.c)
 fviz_add_example(FVizExampleSimpleModel 06_Tutorial/simple_model.c)
+fviz_add_example(FVizExampleScalarColoring 07_ScalarColoring/scalar_coloring.c)
 
 set_target_properties(FVizViewer PROPERTIES OUTPUT_NAME "FEAVizViewer")
 set_target_properties(FVizExampleSimpleModel PROPERTIES OUTPUT_NAME "FEAVizSimpleModel")
+set_target_properties(FVizExampleScalarColoring PROPERTIES OUTPUT_NAME "FEAVizScalarColoring")

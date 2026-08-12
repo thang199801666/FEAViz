@@ -9,6 +9,7 @@
 #include <FViz/Math/FVizQuat.h>
 #include <FViz/Math/FVizVec3.h>
 #include <FViz/Mesh/FVizPolyData.h>
+#include <FViz/Rendering/FVizMapper.h>
 
 FVIZ_EXTERN_C_BEGIN
 
@@ -19,6 +20,8 @@ FVIZ_API FVizResult fviz_actor_create(FVizActor** out_actor);
 FVIZ_API FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data);
 FVIZ_API FVizPolyData* fviz_actor_poly_data(FVizActor* actor);
 FVIZ_API const FVizPolyData* fviz_actor_const_poly_data(const FVizActor* actor);
+FVIZ_API FVizResult fviz_actor_set_mapper(FVizActor* actor, FVizMapper* mapper);
+FVIZ_API FVizMapper* fviz_actor_mapper(FVizActor* actor);
 FVIZ_API void fviz_actor_set_color(FVizActor* actor, float red, float green, float blue);
 FVIZ_API void fviz_actor_get_color(const FVizActor* actor, float* red, float* green, float* blue);
 FVIZ_API void fviz_actor_set_visible(FVizActor* actor, FVizBool visible);
