@@ -126,7 +126,8 @@ static FVizResult fviz_bvh_build_recursive(
     node.triangle_begin = -1;
     node.triangle_end = -1;
 
-    if (end - begin <= FVIZ_BVH_LEAF_SIZE || depth >= FVIZ_BVH_MAX_DEPTH)
+    if ((uint32_t)(end - begin) <= FVIZ_BVH_LEAF_SIZE ||
+        (uint32_t)depth >= FVIZ_BVH_MAX_DEPTH)
     {
         node.triangle_begin = (int32_t)bvh->triangle_count;
         node.triangle_end = node.triangle_begin + (end - begin);

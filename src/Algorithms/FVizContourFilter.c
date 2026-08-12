@@ -88,25 +88,6 @@ FVizSize fviz_contour_filter_level_count(const FVizContourFilter* filter)
     return filter != NULL ? filter->level_count : 0u;
 }
 
-static FVizBool fviz_contour_read_scalar(const FVizDataArray* array, FVizSize index, float* out_value)
-{
-    double value = 0.0;
-    const void* tuple;
-    if (array == NULL || out_value == NULL || fviz_data_array_components(array) != 1u) return FVIZ_FALSE;
-    tuple = fviz_data_array_const_tuple(array, index);
-    if (tuple == NULL) return FVIZ_FALSE;
-    switch (fviz_data_array_type(array))
-    {
-        case FVIZ_DATA_FLOAT32: value = *(const float*)tuple; break;
-        case FVIZ_DATA_FLOAT64: value = *(const double*)tuple; break;
-        case FVIZ_DATA_INT32: value = *(const int32_t*)tuple; break;
-        case FVIZ_DATA_UINT32: value = *(const uint32_t*)tuple; break;
-        default: return FVIZ_FALSE;
-    }
-    *out_value = (float)value;
-    return FVIZ_TRUE;
-}
-
 static FVizResult fviz_contour_execute(FVizContourFilter* filter)
 {
     const FVizPolyData* input = filter->input;
