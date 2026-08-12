@@ -44,6 +44,14 @@ FVIZ_API FVizResult fviz_unstructured_grid_threshold_cells(
     double minimum,
     double maximum,
     FVizUnstructuredGrid** out_grid);
+FVIZ_API FVizResult fviz_unstructured_grid_warp_by_vector(
+    const FVizUnstructuredGrid* grid,
+    const char* vector_name,
+    double scale,
+    FVizUnstructuredGrid** out_grid);
+FVIZ_API FVizResult fviz_unstructured_grid_cell_data_to_point_data(
+    const FVizUnstructuredGrid* grid,
+    FVizUnstructuredGrid** out_grid);
 
 FVIZ_EXTERN_C_END
 

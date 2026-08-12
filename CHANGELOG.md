@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2 - FEA deformation and field interpolation
+
+- Added `fviz_unstructured_grid_warp_by_vector()`: deforms a grid by displacing every point along a named three-component vector field scaled by a factor, preserving topology and all point/cell/field data.
+- Added `fviz_unstructured_grid_cell_data_to_point_data()`: averages one-component cell scalars onto points using incident-cell weights for smooth stress/displacement contours, preserving the original grid.
+- Added `FViz.FEA.Filters` tests covering warp correctness, warp validation, and cell-to-point averaging.
+
 ## 0.3.1 - FEA result visualization: slicing and surface scalars
 
 - Added `FVizPolyData` point attribute storage (`FVizAttributeSet* point_data`) with `point_data`/`const_point_data` accessors so named per-point fields (stress, displacement, ...) can live on rendered surfaces.

@@ -202,26 +202,250 @@ static FVizResult fviz_surface_add_face(FVizArray* faces, const uint32_t* ids, u
     return fviz_array_push(faces, &face);
 }
 
-static FVizBool fviz_scalar_value(const FVizDataArray* array, FVizSize index, double* out_value)
+static FVizBool fviz_component_value(const FVizDataArray* array, FVizSize index, uint32_t component, double* out_value)
 {
     const void* tuple;
-    if (array == NULL || out_value == NULL || fviz_data_array_components(array) != 1u) return FVIZ_FALSE;
+    if (array == NULL || out_value == NULL || component >= fviz_data_array_components(array)) return FVIZ_FALSE;
     tuple = fviz_data_array_const_tuple(array, index);
     if (tuple == NULL) return FVIZ_FALSE;
     switch (fviz_data_array_type(array))
     {
-        case FVIZ_DATA_INT8: *out_value = *(const int8_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT8: *out_value = *(const uint8_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_INT16: *out_value = *(const int16_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT16: *out_value = *(const uint16_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_INT32: *out_value = *(const int32_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT32: *out_value = *(const uint32_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_INT64: *out_value = (double)*(const int64_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT64: *out_value = (double)*(const uint64_t*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_FLOAT32: *out_value = *(const float*)tuple; return FVIZ_TRUE;
-        case FVIZ_DATA_FLOAT64: *out_value = *(const double*)tuple; return FVIZ_TRUE;
+        case FVIZ_DATA_INT8: *out_value = ((const int8_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_UINT8: *out_value = ((const uint8_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_INT16: *out_value = ((const int16_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_UINT16: *out_value = ((const uint16_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_INT32: *out_value = ((const int32_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_UINT32: *out_value = ((const uint32_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_INT64: *out_value = (double)((const int64_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_UINT64: *out_value = (double)((const uint64_t*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_FLOAT32: *out_value = ((const float*)tuple)[component]; return FVIZ_TRUE;
+        case FVIZ_DATA_FLOAT64: *out_value = ((const double*)tuple)[component]; return FVIZ_TRUE;
         default: return FVIZ_FALSE;
     }
+}
+
+static FVizBool fviz_scalar_value(const FVizDataArray* array, FVizSize index, double* out_value)
+{
+    return fviz_component_value(array, index, 0u, out_value);
+}
+
+static FVizResult fviz_copy_attribute_set(FVizAttributeSet* source, FVizAttributeSet* destination)
+{
+    FVizSize i;
+    if (source == NULL) return FVIZ_OK;
+    for (i = 0u; i < fviz_attribute_set_count(source); ++i)
+    {
+        const char* name = fviz_attribute_set_name_at(source, i);
+        FVizDataArray* array = fviz_attribute_set_array_at(source, i);
+        if (name == NULL || array == NULL) continue;
+        if (fviz_attribute_set_add(destination, name, array) != FVIZ_OK) return fviz_last_error_code();
+    }
+    return FVIZ_OK;
+}
+
+static FVizResult fviz_clone_topology(const FVizUnstructuredGrid* grid, FVizUnstructuredGrid** out_result)
+{
+    FVizUnstructuredGrid* result = NULL;
+    const FVizVec3* points;
+    FVizSize i;
+    if (fviz_unstructured_grid_create(&result) != FVIZ_OK) return fviz_last_error_code();
+    points = fviz_points_data(grid->points);
+    for (i = 0u; i < fviz_points_count(grid->points); ++i)
+    {
+        if (fviz_unstructured_grid_add_point(result, points[i], NULL) != FVIZ_OK) goto fail;
+    }
+    for (i = 0u; i < fviz_cell_array_count(grid->cells); ++i)
+    {
+        if (fviz_unstructured_grid_add_cell(result, fviz_cell_array_type(grid->cells, i),
+                fviz_cell_array_point_count(grid->cells, i), fviz_cell_array_point_ids(grid->cells, i)) != FVIZ_OK)
+        {
+            goto fail;
+        }
+    }
+    if (fviz_copy_attribute_set(fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_point_data(result)) != FVIZ_OK ||
+        fviz_copy_attribute_set(fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_cell_data(result)) != FVIZ_OK ||
+        fviz_copy_attribute_set(fviz_unstructured_grid_field_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_field_data(result)) != FVIZ_OK)
+    {
+        goto fail;
+    }
+    *out_result = result;
+    return FVIZ_OK;
+fail:
+    fviz_release(result);
+    return fviz_last_error_code();
+}
+
+FVizResult fviz_unstructured_grid_warp_by_vector(
+    const FVizUnstructuredGrid* grid,
+    const char* vector_name,
+    double scale,
+    FVizUnstructuredGrid** out_grid)
+{
+    const FVizDataArray* vectors;
+    const FVizVec3* points;
+    FVizUnstructuredGrid* result = NULL;
+    FVizSize i;
+    if (grid == NULL || vector_name == NULL || vector_name[0] == '\0' || out_grid == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "warp requires grid, vector name and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_grid = NULL;
+    if (fviz_unstructured_grid_validate(grid) != FVIZ_OK) return fviz_last_error_code();
+    vectors = fviz_attribute_set_const_get(fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), vector_name);
+    if (vectors == NULL || fviz_data_array_components(vectors) != 3u ||
+        fviz_data_array_tuple_count(vectors) != fviz_points_count(grid->points))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "warp vector must be a three-component point array");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (fviz_unstructured_grid_create(&result) != FVIZ_OK) return fviz_last_error_code();
+    points = fviz_points_data(grid->points);
+    for (i = 0u; i < fviz_points_count(grid->points); ++i)
+    {
+        double vx;
+        double vy;
+        double vz;
+        FVizVec3 displaced;
+        if (!fviz_component_value(vectors, i, 0u, &vx) ||
+            !fviz_component_value(vectors, i, 1u, &vy) ||
+            !fviz_component_value(vectors, i, 2u, &vz))
+        {
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "warp vector type is unsupported");
+            fviz_release(result);
+            return FVIZ_ERROR_INVALID_ARGUMENT;
+        }
+        displaced = fviz_vec3(
+            points[i].x + (float)(vx * scale),
+            points[i].y + (float)(vy * scale),
+            points[i].z + (float)(vz * scale));
+        if (fviz_unstructured_grid_add_point(result, displaced, NULL) != FVIZ_OK)
+        {
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
+    }
+    for (i = 0u; i < fviz_cell_array_count(grid->cells); ++i)
+    {
+        if (fviz_unstructured_grid_add_cell(result, fviz_cell_array_type(grid->cells, i),
+                fviz_cell_array_point_count(grid->cells, i), fviz_cell_array_point_ids(grid->cells, i)) != FVIZ_OK)
+        {
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
+    }
+    if (fviz_copy_attribute_set(fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_point_data(result)) != FVIZ_OK ||
+        fviz_copy_attribute_set(fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_cell_data(result)) != FVIZ_OK ||
+        fviz_copy_attribute_set(fviz_unstructured_grid_field_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_field_data(result)) != FVIZ_OK)
+    {
+        fviz_release(result);
+        return fviz_last_error_code();
+    }
+    *out_grid = result;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_unstructured_grid_cell_data_to_point_data(
+    const FVizUnstructuredGrid* grid,
+    FVizUnstructuredGrid** out_grid)
+{
+    FVizUnstructuredGrid* result = NULL;
+    FVizAttributeSet* cell_data;
+    FVizSize i;
+    if (grid == NULL || out_grid == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "grid and out_grid must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_grid = NULL;
+    if (fviz_unstructured_grid_validate(grid) != FVIZ_OK) return fviz_last_error_code();
+    if (fviz_clone_topology(grid, &result) != FVIZ_OK) return fviz_last_error_code();
+    cell_data = fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)grid);
+    for (i = 0u; i < fviz_attribute_set_count(cell_data); ++i)
+    {
+        const FVizDataArray* array = fviz_attribute_set_const_array_at(cell_data, i);
+        const char* name = fviz_attribute_set_name_at(cell_data, i);
+        FVizDataArray* output;
+        double* sums;
+        uint32_t* counts;
+        FVizSize point_count;
+        FVizSize j;
+        if (array == NULL || name == NULL || fviz_data_array_components(array) != 1u ||
+            fviz_data_array_tuple_count(array) != fviz_cell_array_count(grid->cells))
+        {
+            continue;
+        }
+        point_count = fviz_points_count(grid->points);
+        sums = (double*)fviz_alloc(point_count * sizeof(double));
+        counts = (uint32_t*)fviz_alloc(point_count * sizeof(uint32_t));
+        if (sums == NULL || counts == NULL)
+        {
+            fviz_free(sums);
+            fviz_free(counts);
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
+        for (j = 0u; j < point_count; ++j)
+        {
+            sums[j] = 0.0;
+            counts[j] = 0u;
+        }
+        for (j = 0u; j < fviz_cell_array_count(grid->cells); ++j)
+        {
+            double value;
+            FVizSize k;
+            if (!fviz_scalar_value(array, j, &value))
+            {
+                fviz_free(sums);
+                fviz_free(counts);
+                fviz_release(result);
+                fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "cell scalar type is unsupported");
+                return FVIZ_ERROR_INVALID_ARGUMENT;
+            }
+            for (k = 0u; k < fviz_cell_array_point_count(grid->cells, j); ++k)
+            {
+                const uint32_t point_id = fviz_cell_array_point_ids(grid->cells, j)[k];
+                sums[point_id] += value;
+                counts[point_id] += 1u;
+            }
+        }
+        if (fviz_data_array_create(FVIZ_DATA_FLOAT32, 1u, &output) != FVIZ_OK)
+        {
+            fviz_free(sums);
+            fviz_free(counts);
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
+        for (j = 0u; j < point_count; ++j)
+        {
+            const float value = counts[j] != 0u ? (float)(sums[j] / (double)counts[j]) : 0.0f;
+            if (fviz_data_array_append_tuple(output, &value) != FVIZ_OK)
+            {
+                fviz_release(output);
+                fviz_free(sums);
+                fviz_free(counts);
+                fviz_release(result);
+                return fviz_last_error_code();
+            }
+        }
+        fviz_free(sums);
+        fviz_free(counts);
+        if (fviz_attribute_set_add(fviz_unstructured_grid_point_data(result), name, output) != FVIZ_OK)
+        {
+            fviz_release(output);
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
+        fviz_release(output);
+    }
+    *out_grid = result;
+    return FVIZ_OK;
 }
 
 FVizResult fviz_unstructured_grid_threshold_cells(
