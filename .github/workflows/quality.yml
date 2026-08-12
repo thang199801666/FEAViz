@@ -18,7 +18,7 @@ jobs:
       matrix:
         linkage: [shared, static]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
@@ -60,7 +60,7 @@ jobs:
       matrix:
         linkage: [shared, static]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         env:
           CC: clang
@@ -87,7 +87,7 @@ jobs:
     name: Linux Clang ASan UBSan and fuzz smoke
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         env:
           CC: clang
@@ -106,4 +106,4 @@ jobs:
       - name: Sanitizer tests
         run: ctest --test-dir build --output-on-failure
       - name: Reader fuzz smoke
-        run: ./build/fuzz/FVizFuzzReaders -runs=2000 -max_len=1048576
+        run: ./build/bin/FVizFuzzReaders -runs=2000 -max_len=1048576
