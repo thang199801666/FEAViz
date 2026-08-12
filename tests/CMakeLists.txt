@@ -40,6 +40,13 @@ fviz_apply_compiler_options(FVizTestMeshReader)
 fviz_apply_sanitizers(FVizTestMeshReader)
 add_test(NAME FViz.IO.MeshReader COMMAND FVizTestMeshReader)
 
+add_executable(FVizTestVTUReader IO/test_vtu_reader.c)
+target_link_libraries(FVizTestVTUReader PRIVATE FEAViz::FEAViz)
+target_compile_definitions(FVizTestVTUReader PRIVATE FVIZ_TESTDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../assets/testdata")
+fviz_apply_compiler_options(FVizTestVTUReader)
+fviz_apply_sanitizers(FVizTestVTUReader)
+add_test(NAME FViz.IO.VTUReader COMMAND FVizTestVTUReader)
+
 add_executable(FVizTestThreadRuntime Core/test_thread_runtime.c)
 target_link_libraries(FVizTestThreadRuntime PRIVATE FEAViz::FEAViz Threads::Threads)
 fviz_apply_compiler_options(FVizTestThreadRuntime)

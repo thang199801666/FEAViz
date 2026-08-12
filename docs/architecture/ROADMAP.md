@@ -161,9 +161,16 @@ OBJ/STL file
 - [x] `FVizScalarLegend` metadata object (0.4.1)
 - [x] Renderer hook + orthographic 2D overlay color-bar pass (0.4.1)
 
-## Immediate work after 0.4.1
+## Phase 14 — VTU result-file IO — MILESTONE COMPLETE in 0.4.2
 
-1. VTU (VTK XML unstructured grid) reader for real FEA result files.
-2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-4. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+- [x] `fviz_vtu_read` parses VTK XML UnstructuredGrid (ascii) into `FVizUnstructuredGrid` (0.4.2)
+- [x] PointData/CellData result arrays preserved with original names (0.4.2)
+- [ ] Base64/binary VTU format support
+- [ ] Legacy VTK `.vtk` reader
+
+## Immediate work after 0.4.2
+
+1. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+2. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+3. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+4. Base64/binary VTU support and legacy VTK reader.

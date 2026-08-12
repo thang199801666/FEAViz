@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.2 - VTU reader
+
+- Added `fviz_vtu_read()`: parses VTK XML UnstructuredGrid (`.vtu`) files into `FVizUnstructuredGrid` — points, connectivity/offsets/types cells, and arbitrary `PointData`/`CellData` result arrays (ascii format, scalar and vector components).
+- Maps VTK cell types to FEAViz cells (triangle, quad, tetra, hexahedron, wedge, pyramid) and preserves result fields with their original names for scalar coloring and probing.
+- Added `assets/testdata/hex.vtu` and `FViz.IO.VTUReader` tests (counts, bounds, point positions, point/cell scalars, surface extraction).
+- Added `FEAVizVTUViewer`: loads a `.vtu`, extracts the colored surface with a scalar legend.
+
 ## 0.4.1 - Scalar legend overlay
 
 - Added `FVizScalarLegend`: color-bar overlay metadata with a `FVizLookupTable`, value range, corner position, visibility, and title.
