@@ -46,7 +46,8 @@ static FVizMat3 fviz_mat3_from_columns(FVizVec3 c0, FVizVec3 c1, FVizVec3 c2)
 
 static void fviz_point_locator_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_point_locator_class = {
-    FVIZ_TYPE_POINT_LOCATOR, "FVizPointLocator", &g_fviz_object_class, fviz_point_locator_destroy
+    FVIZ_TYPE_POINT_LOCATOR, "FVizPointLocator", &g_fviz_object_class,
+    fviz_point_locator_destroy, NULL
 };
 
 static void fviz_point_locator_destroy(FVizObject* object)

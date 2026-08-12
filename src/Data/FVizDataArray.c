@@ -12,7 +12,8 @@ static const FVizObjectClass g_fviz_data_array_class = {
     FVIZ_TYPE_DATA_ARRAY,
     "FVizDataArray",
     &g_fviz_object_class,
-    fviz_data_array_destroy
+    fviz_data_array_destroy,
+    NULL
 };
 
 static void fviz_data_array_destroy(FVizObject* object)

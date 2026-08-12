@@ -11,7 +11,8 @@ static const FVizObjectClass g_fviz_string_class = {
     FVIZ_TYPE_STRING,
     "FVizString",
     &g_fviz_object_class,
-    fviz_string_destroy
+    fviz_string_destroy,
+    NULL
 };
 
 static void fviz_string_destroy(FVizObject* object)

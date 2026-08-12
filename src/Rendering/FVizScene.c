@@ -11,7 +11,8 @@ static const FVizObjectClass g_fviz_scene_class = {
     FVIZ_TYPE_SCENE,
     "FVizScene",
     &g_fviz_object_class,
-    fviz_scene_destroy
+    fviz_scene_destroy,
+    NULL
 };
 
 static void fviz_scene_release_actors(FVizScene* scene)

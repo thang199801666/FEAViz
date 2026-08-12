@@ -15,7 +15,8 @@ static const FVizObjectClass g_fviz_renderer_widget_class = {
     FVIZ_TYPE_RENDERER_WIDGET,
     "FVizRendererWidget",
     &g_fviz_object_class,
-    fviz_renderer_widget_destroy
+    fviz_renderer_widget_destroy,
+    NULL
 };
 
 FVizResult fviz_renderer_widget_create(

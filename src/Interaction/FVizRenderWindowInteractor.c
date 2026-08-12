@@ -24,7 +24,8 @@ static const FVizObjectClass g_fviz_render_window_interactor_class = {
     FVIZ_TYPE_RENDER_WINDOW_INTERACTOR,
     "FVizRenderWindowInteractor",
     &g_fviz_object_class,
-    fviz_render_window_interactor_destroy
+    fviz_render_window_interactor_destroy,
+    NULL
 };
 
 FVizResult fviz_internal_render_window_interactor_create(

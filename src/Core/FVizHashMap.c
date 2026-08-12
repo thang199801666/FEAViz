@@ -16,7 +16,8 @@ static const FVizObjectClass g_fviz_hash_map_class = {
     FVIZ_TYPE_HASH_MAP,
     "FVizHashMap",
     &g_fviz_object_class,
-    fviz_hash_map_destroy
+    fviz_hash_map_destroy,
+    NULL
 };
 
 static uint64_t fviz_hash_map_hash(FVizId key)

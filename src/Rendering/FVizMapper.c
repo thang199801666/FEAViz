@@ -9,7 +9,8 @@ static const FVizObjectClass g_fviz_mapper_class = {
     FVIZ_TYPE_MAPPER,
     "FVizMapper",
     &g_fviz_object_class,
-    fviz_mapper_destroy
+    fviz_mapper_destroy,
+    NULL
 };
 
 static void fviz_mapper_destroy(FVizObject* object)

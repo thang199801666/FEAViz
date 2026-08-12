@@ -10,7 +10,7 @@
 
 static void fviz_bvh_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_bvh_class = {
-    FVIZ_TYPE_BVH, "FVizBVH", &g_fviz_object_class, fviz_bvh_destroy
+    FVIZ_TYPE_BVH, "FVizBVH", &g_fviz_object_class, fviz_bvh_destroy, NULL
 };
 
 static FVizBounds fviz_triangle_bounds(const FVizVec3* points, const uint32_t* ids)

@@ -15,7 +15,8 @@ static const FVizObjectClass g_fviz_bit_array_class = {
     FVIZ_TYPE_BIT_ARRAY,
     "FVizBitArray",
     &g_fviz_object_class,
-    fviz_bit_array_destroy
+    fviz_bit_array_destroy,
+    NULL
 };
 
 static void fviz_bit_array_destroy(FVizObject* object)

@@ -10,7 +10,8 @@ static const FVizObjectClass g_fviz_renderer_class = {
     FVIZ_TYPE_RENDERER,
     "FVizRenderer",
     &g_fviz_object_class,
-    fviz_renderer_destroy
+    fviz_renderer_destroy,
+    NULL
 };
 
 static void fviz_renderer_destroy(FVizObject* object)

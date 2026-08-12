@@ -16,21 +16,24 @@ static const FVizObjectClass g_fviz_interactor_style_class = {
     FVIZ_TYPE_INTERACTOR_STYLE,
     "FVizInteractorStyle",
     &g_fviz_object_class,
-    fviz_interactor_style_destroy
+    fviz_interactor_style_destroy,
+    NULL
 };
 
 static const FVizObjectClass g_fviz_interactor_style_trackball_camera_class = {
     FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_CAMERA,
     "FVizInteractorStyleTrackballCamera",
     &g_fviz_interactor_style_class,
-    fviz_interactor_style_destroy
+    fviz_interactor_style_destroy,
+    NULL
 };
 
 static const FVizObjectClass g_fviz_interactor_style_rubber_band_class = {
     FVIZ_TYPE_INTERACTOR_STYLE_RUBBER_BAND,
     "FVizInteractorStyleRubberBand",
     &g_fviz_interactor_style_class,
-    fviz_interactor_style_destroy
+    fviz_interactor_style_destroy,
+    NULL
 };
 
 FVizResult fviz_interactor_style_trackball_camera_create(FVizInteractorStyle** out_style)

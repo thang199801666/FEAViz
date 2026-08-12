@@ -12,7 +12,8 @@ static const FVizObjectClass g_fviz_buffer_class = {
     FVIZ_TYPE_BUFFER,
     "FVizBuffer",
     &g_fviz_object_class,
-    fviz_buffer_destroy
+    fviz_buffer_destroy,
+    NULL
 };
 
 static void fviz_buffer_destroy(FVizObject* object)

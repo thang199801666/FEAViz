@@ -9,7 +9,8 @@
 
 static void fviz_scalar_legend_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_scalar_legend_class = {
-    FVIZ_TYPE_SCALAR_LEGEND, "FVizScalarLegend", &g_fviz_object_class, fviz_scalar_legend_destroy
+    FVIZ_TYPE_SCALAR_LEGEND, "FVizScalarLegend", &g_fviz_object_class,
+    fviz_scalar_legend_destroy, NULL
 };
 
 static void fviz_scalar_legend_destroy(FVizObject* object)

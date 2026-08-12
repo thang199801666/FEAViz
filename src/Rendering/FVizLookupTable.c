@@ -13,7 +13,8 @@ static const FVizObjectClass g_fviz_lookup_table_class = {
     FVIZ_TYPE_LOOKUP_TABLE,
     "FVizLookupTable",
     &g_fviz_object_class,
-    fviz_lookup_table_destroy
+    fviz_lookup_table_destroy,
+    NULL
 };
 
 static void fviz_lookup_table_destroy(FVizObject* object)

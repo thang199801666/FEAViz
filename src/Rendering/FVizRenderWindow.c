@@ -18,7 +18,8 @@ static const FVizObjectClass g_fviz_render_window_class = {
     FVIZ_TYPE_RENDER_WINDOW,
     "FVizRenderWindow",
     &g_fviz_object_class,
-    fviz_render_window_destroy
+    fviz_render_window_destroy,
+    NULL
 };
 
 static void fviz_render_window_destroy(FVizObject* object)

@@ -13,19 +13,24 @@ static const FVizObjectClass g_fviz_filter_class = {
     FVIZ_TYPE_FILTER, "FVizFilter", &g_fviz_algorithm_class, fviz_filter_destroy, fviz_filter_mtime
 };
 static const FVizObjectClass g_fviz_threshold_filter_class = {
-    FVIZ_TYPE_THRESHOLD_FILTER, "FVizThresholdFilter", &g_fviz_filter_class, fviz_filter_destroy
+    FVIZ_TYPE_THRESHOLD_FILTER, "FVizThresholdFilter", &g_fviz_filter_class,
+    fviz_filter_destroy, NULL
 };
 static const FVizObjectClass g_fviz_warp_filter_class = {
-    FVIZ_TYPE_WARP_FILTER, "FVizWarpFilter", &g_fviz_filter_class, fviz_filter_destroy
+    FVIZ_TYPE_WARP_FILTER, "FVizWarpFilter", &g_fviz_filter_class,
+    fviz_filter_destroy, NULL
 };
 static const FVizObjectClass g_fviz_cell_to_point_filter_class = {
-    FVIZ_TYPE_CELL_DATA_TO_POINT_FILTER, "FVizCellDataToPointFilter", &g_fviz_filter_class, fviz_filter_destroy
+    FVIZ_TYPE_CELL_DATA_TO_POINT_FILTER, "FVizCellDataToPointFilter", &g_fviz_filter_class,
+    fviz_filter_destroy, NULL
 };
 static const FVizObjectClass g_fviz_surface_filter_class = {
-    FVIZ_TYPE_SURFACE_FILTER, "FVizSurfaceFilter", &g_fviz_filter_class, fviz_filter_destroy
+    FVIZ_TYPE_SURFACE_FILTER, "FVizSurfaceFilter", &g_fviz_filter_class,
+    fviz_filter_destroy, NULL
 };
 static const FVizObjectClass g_fviz_slice_filter_class = {
-    FVIZ_TYPE_SLICE_FILTER, "FVizSliceFilter", &g_fviz_filter_class, fviz_filter_destroy
+    FVIZ_TYPE_SLICE_FILTER, "FVizSliceFilter", &g_fviz_filter_class,
+    fviz_filter_destroy, NULL
 };
 static const FVizObjectClass g_fviz_transform_filter_class = {
     FVIZ_TYPE_TRANSFORM_FILTER, "FVizTransformFilter", &g_fviz_filter_class, fviz_filter_destroy, fviz_filter_mtime

@@ -11,6 +11,7 @@ static const FVizObjectClass g_fviz_camera_class = {
     FVIZ_TYPE_CAMERA,
     "FVizCamera",
     &g_fviz_object_class,
+    NULL,
     NULL
 };
 

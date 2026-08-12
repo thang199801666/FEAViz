@@ -9,7 +9,8 @@
 
 static void fviz_contour_filter_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_contour_filter_class = {
-    FVIZ_TYPE_CONTOUR_FILTER, "FVizContourFilter", &g_fviz_object_class, fviz_contour_filter_destroy
+    FVIZ_TYPE_CONTOUR_FILTER, "FVizContourFilter", &g_fviz_object_class,
+    fviz_contour_filter_destroy, NULL
 };
 
 static void fviz_contour_filter_destroy(FVizObject* object)
