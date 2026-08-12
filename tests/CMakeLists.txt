@@ -40,6 +40,8 @@ fviz_add_test(FVizTestScene Rendering/test_scene.c FViz.Rendering.Scene)
 fviz_add_test(FVizTestMapper Rendering/test_mapper.c FViz.Rendering.Mapper)
 fviz_add_test(FVizTestScalarLegend Rendering/test_scalar_legend.c FViz.Rendering.ScalarLegend)
 fviz_add_test(FVizTestRendererWidget Rendering/test_renderer_widget.c FViz.Rendering.RendererWidget)
+fviz_add_test(FVizTestRenderPass Rendering/test_render_pass.c FViz.Rendering.RenderPass)
+fviz_add_test(FVizTestVisualRegression Rendering/test_visual_regression.c FViz.Rendering.VisualRegression)
 
 add_executable(FVizTestMeshReader IO/test_mesh_reader.c)
 target_link_libraries(FVizTestMeshReader PRIVATE FEAViz::FEAViz)

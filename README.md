@@ -6,16 +6,17 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.12.0** adds isolated parallel runtimes, cancellable task groups,
-deterministic reduction/scan/sort primitives, callback-local scratch storage,
-pipeline-wide cancellation, and a reproducible HEX8 scaling benchmark.
+Version **0.13.0** adds an ordered render-pass architecture, opacity/edge/direct
+RGBA/clipping support, viewport coordinate transforms, offscreen readback and
+image output, explicit context lifecycle, and depth-tested GPU ID selection
+with original FEA provenance.
 
 The active implementation roadmap is
 [`docs/architecture/VTK_CONVERGENCE_PLAN.md`](docs/architecture/VTK_CONVERGENCE_PLAN.md),
 and the default ownership, error, MTime, and thread-safety rules are documented
 in [`docs/api/PUBLIC_API_CONTRACTS.md`](docs/api/PUBLIC_API_CONTRACTS.md).
 
-## Current 0.12.0 milestone
+## Current 0.13.0 milestone
 
 Implemented:
 
@@ -42,6 +43,9 @@ Implemented:
   callback-local scratch, runtime statistics, nested-call safety, and the
   compatible default `fviz_parallel_for` wrapper.
 - Multi-renderer windows with normalized viewports, layers, viewport-aware picking/event routing, and non-blocking widget event processing.
+- Backend-neutral clear/opaque/translucent/edge/selection/overlay render passes,
+  offscreen color/depth readback, PPM output, host child-window attachment,
+  renderer coordinate conversion, and depth-tested hardware provenance picks.
 - Interactor lifecycle/render gating and a headless-testable rubber-band style.
 - General `FVizTransform` composition with actor user transforms, plus NaN/below/above-range lookup-table colors.
 - Scene model: `FVizActor`, `FVizScene`, `FVizRenderer`, `FVizCamera`.

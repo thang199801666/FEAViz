@@ -1,4 +1,5 @@
 #include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,14 +28,14 @@ static const char* const k_fviz_gl_vertex_shader_source =
     "#version 330 core\n"
     "layout(location = 0) in vec3 aPosition;\n"
     "layout(location = 1) in vec3 aNormal;\n"
-    "layout(location = 2) in vec3 aColor;\n"
+    "layout(location = 2) in vec4 aColor;\n"
     "uniform mat4 uMvp;\n"
     "uniform mat4 uModel;\n"
     "uniform mat3 uNormalMatrix;\n"
     "uniform int uScalarColorEnabled;\n"
     "out vec3 vNormal;\n"
     "out vec3 vWorldPos;\n"
-    "out vec3 vColor;\n"
+    "out vec4 vColor;\n"
     "void main()\n"
     "{\n"
     "    gl_Position = uMvp * vec4(aPosition, 1.0);\n"
@@ -47,15 +48,20 @@ static const char* const k_fviz_gl_fragment_shader_source =
     "#version 330 core\n"
     "in vec3 vNormal;\n"
     "in vec3 vWorldPos;\n"
-    "in vec3 vColor;\n"
+    "in vec4 vColor;\n"
     "uniform vec3 uDiffuse;\n"
     "uniform vec3 uLightPosition;\n"
     "uniform vec3 uLightAmbient;\n"
     "uniform int uScalarColorEnabled;\n"
+    "uniform float uOpacity;\n"
+    "uniform int uClipPlaneCount;\n"
+    "uniform vec4 uClipPlanes[6];\n"
     "out vec4 outColor;\n"
     "void main()\n"
     "{\n"
-    "    vec3 baseColor = uScalarColorEnabled == 1 ? vColor : uDiffuse;\n"
+    "    for (int i = 0; i < uClipPlaneCount; ++i)\n"
+    "        if (dot(uClipPlanes[i].xyz, vWorldPos) + uClipPlanes[i].w < 0.0) discard;\n"
+    "    vec3 baseColor = uScalarColorEnabled == 1 ? vColor.rgb : uDiffuse;\n"
     "    vec3 n = normalize(vNormal);\n"
     "    if (length(n) < 0.5)\n"
     "    {\n"
@@ -64,7 +70,7 @@ static const char* const k_fviz_gl_fragment_shader_source =
     "    vec3 l = normalize(uLightPosition - vWorldPos);\n"
     "    float diffuse = max(dot(n, l), 0.0);\n"
     "    vec3 color = baseColor * (uLightAmbient + 0.9 * diffuse);\n"
-    "    outColor = vec4(color, 1.0);\n"
+    "    outColor = vec4(color, uOpacity * (uScalarColorEnabled == 1 ? vColor.a : 1.0));\n"
     "}\n";
 
 static const char* const k_fviz_gl2d_vertex_shader_source =
@@ -77,6 +83,31 @@ static const char* const k_fviz_gl2d_vertex_shader_source =
     "{\n"
     "    gl_Position = uMvp * vec4(aPosition, 0.0, 1.0);\n"
     "    vColor = aColor;\n"
+    "}\n";
+
+static const char* const k_fviz_gl_selection_vertex_shader_source =
+    "#version 330 core\n"
+    "layout(location = 0) in vec3 aPosition;\n"
+    "uniform mat4 uMvp;\n"
+    "uniform mat4 uModel;\n"
+    "out vec3 vWorldPos;\n"
+    "void main() { gl_Position = uMvp * vec4(aPosition, 1.0);\n"
+    "    vWorldPos = vec3(uModel * vec4(aPosition, 1.0)); }\n";
+
+static const char* const k_fviz_gl_selection_fragment_shader_source =
+    "#version 330 core\n"
+    "uniform uint uActorId;\n"
+    "uniform int uClipPlaneCount;\n"
+    "uniform vec4 uClipPlanes[6];\n"
+    "in vec3 vWorldPos;\n"
+    "out vec4 outColor;\n"
+    "void main()\n"
+    "{\n"
+    "    for (int i = 0; i < uClipPlaneCount; ++i)\n"
+    "        if (dot(uClipPlanes[i].xyz, vWorldPos) + uClipPlanes[i].w < 0.0) discard;\n"
+    "    uint code = ((uActorId + 1u) << 24u) | ((uint(gl_PrimitiveID) + 1u) & 0x00ffffffu);\n"
+    "    outColor = vec4(float(code & 255u), float((code >> 8u) & 255u),\n"
+    "        float((code >> 16u) & 255u), float((code >> 24u) & 255u)) / 255.0;\n"
     "}\n";
 
 static const char* const k_fviz_gl2d_fragment_shader_source =
@@ -105,6 +136,14 @@ typedef struct FVizGLActorResource
     FVizSize point_count;
 } FVizGLActorResource;
 
+typedef struct FVizGLColor
+{
+    float r;
+    float g;
+    float b;
+    float a;
+} FVizGLColor;
+
 struct FVizGLDevice
 {
     FVizGLFunctions gl;
@@ -116,8 +155,17 @@ struct FVizGLDevice
     GLint light_position_location;
     GLint light_ambient_location;
     GLint scalar_color_location;
+    GLint opacity_location;
+    GLint clip_plane_count_location;
+    GLint clip_planes_location;
     GLuint program_2d;
     GLint mvp_location_2d;
+    GLuint selection_program;
+    GLint selection_mvp_location;
+    GLint selection_model_location;
+    GLint selection_actor_id_location;
+    GLint selection_clip_plane_count_location;
+    GLint selection_clip_planes_location;
     FVizGLActorResource* actors;
     FVizSize actor_count;
     FVizSize actor_capacity;
@@ -187,6 +235,87 @@ static void fviz_gl_upload_buffer(
     gl->glBufferData(target, size, data, FVIZ_GL_STATIC_DRAW);
 }
 
+static double fviz_gl_array_component(
+    const FVizDataArray* array,
+    FVizSize tuple_index,
+    uint32_t component)
+{
+    const unsigned char* tuple = (const unsigned char*)fviz_data_array_const_tuple(array, tuple_index);
+    if (tuple == NULL || component >= fviz_data_array_components(array)) return 0.0;
+    switch (fviz_data_array_type(array))
+    {
+        case FVIZ_DATA_INT8: return ((const int8_t*)tuple)[component];
+        case FVIZ_DATA_UINT8: return ((const uint8_t*)tuple)[component];
+        case FVIZ_DATA_INT16: return ((const int16_t*)tuple)[component];
+        case FVIZ_DATA_UINT16: return ((const uint16_t*)tuple)[component];
+        case FVIZ_DATA_INT32: return ((const int32_t*)tuple)[component];
+        case FVIZ_DATA_UINT32: return ((const uint32_t*)tuple)[component];
+        case FVIZ_DATA_INT64: return (double)((const int64_t*)tuple)[component];
+        case FVIZ_DATA_UINT64: return (double)((const uint64_t*)tuple)[component];
+        case FVIZ_DATA_FLOAT32: return ((const float*)tuple)[component];
+        case FVIZ_DATA_FLOAT64: return ((const double*)tuple)[component];
+        default: return 0.0;
+    }
+}
+
+static double fviz_gl_array_scalar(
+    const FVizDataArray* array,
+    FVizSize tuple_index,
+    FVizComponentMode mode,
+    uint32_t component)
+{
+    if (mode == FVIZ_COMPONENT_MAGNITUDE)
+    {
+        double squared = 0.0;
+        uint32_t i;
+        for (i = 0u; i < fviz_data_array_components(array); ++i)
+        {
+            const double value = fviz_gl_array_component(array, tuple_index, i);
+            squared += value * value;
+        }
+        return sqrt(squared);
+    }
+    return fviz_gl_array_component(array, tuple_index, component);
+}
+
+static float fviz_gl_direct_color_component(
+    const FVizDataArray* array,
+    FVizSize tuple_index,
+    uint32_t component)
+{
+    double value = fviz_gl_array_component(array, tuple_index, component);
+    if (fviz_data_array_type(array) == FVIZ_DATA_UINT8) value /= 255.0;
+    else if (fviz_data_array_type(array) == FVIZ_DATA_UINT16) value /= 65535.0;
+    if (value < 0.0) value = 0.0;
+    if (value > 1.0) value = 1.0;
+    return (float)value;
+}
+
+static FVizGLColor fviz_gl_map_tuple_color(
+    FVizMapper* mapper,
+    const FVizDataArray* array,
+    FVizSize tuple_index,
+    FVizComponentMode mode,
+    uint32_t component)
+{
+    FVizGLColor color = {1.0f, 1.0f, 1.0f, 1.0f};
+    if (mode == FVIZ_COMPONENT_COLOR && fviz_data_array_components(array) >= 3u)
+    {
+        color.r = fviz_gl_direct_color_component(array, tuple_index, 0u);
+        color.g = fviz_gl_direct_color_component(array, tuple_index, 1u);
+        color.b = fviz_gl_direct_color_component(array, tuple_index, 2u);
+        if (fviz_data_array_components(array) >= 4u)
+            color.a = fviz_gl_direct_color_component(array, tuple_index, 3u);
+    }
+    else
+    {
+        const double value = fviz_gl_array_scalar(array, tuple_index, mode, component);
+        fviz_lookup_table_map_scalar(
+            fviz_mapper_lookup_table(mapper), (float)value, &color.r, &color.g, &color.b);
+    }
+    return color;
+}
+
 static FVizResult fviz_gl_build_color_buffer(
     FVizGLDevice* device,
     FVizGLActorResource* resource,
@@ -196,42 +325,128 @@ static FVizResult fviz_gl_build_color_buffer(
 {
     const FVizGLFunctions* gl = &device->gl;
     FVizMapper* mapper = fviz_actor_mapper((FVizActor*)actor);
-    const FVizLookupTable* table;
     const FVizDataArray* scalars;
-    const float* scalar_data;
-    FVizVec3* colors;
+    const FVizDataArray* opacity_array = NULL;
+    FVizArraySelection selection;
+    FVizGLColor* colors;
+    uint32_t* contributions = NULL;
+    FVizSize tuple_count;
     FVizSize i;
     if (mapper == NULL || fviz_mapper_scalar_visibility(mapper) == FVIZ_FALSE) return FVIZ_OK;
-    table = fviz_mapper_lookup_table(mapper);
-    scalars = fviz_poly_data_const_scalars(poly_data);
-    if (table == NULL || scalars == NULL || point_count == 0u) return FVIZ_OK;
-    scalar_data = (const float*)fviz_data_array_const_data((FVizDataArray*)scalars);
-    if (scalar_data == NULL) return FVIZ_OK;
-
-    if (fviz_mapper_scalar_range_valid(mapper) == FVIZ_FALSE)
+    fviz_array_selection_initialize(&selection);
+    (void)fviz_mapper_get_array_selection(mapper, &selection);
+    scalars = fviz_mapper_selected_array(mapper);
+    if (scalars == NULL)
     {
-        float minimum = scalar_data[0];
-        float maximum = scalar_data[0];
-        for (i = 1u; i < point_count; ++i)
+        scalars = fviz_poly_data_const_scalars(poly_data);
+        selection.association = FVIZ_ASSOCIATION_POINTS;
+        selection.component_mode = FVIZ_COMPONENT_DIRECT;
+        selection.component = 0u;
+    }
+    if (scalars == NULL || point_count == 0u) return FVIZ_OK;
+    tuple_count = fviz_data_array_tuple_count(scalars);
+    if (selection.component_mode != FVIZ_COMPONENT_COLOR && fviz_mapper_lookup_table(mapper) == NULL)
+        return FVIZ_OK;
+    if (selection.component_mode == FVIZ_COMPONENT_DIRECT &&
+        selection.component >= fviz_data_array_components(scalars))
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+
+    if (selection.component_mode != FVIZ_COMPONENT_COLOR &&
+        fviz_mapper_scalar_range_valid(mapper) == FVIZ_FALSE && tuple_count > 0u)
+    {
+        double minimum = fviz_gl_array_scalar(
+            scalars, 0u, selection.component_mode, selection.component);
+        double maximum = minimum;
+        for (i = 1u; i < tuple_count; ++i)
         {
-            if (scalar_data[i] < minimum) minimum = scalar_data[i];
-            if (scalar_data[i] > maximum) maximum = scalar_data[i];
+            const double value = fviz_gl_array_scalar(
+                scalars, i, selection.component_mode, selection.component);
+            if (value < minimum) minimum = value;
+            if (value > maximum) maximum = value;
         }
         if (maximum <= minimum) maximum = minimum + 1.0f;
-        fviz_mapper_set_scalar_range(mapper, minimum, maximum);
+        fviz_mapper_set_scalar_range(mapper, (float)minimum, (float)maximum);
     }
 
-    colors = (FVizVec3*)fviz_alloc(point_count * sizeof(FVizVec3));
+    colors = (FVizGLColor*)fviz_alloc(point_count * sizeof(*colors));
     if (colors == NULL) return fviz_last_error_code();
-    for (i = 0u; i < point_count; ++i)
+    if (selection.association == FVIZ_ASSOCIATION_POINTS && tuple_count == point_count)
     {
-        fviz_lookup_table_map_scalar(table, scalar_data[i], &colors[i].x, &colors[i].y, &colors[i].z);
+        for (i = 0u; i < point_count; ++i)
+            colors[i] = fviz_gl_map_tuple_color(
+                mapper, scalars, i, selection.component_mode, selection.component);
+    }
+    else if (selection.association == FVIZ_ASSOCIATION_CELLS &&
+             tuple_count == fviz_poly_data_triangle_count(poly_data))
+    {
+        const uint32_t* indices = fviz_poly_data_triangle_indices(poly_data);
+        contributions = (uint32_t*)fviz_alloc(point_count * sizeof(*contributions));
+        if (contributions == NULL)
+        {
+            fviz_free(colors);
+            return fviz_last_error_code();
+        }
+        (void)memset(colors, 0, point_count * sizeof(*colors));
+        (void)memset(contributions, 0, point_count * sizeof(*contributions));
+        for (i = 0u; i < tuple_count; ++i)
+        {
+            FVizGLColor cell = fviz_gl_map_tuple_color(
+                mapper, scalars, i, selection.component_mode, selection.component);
+            uint32_t corner;
+            for (corner = 0u; corner < 3u; ++corner)
+            {
+                const uint32_t point_id = indices[i * 3u + corner];
+                colors[point_id].r += cell.r;
+                colors[point_id].g += cell.g;
+                colors[point_id].b += cell.b;
+                colors[point_id].a += cell.a;
+                ++contributions[point_id];
+            }
+        }
+        for (i = 0u; i < point_count; ++i)
+        {
+            if (contributions[i] != 0u)
+            {
+                const float inverse = 1.0f / (float)contributions[i];
+                colors[i].r *= inverse;
+                colors[i].g *= inverse;
+                colors[i].b *= inverse;
+                colors[i].a *= inverse;
+            }
+        }
+    }
+    else if (selection.association == FVIZ_ASSOCIATION_FIELD && tuple_count > 0u)
+    {
+        const FVizGLColor field = fviz_gl_map_tuple_color(
+            mapper, scalars, 0u, selection.component_mode, selection.component);
+        for (i = 0u; i < point_count; ++i) colors[i] = field;
+    }
+    else
+    {
+        fviz_free(colors);
+        return FVIZ_OK;
+    }
+    if (fviz_mapper_opacity_array(mapper) != NULL)
+    {
+        opacity_array = fviz_attribute_set_const_get(
+            fviz_poly_data_const_point_data(poly_data), fviz_mapper_opacity_array(mapper));
+        if (opacity_array != NULL && fviz_data_array_tuple_count(opacity_array) == point_count)
+        {
+            for (i = 0u; i < point_count; ++i)
+            {
+                double opacity = fviz_gl_array_component(opacity_array, i, 0u);
+                if (opacity < 0.0) opacity = 0.0;
+                if (opacity > 1.0) opacity = 1.0;
+                colors[i].a *= (float)opacity;
+            }
+        }
     }
     fviz_gl_upload_buffer(device, &resource->color_buffer, FVIZ_GL_ARRAY_BUFFER, colors,
-        (GLsizeiptr)(point_count * sizeof(FVizVec3)));
+        (GLsizeiptr)(point_count * sizeof(*colors)));
+    fviz_free(contributions);
     fviz_free(colors);
-    gl->glVertexAttribPointer(FVIZ_GL_COLOR_ATTRIBUTE_INDEX, 3, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizVec3), (const void*)0);
+    gl->glVertexAttribPointer(FVIZ_GL_COLOR_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE,
+        (GLsizei)sizeof(FVizGLColor), (const void*)0);
     gl->glEnableVertexAttribArray(FVIZ_GL_COLOR_ATTRIBUTE_INDEX);
     resource->has_color = FVIZ_TRUE;
     return FVIZ_OK;
@@ -256,7 +471,10 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     point_count = fviz_poly_data_point_count(poly_data);
     index_count = fviz_poly_data_triangle_count(poly_data) * 3u;
     line_index_count = fviz_poly_data_line_count(poly_data) * 2u;
-    mtime = fviz_object_mtime((const FVizObject*)poly_data);
+    if (fviz_actor_edge_visibility(actor) != FVIZ_FALSE ||
+        fviz_actor_wireframe(actor) != FVIZ_FALSE)
+        line_index_count += fviz_poly_data_triangle_count(poly_data) * 6u;
+    mtime = fviz_object_mtime((const FVizObject*)actor);
     if (point_count == 0u || (index_count == 0u && line_index_count == 0u)) return FVIZ_OK;
     if (index_count > (FVizSize)INT_MAX || line_index_count > (FVizSize)INT_MAX)
     {
@@ -332,10 +550,38 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
         fviz_gl_upload_buffer(device, &resource->index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, indices,
             (GLsizeiptr)(index_count * sizeof(uint32_t)));
     }
-    if (line_indices != NULL && line_index_count > 0u)
+    if (line_index_count > 0u)
     {
-        fviz_gl_upload_buffer(device, &resource->line_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, line_indices,
-            (GLsizeiptr)(line_index_count * sizeof(uint32_t)));
+        const FVizSize source_line_count = fviz_poly_data_line_count(poly_data) * 2u;
+        uint32_t* render_lines = (uint32_t*)fviz_alloc(line_index_count * sizeof(*render_lines));
+        FVizSize render_index = 0u;
+        FVizSize triangle;
+        if (render_lines == NULL) return fviz_last_error_code();
+        if (line_indices != NULL && source_line_count > 0u)
+        {
+            (void)memcpy(render_lines, line_indices, source_line_count * sizeof(*render_lines));
+            render_index = source_line_count;
+        }
+        if (fviz_actor_edge_visibility(actor) != FVIZ_FALSE ||
+            fviz_actor_wireframe(actor) != FVIZ_FALSE)
+        {
+            for (triangle = 0u; triangle < fviz_poly_data_triangle_count(poly_data); ++triangle)
+            {
+                const uint32_t a = indices[triangle * 3u + 0u];
+                const uint32_t b = indices[triangle * 3u + 1u];
+                const uint32_t c = indices[triangle * 3u + 2u];
+                render_lines[render_index++] = a;
+                render_lines[render_index++] = b;
+                render_lines[render_index++] = b;
+                render_lines[render_index++] = c;
+                render_lines[render_index++] = c;
+                render_lines[render_index++] = a;
+            }
+        }
+        fviz_gl_upload_buffer(
+            device, &resource->line_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER,
+            render_lines, (GLsizeiptr)(line_index_count * sizeof(*render_lines)));
+        fviz_free(render_lines);
     }
 
     gl->glBindVertexArray(0u);
@@ -344,7 +590,7 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     resource->line_index_count = (GLsizei)line_index_count;
     resource->point_count = point_count;
     resource->poly_data = poly_data;
-    resource->mtime = mtime;
+    resource->mtime = fviz_object_mtime((const FVizObject*)actor);
     return FVIZ_OK;
 }
 
@@ -428,6 +674,9 @@ static FVizResult fviz_gl_create_program(FVizGLDevice* device)
     device->light_position_location = gl->glGetUniformLocation(device->program, "uLightPosition");
     device->light_ambient_location = gl->glGetUniformLocation(device->program, "uLightAmbient");
     device->scalar_color_location = gl->glGetUniformLocation(device->program, "uScalarColorEnabled");
+    device->opacity_location = gl->glGetUniformLocation(device->program, "uOpacity");
+    device->clip_plane_count_location = gl->glGetUniformLocation(device->program, "uClipPlaneCount");
+    device->clip_planes_location = gl->glGetUniformLocation(device->program, "uClipPlanes");
     return FVIZ_OK;
 }
 
@@ -479,6 +728,49 @@ static FVizResult fviz_gl_create_2d_program(FVizGLDevice* device)
     return FVIZ_OK;
 }
 
+static FVizResult fviz_gl_create_selection_program(FVizGLDevice* device)
+{
+    const FVizGLFunctions* gl = &device->gl;
+    GLuint vertex_shader;
+    GLuint fragment_shader;
+    GLint status = GL_FALSE;
+    char info_log[2048];
+    vertex_shader = fviz_gl_compile_shader(
+        gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_selection_vertex_shader_source,
+        info_log, sizeof(info_log));
+    fragment_shader = fviz_gl_compile_shader(
+        gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_selection_fragment_shader_source,
+        info_log, sizeof(info_log));
+    if (vertex_shader == 0u || fragment_shader == 0u)
+    {
+        if (vertex_shader != 0u) gl->glDeleteShader(vertex_shader);
+        if (fragment_shader != 0u) gl->glDeleteShader(fragment_shader);
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    device->selection_program = gl->glCreateProgram();
+    if (device->selection_program == 0u)
+    {
+        gl->glDeleteShader(vertex_shader);
+        gl->glDeleteShader(fragment_shader);
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    gl->glAttachShader(device->selection_program, vertex_shader);
+    gl->glAttachShader(device->selection_program, fragment_shader);
+    gl->glLinkProgram(device->selection_program);
+    gl->glGetProgramiv(device->selection_program, FVIZ_GL_LINK_STATUS, &status);
+    gl->glDeleteShader(vertex_shader);
+    gl->glDeleteShader(fragment_shader);
+    if (status != GL_TRUE) return FVIZ_ERROR_GRAPHICS;
+    device->selection_mvp_location = gl->glGetUniformLocation(device->selection_program, "uMvp");
+    device->selection_model_location = gl->glGetUniformLocation(device->selection_program, "uModel");
+    device->selection_actor_id_location = gl->glGetUniformLocation(device->selection_program, "uActorId");
+    device->selection_clip_plane_count_location = gl->glGetUniformLocation(
+        device->selection_program, "uClipPlaneCount");
+    device->selection_clip_planes_location = gl->glGetUniformLocation(
+        device->selection_program, "uClipPlanes");
+    return FVIZ_OK;
+}
+
 FVizGLDevice* fviz_internal_gl_device_create(const FVizGLFunctions* functions)
 {
     FVizGLDevice* device;
@@ -495,7 +787,8 @@ FVizGLDevice* fviz_internal_gl_device_create(const FVizGLFunctions* functions)
     (void)memset(device, 0, sizeof(*device));
     device->gl = *functions;
     if (fviz_gl_create_program(device) != FVIZ_OK ||
-        fviz_gl_create_2d_program(device) != FVIZ_OK)
+        fviz_gl_create_2d_program(device) != FVIZ_OK ||
+        fviz_gl_create_selection_program(device) != FVIZ_OK)
     {
         fviz_internal_gl_device_destroy(device);
         return NULL;
@@ -521,6 +814,11 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device)
         device->gl.glDeleteProgram(device->program_2d);
         device->program_2d = 0u;
     }
+    if (device->selection_program != 0u)
+    {
+        device->gl.glDeleteProgram(device->selection_program);
+        device->selection_program = 0u;
+    }
     fviz_free(device->actors);
     device->actors = NULL;
     device->actor_count = 0u;
@@ -528,10 +826,11 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device)
     fviz_free(device);
 }
 
-FVizResult fviz_internal_gl_device_render(
+FVizResult fviz_internal_gl_device_render_stage(
     FVizGLDevice* device,
     FVizRenderer* renderer,
-    float aspect_ratio)
+    float aspect_ratio,
+    FVizRenderPassStage stage)
 {
     const FVizGLFunctions* gl;
     FVizCamera* camera;
@@ -566,6 +865,12 @@ FVizResult fviz_internal_gl_device_render(
     light_position = fviz_vec3_add(light_position, fviz_vec3_scale(view_direction, -0.15f));
     gl->glUniform3fv(device->light_position_location, 1, &light_position.x);
 
+    if (stage == FVIZ_RENDER_PASS_TRANSLUCENT)
+    {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+    }
     for (i = 0u; i < fviz_scene_actor_count(scene); ++i)
     {
         const FVizActor* actor = fviz_scene_const_actor(scene, i);
@@ -576,8 +881,23 @@ FVizResult fviz_internal_gl_device_render(
         float red;
         float green;
         float blue;
+        float edge_red;
+        float edge_green;
+        float edge_blue;
+        const float opacity = fviz_actor_opacity(actor);
+        FVizMapper* mapper;
+        FVizPlane clip_planes[6];
+        GLfloat clip_values[24];
+        FVizSize clip_count;
+        FVizSize clip_index;
 
         if (fviz_actor_is_visible(actor) == FVIZ_FALSE) continue;
+        if (stage == FVIZ_RENDER_PASS_OPAQUE && opacity < 1.0f) continue;
+        if (stage == FVIZ_RENDER_PASS_TRANSLUCENT && opacity >= 1.0f) continue;
+        if (stage != FVIZ_RENDER_PASS_OPAQUE &&
+            stage != FVIZ_RENDER_PASS_TRANSLUCENT &&
+            stage != FVIZ_RENDER_PASS_EDGE)
+            continue;
         if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
         resource = fviz_gl_find_actor_resource(device, actor);
         if (resource == NULL || (resource->index_count == 0 && resource->line_index_count == 0)) continue;
@@ -602,38 +922,156 @@ FVizResult fviz_internal_gl_device_render(
         fviz_actor_get_color(actor, &red, &green, &blue);
         gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]) {red, green, blue});
         gl->glUniform1i(device->scalar_color_location, resource->has_color == FVIZ_TRUE ? 1 : 0);
+        gl->glUniform1f(device->opacity_location, opacity);
+        mapper = fviz_actor_mapper((FVizActor*)actor);
+        clip_count = mapper != NULL ? fviz_mapper_clipping_plane_count(mapper) : 0u;
+        for (clip_index = 0u; clip_index < clip_count; ++clip_index)
+        {
+            (void)fviz_mapper_clipping_plane(mapper, clip_index, &clip_planes[clip_index]);
+            clip_values[clip_index * 4u + 0u] = clip_planes[clip_index].normal.x;
+            clip_values[clip_index * 4u + 1u] = clip_planes[clip_index].normal.y;
+            clip_values[clip_index * 4u + 2u] = clip_planes[clip_index].normal.z;
+            clip_values[clip_index * 4u + 3u] = clip_planes[clip_index].distance;
+        }
+        gl->glUniform1i(device->clip_plane_count_location, (GLint)clip_count);
+        if (clip_count > 0u)
+            gl->glUniform4fv(device->clip_planes_location, (GLsizei)clip_count, clip_values);
         light_ambient.x = 0.22f;
         light_ambient.y = 0.22f;
         light_ambient.z = 0.26f;
         gl->glUniform3fv(device->light_ambient_location, 1, &light_ambient.x);
 
         gl->glBindVertexArray(resource->vao);
-        if (resource->index_count > 0)
+        if (stage != FVIZ_RENDER_PASS_EDGE && resource->index_count > 0 &&
+            fviz_actor_wireframe(actor) == FVIZ_FALSE)
         {
             gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->index_buffer);
-            glPolygonMode(GL_FRONT_AND_BACK, fviz_actor_wireframe(actor) == FVIZ_TRUE ? GL_LINE : GL_FILL);
-            if (resource->line_index_count > 0 && fviz_actor_wireframe(actor) == FVIZ_FALSE)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            if (fviz_actor_edge_visibility(actor) != FVIZ_FALSE)
             {
                 glEnable(GL_POLYGON_OFFSET_FILL);
                 glPolygonOffset(1.0f, 1.0f);
             }
             glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
-            if (resource->line_index_count > 0 && fviz_actor_wireframe(actor) == FVIZ_FALSE)
+            if (fviz_actor_edge_visibility(actor) != FVIZ_FALSE)
             {
                 glDisable(GL_POLYGON_OFFSET_FILL);
             }
         }
-        if (resource->line_index_count > 0)
+        if (stage == FVIZ_RENDER_PASS_EDGE && resource->line_index_count > 0)
         {
             gl->glUniform1i(device->scalar_color_location, 0);
-            gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]) {0.05f, 0.05f, 0.05f});
+            fviz_actor_get_edge_color(actor, &edge_red, &edge_green, &edge_blue);
+            gl->glUniform3fv(
+                device->diffuse_location, 1,
+                (const GLfloat[]) {edge_red, edge_green, edge_blue});
+            glLineWidth(fviz_actor_line_width(actor));
             gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->line_index_buffer);
             glDrawElements(GL_LINES, resource->line_index_count, GL_UNSIGNED_INT, (const void*)0);
         }
         gl->glBindVertexArray(0u);
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glLineWidth(1.0f);
+    if (stage == FVIZ_RENDER_PASS_TRANSLUCENT)
+    {
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+    }
     gl->glUseProgram(0u);
+    return FVIZ_OK;
+}
+
+FVizResult fviz_internal_gl_device_select(
+    FVizGLDevice* device,
+    FVizRenderer* renderer,
+    float aspect_ratio,
+    int x,
+    int y,
+    FVizSize* out_actor_index,
+    FVizSize* out_primitive_id,
+    float* out_depth)
+{
+    const FVizGLFunctions* gl;
+    FVizCamera* camera;
+    FVizScene* scene;
+    FVizMat4 view_projection;
+    unsigned char rgba[4] = {0u, 0u, 0u, 0u};
+    uint32_t code;
+    FVizSize i;
+    if (device == NULL || renderer == NULL || out_actor_index == NULL ||
+        out_primitive_id == NULL || out_depth == NULL || aspect_ratio <= 0.0f)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    scene = fviz_renderer_scene(renderer);
+    camera = fviz_renderer_camera(renderer);
+    if (scene == NULL || camera == NULL) return FVIZ_ERROR_NOT_FOUND;
+    gl = &device->gl;
+    view_projection = fviz_mat4_multiply(
+        fviz_camera_projection_matrix(camera, aspect_ratio),
+        fviz_camera_view_matrix(camera));
+    glDisable(GL_BLEND);
+    glDisable(GL_DITHER);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gl->glUseProgram(device->selection_program);
+    for (i = 0u; i < fviz_scene_actor_count(scene) && i < 255u; ++i)
+    {
+        const FVizActor* actor = fviz_scene_const_actor(scene, i);
+        FVizGLActorResource* resource;
+        FVizMat4 mvp;
+        FVizMat4 model;
+        FVizMapper* mapper;
+        GLfloat clip_values[24];
+        FVizSize clip_count;
+        FVizSize clip_index;
+        if (actor == NULL || fviz_actor_is_visible(actor) == FVIZ_FALSE ||
+            fviz_actor_opacity(actor) <= 0.0f)
+            continue;
+        if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
+        resource = fviz_gl_find_actor_resource(device, actor);
+        if (resource == NULL || resource->index_count <= 0 ||
+            resource->index_count / 3 > 0x00ffffff)
+            continue;
+        model = fviz_actor_transform_matrix(actor);
+        mvp = fviz_mat4_multiply(view_projection, model);
+        gl->glUniformMatrix4fv(device->selection_mvp_location, 1, GL_FALSE, mvp.m);
+        gl->glUniformMatrix4fv(device->selection_model_location, 1, GL_FALSE, model.m);
+        gl->glUniform1ui(device->selection_actor_id_location, (GLuint)i);
+        mapper = fviz_actor_mapper((FVizActor*)actor);
+        clip_count = mapper != NULL ? fviz_mapper_clipping_plane_count(mapper) : 0u;
+        for (clip_index = 0u; clip_index < clip_count; ++clip_index)
+        {
+            FVizPlane plane;
+            (void)fviz_mapper_clipping_plane(mapper, clip_index, &plane);
+            clip_values[clip_index * 4u + 0u] = plane.normal.x;
+            clip_values[clip_index * 4u + 1u] = plane.normal.y;
+            clip_values[clip_index * 4u + 2u] = plane.normal.z;
+            clip_values[clip_index * 4u + 3u] = plane.distance;
+        }
+        gl->glUniform1i(device->selection_clip_plane_count_location, (GLint)clip_count);
+        if (clip_count > 0u)
+            gl->glUniform4fv(
+                device->selection_clip_planes_location, (GLsizei)clip_count, clip_values);
+        gl->glBindVertexArray(resource->vao);
+        gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->index_buffer);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
+    }
+    gl->glBindVertexArray(0u);
+    gl->glUseProgram(0u);
+    glReadBuffer(GL_BACK);
+    glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, out_depth);
+    glEnable(GL_DITHER);
+    code = (uint32_t)rgba[0] |
+        ((uint32_t)rgba[1] << 8u) |
+        ((uint32_t)rgba[2] << 16u) |
+        ((uint32_t)rgba[3] << 24u);
+    if (code == 0u) return FVIZ_ERROR_NOT_FOUND;
+    *out_actor_index = (FVizSize)(((code >> 24u) & 255u) - 1u);
+    *out_primitive_id = (FVizSize)((code & 0x00ffffffu) - 1u);
     return FVIZ_OK;
 }
 

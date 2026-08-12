@@ -57,6 +57,12 @@ FVizResult fviz_actor_create(FVizActor** out_actor)
     actor->color[2] = 0.88f;
     actor->visible = FVIZ_TRUE;
     actor->wireframe = FVIZ_FALSE;
+    actor->edge_visible = FVIZ_FALSE;
+    actor->opacity = 1.0f;
+    actor->edge_color[0] = 0.05f;
+    actor->edge_color[1] = 0.05f;
+    actor->edge_color[2] = 0.05f;
+    actor->line_width = 1.0f;
     actor->position = fviz_vec3(0.0f, 0.0f, 0.0f);
     actor->orientation = fviz_quat_identity();
     actor->scale = fviz_vec3(1.0f, 1.0f, 1.0f);
@@ -98,6 +104,7 @@ void fviz_actor_set_color(FVizActor* actor, float red, float green, float blue)
     actor->color[0] = red;
     actor->color[1] = green;
     actor->color[2] = blue;
+    fviz_object_modified((FVizObject*)actor);
 }
 
 void fviz_actor_get_color(const FVizActor* actor, float* red, float* green, float* blue)
@@ -110,17 +117,99 @@ void fviz_actor_get_color(const FVizActor* actor, float* red, float* green, floa
 
 void fviz_actor_set_visible(FVizActor* actor, FVizBool visible)
 {
-    if (actor != NULL) actor->visible = visible != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    if (actor != NULL)
+    {
+        actor->visible = visible != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+        fviz_object_modified((FVizObject*)actor);
+    }
 }
 FVizBool fviz_actor_is_visible(const FVizActor* actor) { return actor != NULL ? actor->visible : FVIZ_FALSE; }
-void fviz_actor_set_wireframe(FVizActor* actor, FVizBool enabled) { if (actor != NULL) actor->wireframe = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE; }
+void fviz_actor_set_wireframe(FVizActor* actor, FVizBool enabled)
+{
+    if (actor != NULL)
+    {
+        actor->wireframe = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+        fviz_object_modified((FVizObject*)actor);
+    }
+}
 FVizBool fviz_actor_wireframe(const FVizActor* actor) { return actor != NULL ? actor->wireframe : FVIZ_FALSE; }
 
-void fviz_actor_set_position(FVizActor* actor, FVizVec3 position) { if (actor != NULL) actor->position = position; }
+void fviz_actor_set_opacity(FVizActor* actor, float opacity)
+{
+    if (actor == NULL) return;
+    if (opacity < 0.0f) opacity = 0.0f;
+    if (opacity > 1.0f) opacity = 1.0f;
+    actor->opacity = opacity;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+float fviz_actor_opacity(const FVizActor* actor)
+{
+    return actor != NULL ? actor->opacity : 0.0f;
+}
+
+void fviz_actor_set_edge_visibility(FVizActor* actor, FVizBool visible)
+{
+    if (actor == NULL) return;
+    actor->edge_visible = visible != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizBool fviz_actor_edge_visibility(const FVizActor* actor)
+{
+    return actor != NULL ? actor->edge_visible : FVIZ_FALSE;
+}
+
+void fviz_actor_set_edge_color(FVizActor* actor, float red, float green, float blue)
+{
+    if (actor == NULL) return;
+    actor->edge_color[0] = red;
+    actor->edge_color[1] = green;
+    actor->edge_color[2] = blue;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+void fviz_actor_get_edge_color(
+    const FVizActor* actor,
+    float* red,
+    float* green,
+    float* blue)
+{
+    if (actor == NULL) return;
+    if (red != NULL) *red = actor->edge_color[0];
+    if (green != NULL) *green = actor->edge_color[1];
+    if (blue != NULL) *blue = actor->edge_color[2];
+}
+
+void fviz_actor_set_line_width(FVizActor* actor, float width)
+{
+    if (actor == NULL) return;
+    if (width < 1.0f) width = 1.0f;
+    actor->line_width = width;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+float fviz_actor_line_width(const FVizActor* actor)
+{
+    return actor != NULL ? actor->line_width : 1.0f;
+}
+
+void fviz_actor_set_position(FVizActor* actor, FVizVec3 position)
+{
+    if (actor != NULL)
+    {
+        actor->position = position;
+        fviz_object_modified((FVizObject*)actor);
+    }
+}
 FVizVec3 fviz_actor_position(const FVizActor* actor) { return actor != NULL ? actor->position : fviz_vec3(0.0f, 0.0f, 0.0f); }
 void fviz_actor_set_orientation(FVizActor* actor, FVizQuat orientation)
 {
-    if (actor != NULL) actor->orientation = fviz_quat_normalize(orientation);
+    if (actor != NULL)
+    {
+        actor->orientation = fviz_quat_normalize(orientation);
+        fviz_object_modified((FVizObject*)actor);
+    }
 }
 FVizQuat fviz_actor_orientation(const FVizActor* actor) { return actor != NULL ? actor->orientation : fviz_quat_identity(); }
 void fviz_actor_set_scale(FVizActor* actor, FVizVec3 scale)
@@ -130,6 +219,7 @@ void fviz_actor_set_scale(FVizActor* actor, FVizVec3 scale)
         actor->scale.x = scale.x != 0.0f ? scale.x : 1.0f;
         actor->scale.y = scale.y != 0.0f ? scale.y : 1.0f;
         actor->scale.z = scale.z != 0.0f ? scale.z : 1.0f;
+        fviz_object_modified((FVizObject*)actor);
     }
 }
 FVizVec3 fviz_actor_scale(const FVizActor* actor) { return actor != NULL ? actor->scale : fviz_vec3(1.0f, 1.0f, 1.0f); }

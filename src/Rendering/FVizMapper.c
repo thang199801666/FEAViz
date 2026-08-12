@@ -7,13 +7,27 @@
 #include <FViz/Rendering/FVizMapperPrivate.h>
 
 static void fviz_mapper_destroy(FVizObject* object);
+static FVizMTime fviz_mapper_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_mapper_class = {
     FVIZ_TYPE_MAPPER,
     "FVizMapper",
     &g_fviz_object_class,
     fviz_mapper_destroy,
-    NULL
+    fviz_mapper_mtime
 };
+
+static FVizMTime fviz_mapper_mtime(const FVizObject* object)
+{
+    const FVizMapper* mapper = (const FVizMapper*)object;
+    FVizMTime mtime = fviz_internal_object_local_mtime(object);
+    FVizMTime child = fviz_object_mtime((const FVizObject*)mapper->input_algorithm);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)mapper->poly_data);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)mapper->lookup_table);
+    if (child > mtime) mtime = child;
+    return mtime;
+}
 
 void fviz_array_selection_initialize(FVizArraySelection* selection)
 {
@@ -53,6 +67,7 @@ FVizResult fviz_mapper_create(FVizMapper** out_mapper)
     mapper->scalar_range_valid = FVIZ_FALSE;
     mapper->association = FVIZ_ASSOCIATION_POINTS;
     mapper->component_mode = FVIZ_COMPONENT_DIRECT;
+    mapper->scalar_interpolation = FVIZ_SCALAR_INTERPOLATION_DEFAULT;
     if (fviz_lookup_table_create(256u, &mapper->lookup_table) != FVIZ_OK)
     {
         fviz_release(mapper);
@@ -78,6 +93,7 @@ FVizResult fviz_mapper_set_poly_data(FVizMapper* mapper, FVizPolyData* poly_data
     mapper->input_port = 0u;
     fviz_release(mapper->poly_data);
     mapper->poly_data = poly_data;
+    fviz_object_modified((FVizObject*)mapper);
     return FVIZ_OK;
 }
 
@@ -106,6 +122,7 @@ FVizResult fviz_mapper_set_algorithm_connection(
     mapper->input_port = output_port;
     fviz_release(mapper->poly_data);
     mapper->poly_data = NULL;
+    fviz_object_modified((FVizObject*)mapper);
     return FVIZ_OK;
 }
 
@@ -154,6 +171,7 @@ FVizResult fviz_mapper_update(FVizMapper* mapper)
     if (fviz_retain(output) == NULL) return fviz_last_error_code();
     fviz_release(mapper->poly_data);
     mapper->poly_data = output;
+    fviz_object_modified((FVizObject*)mapper);
     return FVIZ_OK;
 }
 
@@ -166,13 +184,18 @@ void fviz_mapper_set_lookup_table(FVizMapper* mapper, FVizLookupTable* table)
     if (table != NULL && fviz_retain(table) == NULL) return;
     fviz_release(mapper->lookup_table);
     mapper->lookup_table = table;
+    fviz_object_modified((FVizObject*)mapper);
 }
 
 FVizLookupTable* fviz_mapper_lookup_table(FVizMapper* mapper) { return mapper != NULL ? mapper->lookup_table : NULL; }
 
 void fviz_mapper_set_scalar_visibility(FVizMapper* mapper, FVizBool visible)
 {
-    if (mapper != NULL) mapper->scalar_visibility = visible != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    if (mapper != NULL)
+    {
+        mapper->scalar_visibility = visible != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+        fviz_object_modified((FVizObject*)mapper);
+    }
 }
 
 FVizBool fviz_mapper_scalar_visibility(const FVizMapper* mapper)
@@ -194,6 +217,7 @@ void fviz_mapper_set_scalar_range(FVizMapper* mapper, float minimum, float maxim
     {
         fviz_lookup_table_set_range(mapper->lookup_table, minimum, maximum);
     }
+    fviz_object_modified((FVizObject*)mapper);
 }
 
 void fviz_mapper_get_scalar_range(const FVizMapper* mapper, float* minimum, float* maximum)
@@ -206,6 +230,13 @@ void fviz_mapper_get_scalar_range(const FVizMapper* mapper, float* minimum, floa
 FVizBool fviz_mapper_scalar_range_valid(const FVizMapper* mapper)
 {
     return mapper != NULL ? mapper->scalar_range_valid : FVIZ_FALSE;
+}
+
+void fviz_mapper_use_automatic_scalar_range(FVizMapper* mapper)
+{
+    if (mapper == NULL) return;
+    mapper->scalar_range_valid = FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)mapper);
 }
 
 FVizResult fviz_mapper_set_array_selection(
@@ -266,4 +297,78 @@ const FVizDataArray* fviz_mapper_selected_array(const FVizMapper* mapper)
     else
         attributes = fviz_poly_data_const_field_data(mapper->poly_data);
     return fviz_attribute_set_const_get(attributes, mapper->array_name);
+}
+
+void fviz_mapper_set_scalar_interpolation(
+    FVizMapper* mapper,
+    FVizScalarInterpolation interpolation)
+{
+    if (mapper == NULL || interpolation < FVIZ_SCALAR_INTERPOLATION_DEFAULT ||
+        interpolation > FVIZ_SCALAR_INTERPOLATION_POINT)
+        return;
+    mapper->scalar_interpolation = interpolation;
+    fviz_object_modified((FVizObject*)mapper);
+}
+
+FVizScalarInterpolation fviz_mapper_scalar_interpolation(const FVizMapper* mapper)
+{
+    return mapper != NULL ? mapper->scalar_interpolation : FVIZ_SCALAR_INTERPOLATION_DEFAULT;
+}
+
+FVizResult fviz_mapper_set_opacity_array(FVizMapper* mapper, const char* name)
+{
+    FVizSize length;
+    if (mapper == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (name == NULL || name[0] == '\0')
+    {
+        mapper->opacity_array_name[0] = '\0';
+        fviz_object_modified((FVizObject*)mapper);
+        return FVIZ_OK;
+    }
+    length = (FVizSize)strlen(name);
+    if (length >= sizeof(mapper->opacity_array_name)) return FVIZ_ERROR_OVERFLOW;
+    (void)memcpy(mapper->opacity_array_name, name, length + 1u);
+    fviz_object_modified((FVizObject*)mapper);
+    return FVIZ_OK;
+}
+
+const char* fviz_mapper_opacity_array(const FVizMapper* mapper)
+{
+    return mapper != NULL && mapper->opacity_array_name[0] != '\0'
+        ? mapper->opacity_array_name
+        : NULL;
+}
+
+FVizResult fviz_mapper_add_clipping_plane(FVizMapper* mapper, FVizPlane plane)
+{
+    if (mapper == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (mapper->clipping_plane_count >= 6u) return FVIZ_ERROR_OVERFLOW;
+    if (fviz_vec3_length(plane.normal) == 0.0f) return FVIZ_ERROR_INVALID_ARGUMENT;
+    plane.normal = fviz_vec3_normalize(plane.normal);
+    mapper->clipping_planes[mapper->clipping_plane_count++] = plane;
+    fviz_object_modified((FVizObject*)mapper);
+    return FVIZ_OK;
+}
+
+void fviz_mapper_remove_all_clipping_planes(FVizMapper* mapper)
+{
+    if (mapper == NULL) return;
+    mapper->clipping_plane_count = 0u;
+    fviz_object_modified((FVizObject*)mapper);
+}
+
+FVizSize fviz_mapper_clipping_plane_count(const FVizMapper* mapper)
+{
+    return mapper != NULL ? mapper->clipping_plane_count : 0u;
+}
+
+FVizResult fviz_mapper_clipping_plane(
+    const FVizMapper* mapper,
+    FVizSize index,
+    FVizPlane* out_plane)
+{
+    if (mapper == NULL || out_plane == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (index >= mapper->clipping_plane_count) return FVIZ_ERROR_NOT_FOUND;
+    *out_plane = mapper->clipping_planes[index];
+    return FVIZ_OK;
 }

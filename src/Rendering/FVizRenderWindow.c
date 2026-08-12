@@ -1,4 +1,5 @@
 #include <limits.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <FViz/Core/FVizError.h>
@@ -43,10 +44,12 @@ static void fviz_render_window_destroy(FVizObject* object)
     window->title = NULL;
 }
 
-FVizResult fviz_render_window_create(
+static FVizResult fviz_render_window_create_internal(
     int width,
     int height,
     const char* title,
+    FVizBool offscreen,
+    void* host_native_handle,
     FVizRenderWindow** out_window)
 {
     FVizRenderWindow* window;
@@ -71,6 +74,9 @@ FVizResult fviz_render_window_create(
     (void)memcpy(window->title, title, title_length + 1u);
     window->width = width;
     window->height = height;
+    window->offscreen = offscreen;
+    window->host_native_handle = host_native_handle;
+    window->state = FVIZ_RENDER_WINDOW_CREATED;
     if (fviz_array_create(sizeof(FVizRenderer*), &window->renderers) != FVIZ_OK)
     {
         fviz_release(window);
@@ -98,7 +104,262 @@ FVizResult fviz_render_window_create(
         fviz_release(window);
         return result;
     }
+    window->state = offscreen != FVIZ_FALSE
+        ? FVIZ_RENDER_WINDOW_OFFSCREEN
+        : FVIZ_RENDER_WINDOW_INITIALIZED;
     *out_window = window;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_render_window_create(
+    int width,
+    int height,
+    const char* title,
+    FVizRenderWindow** out_window)
+{
+    return fviz_render_window_create_internal(
+        width, height, title, FVIZ_FALSE, NULL, out_window);
+}
+
+FVizResult fviz_render_window_create_offscreen(
+    int width,
+    int height,
+    FVizRenderWindow** out_window)
+{
+    return fviz_render_window_create_internal(
+        width, height, "FEAViz Offscreen", FVIZ_TRUE, NULL, out_window);
+}
+
+FVizResult fviz_render_window_create_attached(
+    void* host_native_handle,
+    int width,
+    int height,
+    FVizRenderWindow** out_window)
+{
+    if (host_native_handle == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    return fviz_render_window_create_internal(
+        width, height, "FEAViz Child", FVIZ_FALSE, host_native_handle, out_window);
+}
+
+FVizRenderWindowState fviz_render_window_state(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->state : FVIZ_RENDER_WINDOW_FINALIZED;
+}
+
+FVizResult fviz_render_window_initialize(FVizRenderWindow* window)
+{
+    FVizResult result;
+    if (window == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (window->state != FVIZ_RENDER_WINDOW_CREATED &&
+        window->state != FVIZ_RENDER_WINDOW_FINALIZED)
+        return FVIZ_OK;
+    window->close_requested = FVIZ_FALSE;
+    result = fviz_internal_render_window_create_platform(window);
+    if (result == FVIZ_OK)
+        window->state = window->offscreen != FVIZ_FALSE
+            ? FVIZ_RENDER_WINDOW_OFFSCREEN
+            : FVIZ_RENDER_WINDOW_INITIALIZED;
+    return result;
+}
+
+void fviz_render_window_finalize(FVizRenderWindow* window)
+{
+    if (window == NULL || window->state == FVIZ_RENDER_WINDOW_FINALIZED) return;
+    fviz_internal_render_window_destroy_platform(window);
+    window->visible = FVIZ_FALSE;
+    window->state = FVIZ_RENDER_WINDOW_FINALIZED;
+}
+
+FVizResult fviz_render_window_resize(FVizRenderWindow* window, int width, int height)
+{
+    if (window == NULL || width <= 0 || height <= 0) return FVIZ_ERROR_INVALID_ARGUMENT;
+    window->width = width;
+    window->height = height;
+    fviz_object_modified((FVizObject*)window);
+    if (window->state == FVIZ_RENDER_WINDOW_CREATED ||
+        window->state == FVIZ_RENDER_WINDOW_FINALIZED)
+        return FVIZ_OK;
+    return fviz_internal_render_window_resize_platform(window);
+}
+
+FVizResult fviz_render_window_read_rgba8(
+    FVizRenderWindow* window,
+    uint8_t* pixels,
+    FVizSize capacity)
+{
+    FVizSize pixel_count;
+    FVizSize required;
+    if (window == NULL || pixels == NULL || window->state == FVIZ_RENDER_WINDOW_FINALIZED)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (fviz_size_multiply((FVizSize)window->width, (FVizSize)window->height, &pixel_count) != FVIZ_OK ||
+        fviz_size_multiply(pixel_count, 4u, &required) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
+    if (capacity < required) return FVIZ_ERROR_OVERFLOW;
+    return fviz_internal_render_window_read_rgba8_platform(window, pixels);
+}
+
+FVizResult fviz_render_window_read_depth_f32(
+    FVizRenderWindow* window,
+    float* depth,
+    FVizSize capacity)
+{
+    FVizSize pixel_count;
+    if (window == NULL || depth == NULL || window->state == FVIZ_RENDER_WINDOW_FINALIZED)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (fviz_size_multiply(
+            (FVizSize)window->width, (FVizSize)window->height, &pixel_count) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
+    if (capacity < pixel_count) return FVIZ_ERROR_OVERFLOW;
+    return fviz_internal_render_window_read_depth_f32_platform(window, depth);
+}
+
+FVizResult fviz_render_window_write_ppm(
+    FVizRenderWindow* window,
+    const char* path)
+{
+    FVizSize pixel_count;
+    FVizSize rgba_size;
+    FVizSize rgb_size;
+    uint8_t* rgba;
+    uint8_t* rgb;
+    FILE* file;
+    FVizBool write_failed = FVIZ_FALSE;
+    int x;
+    int y;
+    if (window == NULL || path == NULL || path[0] == '\0') return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (fviz_size_multiply((FVizSize)window->width, (FVizSize)window->height, &pixel_count) != FVIZ_OK ||
+        fviz_size_multiply(pixel_count, 4u, &rgba_size) != FVIZ_OK ||
+        fviz_size_multiply(pixel_count, 3u, &rgb_size) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
+    rgba = (uint8_t*)fviz_alloc(rgba_size);
+    rgb = (uint8_t*)fviz_alloc(rgb_size);
+    if (rgba == NULL || rgb == NULL)
+    {
+        fviz_free(rgb);
+        fviz_free(rgba);
+        return FVIZ_ERROR_OUT_OF_MEMORY;
+    }
+    if (fviz_render_window_read_rgba8(window, rgba, rgba_size) != FVIZ_OK)
+    {
+        fviz_free(rgb);
+        fviz_free(rgba);
+        return fviz_last_error_code();
+    }
+    for (y = 0; y < window->height; ++y)
+    {
+        const int source_y = window->height - y - 1;
+        for (x = 0; x < window->width; ++x)
+        {
+            const FVizSize source = ((FVizSize)source_y * (FVizSize)window->width + (FVizSize)x) * 4u;
+            const FVizSize destination = ((FVizSize)y * (FVizSize)window->width + (FVizSize)x) * 3u;
+            rgb[destination + 0u] = rgba[source + 0u];
+            rgb[destination + 1u] = rgba[source + 1u];
+            rgb[destination + 2u] = rgba[source + 2u];
+        }
+    }
+#if defined(_MSC_VER)
+    if (fopen_s(&file, path, "wb") != 0) file = NULL;
+#else
+    file = fopen(path, "wb");
+#endif
+    if (file == NULL)
+    {
+        fviz_free(rgb);
+        fviz_free(rgba);
+        return FVIZ_ERROR_IO;
+    }
+    if (fprintf(file, "P6\n%d %d\n255\n", window->width, window->height) < 0)
+        write_failed = FVIZ_TRUE;
+    if (write_failed == FVIZ_FALSE &&
+        fwrite(rgb, 1u, (size_t)rgb_size, file) != (size_t)rgb_size)
+        write_failed = FVIZ_TRUE;
+    if (fclose(file) != 0) write_failed = FVIZ_TRUE;
+    if (write_failed != FVIZ_FALSE)
+    {
+        fviz_free(rgb);
+        fviz_free(rgba);
+        return FVIZ_ERROR_IO;
+    }
+    fviz_free(rgb);
+    fviz_free(rgba);
+    return FVIZ_OK;
+}
+
+void fviz_render_window_get_capabilities(
+    const FVizRenderWindow* window,
+    FVizRenderCapabilities* out_capabilities)
+{
+    if (out_capabilities == NULL) return;
+    (void)memset(out_capabilities, 0, sizeof(*out_capabilities));
+    out_capabilities->struct_size = (uint32_t)sizeof(*out_capabilities);
+    if (window == NULL || window->state == FVIZ_RENDER_WINDOW_FINALIZED) return;
+    out_capabilities->gl_major = window->gl_modern != FVIZ_FALSE ? 3u : 1u;
+    out_capabilities->gl_minor = window->gl_modern != FVIZ_FALSE ? 3u : 1u;
+    out_capabilities->modern_pipeline = window->gl_modern;
+    out_capabilities->offscreen_supported = FVIZ_TRUE;
+    out_capabilities->color_readback_supported = FVIZ_TRUE;
+    out_capabilities->depth_readback_supported = FVIZ_TRUE;
+}
+
+static FVizId fviz_render_window_provenance_id(
+    const FVizPolyData* poly_data,
+    const char* name,
+    FVizSize primitive_id,
+    FVizId fallback)
+{
+    const FVizDataArray* array;
+    const void* tuple;
+    if (poly_data == NULL) return fallback;
+    array = fviz_attribute_set_const_get(fviz_poly_data_const_cell_data(poly_data), name);
+    if (array == NULL || primitive_id >= fviz_data_array_tuple_count(array)) return fallback;
+    tuple = fviz_data_array_const_tuple(array, primitive_id);
+    if (tuple == NULL) return fallback;
+    switch (fviz_data_array_type(array))
+    {
+        case FVIZ_DATA_UINT64: return *(const uint64_t*)tuple;
+        case FVIZ_DATA_INT64: return (FVizId)*(const int64_t*)tuple;
+        case FVIZ_DATA_UINT32: return *(const uint32_t*)tuple;
+        case FVIZ_DATA_INT32: return (FVizId)*(const int32_t*)tuple;
+        default: return fallback;
+    }
+}
+
+FVizResult fviz_render_window_hardware_pick(
+    FVizRenderWindow* window,
+    int x,
+    int y,
+    FVizHardwarePick* out_pick)
+{
+    FVizRenderer* renderer;
+    FVizSize actor_index;
+    FVizSize primitive_id;
+    FVizActor* actor;
+    const FVizPolyData* poly_data;
+    FVizResult result;
+    if (window == NULL || out_pick == NULL || x < 0 || y < 0 ||
+        x >= window->width || y >= window->height)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    (void)memset(out_pick, 0, sizeof(*out_pick));
+    out_pick->struct_size = (uint32_t)sizeof(*out_pick);
+    out_pick->rendered_primitive_id = (FVizSize)-1;
+    out_pick->original_cell_id = (FVizId)-1;
+    out_pick->original_face_id = (FVizId)-1;
+    renderer = fviz_render_window_find_renderer(window, x, y);
+    if (renderer == NULL) return FVIZ_ERROR_NOT_FOUND;
+    if (fviz_renderer_update(renderer) != FVIZ_OK) return fviz_last_error_code();
+    result = fviz_internal_render_window_hardware_pick_platform(
+        window, renderer, x, y, &actor_index, &primitive_id, &out_pick->depth);
+    if (result != FVIZ_OK) return result;
+    actor = fviz_scene_actor(fviz_renderer_scene(renderer), actor_index);
+    if (actor == NULL) return FVIZ_ERROR_NOT_FOUND;
+    poly_data = fviz_actor_const_poly_data(actor);
+    out_pick->renderer = renderer;
+    out_pick->actor = actor;
+    out_pick->rendered_primitive_id = primitive_id;
+    out_pick->original_cell_id = fviz_render_window_provenance_id(
+        poly_data, "FVizOriginalCellIds", primitive_id, (FVizId)primitive_id);
+    out_pick->original_face_id = fviz_render_window_provenance_id(
+        poly_data, "FVizOriginalFaceIds", primitive_id, (FVizId)-1);
     return FVIZ_OK;
 }
 
@@ -239,7 +500,13 @@ FVizResult fviz_render_window_show(FVizRenderWindow* window)
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    return fviz_internal_render_window_show_platform(window);
+    if (window->offscreen != FVIZ_FALSE) return FVIZ_ERROR_INVALID_STATE;
+    if (window->state == FVIZ_RENDER_WINDOW_FINALIZED) return FVIZ_ERROR_INVALID_STATE;
+    {
+        FVizResult result = fviz_internal_render_window_show_platform(window);
+        if (result == FVIZ_OK) window->state = FVIZ_RENDER_WINDOW_VISIBLE;
+        return result;
+    }
 }
 
 FVizResult fviz_render_window_render(FVizRenderWindow* window)
@@ -249,6 +516,7 @@ FVizResult fviz_render_window_render(FVizRenderWindow* window)
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    if (window->state == FVIZ_RENDER_WINDOW_FINALIZED) return FVIZ_ERROR_INVALID_STATE;
     return fviz_internal_render_window_render_platform(window);
 }
 
@@ -259,6 +527,8 @@ FVizResult fviz_render_window_run(FVizRenderWindow* window)
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    if (window->state == FVIZ_RENDER_WINDOW_FINALIZED || window->offscreen != FVIZ_FALSE)
+        return FVIZ_ERROR_INVALID_STATE;
     return fviz_internal_render_window_run_platform(window);
 }
 
@@ -269,6 +539,7 @@ FVizResult fviz_render_window_process_events(FVizRenderWindow* window)
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    if (window->state == FVIZ_RENDER_WINDOW_FINALIZED) return FVIZ_ERROR_INVALID_STATE;
     return fviz_internal_render_window_process_events_platform(window);
 }
 

@@ -29,6 +29,18 @@ FVIZ_API void fviz_actor_set_visible(FVizActor* actor, FVizBool visible);
 FVIZ_API FVizBool fviz_actor_is_visible(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_wireframe(FVizActor* actor, FVizBool enabled);
 FVIZ_API FVizBool fviz_actor_wireframe(const FVizActor* actor);
+FVIZ_API void fviz_actor_set_opacity(FVizActor* actor, float opacity);
+FVIZ_API float fviz_actor_opacity(const FVizActor* actor);
+FVIZ_API void fviz_actor_set_edge_visibility(FVizActor* actor, FVizBool visible);
+FVIZ_API FVizBool fviz_actor_edge_visibility(const FVizActor* actor);
+FVIZ_API void fviz_actor_set_edge_color(FVizActor* actor, float red, float green, float blue);
+FVIZ_API void fviz_actor_get_edge_color(
+    const FVizActor* actor,
+    float* red,
+    float* green,
+    float* blue);
+FVIZ_API void fviz_actor_set_line_width(FVizActor* actor, float width);
+FVIZ_API float fviz_actor_line_width(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_position(FVizActor* actor, FVizVec3 position);
 FVIZ_API FVizVec3 fviz_actor_position(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_orientation(FVizActor* actor, FVizQuat orientation);

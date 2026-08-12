@@ -16,6 +16,37 @@ typedef struct FVizRenderWindow FVizRenderWindow;
 typedef struct FVizRenderWindowInteractor FVizRenderWindowInteractor;
 #define FVIZ_TYPE_RENDER_WINDOW UINT64_C(0x4D73FB2C6579C1DF)
 
+typedef enum FVizRenderWindowState
+{
+    FVIZ_RENDER_WINDOW_CREATED = 0,
+    FVIZ_RENDER_WINDOW_INITIALIZED = 1,
+    FVIZ_RENDER_WINDOW_VISIBLE = 2,
+    FVIZ_RENDER_WINDOW_OFFSCREEN = 3,
+    FVIZ_RENDER_WINDOW_FINALIZED = 4
+} FVizRenderWindowState;
+
+typedef struct FVizRenderCapabilities
+{
+    uint32_t struct_size;
+    uint32_t gl_major;
+    uint32_t gl_minor;
+    FVizBool modern_pipeline;
+    FVizBool offscreen_supported;
+    FVizBool color_readback_supported;
+    FVizBool depth_readback_supported;
+} FVizRenderCapabilities;
+
+typedef struct FVizHardwarePick
+{
+    uint32_t struct_size;
+    FVizRenderer* renderer;
+    FVizActor* actor;
+    FVizSize rendered_primitive_id;
+    FVizId original_cell_id;
+    FVizId original_face_id;
+    float depth;
+} FVizHardwarePick;
+
 typedef void (*FVizPickCallbackFn)(
     FVizRenderWindow* window,
     int x,
@@ -28,6 +59,38 @@ FVIZ_API FVizResult fviz_render_window_create(
     int height,
     const char* title,
     FVizRenderWindow** out_window);
+FVIZ_API FVizResult fviz_render_window_create_offscreen(
+    int width,
+    int height,
+    FVizRenderWindow** out_window);
+FVIZ_API FVizResult fviz_render_window_create_attached(
+    void* host_native_handle,
+    int width,
+    int height,
+    FVizRenderWindow** out_window);
+FVIZ_API FVizRenderWindowState fviz_render_window_state(const FVizRenderWindow* window);
+FVIZ_API FVizResult fviz_render_window_initialize(FVizRenderWindow* window);
+FVIZ_API void fviz_render_window_finalize(FVizRenderWindow* window);
+FVIZ_API FVizResult fviz_render_window_resize(FVizRenderWindow* window, int width, int height);
+FVIZ_API FVizResult fviz_render_window_read_rgba8(
+    FVizRenderWindow* window,
+    uint8_t* pixels,
+    FVizSize capacity);
+FVIZ_API FVizResult fviz_render_window_read_depth_f32(
+    FVizRenderWindow* window,
+    float* depth,
+    FVizSize capacity);
+FVIZ_API FVizResult fviz_render_window_write_ppm(
+    FVizRenderWindow* window,
+    const char* path);
+FVIZ_API void fviz_render_window_get_capabilities(
+    const FVizRenderWindow* window,
+    FVizRenderCapabilities* out_capabilities);
+FVIZ_API FVizResult fviz_render_window_hardware_pick(
+    FVizRenderWindow* window,
+    int x,
+    int y,
+    FVizHardwarePick* out_pick);
 FVIZ_API FVizResult fviz_render_window_set_renderer(FVizRenderWindow* window, FVizRenderer* renderer);
 FVIZ_API FVizRenderer* fviz_render_window_renderer(FVizRenderWindow* window);
 FVIZ_API FVizResult fviz_render_window_add_renderer(FVizRenderWindow* window, FVizRenderer* renderer);

@@ -57,7 +57,10 @@ FVizResult fviz_internal_gl_load(FVizGLFunctions* functions)
     functions->glUniformMatrix4fv = (FVizGLUniformMatrix4fvFn)fviz_gl_lookup_symbol("glUniformMatrix4fv");
     functions->glUniformMatrix3fv = (FVizGLUniformMatrix3fvFn)fviz_gl_lookup_symbol("glUniformMatrix3fv");
     functions->glUniform3fv = (FVizGLUniform3fvFn)fviz_gl_lookup_symbol("glUniform3fv");
+    functions->glUniform4fv = (FVizGLUniform4fvFn)fviz_gl_lookup_symbol("glUniform4fv");
+    functions->glUniform1f = (FVizGLUniform1fFn)fviz_gl_lookup_symbol("glUniform1f");
     functions->glUniform1i = (FVizGLUniform1iFn)fviz_gl_lookup_symbol("glUniform1i");
+    functions->glUniform1ui = (FVizGLUniform1uiFn)fviz_gl_lookup_symbol("glUniform1ui");
 
     if (functions->glGenVertexArrays == NULL ||
         functions->glBindVertexArray == NULL ||
@@ -87,7 +90,10 @@ FVizResult fviz_internal_gl_load(FVizGLFunctions* functions)
         functions->glUniformMatrix4fv == NULL ||
         functions->glUniformMatrix3fv == NULL ||
         functions->glUniform3fv == NULL ||
-        functions->glUniform1i == NULL)
+        functions->glUniform4fv == NULL ||
+        functions->glUniform1f == NULL ||
+        functions->glUniform1i == NULL ||
+        functions->glUniform1ui == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "OpenGL 3.3 function loader is incomplete");
         return FVIZ_ERROR_GRAPHICS;

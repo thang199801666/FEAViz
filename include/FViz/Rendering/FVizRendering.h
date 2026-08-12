@@ -6,6 +6,7 @@
 #include <FViz/Rendering/FVizLookupTable.h>
 #include <FViz/Rendering/FVizMapper.h>
 #include <FViz/Rendering/FVizRenderer.h>
+#include <FViz/Rendering/FVizRenderPass.h>
 #include <FViz/Rendering/FVizRendererWidget.h>
 #include <FViz/Rendering/FVizRenderWindow.h>
 #include <FViz/Rendering/FVizScalarLegend.h>

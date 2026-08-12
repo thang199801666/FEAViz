@@ -5,6 +5,7 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Interaction/FVizRenderWindowInteractor.h>
@@ -290,7 +291,7 @@ FVizResult fviz_internal_render_window_create_platform(FVizRenderWindow* window)
 {
     RECT rect;
     HWND hwnd;
-    DWORD style = WS_OVERLAPPEDWINDOW;
+    DWORD style = window->host_native_handle != NULL ? WS_CHILD | WS_VISIBLE : WS_OVERLAPPEDWINDOW;
     if (fviz_win32_register_class() != FVIZ_OK) return fviz_last_error_code();
     rect.left = 0; rect.top = 0; rect.right = window->width; rect.bottom = window->height;
     (void)AdjustWindowRect(&rect, style, FALSE);
@@ -299,11 +300,11 @@ FVizResult fviz_internal_render_window_create_platform(FVizRenderWindow* window)
         FVIZ_WINDOW_CLASS_NAME,
         window->title,
         style,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
+        window->host_native_handle != NULL ? 0 : CW_USEDEFAULT,
+        window->host_native_handle != NULL ? 0 : CW_USEDEFAULT,
         rect.right - rect.left,
         rect.bottom - rect.top,
-        NULL,
+        (HWND)window->host_native_handle,
         NULL,
         GetModuleHandleA(NULL),
         window);
@@ -412,7 +413,8 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
             int viewport_y;
             int viewport_width;
             int viewport_height;
-            FVizScalarLegend* legend;
+            FVizSize pass_index;
+            FVizRenderPassContext pass_context;
             if (fviz_renderer_layer(renderer) != current_layer) continue;
             if (fviz_renderer_update(renderer) != FVIZ_OK)
             {
@@ -429,24 +431,77 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
             if (viewport_height < 1) viewport_height = 1;
             glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
             glScissor(viewport_x, viewport_y, viewport_width, viewport_height);
-            if (current_layer == 0)
+            (void)memset(&pass_context, 0, sizeof(pass_context));
+            pass_context.struct_size = (uint32_t)sizeof(pass_context);
+            pass_context.viewport_x = viewport_x;
+            pass_context.viewport_y = viewport_y;
+            pass_context.viewport_width = viewport_width;
+            pass_context.viewport_height = viewport_height;
+            pass_context.aspect_ratio = (float)viewport_width / (float)viewport_height;
+            pass_context.backend_context = window;
+            for (pass_index = 0u; pass_index < fviz_renderer_pass_count(renderer); ++pass_index)
             {
-                fviz_renderer_get_background(renderer, &background[0], &background[1], &background[2]);
-                glClearColor(background[0], background[1], background[2], 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                FVizRenderPass* pass = fviz_renderer_pass_at(renderer, pass_index);
+                FVizResult pass_result = FVIZ_OK;
+                if (fviz_render_pass_is_custom(pass) != FVIZ_FALSE)
+                {
+                    pass_result = fviz_render_pass_execute(pass, renderer, &pass_context);
+                }
+                else
+                {
+                    switch (fviz_render_pass_stage(pass))
+                    {
+                        case FVIZ_RENDER_PASS_CLEAR:
+                            if (current_layer == 0)
+                            {
+                                fviz_renderer_get_background(
+                                    renderer, &background[0], &background[1], &background[2]);
+                                glClearColor(background[0], background[1], background[2], 1.0f);
+                                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                            }
+                            break;
+                        case FVIZ_RENDER_PASS_OPAQUE:
+                            if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
+                                pass_result = fviz_internal_gl_device_render_stage(
+                                    (FVizGLDevice*)window->gl_device,
+                                    renderer,
+                                    pass_context.aspect_ratio,
+                                    FVIZ_RENDER_PASS_OPAQUE);
+                            else
+                                fviz_win32_render_legacy_scene(
+                                    window, renderer, viewport_width, viewport_height);
+                            break;
+                        case FVIZ_RENDER_PASS_TRANSLUCENT:
+                        case FVIZ_RENDER_PASS_EDGE:
+                            if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
+                                pass_result = fviz_internal_gl_device_render_stage(
+                                    (FVizGLDevice*)window->gl_device,
+                                    renderer,
+                                    pass_context.aspect_ratio,
+                                    fviz_render_pass_stage(pass));
+                            break;
+                        case FVIZ_RENDER_PASS_OVERLAY:
+                        {
+                            FVizScalarLegend* legend = fviz_renderer_scalar_legend(renderer);
+                            if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL && legend != NULL)
+                                pass_result = fviz_internal_gl_device_render_legend(
+                                    (FVizGLDevice*)window->gl_device,
+                                    legend,
+                                    viewport_width,
+                                    viewport_height);
+                            break;
+                        }
+                        case FVIZ_RENDER_PASS_SELECTION:
+                        default:
+                            break;
+                    }
+                }
+                if (pass_result != FVIZ_OK)
+                {
+                    glDisable(GL_SCISSOR_TEST);
+                    return pass_result;
+                }
             }
-            if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
-                (void)fviz_internal_gl_device_render(
-                    (FVizGLDevice*)window->gl_device,
-                    renderer,
-                    (float)viewport_width / (float)viewport_height);
-            else
-                fviz_win32_render_legacy_scene(
-                    window, renderer, viewport_width, viewport_height);
-            legend = fviz_renderer_scalar_legend(renderer);
-            if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL && legend != NULL)
-                (void)fviz_internal_gl_device_render_legend(
-                    (FVizGLDevice*)window->gl_device, legend, viewport_width, viewport_height);
             ++rendered_count;
         }
         if (current_layer == INT_MAX) break;
@@ -586,6 +641,104 @@ FVizResult fviz_internal_render_window_process_events_platform(FVizRenderWindow*
         DispatchMessageA(&message);
     }
     return FVIZ_OK;
+}
+
+FVizResult fviz_internal_render_window_resize_platform(FVizRenderWindow* window)
+{
+    RECT rect;
+    DWORD style;
+    HWND hwnd;
+    if (window == NULL || window->native_window == NULL) return FVIZ_ERROR_INVALID_STATE;
+    hwnd = (HWND)window->native_window;
+    style = (DWORD)GetWindowLongPtrA(hwnd, GWL_STYLE);
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = window->width;
+    rect.bottom = window->height;
+    (void)AdjustWindowRect(&rect, style, FALSE);
+    if (SetWindowPos(
+            hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
+            SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE) == FALSE)
+        return FVIZ_ERROR_GRAPHICS;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_internal_render_window_read_rgba8_platform(
+    FVizRenderWindow* window,
+    uint8_t* pixels)
+{
+    if (window == NULL || pixels == NULL || window->native_dc == NULL ||
+        window->native_gl_context == NULL)
+        return FVIZ_ERROR_INVALID_STATE;
+    if (wglMakeCurrent(
+            (HDC)window->native_dc, (HGLRC)window->native_gl_context) == FALSE)
+        return FVIZ_ERROR_GRAPHICS;
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadBuffer(GL_FRONT);
+    glReadPixels(0, 0, window->width, window->height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
+}
+
+FVizResult fviz_internal_render_window_read_depth_f32_platform(
+    FVizRenderWindow* window,
+    float* depth)
+{
+    if (window == NULL || depth == NULL || window->native_dc == NULL ||
+        window->native_gl_context == NULL)
+        return FVIZ_ERROR_INVALID_STATE;
+    if (wglMakeCurrent(
+            (HDC)window->native_dc, (HGLRC)window->native_gl_context) == FALSE)
+        return FVIZ_ERROR_GRAPHICS;
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, window->width, window->height, GL_DEPTH_COMPONENT, GL_FLOAT, depth);
+    return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
+}
+
+FVizResult fviz_internal_render_window_hardware_pick_platform(
+    FVizRenderWindow* window,
+    FVizRenderer* renderer,
+    int x,
+    int y,
+    FVizSize* out_actor_index,
+    FVizSize* out_primitive_id,
+    float* out_depth)
+{
+    float viewport[4];
+    int viewport_x;
+    int viewport_y;
+    int viewport_width;
+    int viewport_height;
+    FVizResult result;
+    if (window == NULL || renderer == NULL || out_actor_index == NULL ||
+        out_primitive_id == NULL || out_depth == NULL)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (window->gl_modern == FVIZ_FALSE || window->gl_device == NULL)
+        return FVIZ_ERROR_NOT_SUPPORTED;
+    if (wglMakeCurrent(
+            (HDC)window->native_dc, (HGLRC)window->native_gl_context) == FALSE)
+        return FVIZ_ERROR_GRAPHICS;
+    fviz_renderer_get_viewport(
+        renderer, &viewport[0], &viewport[1], &viewport[2], &viewport[3]);
+    viewport_x = (int)(viewport[0] * (float)window->width);
+    viewport_y = (int)(viewport[1] * (float)window->height);
+    viewport_width = (int)((viewport[2] - viewport[0]) * (float)window->width);
+    viewport_height = (int)((viewport[3] - viewport[1]) * (float)window->height);
+    if (viewport_width < 1 || viewport_height < 1) return FVIZ_ERROR_NOT_FOUND;
+    glViewport(viewport_x, viewport_y, viewport_width, viewport_height);
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(viewport_x, viewport_y, viewport_width, viewport_height);
+    result = fviz_internal_gl_device_select(
+        (FVizGLDevice*)window->gl_device,
+        renderer,
+        (float)viewport_width / (float)viewport_height,
+        x,
+        window->height - y - 1,
+        out_actor_index,
+        out_primitive_id,
+        out_depth);
+    glDisable(GL_SCISSOR_TEST);
+    (void)fviz_internal_render_window_render_platform(window);
+    return result;
 }
 
 static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -753,7 +906,10 @@ static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam,
         case WM_DESTROY:
             fviz_win32_release_gl_context(window, hwnd);
             window->native_window = NULL;
-            PostQuitMessage(0);
+            window->state = FVIZ_RENDER_WINDOW_FINALIZED;
+            /* Child/offscreen windows must not terminate the host application's loop. */
+            if (window->host_native_handle == NULL && window->offscreen == FVIZ_FALSE)
+                PostQuitMessage(0);
             return 0;
         default:
             break;

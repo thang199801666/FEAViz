@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.13.0 - Render passes, offscreen lifecycle, and hardware selection
+
+- Added an ordered, backend-neutral render-pass pipeline for clear, opaque,
+  translucent, edge, selection, and overlay stages, including retained custom
+  passes with explicit user-state destruction.
+- Split modern OpenGL rendering into opaque/translucent/edge stages and added
+  actor opacity, edge styling, RGBA/direct colors, point/cell/field selection,
+  opacity arrays, automatic ranges, and six clipping planes.
+- Added explicit render-window lifecycle, hidden offscreen contexts, resize,
+  color/depth readback, PPM output, child-window attachment, context recreation,
+  and capability diagnostics.
+- Added viewport-aware world/view/NDC/display conversion and display-ray APIs.
+- Added a depth-tested GPU ID pass resolving rendered triangles through
+  `FVizOriginalCellIds` and `FVizOriginalFaceIds` provenance.
+- Added deterministic offscreen, clipping, RGBA, edge, lifecycle, occlusion,
+  provenance, and repeat-render image regressions.
+
 ## 0.12.0 - Isolated parallel runtimes and deterministic primitives
 
 - Replaced sole reliance on the global dispatch lock with explicitly owned,

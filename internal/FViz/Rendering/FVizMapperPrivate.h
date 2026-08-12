@@ -17,8 +17,12 @@ struct FVizMapper
     float scalar_max;
     FVizDataAssociation association;
     FVizComponentMode component_mode;
+    FVizScalarInterpolation scalar_interpolation;
     uint32_t component;
     char array_name[128];
+    char opacity_array_name[128];
+    FVizPlane clipping_planes[6];
+    FVizSize clipping_plane_count;
 };
 
 #endif /* FVIZ_INTERNAL_RENDERING_MAPPER_PRIVATE_H */

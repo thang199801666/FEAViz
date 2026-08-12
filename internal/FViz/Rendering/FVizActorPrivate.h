@@ -13,6 +13,10 @@ struct FVizActor
     float color[3];
     FVizBool visible;
     FVizBool wireframe;
+    FVizBool edge_visible;
+    float opacity;
+    float edge_color[3];
+    float line_width;
     FVizVec3 position;
     FVizQuat orientation;
     FVizVec3 scale;

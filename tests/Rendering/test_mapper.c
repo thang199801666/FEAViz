@@ -1,5 +1,6 @@
 #include <FViz/FViz.h>
 #include <math.h>
+#include <string.h>
 
 #define CHECK(expr) do { if (!(expr)) return __LINE__; } while (0)
 
@@ -67,6 +68,9 @@ static int test_mapper(void)
     uint32_t a, b, c;
     FVizArraySelection selection;
     FVizArraySelection selected;
+    FVizPlane plane;
+    FVizPlane selected_plane;
+    FVizMTime property_mtime;
 
     CHECK(fviz_mapper_create(&mapper) == FVIZ_OK);
     CHECK(fviz_mapper_scalar_visibility(mapper) == FVIZ_FALSE);
@@ -105,6 +109,18 @@ static int test_mapper(void)
     CHECK(fviz_mapper_scalar_range_valid(mapper) == FVIZ_TRUE);
     fviz_mapper_get_scalar_range(mapper, &values[0], &values[1]);
     CHECK(values[0] == 0.0f && values[1] == 10.0f);
+    fviz_mapper_use_automatic_scalar_range(mapper);
+    CHECK(fviz_mapper_scalar_range_valid(mapper) == FVIZ_FALSE);
+    fviz_mapper_set_scalar_interpolation(mapper, FVIZ_SCALAR_INTERPOLATION_POINT);
+    CHECK(fviz_mapper_scalar_interpolation(mapper) == FVIZ_SCALAR_INTERPOLATION_POINT);
+    CHECK(fviz_mapper_set_opacity_array(mapper, "opacity") == FVIZ_OK);
+    CHECK(strcmp(fviz_mapper_opacity_array(mapper), "opacity") == 0);
+    plane = fviz_plane_from_point_normal(
+        fviz_vec3(0.5f, 0.0f, 0.0f), fviz_vec3(1.0f, 0.0f, 0.0f));
+    CHECK(fviz_mapper_add_clipping_plane(mapper, plane) == FVIZ_OK);
+    CHECK(fviz_mapper_clipping_plane_count(mapper) == 1u);
+    CHECK(fviz_mapper_clipping_plane(mapper, 0u, &selected_plane) == FVIZ_OK);
+    CHECK(selected_plane.distance == plane.distance);
     CHECK(fviz_mapper_lookup_table(mapper) != NULL);
     table = fviz_mapper_lookup_table(mapper);
     fviz_lookup_table_map_scalar(table, 5.0f, &values[0], &values[1], &values[2]);
@@ -113,6 +129,15 @@ static int test_mapper(void)
     CHECK(fviz_actor_create(&actor) == FVIZ_OK);
     CHECK(fviz_actor_set_poly_data(actor, data) == FVIZ_OK);
     CHECK(fviz_actor_const_poly_data(actor) == data);
+    property_mtime = fviz_object_mtime((FVizObject*)actor);
+    fviz_actor_set_opacity(actor, 0.4f);
+    fviz_actor_set_edge_visibility(actor, FVIZ_TRUE);
+    fviz_actor_set_edge_color(actor, 1.0f, 0.5f, 0.25f);
+    fviz_actor_set_line_width(actor, 3.0f);
+    CHECK(fviz_actor_opacity(actor) == 0.4f);
+    CHECK(fviz_actor_edge_visibility(actor) == FVIZ_TRUE);
+    CHECK(fviz_actor_line_width(actor) == 3.0f);
+    CHECK(fviz_object_mtime((FVizObject*)actor) > property_mtime);
     CHECK(fviz_actor_mapper(actor) != NULL);
     CHECK(fviz_actor_set_mapper(actor, mapper) == FVIZ_OK);
     CHECK(fviz_actor_mapper(actor) == mapper);
