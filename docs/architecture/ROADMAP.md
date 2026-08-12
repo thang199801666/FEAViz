@@ -26,28 +26,26 @@
 - [x] Logging interface
 - [x] Unit/leak/stress/thread tests
 
-## Phase 2 — Core containers — PARTIAL, viewer-critical subset complete
+## Phase 2 — Core containers — COMPLETE in 0.2.0
 
 - [x] `FVizBuffer`
 - [x] Ownership-aware zero-copy external buffer wrapping
 - [x] Generic dynamic `FVizArray`
 - [x] `FVizString`
-- [ ] Bit array
-- [ ] Hash map
+- [x] Bit array
+- [x] Hash map
 
-The remaining BitArray/HashMap work is intentionally retained as debt rather than blocking the first renderable scene milestone.
-
-## Phase 3 — Math — PARTIAL, renderer-critical subset complete
+## Phase 3 — Math — COMPLETE in 0.2.0
 
 - [x] `FVizVec3`
 - [x] `FVizMat4`
 - [x] Perspective projection
 - [x] Look-at/view matrix
 - [x] Bounds
-- [ ] Vec2 / Vec4
-- [ ] Mat3
-- [ ] Quaternion
-- [ ] Ray / Plane / AABB
+- [x] Vec2 / Vec4
+- [x] Mat3
+- [x] Quaternion
+- [x] Ray / Plane / AABB
 - [ ] General transform object
 
 ## Phase 4 — Data foundation — COMPLETE
@@ -133,13 +131,12 @@ OBJ/STL file
 - [x] Wireframe mode preserved through `glPolygonMode`
 - [x] Public scene API unchanged
 
-## Immediate work after 0.1.4
+## Immediate work after 0.2.0
 
-1. Close Phase 2/3 debt: BitArray, HashMap, complete math primitives (Vec2/Vec4/Mat3/Quat, Ray/Plane/AABB).
-2. Per-actor model transform (uniform scale/rotation/translation) with proper normal matrix in the shader.
-3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-5. Implement surface extraction from volumetric FE meshes. **COMPLETE**
-6. Add spatial acceleration (BVH, point locator, cell locator) and picking.
-7. Add pipeline/filter execution, then clip/slice/threshold/warp. Threshold cell filter **COMPLETE**.
-8. Add scalar lookup tables and FEA contour coloring.
+1. Per-actor model transform (uniform scale/rotation/translation) with proper normal matrix in the shader.
+2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+4. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+5. Add spatial acceleration (BVH, point locator, cell locator) and picking.
+6. Add pipeline/filter execution, then clip/slice/threshold/warp. Threshold cell filter **COMPLETE**.
+7. Add scalar lookup tables and FEA contour coloring.

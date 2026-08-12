@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 - Complete core containers and math primitives
+
+- Added `FVizBitArray`: compact 64-bit-word backed bit storage with set/test, resize, clear, set-all, and hardware pop-count.
+- Added `FVizHashMap`: open-addressing hash map with linear probing and tombstone erase, keyed by `FVizId` with `void*` values, automatic growth at 70% load, and iteration support.
+- Expanded `FViz.Core.Containers` test coverage for both containers including growth and erase patterns.
+
 ## 0.2.0 - Complete math primitives
 
 - Added `FVizVec2` and `FVizVec4` value types with add/sub/scale/dot/length/normalize operations.

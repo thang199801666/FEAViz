@@ -6,7 +6,9 @@
 #include <FViz/Core/FVizApi.h>
 #include <FViz/Core/FVizAllocator.h>
 #include <FViz/Core/FVizArray.h>
+#include <FViz/Core/FVizBitArray.h>
 #include <FViz/Core/FVizBuffer.h>
+#include <FViz/Core/FVizHashMap.h>
 #include <FViz/Core/FVizString.h>
 #include <FViz/Data/FVizDataArray.h>
 #include <FViz/Data/FVizAttributeSet.h>

@@ -62,8 +62,10 @@ endif()
 set(_fviz_sources
     src/Core/FVizAllocator.c
     src/Core/FVizArray.c
+    src/Core/FVizBitArray.c
     src/Core/FVizBuffer.c
     src/Core/FVizError.c
+    src/Core/FVizHashMap.c
     src/Core/FVizLog.c
     src/Core/FVizMemory.c
     src/Core/FVizObject.c
