@@ -177,11 +177,14 @@ OBJ/STL file
 ## Phase 16 — Binary VTU — MILESTONE COMPLETE in 0.4.4
 
 - [x] Base64 decoder + `binary`/`appended` VTU array parsing (0.4.4)
-- [ ] Legacy VTK `.vtk` reader
 
-## Immediate work after 0.4.4
+## Phase 17 — Legacy VTK reader — MILESTONE COMPLETE in 0.4.5
 
-1. Legacy VTK `.vtk` reader.
-2. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
-3. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
-4. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+- [x] `fviz_vtk_legacy_read` ASCII unstructured grid + point/cell scalars/vectors (0.4.5)
+
+## Immediate work after 0.4.5
+
+1. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
+2. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
+3. Implement surface extraction from volumetric FE meshes. **COMPLETE**
+4. Binary legacy VTK and PLY readers.

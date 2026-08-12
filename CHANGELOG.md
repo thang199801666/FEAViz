@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.5 - Legacy VTK reader
+
+- Added `fviz_vtk_legacy_read()`: parses ASCII legacy `.vtk` files (`DATASET UNSTRUCTURED_GRID`) into `FVizUnstructuredGrid` — POINTS, CELLS + CELL_TYPES, and POINT_DATA/CELL_DATA SCALARS and VECTORS.
+- Handles the legacy format's split cell storage (point ids in CELLS, types in CELL_TYPES) and the `LOOKUP_TABLE` line preceding scalar data.
+- Added `assets/testdata/hex_legacy.vtk` and `FViz.IO.VTKLegacyReader` tests.
+
 ## 0.4.4 - Binary VTU support
 
 - Added a base64 decoder and binary data parsing to `fviz_vtu_read`: the `binary` and `appended` formats (with 8-byte block header) are now decoded and read as typed arrays (Float32/64, Int8..64, UInt8..64) for points, connectivity/offsets/types, and result fields.

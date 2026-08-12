@@ -48,6 +48,13 @@ fviz_apply_compiler_options(FVizTestVTUReader)
 fviz_apply_sanitizers(FVizTestVTUReader)
 add_test(NAME FViz.IO.VTUReader COMMAND FVizTestVTUReader)
 
+add_executable(FVizTestVTKLegacyReader IO/test_vtk_legacy_reader.c)
+target_link_libraries(FVizTestVTKLegacyReader PRIVATE FEAViz::FEAViz)
+target_compile_definitions(FVizTestVTKLegacyReader PRIVATE FVIZ_TESTDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../assets/testdata")
+fviz_apply_compiler_options(FVizTestVTKLegacyReader)
+fviz_apply_sanitizers(FVizTestVTKLegacyReader)
+add_test(NAME FViz.IO.VTKLegacyReader COMMAND FVizTestVTKLegacyReader)
+
 add_executable(FVizTestThreadRuntime Core/test_thread_runtime.c)
 target_link_libraries(FVizTestThreadRuntime PRIVATE FEAViz::FEAViz Threads::Threads)
 fviz_apply_compiler_options(FVizTestThreadRuntime)

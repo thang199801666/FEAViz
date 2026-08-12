@@ -26,6 +26,7 @@
 #include <FViz/IO/FVizMeshReader.h>
 #include <FViz/IO/FVizOBJReader.h>
 #include <FViz/IO/FVizSTLReader.h>
+#include <FViz/IO/FVizVTKLegacyReader.h>
 #include <FViz/IO/FVizVTUReader.h>
 #include <FViz/Rendering/FVizRendering.h>
 #include <FViz/Core/FVizError.h>
