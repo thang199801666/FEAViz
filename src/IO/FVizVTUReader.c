@@ -553,7 +553,6 @@ FVizResult fviz_vtu_read(const char* file_path, FVizUnstructuredGrid** out_grid)
         char tag[512];
         FVizSize tag_length;
         const char* open = strstr(cursor, "<DataArray");
-        const char* section = cursor;
         int section_kind = 0;
         if (open == NULL || open >= text + file_size) break;
         {
@@ -571,7 +570,6 @@ FVizResult fviz_vtu_read(const char* file_path, FVizUnstructuredGrid** out_grid)
                 next_section = cell_data_tag;
                 section_kind = 2;
             }
-            if (next_section != NULL) section = next_section;
         }
         if (!fviz_find_data_array(open, text + file_size, &open_end, &close)) break;
         tag_length = (FVizSize)(open_end - open);
