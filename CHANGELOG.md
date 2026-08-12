@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.0 - Complete math primitives
+
+- Added `FVizVec2` and `FVizVec4` value types with add/sub/scale/dot/length/normalize operations.
+- Added `FVizMat3` (column-major): identity, multiply, transpose, adjugate-based inverse, `transform_vec3`, and `from_quaternion`.
+- Added `FVizQuat`: identity, `from_axis_angle`, Hamilton multiply, normalize, `rotate_vec3`, dot.
+- Added `FVizRay` and `FVizPlane` for picking/intersection foundations: ray point/distance-to-point, ray-sphere intersection, plane from point+normal, signed point distance, and point projection.
+- Extended the `FVizMath.h` umbrella header to include the new primitives.
+- Expanded `FViz.Math.Core` test coverage for every new primitive.
+- Fixed `FVizMat3` inverse index mapping (column-major result layout).
+
+## 0.1.4 - Modern OpenGL renderer
+
+- Added an internal OpenGL function loader (`FVizGL`) for the OpenGL 3.3 core subset, resolving entry points through `wglGetProcAddress` with an `opengl32.dll` fallback and no third-party dependency.
+- Added `FVizGLDevice`, a shader-based render device with a built-in GLSL 330 program and per-actor GPU resource cache (VAO + position/normal VBO + index EBO).
+- GPU geometry is uploaded once per mesh and reused across frames; the cache rebuilds only when the `FVizPolyData` generation counter changes.
+- Reworked the Win32/WGL context creation to request an OpenGL 3.3 core-profile context via `wglChoosePixelFormatARB`/`wglCreateContextAttribsARB` (probe-context based), with a seamless fallback to the legacy 1.1 compatibility path.
+- Replaced fixed-function lighting with per-pixel shader lighting (Lambert diffuse + ambient) and automatic flat-shading fallback for meshes without computed normals.
+- Kept the public scene/actor/render-window API unchanged; all renderer changes are internal.
+- Added a mesh mutation generation counter to `FVizPolyData` used for GPU-cache invalidation.
+- Verified: OpenGL 3.3 core-profile path active on the Windows build, all 19 CTest tests pass.
+
 ## 0.1.3
 
 - Fixed MSVC 19.50 / C17 build failure caused by direct use of `max_align_t`.

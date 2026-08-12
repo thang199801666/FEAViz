@@ -14,6 +14,8 @@ struct FVizRenderWindow
     void* native_window;
     void* native_dc;
     void* native_gl_context;
+    void* gl_device;
+    FVizBool gl_modern;
     FVizBool visible;
     FVizBool close_requested;
     FVizBool left_mouse_down;

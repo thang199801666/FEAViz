@@ -6,9 +6,9 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.1.0** is the first 3D-scene milestone. FEAViz can load triangle surface meshes from OBJ/STL, place them in an Actor/Scene/Renderer hierarchy, fit a camera, and display the scene through the native Windows OpenGL viewer backend.
+Version **0.1.4** adds the modern GPU renderer. FEAViz can load triangle surface meshes from OBJ/STL, place them in an Actor/Scene/Renderer hierarchy, fit a camera, and display the scene through the native Windows OpenGL viewer backend.
 
-## Current 0.1.0 milestone
+## Current 0.1.4 milestone
 
 Implemented:
 
@@ -22,9 +22,10 @@ Implemented:
 - Scene model: `FVizActor`, `FVizScene`, `FVizRenderer`, `FVizCamera`.
 - Windows native render window using Win32/WGL and OpenGL.
 - Viewer interaction: orbit, pan, zoom, fit, wireframe toggle.
+- **Modern GPU renderer (0.1.4):** OpenGL 3.3 core-profile context with per-actor VBO/VAO/EBO caching and GLSL per-pixel lighting, with an automatic legacy compatibility fallback.
 - CTest coverage for core/data/math/mesh/IO/scene.
 
-The first renderer intentionally uses a compatibility OpenGL path so the initial scene milestone has no third-party graphics dependency. A modern VBO/shader backend is planned next without changing the public scene API.
+The renderer requests an OpenGL 3.3 core-profile context at startup (probe-context based, using `wglChoosePixelFormatARB`/`wglCreateContextAttribsARB`) and only falls back to the legacy fixed-function path when a 3.3 context is unavailable. Geometry is uploaded to the GPU once per mesh and reused every frame, rebuilding only when the underlying `FVizPolyData` changes.
 
 ## Windows build baseline
 

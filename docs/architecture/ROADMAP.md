@@ -121,10 +121,22 @@ OBJ/STL file
     -> visible interactive 3D scene on Windows
 ```
 
-## Immediate work after 0.1.0
+## Phase 9 — Modern GPU renderer — MILESTONE COMPLETE in 0.1.4
 
-1. Close Phase 2/3 debt: BitArray, HashMap, complete math primitives.
-2. Replace the compatibility renderer internals with an OpenGL 3.3+ VBO/VAO/shader path while preserving the public scene API.
+- [x] Internal OpenGL 3.3 function loader with no third-party dependency
+- [x] Probe-context WGL extension discovery (`wglChoosePixelFormatARB`/`wglCreateContextAttribsARB`)
+- [x] OpenGL 3.3 core-profile context with legacy 1.1 fallback
+- [x] GLSL 330 per-pixel lighting program (Lambert + ambient)
+- [x] Flat-shading fallback for meshes without computed normals
+- [x] Per-actor GPU cache (VAO + position/normal VBO + index EBO)
+- [x] Cache invalidation via `FVizPolyData` generation counter
+- [x] Wireframe mode preserved through `glPolygonMode`
+- [x] Public scene API unchanged
+
+## Immediate work after 0.1.4
+
+1. Close Phase 2/3 debt: BitArray, HashMap, complete math primitives (Vec2/Vec4/Mat3/Quat, Ray/Plane/AABB).
+2. Per-actor model transform (uniform scale/rotation/translation) with proper normal matrix in the shader.
 3. Add `FVizPoints`, `FVizCellArray`, topology-aware attributes and dataset subclasses.
 4. Add `FVizUnstructuredGrid` and linear FEA cell types (TRI/QUAD/TET/HEX/WEDGE/PYRAMID). **COMPLETE**
 5. Implement surface extraction from volumetric FE meshes. **COMPLETE**

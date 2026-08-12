@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 
 project(FEAViz
-    VERSION 0.1.3
+    VERSION 0.2.0
     DESCRIPTION "A C17 visualization and FEA data-processing library"
     LANGUAGES C
 )
@@ -75,9 +75,15 @@ set(_fviz_sources
     src/Data/FVizAttributeSet.c
     src/Data/FVizDataSet.c
 
+    src/Math/FVizVec2.c
     src/Math/FVizVec3.c
+    src/Math/FVizVec4.c
     src/Math/FVizBounds.c
+    src/Math/FVizMat3.c
     src/Math/FVizMat4.c
+    src/Math/FVizQuat.c
+    src/Math/FVizRay.c
+    src/Math/FVizPlane.c
 
     src/Mesh/FVizPolyData.c
     src/Mesh/FVizPoints.c
@@ -97,7 +103,11 @@ set(_fviz_sources
 )
 
 if(WIN32)
-    list(APPEND _fviz_sources src/Rendering/Win32/FVizRenderWindowWin32.c)
+    list(APPEND _fviz_sources
+        src/Rendering/GL/FVizGL.c
+        src/Rendering/GL/FVizGLDevice.c
+        src/Rendering/Win32/FVizRenderWindowWin32.c
+    )
 else()
     list(APPEND _fviz_sources src/Rendering/FVizRenderWindowStub.c)
 endif()

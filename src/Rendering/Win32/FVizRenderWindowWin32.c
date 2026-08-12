@@ -9,11 +9,44 @@
 #include <FViz/Rendering/FVizRenderWindow.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
+#include <FViz/Rendering/FVizGL.h>
+#include <FViz/Rendering/FVizGLDevice.h>
 #include <FViz/Rendering/FVizRenderWindowPrivate.h>
 
 #define FVIZ_WINDOW_CLASS_NAME "FEAVizRenderWindowClass"
 
+/* WGL extension entry points and constants (wglext.h is not shipped with the SDK). */
+typedef BOOL(WINAPI* PFNFVIZWGLCHOOSEPIXELFORMATARBPROC)(
+    HDC dc,
+    const int* int_attrib_list,
+    const FLOAT* float_attrib_list,
+    UINT max_formats,
+    int* out_pixel_format,
+    UINT* out_num_formats);
+typedef HGLRC(WINAPI* PFNFVIZWGLCREATECONTEXTATTRIBSARBPROC)(
+    HDC dc,
+    HGLRC share_context,
+    const int* attrib_list);
+
+#define FVIZ_WGL_DRAW_TO_WINDOW_ARB 0x2001
+#define FVIZ_WGL_ACCELERATION_ARB 0x2003
+#define FVIZ_WGL_SUPPORT_OPENGL_ARB 0x2010
+#define FVIZ_WGL_DOUBLE_BUFFER_ARB 0x2011
+#define FVIZ_WGL_COLOR_BITS_ARB 0x2014
+#define FVIZ_WGL_DEPTH_BITS_ARB 0x2022
+#define FVIZ_WGL_STENCIL_BITS_ARB 0x2023
+#define FVIZ_WGL_FULL_ACCELERATION_ARB 0x2027
+#define FVIZ_WGL_CONTEXT_MAJOR_VERSION_ARB 0x2091
+#define FVIZ_WGL_CONTEXT_MINOR_VERSION_ARB 0x2092
+#define FVIZ_WGL_CONTEXT_PROFILE_MASK_ARB 0x9126
+#define FVIZ_WGL_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
+
+static PFNFVIZWGLCHOOSEPIXELFORMATARBPROC fviz_wgl_choose_pixel_format_arb = NULL;
+static PFNFVIZWGLCREATECONTEXTATTRIBSARBPROC fviz_wgl_create_context_attribs_arb = NULL;
+
 static LRESULT CALLBACK fviz_window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
+static void fviz_win32_release_gl_context(FVizRenderWindow* window, HWND hwnd);
+static void fviz_win32_render_legacy_scene(FVizRenderWindow* window, FVizRenderer* renderer);
 
 static FVizResult fviz_win32_register_class(void)
 {
@@ -35,13 +68,27 @@ static FVizResult fviz_win32_register_class(void)
     return FVIZ_OK;
 }
 
-static FVizResult fviz_win32_create_gl_context(FVizRenderWindow* window, HWND hwnd)
+static HWND fviz_win32_create_probe_window(void)
+{
+    return CreateWindowExA(
+        0,
+        FVIZ_WINDOW_CLASS_NAME,
+        "FEAVizGLCtxProbe",
+        WS_OVERLAPPED,
+        0,
+        0,
+        8,
+        8,
+        NULL,
+        NULL,
+        GetModuleHandleA(NULL),
+        NULL);
+}
+
+static FVizResult fviz_win32_set_legacy_pixel_format(HDC dc)
 {
     PIXELFORMATDESCRIPTOR pfd;
-    HDC dc;
-    HGLRC context;
     int pixel_format;
-
     ZeroMemory(&pfd, sizeof(pfd));
     pfd.nSize = (WORD)sizeof(pfd);
     pfd.nVersion = 1;
@@ -51,40 +98,183 @@ static FVizResult fviz_win32_create_gl_context(FVizRenderWindow* window, HWND hw
     pfd.cDepthBits = 24;
     pfd.cStencilBits = 8;
     pfd.iLayerType = PFD_MAIN_PLANE;
-
-    dc = GetDC(hwnd);
-    if (dc == NULL)
-    {
-        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "GetDC failed for FEAViz render window");
-        return FVIZ_ERROR_GRAPHICS;
-    }
     pixel_format = ChoosePixelFormat(dc, &pfd);
     if (pixel_format == 0 || SetPixelFormat(dc, pixel_format, &pfd) == FALSE)
     {
-        ReleaseDC(hwnd, dc);
         fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to configure OpenGL pixel format");
         return FVIZ_ERROR_GRAPHICS;
     }
-    context = wglCreateContext(dc);
-    if (context == NULL || wglMakeCurrent(dc, context) == FALSE)
-    {
-        if (context != NULL) wglDeleteContext(context);
-        ReleaseDC(hwnd, dc);
-        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to create OpenGL rendering context");
-        return FVIZ_ERROR_GRAPHICS;
-    }
-    window->native_dc = dc;
-    window->native_gl_context = context;
+    return FVIZ_OK;
+}
 
+static FVizBool fviz_win32_load_wgl_extensions(void)
+{
+    if (fviz_wgl_choose_pixel_format_arb == NULL)
+    {
+        fviz_wgl_choose_pixel_format_arb = (PFNFVIZWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
+    }
+    if (fviz_wgl_create_context_attribs_arb == NULL)
+    {
+        fviz_wgl_create_context_attribs_arb = (PFNFVIZWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+    }
+    return fviz_wgl_choose_pixel_format_arb != NULL && fviz_wgl_create_context_attribs_arb != NULL
+        ? FVIZ_TRUE
+        : FVIZ_FALSE;
+}
+
+static void fviz_win32_apply_gl_state(FVizRenderWindow* window)
+{
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glEnable(GL_NORMALIZE);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_COLOR_MATERIAL);
-    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    glShadeModel(GL_SMOOTH);
+    glFrontFace(GL_CCW);
+    if (window->gl_modern == FVIZ_FALSE)
+    {
+        glEnable(GL_NORMALIZE);
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        glEnable(GL_COLOR_MATERIAL);
+        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+        glShadeModel(GL_SMOOTH);
+    }
+}
+
+static FVizResult fviz_win32_create_gl_context(FVizRenderWindow* window, HWND hwnd)
+{
+    HWND probe_window = NULL;
+    HDC probe_dc = NULL;
+    HGLRC probe_context = NULL;
+    HDC dc = NULL;
+    HGLRC context = NULL;
+    FVizBool modern = FVIZ_FALSE;
+
+    probe_window = fviz_win32_create_probe_window();
+    if (probe_window == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to create FEAViz GL probe window");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    probe_dc = GetDC(probe_window);
+    if (probe_dc == NULL)
+    {
+        (void)DestroyWindow(probe_window);
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "GetDC failed for FEAViz GL probe window");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    if (fviz_win32_set_legacy_pixel_format(probe_dc) != FVIZ_OK)
+    {
+        (void)ReleaseDC(probe_window, probe_dc);
+        (void)DestroyWindow(probe_window);
+        return fviz_last_error_code();
+    }
+    probe_context = wglCreateContext(probe_dc);
+    if (probe_context == NULL || wglMakeCurrent(probe_dc, probe_context) == FALSE)
+    {
+        if (probe_context != NULL) (void)wglDeleteContext(probe_context);
+        (void)ReleaseDC(probe_window, probe_dc);
+        (void)DestroyWindow(probe_window);
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to create FEAViz OpenGL probe context");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+
+    if (fviz_win32_load_wgl_extensions() == FVIZ_TRUE)
+    {
+        const int pixel_attribs[] = {
+            FVIZ_WGL_DRAW_TO_WINDOW_ARB, TRUE,
+            FVIZ_WGL_SUPPORT_OPENGL_ARB, TRUE,
+            FVIZ_WGL_DOUBLE_BUFFER_ARB, TRUE,
+            FVIZ_WGL_COLOR_BITS_ARB, 32,
+            FVIZ_WGL_DEPTH_BITS_ARB, 24,
+            FVIZ_WGL_STENCIL_BITS_ARB, 8,
+            FVIZ_WGL_ACCELERATION_ARB, FVIZ_WGL_FULL_ACCELERATION_ARB,
+            0
+        };
+        const int context_attribs[] = {
+            FVIZ_WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+            FVIZ_WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+            FVIZ_WGL_CONTEXT_PROFILE_MASK_ARB, FVIZ_WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+            0
+        };
+        int modern_format = 0;
+        UINT num_formats = 0;
+        dc = GetDC(hwnd);
+        if (dc != NULL &&
+            fviz_wgl_choose_pixel_format_arb(dc, pixel_attribs, NULL, 1, &modern_format, &num_formats) != FALSE &&
+            num_formats > 0)
+        {
+            PIXELFORMATDESCRIPTOR modern_pfd;
+            if (DescribePixelFormat(dc, modern_format, sizeof(modern_pfd), &modern_pfd) != 0 &&
+                SetPixelFormat(dc, modern_format, &modern_pfd) != FALSE)
+            {
+                HGLRC modern_context = fviz_wgl_create_context_attribs_arb(dc, NULL, context_attribs);
+                if (modern_context != NULL)
+                {
+                    if (wglMakeCurrent(dc, modern_context) != FALSE)
+                    {
+                        context = modern_context;
+                        modern = FVIZ_TRUE;
+                    }
+                    else
+                    {
+                        (void)wglDeleteContext(modern_context);
+                    }
+                }
+            }
+        }
+    }
+
+    if (context == NULL)
+    {
+        if (dc == NULL) dc = GetDC(hwnd);
+        if (dc != NULL && fviz_win32_set_legacy_pixel_format(dc) == FVIZ_OK)
+        {
+            context = wglCreateContext(dc);
+            if (context == NULL || wglMakeCurrent(dc, context) == FALSE)
+            {
+                if (context != NULL)
+                {
+                    (void)wglDeleteContext(context);
+                    context = NULL;
+                }
+            }
+        }
+    }
+
+    if (probe_context != NULL)
+    {
+        if (wglGetCurrentContext() == probe_context) (void)wglMakeCurrent(NULL, NULL);
+        (void)wglDeleteContext(probe_context);
+    }
+    if (probe_dc != NULL) (void)ReleaseDC(probe_window, probe_dc);
+    if (probe_window != NULL) (void)DestroyWindow(probe_window);
+
+    if (context == NULL || dc == NULL)
+    {
+        if (dc != NULL && hwnd != NULL) (void)ReleaseDC(hwnd, dc);
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to create OpenGL rendering context");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+
+    window->native_dc = dc;
+    window->native_gl_context = context;
+    window->gl_modern = modern;
+
+    if (modern == FVIZ_TRUE)
+    {
+        FVizGLFunctions functions;
+        if (fviz_internal_gl_load(&functions) != FVIZ_OK)
+        {
+            fviz_win32_release_gl_context(window, hwnd);
+            return fviz_last_error_code();
+        }
+        window->gl_device = fviz_internal_gl_device_create(&functions);
+        if (window->gl_device == NULL)
+        {
+            fviz_win32_release_gl_context(window, hwnd);
+            return fviz_last_error_code();
+        }
+    }
+    fviz_win32_apply_gl_state(window);
     return FVIZ_OK;
 }
 
@@ -175,15 +365,7 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
     HDC dc = (HDC)window->native_dc;
     HGLRC context = (HGLRC)window->native_gl_context;
     FVizRenderer* renderer = window->renderer;
-    FVizCamera* camera;
-    FVizScene* scene;
-    FVizMat4 projection;
-    FVizMat4 view;
-    FVizSize i;
     float background[3];
-    GLfloat light_position[4] = {0.4f, 0.8f, 1.0f, 0.0f};
-    GLfloat light_diffuse[4] = {0.95f, 0.95f, 0.95f, 1.0f};
-    GLfloat light_ambient[4] = {0.22f, 0.22f, 0.25f, 1.0f};
 
     if (dc == NULL || context == NULL || renderer == NULL)
     {
@@ -201,6 +383,34 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
     fviz_renderer_get_background(renderer, &background[0], &background[1], &background[2]);
     glClearColor(background[0], background[1], background[2], 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
+    {
+        (void)fviz_internal_gl_device_render((FVizGLDevice*)window->gl_device, renderer, (float)window->width / (float)window->height);
+    }
+    else
+    {
+        fviz_win32_render_legacy_scene(window, renderer);
+    }
+
+    if (SwapBuffers(dc) == FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "SwapBuffers failed");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    return FVIZ_OK;
+}
+
+static void fviz_win32_render_legacy_scene(FVizRenderWindow* window, FVizRenderer* renderer)
+{
+    FVizCamera* camera;
+    FVizScene* scene;
+    FVizMat4 projection;
+    FVizMat4 view;
+    FVizSize i;
+    GLfloat light_position[4] = {0.4f, 0.8f, 1.0f, 0.0f};
+    GLfloat light_diffuse[4] = {0.95f, 0.95f, 0.95f, 1.0f};
+    GLfloat light_ambient[4] = {0.22f, 0.22f, 0.25f, 1.0f};
 
     camera = fviz_renderer_camera(renderer);
     projection = fviz_camera_projection_matrix(camera, (float)window->width / (float)window->height);
@@ -220,13 +430,6 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
         fviz_win32_render_actor(fviz_scene_const_actor(scene, i));
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    if (SwapBuffers(dc) == FALSE)
-    {
-        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "SwapBuffers failed");
-        return FVIZ_ERROR_GRAPHICS;
-    }
-    return FVIZ_OK;
 }
 
 FVizResult fviz_internal_render_window_run_platform(FVizRenderWindow* window)
@@ -250,6 +453,12 @@ static void fviz_win32_release_gl_context(FVizRenderWindow* window, HWND hwnd)
 {
     HGLRC context = (HGLRC)window->native_gl_context;
     HDC dc = (HDC)window->native_dc;
+    if (window->gl_device != NULL)
+    {
+        if (dc != NULL && context != NULL) (void)wglMakeCurrent(dc, context);
+        fviz_internal_gl_device_destroy((FVizGLDevice*)window->gl_device);
+        window->gl_device = NULL;
+    }
     if (context != NULL)
     {
         if (wglGetCurrentContext() == context) (void)wglMakeCurrent(NULL, NULL);
@@ -258,6 +467,7 @@ static void fviz_win32_release_gl_context(FVizRenderWindow* window, HWND hwnd)
     if (dc != NULL && hwnd != NULL) (void)ReleaseDC(hwnd, dc);
     window->native_gl_context = NULL;
     window->native_dc = NULL;
+    window->gl_modern = FVIZ_FALSE;
 }
 
 void fviz_internal_render_window_destroy_platform(FVizRenderWindow* window)

@@ -51,8 +51,14 @@ FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
     poly_data->bounds = fviz_bounds_empty();
     poly_data->bounds_dirty = FVIZ_FALSE;
     poly_data->normals_dirty = FVIZ_TRUE;
+    poly_data->generation = 1u;
     *out_poly_data = poly_data;
     return FVIZ_OK;
+}
+
+uint32_t fviz_internal_poly_data_generation(const FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->generation : 0u;
 }
 
 void fviz_poly_data_clear(FVizPolyData* poly_data)
@@ -64,6 +70,7 @@ void fviz_poly_data_clear(FVizPolyData* poly_data)
     fviz_bounds_reset(&poly_data->bounds);
     poly_data->bounds_dirty = FVIZ_FALSE;
     poly_data->normals_dirty = FVIZ_TRUE;
+    ++poly_data->generation;
 }
 
 FVizResult fviz_poly_data_reserve(FVizPolyData* poly_data, FVizSize point_capacity, FVizSize triangle_capacity)
@@ -107,6 +114,7 @@ FVizResult fviz_poly_data_add_point(FVizPolyData* poly_data, FVizVec3 point, uin
     }
     fviz_bounds_include_point(&poly_data->bounds, point);
     poly_data->normals_dirty = FVIZ_TRUE;
+    ++poly_data->generation;
     if (out_index != NULL) *out_index = (uint32_t)index;
     return FVIZ_OK;
 }
@@ -126,6 +134,7 @@ FVizResult fviz_poly_data_add_triangle(FVizPolyData* poly_data, uint32_t a, uint
         return fviz_last_error_code();
     }
     poly_data->normals_dirty = FVIZ_TRUE;
+    ++poly_data->generation;
     return FVIZ_OK;
 }
 
@@ -241,5 +250,6 @@ FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data)
         normals[i] = fviz_vec3_normalize(normals[i]);
     }
     poly_data->normals_dirty = FVIZ_FALSE;
+    ++poly_data->generation;
     return FVIZ_OK;
 }
