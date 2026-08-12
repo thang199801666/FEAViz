@@ -124,6 +124,33 @@ FVizResult fviz_cell_array_append(FVizCellArray* cells, FVizCellType type, FVizS
     return FVIZ_OK;
 }
 
+FVizResult fviz_cell_array_append_ids(
+    FVizCellArray* cells,
+    FVizCellType type,
+    FVizSize point_count,
+    const FVizId* point_ids)
+{
+    uint32_t compatibility_ids[8];
+    FVizSize i;
+    if (point_ids == NULL || point_count > 8u)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "64-bit cell connectivity is invalid");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    for (i = 0u; i < point_count; ++i)
+    {
+        if (point_ids[i] > UINT32_MAX)
+        {
+            fviz_internal_set_error(
+                FVIZ_ERROR_OVERFLOW,
+                "topology ID exceeds the current 32-bit in-memory connectivity limit");
+            return FVIZ_ERROR_OVERFLOW;
+        }
+        compatibility_ids[i] = (uint32_t)point_ids[i];
+    }
+    return fviz_cell_array_append(cells, type, point_count, compatibility_ids);
+}
+
 FVizSize fviz_cell_array_count(const FVizCellArray* cells) { return cells != NULL ? fviz_array_count(cells->types) : 0u; }
 FVizSize fviz_cell_array_connectivity_size(const FVizCellArray* cells) { return cells != NULL ? fviz_array_count(cells->connectivity) : 0u; }
 

@@ -83,6 +83,14 @@ FVizResult fviz_points_append(FVizPoints* points, FVizVec3 point, uint32_t* out_
     return FVIZ_OK;
 }
 
+FVizResult fviz_points_append_id(FVizPoints* points, FVizVec3 point, FVizId* out_id)
+{
+    uint32_t compatibility_id = 0u;
+    FVizResult result = fviz_points_append(points, point, &compatibility_id);
+    if (out_id != NULL) *out_id = result == FVIZ_OK ? (FVizId)compatibility_id : FVIZ_INVALID_ID;
+    return result;
+}
+
 FVizSize fviz_points_count(const FVizPoints* points) { return points != NULL ? fviz_array_count(points->data) : 0u; }
 const FVizVec3* fviz_points_data(const FVizPoints* points) { return points != NULL ? (const FVizVec3*)fviz_array_const_data(points->data) : NULL; }
 FVizBounds fviz_points_bounds(const FVizPoints* points) { return points != NULL ? points->bounds : fviz_bounds_empty(); }

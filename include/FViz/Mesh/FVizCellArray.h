@@ -29,6 +29,12 @@ FVIZ_API FVizResult fviz_cell_array_create(FVizCellArray** out_cells);
 FVIZ_API void fviz_cell_array_clear(FVizCellArray* cells);
 FVIZ_API FVizResult fviz_cell_array_reserve(FVizCellArray* cells, FVizSize cell_capacity, FVizSize connectivity_capacity);
 FVIZ_API FVizResult fviz_cell_array_append(FVizCellArray* cells, FVizCellType type, FVizSize point_count, const uint32_t* point_ids);
+/* Checked 64-bit boundary; unsupported IDs fail instead of being narrowed. */
+FVIZ_API FVizResult fviz_cell_array_append_ids(
+    FVizCellArray* cells,
+    FVizCellType type,
+    FVizSize point_count,
+    const FVizId* point_ids);
 FVIZ_API FVizSize fviz_cell_array_count(const FVizCellArray* cells);
 FVIZ_API FVizSize fviz_cell_array_connectivity_size(const FVizCellArray* cells);
 FVIZ_API FVizCellType fviz_cell_array_type(const FVizCellArray* cells, FVizSize cell_id);

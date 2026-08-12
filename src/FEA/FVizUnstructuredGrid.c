@@ -207,7 +207,12 @@ static void fviz_surface_sort(uint32_t* values, uint32_t count)
     }
 }
 
-static FVizResult fviz_surface_add_face(FVizArray* faces, const uint32_t* ids, uint32_t count)
+static FVizResult fviz_surface_add_face(
+    FVizArray* faces,
+    const uint32_t* ids,
+    uint32_t count,
+    FVizId source_cell,
+    FVizId source_face)
 {
     FVizSize i;
     FVizSurfaceFace face;
@@ -215,6 +220,8 @@ static FVizResult fviz_surface_add_face(FVizArray* faces, const uint32_t* ids, u
     (void)memset(&face, 0, sizeof(face));
     face.count = count;
     face.occurrences = 1u;
+    face.source_cell = source_cell;
+    face.source_face = source_face;
     for (i = 0u; i < count; ++i) face.ids[i] = ids[i], face.sorted[i] = ids[i];
     fviz_surface_sort(face.sorted, count);
     for (i = 0u; i < fviz_array_count(faces); ++i)
@@ -665,6 +672,9 @@ static FVizResult fviz_extract_surface_internal(
     FVizPolyData* surface = NULL;
     FVizSize cell_id;
     FVizSize i;
+    FVizDataArray* original_cell_ids = NULL;
+    FVizDataArray* original_face_ids = NULL;
+    FVizDataArray* original_point_ids = NULL;
     const FVizVec3* points;
     if (out_surface == NULL || grid == NULL)
     {
@@ -683,7 +693,16 @@ static FVizResult fviz_extract_surface_internal(
     if (fviz_poly_data_reserve(surface, fviz_points_count(grid->points), 0u) != FVIZ_OK)
         goto fail;
     for (i = 0u; i < fviz_points_count(grid->points); ++i)
+    {
+        FVizId source_point = (FVizId)i;
         if (fviz_poly_data_add_point(surface, points[i], NULL) != FVIZ_OK) goto fail;
+        if (original_point_ids == NULL &&
+            fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &original_point_ids) != FVIZ_OK) goto fail;
+        if (fviz_data_array_append_tuple(original_point_ids, &source_point) != FVIZ_OK) goto fail;
+    }
+    if (original_point_ids != NULL && fviz_attribute_set_add(
+            fviz_poly_data_point_data(surface), "FVizOriginalPointIds", original_point_ids) != FVIZ_OK)
+        goto fail;
     for (cell_id = 0u; cell_id < fviz_cell_array_count(grid->cells); ++cell_id)
     {
         FVizSurfaceDefinition definition;
@@ -699,9 +718,14 @@ static FVizResult fviz_extract_surface_internal(
             uint32_t ids[4];
             uint32_t j;
             for (j = 0u; j < definition.sizes[face_id]; ++j) ids[j] = cell_ids[definition.faces[face_id][j]];
-            if (fviz_surface_add_face(faces, ids, definition.sizes[face_id]) != FVIZ_OK) goto fail;
+            if (fviz_surface_add_face(
+                    faces, ids, definition.sizes[face_id], (FVizId)cell_id, (FVizId)face_id) != FVIZ_OK)
+                goto fail;
         }
     }
+    if (fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &original_cell_ids) != FVIZ_OK ||
+        fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &original_face_ids) != FVIZ_OK)
+        goto fail;
     for (i = 0u; i < fviz_array_count(faces); ++i)
     {
         const FVizSurfaceFace* face = (const FVizSurfaceFace*)fviz_array_const_at(faces, i);
@@ -710,19 +734,36 @@ static FVizResult fviz_extract_surface_internal(
             if (face->count == 3u)
             {
                 if (fviz_poly_data_add_triangle(surface, face->ids[0], face->ids[1], face->ids[2]) != FVIZ_OK) goto fail;
+                if (fviz_data_array_append_tuple(original_cell_ids, &face->source_cell) != FVIZ_OK ||
+                    fviz_data_array_append_tuple(original_face_ids, &face->source_face) != FVIZ_OK) goto fail;
             }
             else if (face->count == 4u)
             {
                 if (fviz_poly_data_add_triangle(surface, face->ids[0], face->ids[1], face->ids[2]) != FVIZ_OK ||
                     fviz_poly_data_add_triangle(surface, face->ids[0], face->ids[2], face->ids[3]) != FVIZ_OK) goto fail;
+                if (fviz_data_array_append_tuple(original_cell_ids, &face->source_cell) != FVIZ_OK ||
+                    fviz_data_array_append_tuple(original_cell_ids, &face->source_cell) != FVIZ_OK ||
+                    fviz_data_array_append_tuple(original_face_ids, &face->source_face) != FVIZ_OK ||
+                    fviz_data_array_append_tuple(original_face_ids, &face->source_face) != FVIZ_OK) goto fail;
             }
         }
     }
+    if (fviz_attribute_set_add(
+            fviz_poly_data_cell_data(surface), "FVizOriginalCellIds", original_cell_ids) != FVIZ_OK ||
+        fviz_attribute_set_add(
+            fviz_poly_data_cell_data(surface), "FVizOriginalFaceIds", original_face_ids) != FVIZ_OK)
+        goto fail;
     if (with_scalars == FVIZ_TRUE && fviz_transfer_point_scalars(grid, surface) != FVIZ_OK) goto fail;
+    fviz_release(original_cell_ids);
+    fviz_release(original_face_ids);
+    fviz_release(original_point_ids);
     fviz_release(faces);
     *out_surface = surface;
     return FVIZ_OK;
 fail:
+    fviz_release(original_cell_ids);
+    fviz_release(original_face_ids);
+    fviz_release(original_point_ids);
     fviz_release(faces);
     fviz_release(surface);
     return fviz_last_error_code();

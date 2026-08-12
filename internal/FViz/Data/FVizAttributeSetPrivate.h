@@ -16,6 +16,7 @@ struct FVizAttributeSet
 {
     FVizObject base;
     FVizArray* entries;
+    FVizString* active[FVIZ_ATTRIBUTE_ROLE_COUNT];
 };
 
 #endif /* FVIZ_INTERNAL_DATA_ATTRIBUTE_SET_PRIVATE_H */

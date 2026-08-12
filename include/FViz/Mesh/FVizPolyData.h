@@ -38,6 +38,10 @@ FVIZ_API FVizResult fviz_poly_data_set_scalars(FVizPolyData* poly_data, FVizData
 FVIZ_API const FVizDataArray* fviz_poly_data_const_scalars(const FVizPolyData* poly_data);
 FVIZ_API FVizAttributeSet* fviz_poly_data_point_data(FVizPolyData* poly_data);
 FVIZ_API const FVizAttributeSet* fviz_poly_data_const_point_data(const FVizPolyData* poly_data);
+FVIZ_API FVizAttributeSet* fviz_poly_data_cell_data(FVizPolyData* poly_data);
+FVIZ_API const FVizAttributeSet* fviz_poly_data_const_cell_data(const FVizPolyData* poly_data);
+FVIZ_API FVizAttributeSet* fviz_poly_data_field_data(FVizPolyData* poly_data);
+FVIZ_API const FVizAttributeSet* fviz_poly_data_const_field_data(const FVizPolyData* poly_data);
 
 FVIZ_EXTERN_C_END
 

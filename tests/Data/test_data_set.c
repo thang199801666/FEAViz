@@ -18,6 +18,10 @@ int main(void)
     CHECK(fviz_data_set_validate(data_set) == FVIZ_OK);
     CHECK(fviz_attribute_set_count(fviz_data_set_point_data(data_set)) == 1u);
     CHECK(fviz_attribute_set_const_get(fviz_data_set_point_data(data_set), "temperature") == temperature);
+    CHECK(fviz_attribute_set_set_active(
+        fviz_data_set_point_data(data_set), FVIZ_ATTRIBUTE_SCALARS, "temperature") == FVIZ_OK);
+    CHECK(fviz_attribute_set_const_active(
+        fviz_data_set_point_data(data_set), FVIZ_ATTRIBUTE_SCALARS) == temperature);
     data_set_mtime = fviz_object_mtime((const FVizObject*)data_set);
     value = 43.0f;
     CHECK(fviz_data_array_set_tuple(temperature, 0u, &value) == FVIZ_OK);
@@ -30,7 +34,11 @@ int main(void)
     CHECK(fviz_data_array_create(FVIZ_DATA_FLOAT32, 1u, &replacement) == FVIZ_OK);
     CHECK(fviz_attribute_set_add(fviz_data_set_point_data(data_set), "temperature", replacement) == FVIZ_OK);
     CHECK(fviz_attribute_set_const_get(fviz_data_set_point_data(data_set), "temperature") == replacement);
+    CHECK(fviz_attribute_set_const_active(
+        fviz_data_set_point_data(data_set), FVIZ_ATTRIBUTE_SCALARS) == replacement);
     CHECK(fviz_attribute_set_remove(fviz_data_set_point_data(data_set), "temperature") == FVIZ_OK);
+    CHECK(fviz_attribute_set_active_name(
+        fviz_data_set_point_data(data_set), FVIZ_ATTRIBUTE_SCALARS) == NULL);
     CHECK(fviz_attribute_set_count(fviz_data_set_point_data(data_set)) == 0u);
 
     fviz_release(replacement);

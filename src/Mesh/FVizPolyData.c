@@ -35,6 +35,10 @@ static FVizMTime fviz_poly_data_mtime(const FVizObject* object)
     if (child > mtime) mtime = child;
     child = fviz_object_mtime((const FVizObject*)poly_data->point_data);
     if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)poly_data->cell_data);
+    if (child > mtime) mtime = child;
+    child = fviz_object_mtime((const FVizObject*)poly_data->field_data);
+    if (child > mtime) mtime = child;
     return mtime;
 }
 
@@ -47,12 +51,16 @@ static void fviz_poly_data_destroy(FVizObject* object)
     fviz_release(poly_data->line_indices);
     fviz_release(poly_data->scalars);
     fviz_release(poly_data->point_data);
+    fviz_release(poly_data->cell_data);
+    fviz_release(poly_data->field_data);
     poly_data->points = NULL;
     poly_data->normals = NULL;
     poly_data->indices = NULL;
     poly_data->line_indices = NULL;
     poly_data->scalars = NULL;
     poly_data->point_data = NULL;
+    poly_data->cell_data = NULL;
+    poly_data->field_data = NULL;
 }
 
 FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
@@ -73,7 +81,9 @@ FVizResult fviz_poly_data_create(FVizPolyData** out_poly_data)
         fviz_array_create(sizeof(FVizVec3), &poly_data->normals) != FVIZ_OK ||
         fviz_array_create(sizeof(uint32_t), &poly_data->indices) != FVIZ_OK ||
         fviz_array_create(sizeof(uint32_t), &poly_data->line_indices) != FVIZ_OK ||
-        fviz_attribute_set_create(&poly_data->point_data) != FVIZ_OK)
+        fviz_attribute_set_create(&poly_data->point_data) != FVIZ_OK ||
+        fviz_attribute_set_create(&poly_data->cell_data) != FVIZ_OK ||
+        fviz_attribute_set_create(&poly_data->field_data) != FVIZ_OK)
     {
         fviz_release(poly_data);
         return fviz_last_error_code();
@@ -95,6 +105,8 @@ void fviz_poly_data_clear(FVizPolyData* poly_data)
     fviz_release(poly_data->scalars);
     poly_data->scalars = NULL;
     fviz_attribute_set_clear(poly_data->point_data);
+    fviz_attribute_set_clear(poly_data->cell_data);
+    fviz_attribute_set_clear(poly_data->field_data);
     fviz_bounds_reset(&poly_data->bounds);
     poly_data->bounds_dirty = FVIZ_FALSE;
     poly_data->normals_dirty = FVIZ_TRUE;
@@ -301,6 +313,26 @@ FVizAttributeSet* fviz_poly_data_point_data(FVizPolyData* poly_data)
 const FVizAttributeSet* fviz_poly_data_const_point_data(const FVizPolyData* poly_data)
 {
     return poly_data != NULL ? poly_data->point_data : NULL;
+}
+
+FVizAttributeSet* fviz_poly_data_cell_data(FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->cell_data : NULL;
+}
+
+const FVizAttributeSet* fviz_poly_data_const_cell_data(const FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->cell_data : NULL;
+}
+
+FVizAttributeSet* fviz_poly_data_field_data(FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->field_data : NULL;
+}
+
+const FVizAttributeSet* fviz_poly_data_const_field_data(const FVizPolyData* poly_data)
+{
+    return poly_data != NULL ? poly_data->field_data : NULL;
 }
 
 FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data)
