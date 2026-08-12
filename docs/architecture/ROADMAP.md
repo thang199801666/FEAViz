@@ -291,15 +291,16 @@ OBJ/STL file
 - [x] Persistent original-ID selection records and scalar/vector probes
 - [x] Selection highlight and orientation-axes widget
 
-## Phase 29 - Data/rendering/IO completeness - FOUNDATION in 0.9.0, planned completion in 0.14.0
+## Phase 29 - Data/rendering/IO completeness - COMPLETED in 0.15.0
 
 - [x] Transform pipeline algorithm
 - [x] General transform object and actor user-transform integration
-- [ ] Complete polygonal topology and 64-bit connectivity path
-- [ ] Mapper point/cell array selection by name, association, and component
+- [x] Checked 64-bit topology boundary and general FEA cell connectivity path
+- [x] Mapper point/cell/field array selection by name, association, and component
 - [x] NaN, below-range, and above-range lookup-table colors
-- [ ] Opacity, edges, and clipping planes
-- [ ] PLY and compressed VTU read/write paths
+- [x] Opacity, edges, and clipping planes
+- [x] PLY and typed VTU ASCII/appended-raw read/write paths
+- [ ] Optional compressed VTU backend (explicitly deferred; unsupported builds report it)
 
 ## Phase 30 - Stable public release - PLANNED for 1.0.0
 

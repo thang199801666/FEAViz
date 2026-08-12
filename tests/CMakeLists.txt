@@ -57,6 +57,8 @@ fviz_apply_compiler_options(FVizTestVTUReader)
 fviz_apply_sanitizers(FVizTestVTUReader)
 add_test(NAME FViz.IO.VTUReader COMMAND FVizTestVTUReader)
 
+fviz_add_test(FVizTestWriters IO/test_writers.c FViz.IO.Writers)
+
 add_executable(FVizTestVTKLegacyReader IO/test_vtk_legacy_reader.c)
 target_link_libraries(FVizTestVTKLegacyReader PRIVATE FEAViz::FEAViz)
 target_compile_definitions(FVizTestVTKLegacyReader PRIVATE FVIZ_TESTDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../assets/testdata")

@@ -6,17 +6,16 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.14.0** adds deterministic timers/focus/drag capture, trackball-actor
-interaction, persistent original-ID selections, scalar/vector probes,
-actor/point/cell click selection, source-preserving highlights, and
-multi-viewport orientation axes.
+Version **0.15.0** adds typed VTU ASCII/appended-raw round trips with 64-bit
+headers and IDs, active-role and field-data preservation, configurable parser
+limits, plus ASCII/binary PLY export.
 
 The active implementation roadmap is
 [`docs/architecture/VTK_CONVERGENCE_PLAN.md`](docs/architecture/VTK_CONVERGENCE_PLAN.md),
 and the default ownership, error, MTime, and thread-safety rules are documented
 in [`docs/api/PUBLIC_API_CONTRACTS.md`](docs/api/PUBLIC_API_CONTRACTS.md).
 
-## Current 0.14.0 milestone
+## Current 0.15.0 milestone
 
 Implemented:
 

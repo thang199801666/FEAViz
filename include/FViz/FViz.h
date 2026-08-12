@@ -30,9 +30,11 @@
 #include <FViz/Spatial/FVizPointLocator.h>
 #include <FViz/IO/FVizMeshReader.h>
 #include <FViz/IO/FVizOBJReader.h>
+#include <FViz/IO/FVizPLYWriter.h>
 #include <FViz/IO/FVizSTLReader.h>
 #include <FViz/IO/FVizVTKLegacyReader.h>
 #include <FViz/IO/FVizVTUReader.h>
+#include <FViz/IO/FVizVTUWriter.h>
 #include <FViz/Rendering/FVizRendering.h>
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizLog.h>

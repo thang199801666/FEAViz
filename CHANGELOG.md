@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.15.0 - Typed VTU round trips and interchange writers
+
+- Added VTU ASCII and appended-raw writers with 32/64-bit headers, typed
+  point/cell/field arrays, XML-safe names, active roles, and 64-bit connectivity
+  serialization.
+- Extended VTU reading to appended raw data and preserved all ten numeric array
+  types instead of converting attributes to `Float32`.
+- Added caller-configurable file, point, cell, connectivity, and array limits;
+  malformed tuple counts and unsupported point-ID narrowing now fail explicitly.
+- Added ASCII and binary little-endian PLY triangle writers.
+- Added round-trip regressions for large unsigned IDs, NaN/infinity, tensor
+  components, field metadata, association roles, header widths, and limits.
+- Compression remains an explicit optional capability and returns
+  `FVIZ_ERROR_NOT_SUPPORTED` when no approved compression backend is configured.
+
 ## 0.14.0 - Deterministic interaction and FEA inspection
 
 - Added host-driven one-shot/repeating timers with stable IDs, reset/destroy,
