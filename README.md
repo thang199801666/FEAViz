@@ -6,14 +6,16 @@ FEAViz is a from-scratch C17 visualization and FEA data-processing library. The 
 - Public functions: `fviz_*`
 - Public constants/macros: `FVIZ_*`
 
-Version **0.11.0** adds complete point/cell/field associations for polygonal FEA results, active attribute roles, unified mapper array selection, 64-bit provenance through surface extraction, checked wide-ID boundaries, and explicit shallow/deep/structure copy contracts.
+Version **0.12.0** adds isolated parallel runtimes, cancellable task groups,
+deterministic reduction/scan/sort primitives, callback-local scratch storage,
+pipeline-wide cancellation, and a reproducible HEX8 scaling benchmark.
 
 The active implementation roadmap is
 [`docs/architecture/VTK_CONVERGENCE_PLAN.md`](docs/architecture/VTK_CONVERGENCE_PLAN.md),
 and the default ownership, error, MTime, and thread-safety rules are documented
 in [`docs/api/PUBLIC_API_CONTRACTS.md`](docs/api/PUBLIC_API_CONTRACTS.md).
 
-## Current 0.11.0 milestone
+## Current 0.12.0 milestone
 
 Implemented:
 
@@ -35,7 +37,10 @@ Implemented:
 - `FVizRenderWindowInteractor` with replaceable `FVizInteractorStyleTrackballCamera`; native backends translate events instead of owning camera behavior.
 - VTK-style interactor observers with event filtering, stable priority ordering, consumable propagation, observer IDs, and mutation-safe dispatch.
 - `FVizRendererWidget`, a VTK-widget-style facade for renderer/window/interactor ownership and lifecycle.
-- Persistent-worker `fviz_parallel_for` with hardware-thread detection, configurable limits, nested-call safety, dispatch statistics, and serial fallback; warp-by-vector uses it for point deformation.
+- Explicit parallel contexts with independent persistent worker pools, task
+  groups, cancellation/error propagation, deterministic sum/scan/stable-sort,
+  callback-local scratch, runtime statistics, nested-call safety, and the
+  compatible default `fviz_parallel_for` wrapper.
 - Multi-renderer windows with normalized viewports, layers, viewport-aware picking/event routing, and non-blocking widget event processing.
 - Interactor lifecycle/render gating and a headless-testable rubber-band style.
 - General `FVizTransform` composition with actor user transforms, plus NaN/below/above-range lookup-table colors.

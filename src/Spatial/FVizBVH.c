@@ -3,6 +3,7 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
+#include <FViz/Parallel/FVizParallel.h>
 #include <FViz/Spatial/FVizBVH.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
@@ -20,6 +21,33 @@ static FVizBounds fviz_triangle_bounds(const FVizVec3* points, const uint32_t* i
     fviz_bounds_include_point(&bounds, points[ids[1]]);
     fviz_bounds_include_point(&bounds, points[ids[2]]);
     return bounds;
+}
+
+typedef struct FVizBVHPrimitiveRange
+{
+    const FVizVec3* points;
+    const uint32_t* indices;
+    uint32_t* primitive_ids;
+    FVizBounds* bounds;
+    FVizVec3* centroids;
+} FVizBVHPrimitiveRange;
+
+static void fviz_bvh_initialize_primitive_range(FVizSize begin, FVizSize end, void* user_data)
+{
+    FVizBVHPrimitiveRange* range = (FVizBVHPrimitiveRange*)user_data;
+    FVizSize i;
+    for (i = begin; i < end; ++i)
+    {
+        const uint32_t a = range->indices[i * 3u + 0u];
+        const uint32_t b = range->indices[i * 3u + 1u];
+        const uint32_t c = range->indices[i * 3u + 2u];
+        range->primitive_ids[i] = (uint32_t)i;
+        range->bounds[i] = fviz_triangle_bounds(range->points, &range->indices[i * 3u]);
+        range->centroids[i] = fviz_vec3_scale(
+            fviz_vec3_add(
+                fviz_vec3_add(range->points[a], range->points[b]), range->points[c]),
+            1.0f / 3.0f);
+    }
 }
 
 static void fviz_bvh_destroy(FVizObject* object)
@@ -196,7 +224,7 @@ FVizResult fviz_bvh_build(FVizBVH* bvh, const FVizPolyData* poly_data)
     FVizSize triangle_count;
     uint32_t* primitive_ids;
     FVizBounds* bounds_cache;
-    FVizSize i;
+    FVizBVHPrimitiveRange primitive_range;
 
     if (bvh == NULL || poly_data == NULL)
     {
@@ -245,15 +273,18 @@ FVizResult fviz_bvh_build(FVizBVH* bvh, const FVizPolyData* poly_data)
         fviz_free(bounds_cache);
         return fviz_last_error_code();
     }
-    for (i = 0u; i < triangle_count; ++i)
+    primitive_range.points = points;
+    primitive_range.indices = indices;
+    primitive_range.primitive_ids = primitive_ids;
+    primitive_range.bounds = bounds_cache;
+    primitive_range.centroids = bvh->triangle_centroids;
+    if (fviz_parallel_for(
+            0u, triangle_count, 512u,
+            fviz_bvh_initialize_primitive_range, &primitive_range) != FVIZ_OK)
     {
-        const uint32_t a = indices[i * 3u + 0u];
-        const uint32_t b = indices[i * 3u + 1u];
-        const uint32_t c = indices[i * 3u + 2u];
-        primitive_ids[i] = (uint32_t)i;
-        bounds_cache[i] = fviz_triangle_bounds(points, &indices[i * 3u]);
-        bvh->triangle_centroids[i] = fviz_vec3_scale(
-            fviz_vec3_add(fviz_vec3_add(points[a], points[b]), points[c]), 1.0f / 3.0f);
+        fviz_free(primitive_ids);
+        fviz_free(bounds_cache);
+        return fviz_last_error_code();
     }
 
     {

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.12.0 - Isolated parallel runtimes and deterministic primitives
+
+- Replaced sole reliance on the global dispatch lock with explicitly owned,
+  independently executable parallel contexts and persistent worker pools.
+- Added cancellable result-returning ranges, reusable task groups, deterministic
+  floating-point reduction, checked scans, stable key/index sorting, worker
+  affinity hints on Windows, callback-local scratch, and runtime statistics.
+- Propagated the shared cancellation token through demand-driven pipeline
+  requests with `FVIZ_ERROR_CANCELLED` and deterministic worker-error capture.
+- Parallelized unstructured-grid transforms/warps and BVH primitive setup while
+  retaining the legacy `fviz_parallel_for` compatibility entry point.
+- Added independent-context, nested, cancellation, error, scratch, and repeated
+  create/shutdown regressions plus a CSV HEX8 scaling benchmark matrix.
+
 ## 0.11.0 - Data associations and FEA provenance
 
 - Completed point, cell, and field attribute associations on polygonal data,

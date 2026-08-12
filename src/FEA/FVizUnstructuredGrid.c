@@ -312,12 +312,28 @@ fail:
     return fviz_last_error_code();
 }
 
+typedef struct FVizTransformRangeContext
+{
+    FVizVec3* points;
+    const FVizTransform* transform;
+} FVizTransformRangeContext;
+
+static void fviz_transform_point_range(FVizSize begin, FVizSize end, void* user_data)
+{
+    FVizTransformRangeContext* context = (FVizTransformRangeContext*)user_data;
+    FVizSize i;
+    for (i = begin; i < end; ++i)
+        context->points[i] = fviz_transform_point(context->transform, context->points[i]);
+}
+
 FVizResult fviz_unstructured_grid_transform(
     const FVizUnstructuredGrid* grid,
     const FVizTransform* transform,
     FVizUnstructuredGrid** out_grid)
 {
     FVizUnstructuredGrid* result = NULL;
+    FVizTransformRangeContext context;
+    FVizVec3* points;
     FVizSize i;
     if (grid == NULL || transform == NULL || out_grid == NULL)
     {
@@ -326,13 +342,19 @@ FVizResult fviz_unstructured_grid_transform(
     }
     *out_grid = NULL;
     if (fviz_clone_topology(grid, &result) != FVIZ_OK) return fviz_last_error_code();
+    points = (FVizVec3*)fviz_array_data(result->points->data);
+    context.points = points;
+    context.transform = transform;
+    if (fviz_parallel_for(
+            0u, fviz_points_count(result->points), 256u,
+            fviz_transform_point_range, &context) != FVIZ_OK)
+    {
+        fviz_release(result);
+        return fviz_last_error_code();
+    }
     result->points->bounds = fviz_bounds_empty();
     for (i = 0u; i < fviz_points_count(result->points); ++i)
-    {
-        FVizVec3* point = (FVizVec3*)fviz_array_data(result->points->data);
-        point[i] = fviz_transform_point(transform, point[i]);
-        fviz_bounds_include_point(&result->points->bounds, point[i]);
-    }
+        fviz_bounds_include_point(&result->points->bounds, points[i]);
     fviz_object_modified((FVizObject*)result->points->data);
     *out_grid = result;
     return FVIZ_OK;

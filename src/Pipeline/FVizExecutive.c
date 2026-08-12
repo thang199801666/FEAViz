@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include <FViz/Core/FVizError.h>
+#include <FViz/Parallel/FVizParallel.h>
 #include <FViz/Pipeline/FVizExecutive.h>
 
 #include <FViz/Core/FVizAtomic.h>
@@ -138,6 +139,13 @@ static FVizResult fviz_executive_execute_algorithm(
         FVIZ_PIPELINE_REQUEST_DATA
     };
     uint32_t stage;
+
+    if (root_request->cancellation != NULL &&
+        fviz_cancellation_token_is_cancelled(root_request->cancellation) != FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_CANCELLED, "pipeline request was cancelled");
+        return FVIZ_ERROR_CANCELLED;
+    }
     if (algorithm->updating == FVIZ_TRUE)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "re-entrant pipeline update detected");
@@ -198,6 +206,13 @@ static FVizResult fviz_executive_execute_algorithm(
     }
     for (stage = 0u; stage < (uint32_t)(sizeof(stages) / sizeof(stages[0])); ++stage)
     {
+        if (request.cancellation != NULL &&
+            fviz_cancellation_token_is_cancelled(request.cancellation) != FVIZ_FALSE)
+        {
+            fviz_internal_set_error(FVIZ_ERROR_CANCELLED, "pipeline request was cancelled during execution");
+            result = FVIZ_ERROR_CANCELLED;
+            goto done;
+        }
         request.type = stages[stage];
         result = fviz_internal_algorithm_process_request(
             algorithm, &request, input_mtime, request_key, &executed);

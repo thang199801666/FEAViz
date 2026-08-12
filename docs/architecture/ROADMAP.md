@@ -262,7 +262,7 @@ OBJ/STL file
 - [ ] Shared-upstream cache and branch fan-out correctness
 - [ ] Pipeline graph diagnostics
 
-## Phase 26 - Persistent parallel runtime - FOUNDATION in 0.9.0, planned completion in 0.11.0
+## Phase 26 - Persistent parallel runtime - COMPLETED in 0.12.0
 
 - [x] Bounded persistent worker pool with reusable dispatch
 - [ ] Task groups, cooperative cancellation, and thread-local scratch storage

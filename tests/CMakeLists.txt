@@ -31,6 +31,8 @@ fviz_add_test(FVizTestAlgorithm Pipeline/test_algorithm.c FViz.Pipeline.Algorith
 fviz_add_test(FVizTestCustomAlgorithm Pipeline/test_custom_algorithm.c FViz.Pipeline.CustomAlgorithm)
 fviz_add_test(FVizTestInteractorStyle Interaction/test_interactor_style.c FViz.Interaction.TrackballCamera)
 fviz_add_test(FVizTestParallel Parallel/test_parallel.c FViz.Parallel.For)
+fviz_add_test(FVizTestParallelContext Parallel/test_parallel_context.c FViz.Parallel.Context)
+target_link_libraries(FVizTestParallelContext PRIVATE Threads::Threads)
 fviz_add_test(FVizTestBVH Spatial/test_bvh.c FViz.Spatial.BVH)
 fviz_add_test(FVizTestPointLocator Spatial/test_point_locator.c FViz.Spatial.PointLocator)
 fviz_add_test(FVizTestContourFilter Algorithms/test_contour_filter.c FViz.Algorithms.ContourFilter)

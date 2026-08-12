@@ -12,6 +12,7 @@ FVIZ_EXTERN_C_BEGIN
 
 typedef struct FVizAlgorithm FVizAlgorithm;
 typedef struct FVizExecutive FVizExecutive;
+typedef struct FVizCancellationToken FVizCancellationToken;
 
 #define FVIZ_TYPE_EXECUTIVE UINT64_C(0xB9D3416E2A705CF8)
 
@@ -46,6 +47,7 @@ typedef struct FVizPipelineRequestInfo
     double time;
     uint32_t flags;
     uint64_t transaction_id;
+    FVizCancellationToken* cancellation;
 } FVizPipelineRequestInfo;
 
 FVIZ_API void fviz_pipeline_request_initialize(FVizPipelineRequestInfo* request);

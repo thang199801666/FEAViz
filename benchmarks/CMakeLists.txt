@@ -1,0 +1,4 @@
+add_executable(FVizBenchmarkParallelHex parallel_hex.c)
+target_link_libraries(FVizBenchmarkParallelHex PRIVATE FEAViz::FEAViz)
+fviz_apply_compiler_options(FVizBenchmarkParallelHex)
+fviz_set_target_output_directories(FVizBenchmarkParallelHex)

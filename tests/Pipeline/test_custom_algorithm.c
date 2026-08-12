@@ -95,6 +95,7 @@ int main(void)
     FVizAlgorithm* merge = NULL;
     FVizAlgorithm* split = NULL;
     FVizPipelineRequestInfo request;
+    FVizCancellationToken* cancellation = NULL;
     uint64_t first_transaction;
     FVizSize dot_size = 0u;
     char dot[4096];
@@ -146,6 +147,14 @@ int main(void)
     CHECK(strstr(dot, "digraph FEAVizPipeline") != NULL);
     CHECK(strstr(dot, "out0 -> in0") != NULL);
 
+    CHECK(fviz_cancellation_token_create(&cancellation) == FVIZ_OK);
+    request.cancellation = cancellation;
+    fviz_cancellation_token_cancel(cancellation);
+    CHECK(fviz_executive_update_request(
+        fviz_algorithm_executive(merge), &request) == FVIZ_ERROR_CANCELLED);
+    fviz_cancellation_token_reset(cancellation);
+    CHECK(fviz_executive_update_request(fviz_algorithm_executive(merge), &request) == FVIZ_OK);
+
     CHECK(make_algorithm(0u, 2u, source_request, &split_state, &split) == FVIZ_OK);
     CHECK(fviz_algorithm_configure_output_port(split, 0u, FVIZ_TYPE_POLY_DATA) == FVIZ_OK);
     CHECK(fviz_algorithm_configure_output_port(split, 1u, FVIZ_TYPE_POLY_DATA) == FVIZ_OK);
@@ -159,6 +168,7 @@ int main(void)
     fviz_release(right);
     fviz_release(left);
     fviz_release(source);
+    fviz_cancellation_token_destroy(cancellation);
     puts("custom algorithm executive tests passed");
     return 0;
 }
