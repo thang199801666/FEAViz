@@ -398,6 +398,12 @@ if(FVIZ_BUILD_TESTS)
 endif()
 
 if(FVIZ_BUILD_EXAMPLES)
+    # The C++ feature-test example consumes the header-only binding, which
+    # requires a C++17 compiler. The tests subdirectory also enables CXX, but
+    # examples may be built standalone (tests disabled).
+    if(TARGET FEAVizFEA)
+        enable_language(CXX)
+    endif()
     add_subdirectory(examples)
 endif()
 

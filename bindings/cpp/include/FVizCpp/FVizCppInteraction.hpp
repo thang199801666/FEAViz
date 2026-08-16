@@ -13,6 +13,9 @@
 #include "FVizCppObject.hpp"
 #include "FVizCppRendering.hpp"
 
+#include <functional>
+#include <memory>
+
 namespace fviz {
 
 // ---------------------------------------------------------------------------
@@ -165,7 +168,42 @@ public:
     void start() { detail::checkResult(fviz_render_window_interactor_start(ptr_)); }
     void render() { detail::checkResult(fviz_render_window_interactor_render(ptr_)); }
     void requestRender() { detail::checkResult(fviz_render_window_interactor_request_render(ptr_)); }
+
+    // Registers a per-event callback. The callback receives the C event struct;
+    // returning true consumes the event (like an aborting observer). The
+    // std::function is kept alive on the heap for the interactor lifetime.
+    using EventCallback = std::function<bool(const FVizInteractionEvent&)>;
+    void setEventCallback(EventCallback callback)
+    {
+        if (!ptr_) return;
+        auto holder = std::make_shared<CallbackHolder>();
+        holder->fn = std::move(callback);
+        callback_holder_ = holder;
+        fviz_render_window_interactor_set_event_callback(ptr_, &CallbackHolder::invoke, holder.get());
+    }
+
+private:
+    struct CallbackHolder {
+        EventCallback fn;
+        static FVizBool invoke(FVizRenderWindowInteractor* /*interactor*/,
+            const FVizInteractionEvent* event, void* user_data)
+        {
+            auto* holder = static_cast<CallbackHolder*>(user_data);
+            if (holder == nullptr || holder->fn == nullptr) return FVIZ_FALSE;
+            return holder->fn(*event) ? detail::fbool(true) : detail::fbool(false);
+        }
+    };
+    std::shared_ptr<CallbackHolder> callback_holder_;
 };
+
+// Defined here so RenderWindowInteractor is complete. Returns a retained view
+// of the window's interactor.
+inline RenderWindowInteractor RenderWindow::interactor() const
+{
+    FVizRenderWindowInteractor* raw = ptr_ != nullptr ? fviz_render_window_interactor(ptr_) : nullptr;
+    if (raw == nullptr) return RenderWindowInteractor();
+    return RenderWindowInteractor(static_cast<FVizRenderWindowInteractor*>(fviz_retain(raw)));
+}
 
 } // namespace fviz
 

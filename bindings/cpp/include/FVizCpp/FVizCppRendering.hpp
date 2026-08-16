@@ -29,6 +29,9 @@
 
 namespace fviz {
 
+class RenderWindowInteractor;
+class TextActor2D;
+
 // ---------------------------------------------------------------------------
 // Camera
 // ---------------------------------------------------------------------------
@@ -427,6 +430,20 @@ public:
     void fitCamera(float padding = 1.0f) noexcept { if (ptr_) fviz_renderer_fit_camera(ptr_, padding); }
     void resetClippingRange() noexcept { if (ptr_) fviz_renderer_reset_clipping_range(ptr_); }
     void update() { detail::checkResult(fviz_renderer_update(ptr_)); }
+
+    void setTransparencyMode(FVizTransparencyMode mode) noexcept
+    {
+        if (ptr_) fviz_renderer_set_transparency_mode(ptr_, mode);
+    }
+    FVizTransparencyMode transparencyMode() const noexcept
+    {
+        return ptr_ ? fviz_renderer_transparency_mode(ptr_) : FVIZ_TRANSPARENCY_SORTED;
+    }
+
+    // Defined after TextActor2D below.
+    void addTextActor2D(TextActor2D& actor);
+    void removeTextActor2D(TextActor2D& actor);
+    void removeAllTextActors2D() noexcept { if (ptr_) fviz_renderer_remove_all_text_actors_2d(ptr_); }
 };
 
 // ---------------------------------------------------------------------------
@@ -555,6 +572,15 @@ public:
     bool isVisible() const noexcept { return ptr_ ? fviz_text_actor_2d_is_visible(ptr_) != FVIZ_FALSE : false; }
 };
 
+inline void Renderer::addTextActor2D(TextActor2D& actor)
+{
+    detail::checkResult(fviz_renderer_add_text_actor_2d(ptr_, actor.get()));
+}
+inline void Renderer::removeTextActor2D(TextActor2D& actor)
+{
+    detail::checkResult(fviz_renderer_remove_text_actor_2d(ptr_, actor.get()));
+}
+
 // ---------------------------------------------------------------------------
 // BillboardTextActor3D - world-space text facing the camera.
 // ---------------------------------------------------------------------------
@@ -660,10 +686,16 @@ public:
     void initialize() { detail::checkResult(fviz_render_window_initialize(ptr_)); }
     void finalize() noexcept { if (ptr_) fviz_render_window_finalize(ptr_); }
     void requestClose() noexcept { if (ptr_) fviz_render_window_request_close(ptr_); }
+    void run() { detail::checkResult(fviz_render_window_run(ptr_)); }
+    void setFxaa(bool enabled) noexcept { if (ptr_) fviz_render_window_set_fxaa(ptr_, detail::fbool(enabled)); }
+    void readRgba8(uint8_t* rgba, FVizSize byte_count) { detail::checkResult(fviz_render_window_read_rgba8(ptr_, rgba, byte_count)); }
     FVizRenderWindowState state() const noexcept { return ptr_ ? fviz_render_window_state(ptr_) : FVIZ_RENDER_WINDOW_CREATED; }
     uint32_t dpi() const noexcept { return ptr_ ? fviz_render_window_dpi(ptr_) : 96u; }
     float contentScale() const noexcept { return ptr_ ? fviz_render_window_content_scale(ptr_) : 1.0f; }
     void* nativeHandle() const noexcept { return ptr_ ? fviz_render_window_native_handle(ptr_) : nullptr; }
+    // Defined in FVizCppInteraction.hpp (RenderWindowInteractor is a complete
+    // type there). Returns a retained interactor wrapper.
+    RenderWindowInteractor interactor() const;
 };
 
 } // namespace fviz

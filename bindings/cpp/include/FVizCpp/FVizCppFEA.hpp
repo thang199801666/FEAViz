@@ -580,6 +580,14 @@ public:
         out_cell_mask = DataArray(cm);
     }
 
+    // Copies the visible cells of a PolyData surface filtered by this group.
+    PolyData applyToSurface(PolyData& surface)
+    {
+        FVizPolyData* filtered = nullptr;
+        detail::checkResult(fviz_fea_display_group_apply_to_surface(ptr_, surface.get(), &filtered));
+        return PolyData(filtered);
+    }
+
     FVizFEADisplayGroupStatistics statistics(UnstructuredGrid& grid) const noexcept
     {
         FVizFEADisplayGroupStatistics stats;

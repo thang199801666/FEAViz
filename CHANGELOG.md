@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Added an interactive C++ feature-test GUI (`examples/35_FeatureTestGUI`,
+  `FVizExampleFeatureTestGUI`) driven entirely through the header-only C++
+  binding. It hosts four switchable modes (keys 1-4): GPU ray-cast volume
+  rendering, dual depth peeling, multi-plane cutter + iso-surface, and FEA
+  display groups, with an on-screen mode panel (`TextActor2D`). `--smoke`
+  renders every mode offscreen through the C++ API and is registered as
+  `FViz.Examples.FeatureTestGUI`.
+- Extended the C++ binding with the hooks the GUI uses: `Renderer`
+  `setTransparencyMode`/`transparencyMode` and text-actor 2D add/remove,
+  `RenderWindow` `run`/`setFxaa`/`readRgba8`/`interactor` (retained,
+  out-of-line in the interaction header), `RenderWindowInteractor`
+  `setEventCallback` (heap-held `std::function` trampoline), `UnstructuredGrid`
+  `extractSurface`, `AttributeSet` `setActive`/`active`, and `fea::DisplayGroup`
+  `applyToSurface`.
 - Added FEA display groups (`FVizFEADisplayGroup`, `fea::DisplayGroup`) that
   collect nodes/elements/faces into named, independently visible sets and combine
   them with replace/add/remove/intersect semantics. `fviz_fea_display_group_create_masks`

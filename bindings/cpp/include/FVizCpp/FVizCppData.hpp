@@ -158,6 +158,18 @@ public:
     {
         if (ptr_ != nullptr) fviz_attribute_set_clear(ptr_);
     }
+
+    void setActive(FVizAttributeRole role, const char* name)
+    {
+        detail::checkResult(fviz_attribute_set_set_active(ptr_, role, name));
+    }
+    DataArray active(FVizAttributeRole role) const
+    {
+        FVizDataArray* array = ptr_ != nullptr
+            ? const_cast<FVizDataArray*>(fviz_attribute_set_const_active(ptr_, role))
+            : nullptr;
+        return DataArray(array != nullptr ? static_cast<FVizDataArray*>(fviz_retain(array)) : nullptr);
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -320,6 +332,9 @@ public:
 
     // Extracts a 3-D iso-surface (vtkContourFilter compatible, marching tetra).
     PolyData isoSurface(const std::string& scalar_array_name, double iso_value) const;
+
+    // Extracts the exterior surface (vtkDataSetSurfaceFilter compatible).
+    PolyData extractSurface() const;
 };
 
 // ---------------------------------------------------------------------------
@@ -650,6 +665,13 @@ inline PolyData UnstructuredGrid::isoSurface(const std::string& scalar_array_nam
 {
     FVizPolyData* surface = nullptr;
     detail::checkResult(fviz_unstructured_grid_iso_surface(ptr_, scalar_array_name.c_str(), iso_value, &surface));
+    return PolyData(surface);
+}
+
+inline PolyData UnstructuredGrid::extractSurface() const
+{
+    FVizPolyData* surface = nullptr;
+    detail::checkResult(fviz_unstructured_grid_extract_surface(ptr_, &surface));
     return PolyData(surface);
 }
 
