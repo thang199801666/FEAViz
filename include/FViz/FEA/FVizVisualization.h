@@ -6,6 +6,8 @@
 #include <FViz/Core/FVizResult.h>
 #include <FViz/Core/FVizTypes.h>
 #include <FViz/FEA/FVizFEAApi.h>
+#include <FViz/FEA/FVizPrimaryVariable.h>
+#include <FViz/Data/FVizUnstructuredGrid.h>
 #include <FViz/Mesh/FVizPolyData.h>
 #include <FViz/Rendering/FVizLookupTable.h>
 
@@ -82,6 +84,64 @@ FVIZ_FEA_API FVizResult fviz_fea_find_extrema(
     const char* scalar_array_name,
     uint32_t components,
     FVizFEAExtrema* out_extrema);
+
+/* Builds a contour (banded or smooth) surface from an evaluated primary
+ * variable result. The display values are mapped onto the grid's point data
+ * by entity id, the surface is extracted, and every vertex is colored by the
+ * Abaqus rainbow (smooth) or interval-clipped RGB (banded). */
+typedef enum FVizFEAContourMode
+{
+    FVIZ_FEA_CONTOUR_SMOOTH = 0,
+    FVIZ_FEA_CONTOUR_BANDED = 1
+} FVizFEAContourMode;
+
+FVIZ_FEA_API FVizResult fviz_fea_build_contour_surface_from_result(
+    const FVizFEAPrimaryVariableResult* result,
+    const FVizUnstructuredGrid* grid,
+    FVizFEAContourMode mode,
+    float range_minimum,
+    float range_maximum,
+    uint32_t interval_count,
+    const char* output_color_array_name,
+    FVizPolyData** out_surface);
+
+/* Banded-surface options: extend the classic banded builder with explicit
+ * out-of-range colors (instead of clamping to the first/last band) and an
+ * optional reversed spectrum. */
+typedef struct FVizFEABandedSurfaceOptions
+{
+    uint32_t struct_size;
+    FVizBool enabled;
+    float below_range_color[3];
+    float above_range_color[3];
+    FVizBool reversed;
+} FVizFEABandedSurfaceOptions;
+
+FVIZ_FEA_API void fviz_fea_banded_surface_options_initialize(FVizFEABandedSurfaceOptions* options);
+FVIZ_FEA_API FVizResult fviz_fea_build_abaqus_banded_surface_ex(
+    const FVizPolyData* input,
+    const char* scalar_array_name,
+    uint32_t components,
+    float range_minimum,
+    float range_maximum,
+    uint32_t interval_count,
+    const FVizFEABandedSurfaceOptions* options,
+    const char* output_color_array_name,
+    FVizPolyData** out_surface);
+
+/* Slices a grid with a plane and colors the cut surface by a point scalar
+ * field, producing a contour-ready cut. Equivalent to a VTK slice + probe. */
+FVIZ_FEA_API FVizResult fviz_fea_slice_contour(
+    const FVizUnstructuredGrid* grid,
+    FVizPlane plane,
+    const char* scalar_array_name,
+    uint32_t components,
+    FVizFEAContourMode mode,
+    float range_minimum,
+    float range_maximum,
+    uint32_t interval_count,
+    const char* output_color_array_name,
+    FVizPolyData** out_slice);
 
 FVIZ_EXTERN_C_END
 

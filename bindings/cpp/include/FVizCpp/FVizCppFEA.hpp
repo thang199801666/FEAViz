@@ -433,6 +433,42 @@ struct Extrema {
     }
 };
 
+// Builds a contour surface from an evaluated primary-variable result.
+inline PolyData buildContourFromResult(PrimaryVariableResult& result, UnstructuredGrid& grid,
+    FVizFEAContourMode mode, float range_minimum, float range_maximum,
+    uint32_t interval_count, const std::string& output_color_array_name)
+{
+    FVizPolyData* surface = nullptr;
+    detail::checkResult(fviz_fea_build_contour_surface_from_result(result.get(), grid.get(), mode,
+        range_minimum, range_maximum, interval_count, output_color_array_name.c_str(), &surface));
+    return PolyData(surface);
+}
+
+// Extended banded surface with out-of-range colors / reversed spectrum.
+inline PolyData buildBandedSurfaceEx(PolyData& input, const std::string& scalar_array_name,
+    uint32_t components, float range_minimum, float range_maximum,
+    uint32_t interval_count, const FVizFEABandedSurfaceOptions& options,
+    const std::string& output_color_array_name)
+{
+    FVizPolyData* surface = nullptr;
+    detail::checkResult(fviz_fea_build_abaqus_banded_surface_ex(input.get(), scalar_array_name.c_str(),
+        components, range_minimum, range_maximum, interval_count, &options,
+        output_color_array_name.c_str(), &surface));
+    return PolyData(surface);
+}
+
+// Slices a grid with a plane and colors the cut by a scalar field.
+inline PolyData sliceContour(UnstructuredGrid& grid, Plane plane, const std::string& scalar_array_name,
+    uint32_t components, FVizFEAContourMode mode, float range_minimum, float range_maximum,
+    uint32_t interval_count, const std::string& output_color_array_name)
+{
+    FVizPolyData* slice = nullptr;
+    detail::checkResult(fviz_fea_slice_contour(grid.get(), plane, scalar_array_name.c_str(),
+        components, mode, range_minimum, range_maximum, interval_count,
+        output_color_array_name.c_str(), &slice));
+    return PolyData(slice);
+}
+
 } // namespace fea
 
 // Frame methods that need the complete Field type.

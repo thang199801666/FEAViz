@@ -253,6 +253,62 @@ static int test_contour_helpers()
     return 0;
 }
 
+static int test_result_contour_cpp()
+{
+    // Hex grid with nodal scalar + a result field block.
+    UnstructuredGrid grid = UnstructuredGrid::create();
+    grid.addPoint(Vec3(0, 0, 0));
+    grid.addPoint(Vec3(1, 0, 0));
+    grid.addPoint(Vec3(1, 1, 0));
+    grid.addPoint(Vec3(0, 1, 0));
+    grid.addPoint(Vec3(0, 0, 1));
+    grid.addPoint(Vec3(1, 0, 1));
+    grid.addPoint(Vec3(1, 1, 1));
+    grid.addPoint(Vec3(0, 1, 1));
+    const uint32_t hex[8] = {0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u};
+    grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, hex);
+
+    DataArray stress = DataArray::createFloat64();
+    stress.resize(8u);
+    for (FVizSize i = 0u; i < 8u; ++i)
+        stress.setComponent(i, 0u, 10.0 * (double)(i % 4u));
+    grid.pointData().add("S", stress.get());
+
+    Field field = Field::create("S", "Stress", FVIZ_FEA_FIELD_SCALAR);
+    DataArray ids = DataArray::createUint64();
+    ids.resize(8u);
+    for (FVizSize i = 0u; i < 8u; ++i)
+        ids.setComponent(i, 0u, (double)i);
+    field.addBlock("PART-1", FVIZ_FEA_POSITION_NODAL, ids.get(), nullptr, stress.get());
+
+    PrimaryVariableEvaluator evaluator = PrimaryVariableEvaluator::create();
+    FVizFEAPrimaryVariable variable;
+    fviz_fea_primary_variable_initialize(&variable);
+    variable.operation = FVIZ_FEA_PRIMARY_COMPONENT;
+    variable.component = 0u;
+    variable.target_position = FVIZ_FEA_POSITION_NODAL;
+    variable.source_position = FVIZ_FEA_POSITION_NODAL;
+
+    FVizFEAPrimaryVariableResult* raw_result = nullptr;
+    CHECK(fviz_fea_primary_variable_evaluate(evaluator.get(), field.get(), grid.get(), &variable, &raw_result) == FVIZ_OK);
+    PrimaryVariableResult result(raw_result);
+
+    PolyData smooth = fea::buildContourFromResult(result, grid, FVIZ_FEA_CONTOUR_SMOOTH, 0.0f, 30.0f, 1u, "result_rgb");
+    CHECK(smooth.pointCount() > 0u);
+    CHECK(smooth.pointData().get("result_rgb").get() != nullptr);
+
+    PolyData banded = fea::buildContourFromResult(result, grid, FVIZ_FEA_CONTOUR_BANDED, 0.0f, 30.0f, 6u, "result_rgb");
+    CHECK(banded.pointCount() > 0u);
+
+    // Cut: slice at z=0.5 colored by the point scalar.
+    Plane plane = Plane::fromPointNormal(Vec3(0, 0, 0.5f), Vec3(0, 0, 1));
+    PolyData slice = fea::sliceContour(grid, plane, "S", 1u, FVIZ_FEA_CONTOUR_SMOOTH, 0.0f, 15.0f, 1u, "slice_rgb");
+    CHECK(slice.pointCount() > 0u);
+    CHECK(slice.pointData().get("slice_rgb").get() != nullptr);
+
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -261,6 +317,7 @@ int main(void)
     if ((result = test_deformed_shape()) != 0) { std::printf("test_deformed_shape failed at line %d\n", result); return result; }
     if ((result = test_scalar_bar()) != 0) { std::printf("test_scalar_bar failed at line %d\n", result); return result; }
     if ((result = test_contour_helpers()) != 0) { std::printf("test_contour_helpers failed at line %d\n", result); return result; }
+    if ((result = test_result_contour_cpp()) != 0) { std::printf("test_result_contour_cpp failed at line %d\n", result); return result; }
     std::printf("FVizCpp FEA binding tests passed\n");
     return 0;
 }

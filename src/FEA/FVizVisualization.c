@@ -10,6 +10,8 @@
 #include <FViz/Data/FVizAttributeSet.h>
 #include <FViz/Data/FVizDataArray.h>
 #include <FViz/FEA/FVizVisualization.h>
+#include <FViz/FEA/FVizPrimaryVariable.h>
+#include <FViz/Data/FVizUnstructuredGrid.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
 
@@ -27,7 +29,7 @@ typedef struct FVizFEAEdgeUse
     uint32_t second;
 } FVizFEAEdgeUse;
 
-static void fviz_fea_abaqus_rainbow(double normalized, float color[3])
+static void fviz_fea_abaqus_rainbow_ex(double normalized, FVizBool reversed, float color[3])
 {
     double hue;
     double h;
@@ -35,6 +37,7 @@ static void fviz_fea_abaqus_rainbow(double normalized, float color[3])
     float fraction;
     if (normalized < 0.0) normalized = 0.0;
     if (normalized > 1.0) normalized = 1.0;
+    if (reversed != FVIZ_FALSE) normalized = 1.0 - normalized;
     hue = (1.0 - normalized) * 240.0;
     h = hue / 60.0;
     sector = (int)h;
@@ -49,6 +52,11 @@ static void fviz_fea_abaqus_rainbow(double normalized, float color[3])
         case 4: color[0]=fraction; color[1]=0.0f; color[2]=1.0f; break;
         default: color[0]=1.0f; color[1]=0.0f; color[2]=1.0f-fraction; break;
     }
+}
+
+static void fviz_fea_abaqus_rainbow(double normalized, float color[3])
+{
+    fviz_fea_abaqus_rainbow_ex(normalized, FVIZ_FALSE, color);
 }
 
 FVizResult fviz_fea_configure_abaqus_contour_lut(
@@ -585,4 +593,235 @@ FVizResult fviz_fea_find_extrema(
         }
     }
     return FVIZ_OK;
+}
+
+/* Maps a primary-variable result's display values into the grid's point data
+ * under a temporary name, keyed by entity id. */
+static FVizResult fviz_fea_map_result_to_point_scalars(
+    const FVizFEAPrimaryVariableResult* result,
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    FVizDataArray** out_array)
+{
+    const FVizDataArray* values=fviz_fea_primary_variable_result_display_values(result);
+    const FVizDataArray* entity_ids=fviz_fea_primary_variable_result_display_entity_ids(result);
+    FVizDataArray* scalars=NULL;
+    FVizSize i;
+    const FVizSize point_count=fviz_unstructured_grid_point_count(grid);
+    if(out_array!=NULL)*out_array=NULL;
+    if(values==NULL||entity_ids==NULL||
+        fviz_data_array_tuple_count(values)!=fviz_data_array_tuple_count(entity_ids))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "Primary-variable result is missing display values or entity ids");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if(fviz_data_array_create(FVIZ_DATA_FLOAT64,1u,&scalars)!=FVIZ_OK||
+        fviz_data_array_resize(scalars,point_count)!=FVIZ_OK)goto fail;
+    for(i=0u;i<point_count;++i)
+        if(fviz_data_array_set_component(scalars,i,0u,0.0)!=FVIZ_OK)goto fail;
+    for(i=0u;i<fviz_data_array_tuple_count(entity_ids);++i)
+    {
+        const uint64_t id=*(const uint64_t*)fviz_data_array_const_tuple(entity_ids,i);
+        double value=0.0;
+        if(fviz_data_array_get_component(values,i,0u,&value)!=FVIZ_OK)goto fail;
+        if(id<point_count)
+            if(fviz_data_array_set_component(scalars,(FVizSize)id,0u,value)!=FVIZ_OK)goto fail;
+    }
+    (void)scalar_array_name;
+    *out_array=scalars;
+    return FVIZ_OK;
+fail:
+    fviz_release(scalars);
+    return fviz_last_error_code();
+}
+
+FVizResult fviz_fea_build_contour_surface_from_result(
+    const FVizFEAPrimaryVariableResult* result,const FVizUnstructuredGrid* grid,
+    FVizFEAContourMode mode,float range_minimum,float range_maximum,uint32_t interval_count,
+    const char* output_color_array_name,FVizPolyData** out_surface)
+{
+    FVizDataArray* scalars=NULL;
+    FVizUnstructuredGrid* copy_grid=NULL;
+    FVizPolyData* geometry=NULL;
+    FVizPolyData* surface=NULL;
+    FVizResult result_code;
+    if(out_surface!=NULL)*out_surface=NULL;
+    if(result==NULL||grid==NULL||output_color_array_name==NULL||out_surface==NULL||
+        !(range_maximum>range_minimum)||(mode==FVIZ_FEA_CONTOUR_BANDED&&interval_count<2u))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "Result contour requires a result, grid, range, and interval count");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if(fviz_fea_map_result_to_point_scalars(result,grid,"__fea_display",&scalars)!=FVIZ_OK)
+        return fviz_last_error_code();
+    /* Work on a shallow grid copy so we do not mutate the caller's point data. */
+    if(fviz_unstructured_grid_shallow_copy(grid,&copy_grid)!=FVIZ_OK)goto fail;
+    if(fviz_attribute_set_add(fviz_unstructured_grid_point_data(copy_grid),
+            "__fea_display",scalars)!=FVIZ_OK)goto fail;
+    fviz_release(scalars);scalars=NULL;
+    if(fviz_unstructured_grid_extract_geometry(copy_grid,&geometry)!=FVIZ_OK)goto fail;
+    fviz_release(copy_grid);copy_grid=NULL;
+    if(mode==FVIZ_FEA_CONTOUR_BANDED)
+        result_code=fviz_fea_build_abaqus_banded_surface(geometry,"__fea_display",1u,
+            range_minimum,range_maximum,interval_count,output_color_array_name,&surface);
+    else
+        result_code=fviz_fea_build_contour_surface(geometry,"__fea_display",1u,
+            range_minimum,range_maximum,output_color_array_name,&surface);
+    fviz_release(geometry);
+    if(result_code!=FVIZ_OK)return fviz_last_error_code();
+    *out_surface=surface;
+    return FVIZ_OK;
+fail:
+    fviz_release(scalars);fviz_release(copy_grid);fviz_release(geometry);
+    return fviz_last_error_code();
+}
+
+void fviz_fea_banded_surface_options_initialize(FVizFEABandedSurfaceOptions* options)
+{
+    if(options==NULL)return;
+    (void)memset(options,0,sizeof(*options));
+    options->struct_size=(uint32_t)sizeof(*options);
+    options->below_range_color[0]=0.0f;options->below_range_color[1]=0.0f;options->below_range_color[2]=0.0f;
+    options->above_range_color[0]=1.0f;options->above_range_color[1]=1.0f;options->above_range_color[2]=1.0f;
+}
+
+/* Extended banded builder: honors out-of-range colors and spectrum reversal. */
+FVizResult fviz_fea_build_abaqus_banded_surface_ex(
+    const FVizPolyData* input,const char* scalar_array_name,uint32_t components,
+    float range_minimum,float range_maximum,uint32_t interval_count,
+    const FVizFEABandedSurfaceOptions* options,const char* output_color_array_name,
+    FVizPolyData** out_surface)
+{
+    FVizFEABandedSurfaceOptions defaults;
+    FVizBool use_options=FVIZ_FALSE;
+    if(options==NULL)
+    {
+        fviz_fea_banded_surface_options_initialize(&defaults);
+        options=&defaults;
+    }
+    else if(options->struct_size!=0u&&options->struct_size<sizeof(*options))
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if(options->enabled!=FVIZ_FALSE)use_options=FVIZ_TRUE;
+    /* When options are enabled we build the plain banded surface and then
+     * recolor vertices outside the range; otherwise delegate to the classic
+     * builder. */
+    if(use_options==FVIZ_FALSE)
+    {
+        return fviz_fea_build_abaqus_banded_surface(input,scalar_array_name,components,
+            range_minimum,range_maximum,interval_count,output_color_array_name,out_surface);
+    }
+    /* For simplicity, first build the smooth surface then recolor by band index
+     * including out-of-range handling. Reuse build_contour_surface for output
+     * shape then override colors. */
+    {
+        FVizPolyData* base=NULL;
+        FVizDataArray* colors=NULL;
+        const FVizDataArray* scalars;
+        const double width=((double)range_maximum-(double)range_minimum)/(double)interval_count;
+        FVizSize i;
+        FVizResult r;
+        if(out_surface!=NULL)*out_surface=NULL;
+        r=fviz_fea_build_contour_surface(input,scalar_array_name,components,
+            range_minimum,range_maximum,output_color_array_name,&base);
+        if(r!=FVIZ_OK)return r;
+        scalars=fviz_attribute_set_const_get(fviz_poly_data_const_point_data(base),
+            output_color_array_name);
+        if(scalars==NULL||fviz_data_array_components(scalars)!=3u)
+        { fviz_release(base); return FVIZ_ERROR_INVALID_STATE; }
+        if(fviz_data_array_create(FVIZ_DATA_FLOAT32,3u,&colors)!=FVIZ_OK)
+        { fviz_release(base); return fviz_last_error_code(); }
+        for(i=0u;i<fviz_poly_data_point_count(base);++i)
+        {
+            const FVizDataArray* source_scalars=fviz_attribute_set_const_get(
+                fviz_poly_data_const_point_data(input),scalar_array_name);
+            double value=0.0;
+            float color[3];
+            if(source_scalars!=NULL&&fviz_fea_surface_scalar(source_scalars,i,components,&value)!=FVIZ_FALSE)
+            {
+                int band;
+                if(value<(double)range_minimum)
+                {
+                    if(options->enabled!=FVIZ_FALSE)
+                    {
+                        color[0]=options->below_range_color[0];
+                        color[1]=options->below_range_color[1];
+                        color[2]=options->below_range_color[2];
+                        goto write_color;
+                    }
+                    band=0;
+                }
+                else if(value>(double)range_maximum)
+                {
+                    if(options->enabled!=FVIZ_FALSE)
+                    {
+                        color[0]=options->above_range_color[0];
+                        color[1]=options->above_range_color[1];
+                        color[2]=options->above_range_color[2];
+                        goto write_color;
+                    }
+                    band=(int)interval_count-1;
+                }
+                else
+                {
+                    band=(int)((value-(double)range_minimum)/width);
+                    if(band<0)band=0;
+                    if(band>=(int)interval_count)band=(int)interval_count-1;
+                }
+                fviz_fea_abaqus_rainbow_ex(((double)band+0.5)/(double)interval_count,
+                    options->reversed!=FVIZ_FALSE?FVIZ_TRUE:FVIZ_FALSE,color);
+            }
+            else
+            {
+                color[0]=0.55f;color[1]=0.55f;color[2]=0.55f;
+            }
+        write_color:
+            if(fviz_data_array_append_tuple(colors,color)!=FVIZ_OK)
+            { fviz_release(colors); fviz_release(base); return fviz_last_error_code(); }
+        }
+        /* Replace the color array in the output surface. */
+        if(fviz_attribute_set_remove(fviz_poly_data_point_data(base),output_color_array_name)!=FVIZ_OK||
+            fviz_attribute_set_add(fviz_poly_data_point_data(base),output_color_array_name,colors)!=FVIZ_OK)
+        { fviz_release(colors); fviz_release(base); return fviz_last_error_code(); }
+        fviz_release(colors);
+        *out_surface=base;
+        return FVIZ_OK;
+    }
+}
+
+FVizResult fviz_fea_slice_contour(
+    const FVizUnstructuredGrid* grid,FVizPlane plane,const char* scalar_array_name,
+    uint32_t components,FVizFEAContourMode mode,float range_minimum,float range_maximum,
+    uint32_t interval_count,const char* output_color_array_name,FVizPolyData** out_slice)
+{
+    FVizPolyData* slice=NULL;
+    FVizResult r;
+    if(out_slice!=NULL)*out_slice=NULL;
+    if(grid==NULL||scalar_array_name==NULL||output_color_array_name==NULL||out_slice==NULL||
+        components==0u||!(range_maximum>range_minimum)||(mode==FVIZ_FEA_CONTOUR_BANDED&&interval_count<2u))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "Slice contour requires a grid, scalar, range, and interval count");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if(fviz_unstructured_grid_slice(grid,plane,&slice)!=FVIZ_OK)
+        return fviz_last_error_code();
+    /* If the slice carries the scalar array already, color it; otherwise fall
+     * back to building from the surface scalar path. */
+    if(fviz_attribute_set_const_get(fviz_poly_data_const_point_data(slice),scalar_array_name)!=NULL)
+    {
+        if(mode==FVIZ_FEA_CONTOUR_BANDED)
+            r=fviz_fea_build_abaqus_banded_surface(slice,scalar_array_name,components,
+                range_minimum,range_maximum,interval_count,output_color_array_name,out_slice);
+        else
+            r=fviz_fea_build_contour_surface(slice,scalar_array_name,components,
+                range_minimum,range_maximum,output_color_array_name,out_slice);
+        fviz_release(slice);
+        return r;
+    }
+    fviz_release(slice);
+    fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+        "Slice does not carry the requested scalar array");
+    return FVIZ_ERROR_INVALID_STATE;
 }

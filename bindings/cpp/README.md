@@ -26,7 +26,7 @@ include/FVizCpp/
                        writeVtu / writeVtp / writePly, PVDCollection
   FVizCppFEA.hpp       FEA module: HistorySeries/Region, Frame, Field, Step,
                        ResultDatabase, PrimaryVariable, DeformedShape,
-                       ScalarBarActor, fea contour/edges helpers
+                       ScalarBarActor, fea contour/edges/result/cut helpers
 ```
 
 The FEA wrappers (`FVizCppFEA.hpp`) link against `FEAViz::FEA`; everything else
@@ -99,10 +99,15 @@ Functions throw `fviz::Error` on failure; `Error::code()` returns the C
 
 ## Testing
 
-The binding is exercised by two CTest targets:
+The binding is exercised by three CTest targets:
 
 - `FViz.Cpp.Binding` (`FVizTestCppBinding`) — math operators, RAII refcounting,
   grid construction, data arrays, readers, and headless rendering assembly.
 - `FViz.Cpp.FEABinding` (`FVizTestCppFEABinding`, only when `FEAViz::FEA` is
   built) — result database/step/frame/field, primary-variable invariants,
-  deformed-shape control, and the Abaqus-style scalar bar.
+  deformed-shape control, the Abaqus-style scalar bar, and the contour/cut
+  helpers.
+- `FViz.Cpp.Features` (`FVizTestCppFeatures`, only when `FEAViz::FEA` is
+  built) — filter chain (threshold/warp/surface/slice/cell-to-point), the
+  trackball interaction driving the camera through `processEvent`, and a
+  headless `fea::FramePlayer` animation controller over ResultDatabase frames.

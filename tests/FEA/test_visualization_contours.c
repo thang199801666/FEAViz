@@ -129,6 +129,139 @@ static int test_extrema(void)
     return 0;
 }
 
+/* Builds a 2x2x1 hex grid with a nodal stress field and a nodal displacement
+ * vector, plus a result field so primary-variable evaluation can run. */
+static FVizResult build_result_grid(FVizUnstructuredGrid** out_grid, FVizFEAField** out_field)
+{
+    const FVizVec3 points[8]={
+        {0.0f,0.0f,0.0f},{1.0f,0.0f,0.0f},{1.0f,1.0f,0.0f},{0.0f,1.0f,0.0f},
+        {0.0f,0.0f,1.0f},{1.0f,0.0f,1.0f},{1.0f,1.0f,1.0f},{0.0f,1.0f,1.0f}};
+    const uint32_t hex[8]={0u,1u,2u,3u,4u,5u,6u,7u};
+    FVizUnstructuredGrid* grid=NULL;
+    FVizFEAField* field=NULL;
+    FVizDataArray* values=NULL;
+    FVizDataArray* ids=NULL;
+    FVizFEAFieldBlockDescriptor block;
+    FVizSize i;
+    if(out_grid==NULL||out_field==NULL)return FVIZ_ERROR_INVALID_ARGUMENT;
+    *out_grid=NULL;*out_field=NULL;
+    if(fviz_unstructured_grid_create(&grid)!=FVIZ_OK||
+        fviz_unstructured_grid_add_points(grid,points,8u,NULL)!=FVIZ_OK||
+        fviz_unstructured_grid_add_cell(grid,FVIZ_CELL_HEXAHEDRON,8u,hex)!=FVIZ_OK||
+        fviz_fea_field_create("S","Stress",FVIZ_FEA_FIELD_SCALAR,&field)!=FVIZ_OK||
+        fviz_data_array_create(FVIZ_DATA_FLOAT64,1u,&values)!=FVIZ_OK||
+        fviz_data_array_resize(values,8u)!=FVIZ_OK||
+        fviz_data_array_create(FVIZ_DATA_UINT64,1u,&ids)!=FVIZ_OK||
+        fviz_data_array_resize(ids,8u)!=FVIZ_OK)goto fail;
+    for(i=0u;i<8u;++i)
+    {
+        const double value=10.0*(double)(i%4u);
+        if(fviz_data_array_set_component(values,i,0u,value)!=FVIZ_OK||
+            fviz_data_array_set_component(ids,i,0u,(double)i)!=FVIZ_OK)goto fail;
+    }
+    fviz_fea_field_block_descriptor_initialize(&block);
+    block.instance_name="PART-1";
+    block.position=FVIZ_FEA_POSITION_NODAL;
+    block.entity_ids=ids;
+    block.values=values;
+    if(fviz_fea_field_add_block(field,&block,NULL)!=FVIZ_OK)goto fail;
+    fviz_release(values);fviz_release(ids);
+    *out_grid=grid;*out_field=field;
+    return FVIZ_OK;
+fail:
+    fviz_release(values);fviz_release(ids);fviz_release(field);fviz_release(grid);
+    return fviz_last_error_code();
+}
+
+static int test_result_contour(void)
+{
+    FVizUnstructuredGrid* grid=NULL;
+    FVizFEAField* field=NULL;
+    FVizFEAPrimaryVariableEvaluator* evaluator=NULL;
+    FVizFEAPrimaryVariable variable;
+    FVizFEAPrimaryVariableResult* result=NULL;
+    FVizPolyData* surface=NULL;
+    const FVizDataArray* colors=NULL;
+    CHECK(build_result_grid(&grid,&field)==FVIZ_OK);
+    CHECK(fviz_fea_primary_variable_evaluator_create(&evaluator)==FVIZ_OK);
+    fviz_fea_primary_variable_initialize(&variable);
+    variable.operation=FVIZ_FEA_PRIMARY_COMPONENT;
+    variable.component=0u;
+    variable.target_position=FVIZ_FEA_POSITION_NODAL;
+    variable.source_position=FVIZ_FEA_POSITION_NODAL;
+    CHECK(fviz_fea_primary_variable_evaluate(evaluator,field,grid,&variable,&result)==FVIZ_OK);
+    CHECK(fviz_fea_build_contour_surface_from_result(result,grid,FVIZ_FEA_CONTOUR_SMOOTH,
+        0.0f,30.0f,1u,"result_rgb",&surface)==FVIZ_OK);
+    CHECK(fviz_poly_data_point_count(surface)>0u);
+    colors=fviz_attribute_set_const_get(fviz_poly_data_const_point_data(surface),"result_rgb");
+    CHECK(colors!=NULL&&fviz_data_array_components(colors)==3u);
+    fviz_release(surface);
+    surface=NULL;
+    CHECK(fviz_fea_build_contour_surface_from_result(result,grid,FVIZ_FEA_CONTOUR_BANDED,
+        0.0f,30.0f,6u,"result_rgb",&surface)==FVIZ_OK);
+    CHECK(fviz_poly_data_point_count(surface)>0u);
+    colors=fviz_attribute_set_const_get(fviz_poly_data_const_point_data(surface),"result_rgb");
+    CHECK(colors!=NULL&&fviz_data_array_components(colors)==3u);
+    fviz_release(surface);surface=NULL;
+    fviz_release(result);fviz_release(evaluator);fviz_release(field);fviz_release(grid);
+    return 0;
+}
+
+static int test_banded_ex(void)
+{
+    FVizPolyData* surface=NULL;
+    FVizPolyData* banded=NULL;
+    FVizFEABandedSurfaceOptions options;
+    const FVizDataArray* colors=NULL;
+    CHECK(build_quad_surface(&surface)==FVIZ_OK);
+    fviz_fea_banded_surface_options_initialize(&options);
+    options.enabled=FVIZ_TRUE;
+    options.reversed=FVIZ_TRUE;
+    options.below_range_color[0]=0.0f;options.below_range_color[1]=0.0f;options.below_range_color[2]=1.0f;
+    options.above_range_color[0]=1.0f;options.above_range_color[1]=0.0f;options.above_range_color[2]=0.0f;
+    CHECK(fviz_fea_build_abaqus_banded_surface_ex(surface,"stress",1u,
+        -10.0f,40.0f,5u,&options,"banded_rgb",&banded)==FVIZ_OK);
+    colors=fviz_attribute_set_const_get(fviz_poly_data_const_point_data(banded),"banded_rgb");
+    CHECK(colors!=NULL&&fviz_data_array_components(colors)==3u);
+    CHECK(fviz_poly_data_triangle_count(banded)>0u);
+    fviz_release(banded);
+    fviz_release(surface);
+    return 0;
+}
+
+static int test_slice_contour(void)
+{
+    FVizUnstructuredGrid* grid=NULL;
+    FVizFEAField* field=NULL;
+    FVizPolyData* slice=NULL;
+    FVizPlane plane;
+    CHECK(build_result_grid(&grid,&field)==FVIZ_OK);
+    /* Add a point scalar to the grid so extract_geometry/slice can carry it. */
+    {
+        FVizDataArray* scalars=NULL;
+        FVizSize i;
+        CHECK(fviz_data_array_create(FVIZ_DATA_FLOAT64,1u,&scalars)==FVIZ_OK);
+        CHECK(fviz_data_array_resize(scalars,fviz_unstructured_grid_point_count(grid))==FVIZ_OK);
+        for(i=0u;i<fviz_unstructured_grid_point_count(grid);++i)
+            CHECK(fviz_data_array_set_component(scalars,i,0u,5.0*(double)(i%4u))==FVIZ_OK);
+        CHECK(fviz_attribute_set_add(fviz_unstructured_grid_point_data(grid),"stress",scalars)==FVIZ_OK);
+        fviz_release(scalars);
+    }
+    plane = fviz_plane_from_point_normal(
+        fviz_vec3(0.0f, 0.0f, 0.5f), fviz_vec3(0.0f, 0.0f, 1.0f));
+    CHECK(fviz_fea_slice_contour(grid,plane,"stress",1u,FVIZ_FEA_CONTOUR_SMOOTH,
+        0.0f,15.0f,1u,"slice_rgb",&slice)==FVIZ_OK);
+    CHECK(fviz_poly_data_point_count(slice)>0u);
+    CHECK(fviz_attribute_set_const_get(fviz_poly_data_const_point_data(slice),"slice_rgb")!=NULL);
+    fviz_release(slice);slice=NULL;
+    CHECK(fviz_fea_slice_contour(grid,plane,"stress",1u,FVIZ_FEA_CONTOUR_BANDED,
+        0.0f,15.0f,5u,"slice_rgb",&slice)==FVIZ_OK);
+    CHECK(fviz_poly_data_point_count(slice)>0u);
+    fviz_release(slice);
+    fviz_release(field);fviz_release(grid);
+    return 0;
+}
+
 int main(void)
 {
     int result=0;
@@ -138,6 +271,12 @@ int main(void)
     { fprintf(stderr,"test_contour_lines failed at line %d\n",result); return result; }
     if((result=test_extrema())!=0)
     { fprintf(stderr,"test_extrema failed at line %d\n",result); return result; }
+    if((result=test_result_contour())!=0)
+    { fprintf(stderr,"test_result_contour failed at line %d\n",result); return result; }
+    if((result=test_banded_ex())!=0)
+    { fprintf(stderr,"test_banded_ex failed at line %d\n",result); return result; }
+    if((result=test_slice_contour())!=0)
+    { fprintf(stderr,"test_slice_contour failed at line %d\n",result); return result; }
     printf("FVizTestFEAVisualizationContours passed\n");
     return 0;
 }

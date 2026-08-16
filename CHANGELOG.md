@@ -87,6 +87,23 @@
 - Added `FVizTestFEAVisualizationContours` (`FViz.FEA.VisualizationContours`)
   covering the smooth contour surface, contour lines, and extrema, plus
   matching C++ wrappers in the FEA binding.
+- Completed the FEA result-rendering feature set called out in
+  `docs/architecture/FEA_RENDERING_VTK_GAP_PLAN.md`:
+  - Result-driven contour: `fviz_fea_build_contour_surface_from_result()`
+    maps a `FVizFEAPrimaryVariableResult` display field onto the grid point
+    data and builds a banded or smooth contour surface (G4).
+  - Banded out-of-range colors + reversed spectrum:
+    `fviz_fea_banded_surface_options_initialize()` and
+    `fviz_fea_build_abaqus_banded_surface_ex()` (G6).
+  - Section cut with result coloring: `fviz_fea_slice_contour()` slices a grid
+    with a plane and colors the cut by a point scalar (G5).
+  - C++ wrappers `fea::buildContourFromResult`, `fea::buildBandedSurfaceEx`
+    and `fea::sliceContour`.
+- Added `FVizTestCppFeatures` (`FViz.Cpp.Features`) exercising the filter
+  chain (threshold/warp/surface/slice/cell-to-point), the trackball
+  interaction driving the camera through `processEvent`, and a headless
+  `fea::FramePlayer` animation controller that iterates ResultDatabase frames
+  and rebuilds a contour surface per frame.
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 
