@@ -469,6 +469,69 @@ inline PolyData sliceContour(UnstructuredGrid& grid, Plane plane, const std::str
     return PolyData(slice);
 }
 
+// Builds an element (facet) contour surface: each triangle is flat-colored by
+// its source cell's scalar, bypassing nodal averaging.
+inline PolyData buildElementFacetSurface(UnstructuredGrid& grid, PolyData& surface,
+    const std::string& cell_scalar_array_name, uint32_t components,
+    float range_minimum, float range_maximum, const std::string& output_color_array_name)
+{
+    FVizPolyData* facet = nullptr;
+    detail::checkResult(fviz_fea_build_element_facet_surface(grid.get(), surface.get(),
+        cell_scalar_array_name.c_str(), components, range_minimum, range_maximum,
+        output_color_array_name.c_str(), &facet));
+    return PolyData(facet);
+}
+
+// ---------------------------------------------------------------------------
+// SuperimposedDisplay - deformed + undeformed overlay (G7).
+// ---------------------------------------------------------------------------
+class SuperimposedDisplay {
+public:
+    // Builds the deformed solid actor and the undeformed wireframe/ghost
+    // actor from a deformed-shape result, and adds both to the scene.
+    static bool build(DeformedShapeResult& result, Scene& scene,
+        float deformed_color[3] = nullptr, float undeformed_color[3] = nullptr)
+    {
+        const float def[3] = {0.85f, 0.55f, 0.20f};
+        const float undef[3] = {0.30f, 0.30f, 0.32f};
+        const float* dc = deformed_color != nullptr ? deformed_color : def;
+        const float* uc = undeformed_color != nullptr ? undeformed_color : undef;
+
+        UnstructuredGrid deformedGrid = result.grid();
+        if (deformedGrid.get() == nullptr) return false;
+
+        FVizPolyData* deformedRaw = nullptr;
+        if (fviz_unstructured_grid_extract_geometry(deformedGrid.get(), &deformedRaw) != FVIZ_OK)
+            return false;
+        PolyData deformedSurface(deformedRaw);
+        deformedSurface.computeNormals();
+
+        Actor deformed = Actor::create();
+        deformed.setPolyData(deformedSurface);
+        deformed.setColor(dc[0], dc[1], dc[2]);
+        deformed.setOpacity(1.0f);
+        scene.addActor(deformed);
+
+        UnstructuredGrid baseGrid = result.baseGrid();
+        if (baseGrid.get() != nullptr)
+        {
+            FVizPolyData* baseRaw = nullptr;
+            if (fviz_unstructured_grid_extract_geometry(baseGrid.get(), &baseRaw) == FVIZ_OK)
+            {
+                PolyData baseSurface(baseRaw);
+                Actor undeformed = Actor::create();
+                undeformed.setPolyData(baseSurface);
+                undeformed.setColor(uc[0], uc[1], uc[2]);
+                undeformed.setOpacity(0.55f);
+                undeformed.setEdgeVisibility(true);
+                undeformed.setEdgeColor(uc[0], uc[1], uc[2]);
+                scene.addActor(undeformed);
+            }
+        }
+        return true;
+    }
+};
+
 } // namespace fea
 
 // Frame methods that need the complete Field type.

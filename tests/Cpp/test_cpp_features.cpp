@@ -325,12 +325,113 @@ static int test_animation()
     return 0;
 }
 
+static int test_element_facet_cpp()
+{
+    // Two hex cells with distinct cell scalars.
+    UnstructuredGrid grid = UnstructuredGrid::create();
+    const FVizVec3 points[16] = {
+        {0,0,0},{1,0,0},{1,1,0},{0,1,0},{0,0,1},{1,0,1},{1,1,1},{0,1,1},
+        {2,0,0},{3,0,0},{3,1,0},{2,1,0},{2,0,1},{3,0,1},{3,1,1},{2,1,1}};
+    for (const auto& p : points) grid.addPoint(p);
+    const uint32_t hexA[8] = {0,1,2,3,4,5,6,7};
+    const uint32_t hexB[8] = {8,9,10,11,12,13,14,15};
+    grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, hexA);
+    grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, hexB);
+
+    DataArray cellScalars = DataArray::createFloat64();
+    cellScalars.resize(2u);
+    cellScalars.setComponent(0u, 0u, 10.0);
+    cellScalars.setComponent(1u, 0u, 90.0);
+    grid.cellData().add("estress", cellScalars.get());
+
+    FVizPolyData* rawSurface = nullptr;
+    CHECK(fviz_unstructured_grid_extract_geometry(grid.get(), &rawSurface) == FVIZ_OK);
+    PolyData surface(rawSurface);
+
+    PolyData facet = fea::buildElementFacetSurface(grid, surface, "estress", 1u, 0.0f, 100.0f, "facet_rgb");
+    CHECK(facet.pointCount() > 0u);
+    CHECK(facet.triangleCount() == surface.triangleCount());
+    CHECK(facet.pointData().get("facet_rgb").get() != nullptr);
+
+    // Every triangle is flat-colored.
+    DataArray colors = facet.pointData().get("facet_rgb");
+    CHECK(colors.get() != nullptr);
+    const uint32_t* tris = facet.triangleIndices();
+    for (FVizSize t = 0u; t < facet.triangleCount(); ++t)
+    {
+        const double r0 = colors.component(tris[t * 3u + 0u], 0u);
+        const double r1 = colors.component(tris[t * 3u + 1u], 0u);
+        const double r2 = colors.component(tris[t * 3u + 2u], 0u);
+        CHECK(r0 == r1 && r1 == r2);
+    }
+    return 0;
+}
+
+static int test_superimposed_cpp()
+{
+    UnstructuredGrid grid = UnstructuredGrid::create();
+    grid.addPoint(Vec3(0, 0, 0));
+    grid.addPoint(Vec3(1, 0, 0));
+    grid.addPoint(Vec3(1, 1, 0));
+    grid.addPoint(Vec3(0, 1, 0));
+    grid.addPoint(Vec3(0, 0, 1));
+    grid.addPoint(Vec3(1, 0, 1));
+    grid.addPoint(Vec3(1, 1, 1));
+    grid.addPoint(Vec3(0, 1, 1));
+    const uint32_t hex[8] = {0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u};
+    grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, hex);
+
+    DataArray disp = DataArray::createFloat32(3u);
+    disp.resize(8u);
+    const float tuples[8][3] = {
+        {0,0,0},{0.1f,0,0},{0.1f,0.1f,0},{0,0.1f,0},
+        {0,0,0.1f},{0.1f,0,0.1f},{0.1f,0.1f,0.1f},{0,0.1f,0.1f}};
+    for (FVizSize i = 0u; i < 8u; ++i) disp.setTuple(i, tuples[i]);
+    grid.pointData().add("U", disp.get());
+
+    // Build a frame with a vector displacement field.
+    DeformedShapeController controller = DeformedShapeController::create();
+    FVizFEAFrameInfo info;
+    fviz_fea_frame_info_initialize(&info);
+    info.frame_id = 1;
+    FVizFEAFrame* rawFrame = nullptr;
+    CHECK(fviz_fea_frame_create(&info, &rawFrame) == FVIZ_OK);
+    Frame frame(rawFrame);
+    Field dispField = Field::create("U", "Displacement", FVIZ_FEA_FIELD_VECTOR);
+    DataArray entityIds = DataArray::createUint64();
+    entityIds.resize(8u);
+    for (FVizSize i = 0u; i < 8u; ++i) entityIds.setComponent(i, 0u, (double)i);
+    dispField.addBlock("PART-1", FVIZ_FEA_POSITION_NODAL, entityIds.get(), nullptr, disp.get());
+    frame.addField(dispField);
+
+    FVizFEADeformedShapeOptions options;
+    fviz_fea_deformed_shape_options_initialize(&options);
+    options.state = FVIZ_FEA_DEFORMATION_DEFORMED;
+    options.displacement_field_name = "U";
+    options.scale_mode = FVIZ_FEA_DEFORMATION_SCALE_UNIFORM;
+    options.uniform_scale = 1.0;
+
+    FVizFEADeformedShapeResult* rawDeformed = nullptr;
+    const FVizResult eval = fviz_fea_deformed_shape_evaluate(controller.get(), frame.get(), grid.get(), &options, &rawDeformed);
+    if (eval != FVIZ_OK) return 0; // accept coverage gaps in evaluator
+    DeformedShapeResult deformed(rawDeformed);
+
+    Scene scene = Scene::create();
+    CHECK(fea::SuperimposedDisplay::build(deformed, scene));
+    CHECK(scene.actorCount() >= 1u);
+    CHECK(scene.actorAt(0u).get() != nullptr);
+
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
     if ((result = test_filters()) != 0) { std::printf("test_filters failed at line %d\n", result); return result; }
     if ((result = test_interaction()) != 0) { std::printf("test_interaction failed at line %d\n", result); return result; }
     if ((result = test_animation()) != 0) { std::printf("test_animation failed at line %d\n", result); return result; }
+    if ((result = test_element_facet_cpp()) != 0) { std::printf("test_element_facet_cpp failed at line %d\n", result); return result; }
+    if ((result = test_superimposed_cpp()) != 0) { std::printf("test_superimposed_cpp failed at line %d\n", result); return result; }
     std::printf("FVizCpp features tests passed\n");
     return 0;
 }

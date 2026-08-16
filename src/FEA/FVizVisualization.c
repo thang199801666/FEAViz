@@ -825,3 +825,96 @@ FVizResult fviz_fea_slice_contour(
         "Slice does not carry the requested scalar array");
     return FVIZ_ERROR_INVALID_STATE;
 }
+
+FVizResult fviz_fea_build_element_facet_surface(
+    const FVizUnstructuredGrid* grid,const FVizPolyData* surface,
+    const char* cell_scalar_array_name,uint32_t components,
+    float range_minimum,float range_maximum,const char* output_color_array_name,
+    FVizPolyData** out_surface)
+{
+    const FVizDataArray* cell_scalars;
+    const FVizDataArray* cell_ids;
+    const uint32_t* triangles;
+    FVizPolyData* output=NULL;
+    FVizDataArray* colors=NULL;
+    FVizSize triangle;
+    const double width=(double)range_maximum-(double)range_minimum;
+    const char* const provenance_names[2]={"FVizOriginalCellIds","FVizOriginalFaceIds"};
+    FVizSize i;
+    if(out_surface!=NULL)*out_surface=NULL;
+    if(grid==NULL||surface==NULL||cell_scalar_array_name==NULL||output_color_array_name==NULL||
+        out_surface==NULL||components==0u||!(range_maximum>range_minimum))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "Element facet surface requires a grid, surface, scalar, and range");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    cell_scalars=fviz_attribute_set_const_get(
+        fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)grid),cell_scalar_array_name);
+    if(cell_scalars==NULL||fviz_data_array_components(cell_scalars)<components||
+        fviz_data_array_tuple_count(cell_scalars)!=fviz_unstructured_grid_cell_count(grid))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "Element facet scalar must be a one-tuple-per-cell cell array");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    cell_ids=fviz_attribute_set_const_get(fviz_poly_data_const_cell_data(surface),"FVizOriginalCellIds");
+    triangles=fviz_poly_data_triangle_indices(surface);
+    if(cell_ids==NULL||fviz_data_array_type(cell_ids)!=FVIZ_DATA_UINT64||
+        fviz_data_array_tuple_count(cell_ids)!=fviz_poly_data_triangle_count(surface))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "Element facet surface requires FVizOriginalCellIds provenance");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if(fviz_poly_data_create(&output)!=FVIZ_OK||
+        fviz_data_array_create(FVIZ_DATA_FLOAT32,3u,&colors)!=FVIZ_OK)goto fail;
+    /* Copy the surface points; each input point is used once (facet coloring
+     * duplicates per-triangle vertices so flat colors do not bleed across
+     * element boundaries). */
+    for(triangle=0u;triangle<fviz_poly_data_triangle_count(surface);++triangle)
+    {
+        const uint64_t cell_id=*(const uint64_t*)fviz_data_array_const_tuple(cell_ids,triangle);
+        double value=0.0;
+        float color[3];
+        FVizSize corner;
+        uint32_t ids[3];
+        if(cell_id>=fviz_data_array_tuple_count(cell_scalars)||
+            fviz_fea_surface_scalar(cell_scalars,(FVizSize)cell_id,components,&value)==FVIZ_FALSE)
+        {
+            color[0]=0.55f;color[1]=0.55f;color[2]=0.55f;
+        }
+        else
+        {
+            const double normalized=(value-(double)range_minimum)/width;
+            fviz_fea_abaqus_rainbow(normalized,color);
+        }
+        for(corner=0u;corner<3u;++corner)
+        {
+            FVizVec3 point;
+            if(fviz_poly_data_get_point(surface,triangles[triangle*3u+corner],&point)!=FVIZ_OK)goto fail;
+            if(fviz_poly_data_add_point(output,point,&ids[corner])!=FVIZ_OK||
+                fviz_data_array_append_tuple(colors,color)!=FVIZ_OK)goto fail;
+        }
+        if(fviz_poly_data_add_triangle(output,ids[0],ids[1],ids[2])!=FVIZ_OK)goto fail;
+    }
+    if(fviz_attribute_set_add(fviz_poly_data_point_data(output),output_color_array_name,colors)!=FVIZ_OK||
+        fviz_poly_data_compute_normals(output)!=FVIZ_OK||fviz_poly_data_validate(output)!=FVIZ_OK)goto fail;
+    /* Copy provenance through (per-triangle). */
+    for(i=0u;i<2u;++i)
+    {
+        const FVizDataArray* source=fviz_attribute_set_const_get(
+            fviz_poly_data_const_cell_data(surface),provenance_names[i]);
+        if(source!=NULL&&fviz_data_array_tuple_count(source)==fviz_poly_data_triangle_count(surface))
+        {
+            FVizDataArray* copy=NULL;
+            if(fviz_data_array_deep_copy(source,&copy)!=FVIZ_OK)goto fail;
+            if(fviz_attribute_set_add(fviz_poly_data_cell_data(output),provenance_names[i],copy)!=FVIZ_OK)
+            { fviz_release(copy); goto fail; }
+            fviz_release(copy);
+        }
+    }
+    fviz_release(colors);*out_surface=output;return FVIZ_OK;
+fail:
+    fviz_release(colors);fviz_release(output);return fviz_last_error_code();
+}

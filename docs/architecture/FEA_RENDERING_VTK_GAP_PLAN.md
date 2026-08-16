@@ -41,8 +41,8 @@ VTK workflows in the table below.
 | G4 | **Averaging on/off visible in contour** (VTK `vtkCellDataToPointData` + `vtkDataSetMapper` ScalarMode) | `FVizFEAPrimaryVariable` computes raw/display values and discontinuity mask; **not wired to rendering** | Add `fviz_fea_build_contour_surface_from_result()` taking a `FVizFEAPrimaryVariableResult` so averaged vs raw contours come from one code path | Medium |
 | G5 | **Section cut with result interpolation** (`vtkSlice`/`vtkCutter` + `vtkProbeFilter`) | `fviz_unstructured_grid_slice` exists; scalar interpolation onto the cut surface is not verified in FEA tests | Verify/complete scalar transfer on slice; add FEA helper `fviz_fea_slice_contour()` | Medium |
 | G6 | **Above/below-range colors** (`vtkLookupTable` SetAboveRangeColor/SetBelowRangeColor) | `fviz_lookup_table_set_above/below_range_color` exists; banded surface clamps to endpoints instead | Banded surface should honor above/below colors (or expose explicit clamp vs extend) | Medium |
-| G7 | **Deformed vs undeformed overlay color** (`vtkWarpVector` + separate actor) | Deformation engine produces base/deformed grids; rendering both simultaneously (superimposed) is manual | Add `fviz_fea_build_superimposed_actors()` or document the two-actor pattern | Low |
-| G8 | **Element (facet) contour without point averaging** | Mapper supports `FVIZ_SCALAR_INTERPOLATION_FLAT` and CELLS association, but no FEA helper builds an element-colored surface | Add `fviz_fea_build_element_facet_surface()` mapping element-nodal/centroid results to flat-colored triangles | Low |
+| G7 | **Deformed vs undeformed overlay color** (`vtkWarpVector` + separate actor) | **Closed** — `fea::SuperimposedDisplay::build()` in the C++ binding builds the deformed solid actor plus a translucent undeformed wireframe/ghost actor from a `FVizFEADeformedShapeResult` and adds both to a scene | Low → **done** |
+| G8 | **Element (facet) contour without point averaging** | **Closed** — `fviz_fea_build_element_facet_surface()` colors every triangle flat by its source cell's scalar from grid cell data (bypassing nodal averaging), with per-triangle provenance | Low → **done** |
 
 ## Plan to close the gap
 
@@ -142,5 +142,23 @@ For each WP:
 
 ## Execution checkpoint
 
-This session: implement WP-1, WP-2 and WP-3 (the three high-priority items),
-with C tests + C++ wrappers + full gates. WP-4/WP-5 are the next candidates.
+**All gaps G1–G8 are closed (2026-08-16).**
+
+| Gap | API | Status |
+|---|---|---|
+| G1 contour lines | `fviz_fea_build_contour_lines` + `fea::buildContourLines` | done |
+| G2 smooth contour | `fviz_fea_build_contour_surface` + `fea::buildContourSurface` | done |
+| G3 extrema | `fviz_fea_find_extrema` + `fea::Extrema` | done |
+| G4 result contour | `fviz_fea_build_contour_surface_from_result` + `fea::buildContourFromResult` | done |
+| G5 section cut | `fviz_fea_slice_contour` + `fea::sliceContour` | done |
+| G6 out-of-range colors | `fviz_fea_build_abaqus_banded_surface_ex` + `fea::buildBandedSurfaceEx` | done |
+| G7 superimposed display | `fea::SuperimposedDisplay::build` (C++) | done |
+| G8 element facet contour | `fviz_fea_build_element_facet_surface` + `fea::buildElementFacetSurface` | done |
+
+C coverage: `FViz.FEA.VisualizationContours`. C++ coverage:
+`FViz.Cpp.FEABinding` + `FViz.Cpp.Features`. Gates: Release warnings-as-errors,
+full ctest, ASan, Core-only build.
+
+Next candidates (beyond this plan's scope): a full `FVizFEAResultView`/session
+controller, section-point/envelope engine, and display-group visibility —
+tracked in the Abaqus FEA visualization master plan (0.42–0.49).

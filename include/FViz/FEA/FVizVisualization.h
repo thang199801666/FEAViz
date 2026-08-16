@@ -143,6 +143,19 @@ FVIZ_FEA_API FVizResult fviz_fea_slice_contour(
     const char* output_color_array_name,
     FVizPolyData** out_slice);
 
+/* Builds an element (facet) contour surface: every triangle is colored flat by
+ * its source cell's scalar from the grid's cell data, bypassing nodal
+ * averaging entirely. Equivalent to VTK cell-data scalar coloring. */
+FVIZ_FEA_API FVizResult fviz_fea_build_element_facet_surface(
+    const FVizUnstructuredGrid* grid,
+    const FVizPolyData* surface,
+    const char* cell_scalar_array_name,
+    uint32_t components,
+    float range_minimum,
+    float range_maximum,
+    const char* output_color_array_name,
+    FVizPolyData** out_surface);
+
 FVIZ_EXTERN_C_END
 
 #endif /* FVIZ_FEA_VISUALIZATION_H */

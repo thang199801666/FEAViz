@@ -262,6 +262,65 @@ static int test_slice_contour(void)
     return 0;
 }
 
+static int test_element_facet_surface(void)
+{
+    FVizUnstructuredGrid* grid=NULL;
+    FVizPolyData* surface=NULL;
+    FVizPolyData* facet=NULL;
+    FVizDataArray* cell_scalars=NULL;
+    const FVizDataArray* colors=NULL;
+    FVizSize i;
+    /* Two disconnected hex cells (two volume cells) so cell-data scalar has
+     * two tuples and surface has distinct original cell ids. */
+    const FVizVec3 points[16]={
+        {0,0,0},{1,0,0},{1,1,0},{0,1,0},{0,0,1},{1,0,1},{1,1,1},{0,1,1},
+        {2,0,0},{3,0,0},{3,1,0},{2,1,0},{2,0,1},{3,0,1},{3,1,1},{2,1,1}};
+    const uint32_t hex_a[8]={0,1,2,3,4,5,6,7};
+    const uint32_t hex_b[8]={8,9,10,11,12,13,14,15};
+    CHECK(fviz_unstructured_grid_create(&grid)==FVIZ_OK);
+    CHECK(fviz_unstructured_grid_add_points(grid,points,16u,NULL)==FVIZ_OK);
+    CHECK(fviz_unstructured_grid_add_cell(grid,FVIZ_CELL_HEXAHEDRON,8u,hex_a)==FVIZ_OK);
+    CHECK(fviz_unstructured_grid_add_cell(grid,FVIZ_CELL_HEXAHEDRON,8u,hex_b)==FVIZ_OK);
+    CHECK(fviz_data_array_create(FVIZ_DATA_FLOAT64,1u,&cell_scalars)==FVIZ_OK);
+    CHECK(fviz_data_array_resize(cell_scalars,2u)==FVIZ_OK);
+    CHECK(fviz_data_array_set_component(cell_scalars,0u,0u,10.0)==FVIZ_OK);
+    CHECK(fviz_data_array_set_component(cell_scalars,1u,0u,90.0)==FVIZ_OK);
+    CHECK(fviz_attribute_set_add(fviz_unstructured_grid_cell_data(grid),"estress",cell_scalars)==FVIZ_OK);
+    CHECK(fviz_unstructured_grid_extract_geometry(grid,&surface)==FVIZ_OK);
+    CHECK(fviz_poly_data_triangle_count(surface)>0u);
+    CHECK(fviz_fea_build_element_facet_surface(grid,surface,"estress",1u,
+        0.0f,100.0f,"facet_rgb",&facet)==FVIZ_OK);
+    CHECK(fviz_poly_data_triangle_count(facet)==fviz_poly_data_triangle_count(surface));
+    colors=fviz_attribute_set_const_get(fviz_poly_data_const_point_data(facet),"facet_rgb");
+    CHECK(colors!=NULL&&fviz_data_array_components(colors)==3u);
+    CHECK(fviz_data_array_tuple_count(colors)==fviz_poly_data_point_count(facet));
+    /* Every triangle is flat: its 3 vertices share the same RGB tuple. */
+    {
+        const uint32_t* tris=fviz_poly_data_triangle_indices(facet);
+        for(i=0u;i<fviz_poly_data_triangle_count(facet);++i)
+        {
+            double r0,g0,b0,r1,g1,b1,r2,g2,b2;
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+0u],0u,&r0)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+0u],1u,&g0)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+0u],2u,&b0)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+1u],0u,&r1)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+1u],1u,&g1)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+1u],2u,&b1)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+2u],0u,&r2)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+2u],1u,&g2)==FVIZ_OK);
+            CHECK(fviz_data_array_get_component(colors,tris[i*3u+2u],2u,&b2)==FVIZ_OK);
+            CHECK(r0==r1&&r1==r2&&g0==g1&&g1==g2&&b0==b1&&b1==b2);
+        }
+    }
+    /* Provenance survived. */
+    CHECK(fviz_attribute_set_const_get(fviz_poly_data_const_cell_data(facet),"FVizOriginalCellIds")!=NULL);
+    fviz_release(facet);
+    fviz_release(surface);
+    fviz_release(cell_scalars);
+    fviz_release(grid);
+    return 0;
+}
+
 int main(void)
 {
     int result=0;
@@ -277,6 +336,8 @@ int main(void)
     { fprintf(stderr,"test_banded_ex failed at line %d\n",result); return result; }
     if((result=test_slice_contour())!=0)
     { fprintf(stderr,"test_slice_contour failed at line %d\n",result); return result; }
+    if((result=test_element_facet_surface())!=0)
+    { fprintf(stderr,"test_element_facet_surface failed at line %d\n",result); return result; }
     printf("FVizTestFEAVisualizationContours passed\n");
     return 0;
 }

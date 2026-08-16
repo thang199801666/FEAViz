@@ -104,6 +104,17 @@
   interaction driving the camera through `processEvent`, and a headless
   `fea::FramePlayer` animation controller that iterates ResultDatabase frames
   and rebuilds a contour surface per frame.
+- Closed the final two gaps in `docs/architecture/FEA_RENDERING_VTK_GAP_PLAN.md`
+  (G1–G8 all done):
+  - Element (facet) contour without nodal averaging:
+    `fviz_fea_build_element_facet_surface()` colors every triangle flat by its
+    source cell's scalar from the grid cell data, with per-triangle provenance
+    (G8); C++ wrapper `fea::buildElementFacetSurface`.
+  - Deformed/undeformed overlay: `fea::SuperimposedDisplay::build()` builds the
+    deformed solid actor plus a translucent undeformed wireframe/ghost actor
+    from a `FVizFEADeformedShapeResult` into one scene (G7).
+  - Extended `FViz.FEA.VisualizationContours` (facet case) and
+    `FViz.Cpp.Features` (facet + superimposed cases).
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 
