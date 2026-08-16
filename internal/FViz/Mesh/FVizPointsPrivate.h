@@ -10,6 +10,7 @@ struct FVizPoints
     FVizObject base;
     FVizArray* data;
     FVizBounds bounds;
+    FVizBool bounds_dirty;
 };
 
 #endif /* FVIZ_INTERNAL_MESH_POINTS_PRIVATE_H */

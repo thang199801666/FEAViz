@@ -156,7 +156,13 @@ int main(void)
     uint64_t total = 0u;
     uint64_t keys[] = {5u, 2u, 5u, 1u, 2u};
     FVizSize indices[] = {0u, 1u, 2u, 3u, 4u};
+    uint64_t* large_scan_input = NULL;
+    uint64_t* large_scan_output = NULL;
+    uint64_t* large_keys = NULL;
+    FVizSize* large_indices = NULL;
+    const FVizSize large_count = 20000u;
     ContextFill fill;
+    volatile long group_arrivals = 0;
     FVizSize i;
     int result;
 
@@ -175,10 +181,19 @@ int main(void)
     fill.values = values;
     fill.increment = 1u;
     CHECK(fviz_task_group_create(first, NULL, &group) == FVIZ_OK);
-    CHECK(fviz_task_group_run(group, 0u, 64u, 8u, fill_result, &fill) == FVIZ_OK);
-    CHECK(fviz_task_group_run(group, 0u, 64u, 8u, fill_result, &fill) == FVIZ_OK);
+    CHECK(fviz_task_group_run(group, 0u, 32u, 8u, fill_result, &fill) == FVIZ_OK);
+    CHECK(fviz_task_group_run(group, 32u, 64u, 8u, fill_result, &fill) == FVIZ_OK);
     CHECK(fviz_task_group_wait(group) == FVIZ_OK);
-    for (i = 0u; i < 64u; ++i) CHECK(values[i] == 2u);
+    for (i = 0u; i < 64u; ++i) CHECK(values[i] == 1u);
+    /* Queued tasks share one scheduler dispatch and may overlap.  This catches
+     * regressions back to the old sequential TaskGroup::wait behavior. */
+    if (fviz_parallel_context_thread_count(first) >= 2u)
+    {
+        CHECK(fviz_task_group_run(group, 0u, 1u, 1u, rendezvous_range, (void*)&group_arrivals) == FVIZ_OK);
+        CHECK(fviz_task_group_run(group, 0u, 1u, 1u, rendezvous_range, (void*)&group_arrivals) == FVIZ_OK);
+        CHECK(fviz_task_group_wait(group) == FVIZ_OK);
+        CHECK(concurrent_load(&group_arrivals) >= 2);
+    }
 
     CHECK(fviz_parallel_context_for(
         first, 0u, 64u, 16u, fail_second_chunk, NULL, NULL) == FVIZ_ERROR_INTERNAL);
@@ -206,8 +221,45 @@ int main(void)
     CHECK(indices[0] == 3u && indices[1] == 1u && indices[2] == 4u &&
           indices[3] == 0u && indices[4] == 2u);
 
+    /* Exercise the parallel scan/sort paths rather than only their tiny serial
+     * fallbacks.  Stable-sort validation deliberately uses many duplicate keys. */
+    large_scan_input = (uint64_t*)fviz_alloc(large_count * sizeof(uint64_t));
+    large_scan_output = (uint64_t*)fviz_alloc(large_count * sizeof(uint64_t));
+    large_keys = (uint64_t*)fviz_alloc(large_count * sizeof(uint64_t));
+    large_indices = (FVizSize*)fviz_alloc(large_count * sizeof(FVizSize));
+    CHECK(large_scan_input != NULL && large_scan_output != NULL &&
+          large_keys != NULL && large_indices != NULL);
+    for (i = 0u; i < large_count; ++i)
+    {
+        large_scan_input[i] = 1u;
+        large_keys[i] = (uint64_t)(i % 257u);
+        large_indices[i] = i;
+    }
+    CHECK(fviz_parallel_exclusive_scan_u64(
+        first, large_scan_input, large_scan_output, large_count, 7u, &total) == FVIZ_OK);
+    CHECK(large_scan_output[0] == 7u);
+    CHECK(large_scan_output[large_count - 1u] == 7u + (uint64_t)(large_count - 1u));
+    CHECK(total == 7u + (uint64_t)large_count);
+    CHECK(fviz_parallel_inclusive_scan_u64(
+        first, large_scan_input, large_scan_output, large_count, &total) == FVIZ_OK);
+    CHECK(large_scan_output[0] == 1u);
+    CHECK(large_scan_output[large_count - 1u] == (uint64_t)large_count);
+    CHECK(total == (uint64_t)large_count);
+    CHECK(fviz_parallel_stable_sort_u64_indices(first, large_keys, large_indices, large_count) == FVIZ_OK);
+    for (i = 1u; i < large_count; ++i)
+    {
+        const uint64_t previous_key = large_keys[large_indices[i - 1u]];
+        const uint64_t current_key = large_keys[large_indices[i]];
+        CHECK(previous_key <= current_key);
+        if (previous_key == current_key) CHECK(large_indices[i - 1u] < large_indices[i]);
+    }
+    fviz_free(large_indices);
+    fviz_free(large_keys);
+    fviz_free(large_scan_output);
+    fviz_free(large_scan_input);
+
     fviz_parallel_context_get_statistics(first, &statistics);
-    CHECK(statistics.dispatch_count >= 5u);
+    CHECK(statistics.dispatch_count >= 4u);
     CHECK(statistics.failed_dispatch_count == 1u);
     CHECK(statistics.cancelled_dispatch_count == 1u);
     CHECK(statistics.chunk_count >= statistics.completed_chunk_count);

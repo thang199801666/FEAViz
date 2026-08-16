@@ -4,12 +4,15 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
+#include <FViz/Data/FVizProvenance.h>
 #include <FViz/Interaction/FVizRenderWindowInteractor.h>
 #include <FViz/Rendering/FVizRenderWindow.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Interaction/FVizRenderWindowInteractorPrivate.h>
 #include <FViz/Rendering/FVizCamera.h>
+#include <FViz/Rendering/FVizGlyphMapper.h>
+#include <FViz/Rendering/FVizGLDevice.h>
 #include <FViz/Rendering/FVizRenderWindowPrivate.h>
 #include <FViz/Rendering/FVizScene.h>
 #include <FViz/Spatial/FVizBVH.h>
@@ -23,6 +26,18 @@ static const FVizObjectClass g_fviz_render_window_class = {
     NULL
 };
 
+static FVizBool fviz_render_window_renderer_modified(
+    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+{
+    FVizRenderWindow* window = (FVizRenderWindow*)client_data;
+    FVIZ_UNUSED(caller);
+    FVIZ_UNUSED(event_id);
+    FVIZ_UNUSED(call_data);
+    if (window != NULL)
+        fviz_render_window_request_render_reason(window, FVIZ_RENDER_REQUEST_SCENE);
+    return FVIZ_FALSE;
+}
+
 static void fviz_render_window_destroy(FVizObject* object)
 {
     FVizRenderWindow* window = (FVizRenderWindow*)object;
@@ -32,9 +47,21 @@ static void fviz_render_window_destroy(FVizObject* object)
     fviz_release(window->interactor);
     window->interactor = NULL;
     for (i = 0u; i < fviz_array_count(window->renderers); ++i)
-        fviz_release(*(FVizRenderer**)fviz_array_at(window->renderers, i));
+    {
+        FVizRenderer* renderer = *(FVizRenderer**)fviz_array_at(window->renderers, i);
+        FVizObserverTag* tag = window->renderer_modified_tags != NULL
+            ? (FVizObserverTag*)fviz_array_at(window->renderer_modified_tags, i)
+            : NULL;
+        if (renderer != NULL && tag != NULL && *tag != FVIZ_OBSERVER_TAG_INVALID)
+            (void)fviz_object_remove_observer((FVizObject*)renderer, *tag);
+        fviz_release(renderer);
+    }
+    fviz_release(window->renderer_modified_tags);
     fviz_release(window->renderers);
+    fviz_release(window->pass_statistics);
+    window->renderer_modified_tags = NULL;
     window->renderers = NULL;
+    window->pass_statistics = NULL;
     window->renderer = NULL;
     fviz_release(window->pick_bvh);
     window->pick_bvh = NULL;
@@ -50,6 +77,8 @@ static FVizResult fviz_render_window_create_internal(
     const char* title,
     FVizBool offscreen,
     void* host_native_handle,
+    const FVizExternalOpenGLSurface* external_surface,
+    const FVizRenderWindowOptions* options,
     FVizRenderWindow** out_window)
 {
     FVizRenderWindow* window;
@@ -74,10 +103,36 @@ static FVizResult fviz_render_window_create_internal(
     (void)memcpy(window->title, title, title_length + 1u);
     window->width = width;
     window->height = height;
+    window->dpi = 96u;
+    window->requested_multisamples = options != NULL ? options->multisamples : 4u;
+    window->fxaa_enabled = options != NULL ? options->fxaa : FVIZ_TRUE;
+    fviz_fxaa_options_initialize(&window->fxaa_options);
+    window->adaptive_antialiasing = options != NULL
+        ? (options->adaptive_antialiasing != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE)
+        : FVIZ_TRUE;
+    window->swap_interval = options != NULL ? options->swap_interval : 1;
+    window->srgb_enabled = FVIZ_TRUE;
+    if (options != NULL &&
+        (options->struct_size == 0u ||
+         options->struct_size >= offsetof(FVizRenderWindowOptions, srgb) + sizeof(options->srgb)))
+        window->srgb_enabled = options->srgb != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    window->last_statistics.struct_size = (uint32_t)sizeof(window->last_statistics);
+    fviz_frame_scheduler_options_initialize(&window->frame_scheduler_options);
+    fviz_gpu_memory_options_initialize(&window->gpu_memory_options);
+    window->frame_scheduler_statistics.struct_size =
+        (uint32_t)sizeof(window->frame_scheduler_statistics);
     window->offscreen = offscreen;
     window->host_native_handle = host_native_handle;
+    if (external_surface != NULL)
+    {
+        window->external_surface = *external_surface;
+        window->external_surface.struct_size = (uint32_t)sizeof(window->external_surface);
+        window->external_opengl = FVIZ_TRUE;
+    }
     window->state = FVIZ_RENDER_WINDOW_CREATED;
-    if (fviz_array_create(sizeof(FVizRenderer*), &window->renderers) != FVIZ_OK)
+    if (fviz_array_create(sizeof(FVizRenderer*), &window->renderers) != FVIZ_OK ||
+        fviz_array_create(sizeof(FVizObserverTag), &window->renderer_modified_tags) != FVIZ_OK ||
+        fviz_array_create(sizeof(FVizRenderPassStatistics), &window->pass_statistics) != FVIZ_OK)
     {
         fviz_release(window);
         return fviz_last_error_code();
@@ -111,14 +166,87 @@ static FVizResult fviz_render_window_create_internal(
     return FVIZ_OK;
 }
 
+void fviz_fxaa_options_initialize(FVizFXAAOptions* options)
+{
+    if (options == NULL) return;
+    (void)memset(options, 0, sizeof(*options));
+    options->struct_size = (uint32_t)sizeof(*options);
+    options->relative_threshold = 0.125f;
+    options->absolute_threshold = 0.0312f;
+    options->span_max = 8.0f;
+}
+
+void fviz_render_window_options_initialize(FVizRenderWindowOptions* options)
+{
+    if (options == NULL) return;
+    (void)memset(options, 0, sizeof(*options));
+    options->struct_size = (uint32_t)sizeof(*options);
+    options->multisamples = 4u;
+    options->fxaa = FVIZ_TRUE;
+    options->swap_interval = 1;
+    options->adaptive_antialiasing = FVIZ_TRUE;
+    options->srgb = FVIZ_TRUE;
+}
+
+void fviz_frame_scheduler_options_initialize(FVizFrameSchedulerOptions* options)
+{
+    if (options == NULL) return;
+    (void)memset(options, 0, sizeof(*options));
+    options->struct_size = (uint32_t)sizeof(*options);
+    options->interactive_quality = FVIZ_TRUE;
+}
+
+void fviz_gpu_memory_options_initialize(FVizGPUMemoryOptions* options)
+{
+    if (options == NULL) return;
+    (void)memset(options, 0, sizeof(*options));
+    options->struct_size = (uint32_t)sizeof(*options);
+}
+
+static FVizResult fviz_render_window_validate_options(const FVizRenderWindowOptions* options)
+{
+    if (options == NULL) return FVIZ_OK;
+    if (options->struct_size != 0u &&
+        options->struct_size < offsetof(FVizRenderWindowOptions, srgb))
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (options->multisamples > 32u) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (options->swap_interval < -1 || options->swap_interval > 4)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_render_window_create_with_options(
+    int width,
+    int height,
+    const char* title,
+    const FVizRenderWindowOptions* options,
+    FVizRenderWindow** out_window)
+{
+    if (fviz_render_window_validate_options(options) != FVIZ_OK) return FVIZ_ERROR_INVALID_ARGUMENT;
+    return fviz_render_window_create_internal(
+        width, height, title, FVIZ_FALSE, NULL, NULL, options, out_window);
+}
+
+FVizResult fviz_render_window_create_offscreen_with_options(
+    int width,
+    int height,
+    const FVizRenderWindowOptions* options,
+    FVizRenderWindow** out_window)
+{
+    if (fviz_render_window_validate_options(options) != FVIZ_OK) return FVIZ_ERROR_INVALID_ARGUMENT;
+    return fviz_render_window_create_internal(
+        width, height, "FEAViz Offscreen", FVIZ_TRUE, NULL, NULL, options, out_window);
+}
+
 FVizResult fviz_render_window_create(
     int width,
     int height,
     const char* title,
     FVizRenderWindow** out_window)
 {
-    return fviz_render_window_create_internal(
-        width, height, title, FVIZ_FALSE, NULL, out_window);
+    FVizRenderWindowOptions options;
+    fviz_render_window_options_initialize(&options);
+    return fviz_render_window_create_with_options(width, height, title, &options, out_window);
 }
 
 FVizResult fviz_render_window_create_offscreen(
@@ -126,8 +254,26 @@ FVizResult fviz_render_window_create_offscreen(
     int height,
     FVizRenderWindow** out_window)
 {
+    FVizRenderWindowOptions options;
+    fviz_render_window_options_initialize(&options);
+    return fviz_render_window_create_offscreen_with_options(width, height, &options, out_window);
+}
+
+FVizResult fviz_render_window_create_attached_with_options(
+    void* host_native_handle,
+    int width,
+    int height,
+    const FVizRenderWindowOptions* options,
+    FVizRenderWindow** out_window)
+{
+    if (host_native_handle == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "attached render window requires a host native handle");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (fviz_render_window_validate_options(options) != FVIZ_OK) return FVIZ_ERROR_INVALID_ARGUMENT;
     return fviz_render_window_create_internal(
-        width, height, "FEAViz Offscreen", FVIZ_TRUE, NULL, out_window);
+        width, height, "FEAViz Child", FVIZ_FALSE, host_native_handle, NULL, options, out_window);
 }
 
 FVizResult fviz_render_window_create_attached(
@@ -136,9 +282,97 @@ FVizResult fviz_render_window_create_attached(
     int height,
     FVizRenderWindow** out_window)
 {
-    if (host_native_handle == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    FVizRenderWindowOptions options;
+    fviz_render_window_options_initialize(&options);
+    return fviz_render_window_create_attached_with_options(
+        host_native_handle, width, height, &options, out_window);
+}
+
+FVizResult fviz_render_window_create_external_opengl_with_options(
+    int width,
+    int height,
+    const FVizExternalOpenGLSurface* surface,
+    const FVizRenderWindowOptions* options,
+    FVizRenderWindow** out_window)
+{
+    FVizResult result;
+    result = fviz_external_opengl_surface_validate(surface);
+    if (result != FVIZ_OK) return result;
+    result = fviz_render_window_validate_options(options);
+    if (result != FVIZ_OK) return result;
     return fviz_render_window_create_internal(
-        width, height, "FEAViz Child", FVIZ_FALSE, host_native_handle, out_window);
+        width, height, "FEAViz External OpenGL", FVIZ_FALSE, NULL, surface, options, out_window);
+}
+
+FVizResult fviz_render_window_create_external_opengl(
+    int width,
+    int height,
+    const FVizExternalOpenGLSurface* surface,
+    FVizRenderWindow** out_window)
+{
+    FVizRenderWindowOptions options;
+    fviz_render_window_options_initialize(&options);
+    return fviz_render_window_create_external_opengl_with_options(
+        width, height, surface, &options, out_window);
+}
+
+FVizResult fviz_render_window_sync_external_surface_size(FVizRenderWindow* window)
+{
+    int width;
+    int height;
+    FVizResult result;
+    if (window == NULL || window->external_opengl == FVIZ_FALSE)
+        return FVIZ_ERROR_INVALID_STATE;
+    if (window->external_surface.get_framebuffer_size == NULL) return FVIZ_OK;
+    width = window->width;
+    height = window->height;
+    result = window->external_surface.get_framebuffer_size(
+        window->external_surface.user_data, &width, &height);
+    if (result != FVIZ_OK) return result;
+    if (width <= 0 || height <= 0) return FVIZ_ERROR_INVALID_STATE;
+    return fviz_render_window_resize(window, width, height);
+}
+
+FVizBool fviz_render_window_is_external_opengl(const FVizRenderWindow* window)
+{
+    return window != NULL && window->external_opengl != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+FVizResult fviz_render_window_release_external_opengl_resources(FVizRenderWindow* window)
+{
+    if (window == NULL || window->external_opengl == FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "window must be an external OpenGL render window");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (window->render_in_progress != FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "external OpenGL resources cannot be released during rendering");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    return fviz_internal_render_window_release_external_opengl_platform(window);
+}
+
+FVizResult fviz_render_window_reinitialize_external_opengl(FVizRenderWindow* window)
+{
+    FVizResult result;
+    if (window == NULL || window->external_opengl == FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "window must be an external OpenGL render window");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (window->render_in_progress != FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "external OpenGL context cannot be reinitialized during rendering");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    result = fviz_internal_render_window_reinitialize_external_opengl_platform(window);
+    if (result == FVIZ_OK) fviz_render_window_request_render(window);
+    return result;
 }
 
 FVizRenderWindowState fviz_render_window_state(const FVizRenderWindow* window)
@@ -176,10 +410,87 @@ FVizResult fviz_render_window_resize(FVizRenderWindow* window, int width, int he
     window->width = width;
     window->height = height;
     fviz_object_modified((FVizObject*)window);
+    (void)fviz_object_invoke_event((FVizObject*)window, FVIZ_EVENT_WINDOW_RESIZE, NULL);
     if (window->state == FVIZ_RENDER_WINDOW_CREATED ||
         window->state == FVIZ_RENDER_WINDOW_FINALIZED)
         return FVIZ_OK;
     return fviz_internal_render_window_resize_platform(window);
+}
+
+FVizResult fviz_render_window_sync_host_size(FVizRenderWindow* window)
+{
+    if (window == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (window->host_native_handle == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "render window is not attached to a native host");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if (window->state == FVIZ_RENDER_WINDOW_FINALIZED) return FVIZ_ERROR_INVALID_STATE;
+    return fviz_internal_render_window_sync_host_size_platform(window);
+}
+
+FVizResult fviz_render_window_reparent(FVizRenderWindow* window, void* host_native_handle)
+{
+    FVizResult result;
+    uint32_t previous_dpi;
+    void* previous_host;
+    FVizBool native_recreated = FVIZ_FALSE;
+    if (window == NULL || host_native_handle == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window and host_native_handle must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (window->host_native_handle == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "render window was not created as an attached window");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if (window->host_native_handle == host_native_handle && window->native_window != NULL &&
+        window->state != FVIZ_RENDER_WINDOW_FINALIZED)
+        return fviz_render_window_sync_host_size(window);
+
+    previous_host = window->host_native_handle;
+    previous_dpi = window->dpi;
+
+    /* A GUI toolkit may destroy an old native parent before publishing the new
+     * handle. Windows destroys child HWNDs with their parent, which finalizes
+     * our platform surface. Reparent therefore also acts as a recovery path:
+     * keep the FEAViz object graph, recreate only native/WGL resources, then
+     * continue against the replacement host. */
+    if (window->native_window == NULL || window->state == FVIZ_RENDER_WINDOW_FINALIZED)
+    {
+        window->host_native_handle = host_native_handle;
+        result = fviz_render_window_initialize(window);
+        if (result != FVIZ_OK)
+        {
+            window->host_native_handle = previous_host;
+            return result;
+        }
+        native_recreated = FVIZ_TRUE;
+    }
+    else
+    {
+        result = fviz_internal_render_window_reparent_platform(window, host_native_handle);
+        if (result != FVIZ_OK) return result;
+        window->host_native_handle = host_native_handle;
+    }
+
+    fviz_object_modified((FVizObject*)window);
+    if (window->dpi != previous_dpi)
+    {
+        (void)fviz_object_invoke_event(
+            (FVizObject*)window, FVIZ_EVENT_WINDOW_DPI_CHANGED, &window->dpi);
+    }
+    (void)fviz_object_invoke_event(
+        (FVizObject*)window, FVIZ_EVENT_WINDOW_REPARENTED, host_native_handle);
+    result = fviz_render_window_sync_host_size(window);
+    if (result == FVIZ_OK && native_recreated != FVIZ_FALSE && window->visible != FVIZ_FALSE)
+        result = fviz_internal_render_window_show_platform(window);
+    return result;
 }
 
 FVizResult fviz_render_window_read_rgba8(
@@ -299,29 +610,262 @@ void fviz_render_window_get_capabilities(
     out_capabilities->offscreen_supported = FVIZ_TRUE;
     out_capabilities->color_readback_supported = FVIZ_TRUE;
     out_capabilities->depth_readback_supported = FVIZ_TRUE;
+    out_capabilities->multisample_supported =
+        window->gl_modern != FVIZ_FALSE || window->actual_multisamples > 1u
+        ? FVIZ_TRUE : FVIZ_FALSE;
+    out_capabilities->fxaa_supported = window->fxaa_supported;
+    out_capabilities->swap_control_supported = window->swap_control_supported;
+    out_capabilities->sample_count = window->actual_multisamples;
+    out_capabilities->srgb_supported = window->srgb_supported;
+    out_capabilities->weighted_oit_supported = window->weighted_oit_supported;
+    out_capabilities->shader_lines_supported = window->shader_lines_supported;
+    out_capabilities->text_rendering_supported = window->text_rendering_supported;
+    out_capabilities->integer_selection_supported = window->integer_selection_supported;
+    out_capabilities->gpu_timing_supported = window->gpu_timing_supported;
+    /* Dual-depth peeling is not part of the current OpenGL backend. Requests
+     * deterministically fall back to sorted alpha and report the applied mode. */
+    out_capabilities->depth_peeling_supported = FVIZ_FALSE;
 }
 
-static FVizId fviz_render_window_provenance_id(
-    const FVizPolyData* poly_data,
-    const char* name,
-    FVizSize primitive_id,
-    FVizId fallback)
+FVizResult fviz_render_window_set_multisamples(FVizRenderWindow* window, uint32_t samples)
 {
-    const FVizDataArray* array;
-    const void* tuple;
-    if (poly_data == NULL) return fallback;
-    array = fviz_attribute_set_const_get(fviz_poly_data_const_cell_data(poly_data), name);
-    if (array == NULL || primitive_id >= fviz_data_array_tuple_count(array)) return fallback;
-    tuple = fviz_data_array_const_tuple(array, primitive_id);
-    if (tuple == NULL) return fallback;
-    switch (fviz_data_array_type(array))
+    if (window == NULL || samples > 32u) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (window->state != FVIZ_RENDER_WINDOW_CREATED &&
+        window->state != FVIZ_RENDER_WINDOW_FINALIZED)
     {
-        case FVIZ_DATA_UINT64: return *(const uint64_t*)tuple;
-        case FVIZ_DATA_INT64: return (FVizId)*(const int64_t*)tuple;
-        case FVIZ_DATA_UINT32: return *(const uint32_t*)tuple;
-        case FVIZ_DATA_INT32: return (FVizId)*(const int32_t*)tuple;
-        default: return fallback;
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "multisample pixel format can only be changed before initialization; finalize the window first");
+        return FVIZ_ERROR_INVALID_STATE;
     }
+    window->requested_multisamples = samples;
+    return FVIZ_OK;
+}
+
+uint32_t fviz_render_window_multisamples(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->requested_multisamples : 0u;
+}
+
+uint32_t fviz_render_window_actual_multisamples(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->actual_multisamples : 0u;
+}
+
+void fviz_render_window_set_fxaa(FVizRenderWindow* window, FVizBool enabled)
+{
+    if (window == NULL) return;
+    window->fxaa_enabled = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)window);
+}
+
+FVizBool fviz_render_window_fxaa(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->fxaa_enabled : FVIZ_FALSE;
+}
+
+FVizResult fviz_render_window_set_fxaa_options(
+    FVizRenderWindow* window,
+    const FVizFXAAOptions* options)
+{
+    if (window == NULL || options == NULL ||
+        (options->struct_size != 0u && options->struct_size < sizeof(FVizFXAAOptions)) ||
+        options->relative_threshold < 0.0f || options->relative_threshold > 1.0f ||
+        options->absolute_threshold < 0.0f || options->absolute_threshold > 1.0f ||
+        options->span_max < 1.0f || options->span_max > 32.0f)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    window->fxaa_options = *options;
+    window->fxaa_options.struct_size = (uint32_t)sizeof(window->fxaa_options);
+    fviz_object_modified((FVizObject*)window);
+    return FVIZ_OK;
+}
+
+void fviz_render_window_get_fxaa_options(
+    const FVizRenderWindow* window,
+    FVizFXAAOptions* out_options)
+{
+    if (out_options == NULL) return;
+    fviz_fxaa_options_initialize(out_options);
+    if (window != NULL) *out_options = window->fxaa_options;
+}
+
+void fviz_render_window_set_adaptive_antialiasing(
+    FVizRenderWindow* window,
+    FVizBool enabled)
+{
+    if (window == NULL) return;
+    window->adaptive_antialiasing = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)window);
+}
+
+FVizBool fviz_render_window_adaptive_antialiasing(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->adaptive_antialiasing : FVIZ_FALSE;
+}
+
+FVizBool fviz_render_window_interaction_active(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->interaction_active : FVIZ_FALSE;
+}
+
+void fviz_internal_render_window_set_interaction_active(FVizRenderWindow* window, FVizBool active)
+{
+    FVizBool normalized;
+    if (window == NULL) return;
+    normalized = active != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    if (window->interaction_active == normalized) return;
+    window->interaction_active = normalized;
+    fviz_render_window_request_render_reason(
+        window,
+        normalized != FVIZ_FALSE
+            ? FVIZ_RENDER_REQUEST_INTERACTION
+            : (FVIZ_RENDER_REQUEST_INTERACTION | FVIZ_RENDER_REQUEST_SCENE));
+}
+
+FVizResult fviz_render_window_set_swap_interval(FVizRenderWindow* window, int interval)
+{
+    if (window == NULL || interval < -1 || interval > 4) return FVIZ_ERROR_INVALID_ARGUMENT;
+    window->swap_interval = interval;
+    if (window->state == FVIZ_RENDER_WINDOW_INITIALIZED ||
+        window->state == FVIZ_RENDER_WINDOW_VISIBLE ||
+        window->state == FVIZ_RENDER_WINDOW_OFFSCREEN)
+        return fviz_internal_render_window_set_swap_interval_platform(window, interval);
+    return FVIZ_OK;
+}
+
+int fviz_render_window_swap_interval(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->swap_interval : 0;
+}
+
+void fviz_render_window_set_srgb(FVizRenderWindow* window, FVizBool enabled)
+{
+    if (window == NULL) return;
+    window->srgb_enabled = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)window);
+}
+
+FVizBool fviz_render_window_srgb(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->srgb_enabled : FVIZ_FALSE;
+}
+
+void fviz_render_window_get_statistics(
+    const FVizRenderWindow* window,
+    FVizRenderStatistics* out_statistics)
+{
+    if (out_statistics == NULL) return;
+    (void)memset(out_statistics, 0, sizeof(*out_statistics));
+    out_statistics->struct_size = (uint32_t)sizeof(*out_statistics);
+    if (window != NULL)
+    {
+        const uint32_t struct_size = out_statistics->struct_size;
+        *out_statistics = window->last_statistics;
+        out_statistics->struct_size = struct_size;
+    }
+}
+
+FVizSize fviz_render_window_pass_statistics_count(const FVizRenderWindow* window)
+{
+    return window != NULL && window->pass_statistics != NULL
+        ? fviz_array_count(window->pass_statistics) : 0u;
+}
+
+FVizResult fviz_render_window_get_pass_statistics(
+    const FVizRenderWindow* window,
+    FVizSize index,
+    FVizRenderPassStatistics* out_statistics)
+{
+    const FVizRenderPassStatistics* statistics;
+    if (window == NULL || out_statistics == NULL || window->pass_statistics == NULL)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    statistics = (const FVizRenderPassStatistics*)fviz_array_const_at(
+        window->pass_statistics, index);
+    if (statistics == NULL) return FVIZ_ERROR_NOT_FOUND;
+    *out_statistics = *statistics;
+    out_statistics->struct_size = (uint32_t)sizeof(*out_statistics);
+    return FVIZ_OK;
+}
+
+void fviz_internal_render_window_clear_pass_statistics(FVizRenderWindow* window)
+{
+    if (window != NULL && window->pass_statistics != NULL)
+        fviz_array_clear(window->pass_statistics);
+}
+
+void fviz_internal_render_window_record_pass_statistics(
+    FVizRenderWindow* window,
+    FVizRenderer* renderer,
+    FVizRenderGraphPassId graph_pass_id,
+    FVizSize execution_index,
+    FVizRenderPass* pass,
+    const char* name,
+    double cpu_seconds,
+    FVizResult result)
+{
+    FVizRenderPassStatistics statistics;
+    FVizSize name_length;
+    if (window == NULL || window->pass_statistics == NULL || pass == NULL) return;
+    (void)memset(&statistics, 0, sizeof(statistics));
+    statistics.struct_size = (uint32_t)sizeof(statistics);
+    statistics.renderer = renderer;
+    statistics.graph_pass_id = graph_pass_id;
+    statistics.execution_index = execution_index;
+    statistics.stage = fviz_render_pass_stage(pass);
+    statistics.cpu_seconds = cpu_seconds >= 0.0 ? cpu_seconds : 0.0;
+    statistics.result = result;
+    if (name == NULL) name = "pass";
+    name_length = (FVizSize)strlen(name);
+    if (name_length >= FVIZ_RENDER_PASS_STATISTICS_NAME_CAPACITY)
+        name_length = FVIZ_RENDER_PASS_STATISTICS_NAME_CAPACITY - 1u;
+    (void)memcpy(statistics.name, name, (size_t)name_length);
+    statistics.name[name_length] = '\0';
+    (void)fviz_array_push(window->pass_statistics, &statistics);
+}
+
+
+static void fviz_render_window_pick_event_initialize(
+    FVizPickEventData* event_data,
+    int x,
+    int y,
+    FVizSelectionAssociation association,
+    FVizBool hardware)
+{
+    if (event_data == NULL) return;
+    (void)memset(event_data, 0, sizeof(*event_data));
+    event_data->struct_size = (uint32_t)sizeof(*event_data);
+    event_data->x = x;
+    event_data->y = y;
+    event_data->association = association;
+    event_data->hardware = hardware;
+    event_data->result = FVIZ_OK;
+    event_data->hardware_pick.struct_size = (uint32_t)sizeof(event_data->hardware_pick);
+    event_data->hardware_pick.rendered_primitive_id = SIZE_MAX;
+    event_data->hardware_pick.original_cell_id = FVIZ_INVALID_ID;
+    event_data->hardware_pick.original_face_id = FVIZ_INVALID_ID;
+    event_data->hardware_pick.association = association;
+}
+
+static FVizBool fviz_render_window_pick_event_begin(
+    FVizRenderWindow* window, FVizPickEventData* event_data)
+{
+    if (fviz_object_invoke_event(
+            (FVizObject*)window, FVIZ_EVENT_START_PICK, event_data) != FVIZ_FALSE)
+    {
+        event_data->result = FVIZ_ERROR_BUSY;
+        (void)fviz_object_invoke_event(
+            (FVizObject*)window, FVIZ_EVENT_END_PICK, event_data);
+        fviz_internal_set_error(FVIZ_ERROR_BUSY, "pick was aborted by a StartPickEvent observer");
+        return FVIZ_TRUE;
+    }
+    return FVIZ_FALSE;
+}
+
+static void fviz_render_window_pick_event_end(
+    FVizRenderWindow* window, FVizPickEventData* event_data)
+{
+    if (event_data->result == FVIZ_OK)
+        (void)fviz_object_invoke_event((FVizObject*)window, FVIZ_EVENT_PICK, event_data);
+    (void)fviz_object_invoke_event((FVizObject*)window, FVIZ_EVENT_END_PICK, event_data);
 }
 
 FVizResult fviz_render_window_hardware_pick(
@@ -330,37 +874,82 @@ FVizResult fviz_render_window_hardware_pick(
     int y,
     FVizHardwarePick* out_pick)
 {
-    FVizRenderer* renderer;
-    FVizSize actor_index;
-    FVizSize primitive_id;
-    FVizActor* actor;
+    return fviz_render_window_hardware_pick_association(
+        window, x, y, FVIZ_SELECTION_CELL, out_pick);
+}
+
+FVizResult fviz_render_window_hardware_pick_association(
+    FVizRenderWindow* window,
+    int x,
+    int y,
+    FVizSelectionAssociation association,
+    FVizHardwarePick* out_pick)
+{
+    FVizRenderer* renderer = NULL;
+    FVizSize actor_index = 0u;
+    FVizSize primitive_id = 0u;
+    FVizActor* actor = NULL;
     const FVizPolyData* poly_data;
-    FVizResult result;
+    FVizResult result = FVIZ_OK;
+    FVizPickEventData event_data;
     if (window == NULL || out_pick == NULL || x < 0 || y < 0 ||
-        x >= window->width || y >= window->height)
+        x >= window->width || y >= window->height ||
+        association < FVIZ_SELECTION_ACTOR || association > FVIZ_SELECTION_GLYPH_INSTANCE)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     (void)memset(out_pick, 0, sizeof(*out_pick));
     out_pick->struct_size = (uint32_t)sizeof(*out_pick);
-    out_pick->rendered_primitive_id = (FVizSize)-1;
-    out_pick->original_cell_id = (FVizId)-1;
-    out_pick->original_face_id = (FVizId)-1;
+    out_pick->rendered_primitive_id = SIZE_MAX;
+    out_pick->original_cell_id = FVIZ_INVALID_ID;
+    out_pick->original_face_id = FVIZ_INVALID_ID;
+    out_pick->association = association;
+    fviz_render_window_pick_event_initialize(&event_data, x, y, association, FVIZ_TRUE);
+    if (fviz_render_window_pick_event_begin(window, &event_data) != FVIZ_FALSE)
+        return FVIZ_ERROR_BUSY;
     renderer = fviz_render_window_find_renderer(window, x, y);
-    if (renderer == NULL) return FVIZ_ERROR_NOT_FOUND;
-    if (fviz_renderer_update(renderer) != FVIZ_OK) return fviz_last_error_code();
+    if (renderer == NULL)
+    {
+        result = FVIZ_ERROR_NOT_FOUND;
+        goto done;
+    }
+    result = fviz_renderer_update(renderer);
+    if (result != FVIZ_OK) goto done;
     result = fviz_internal_render_window_hardware_pick_platform(
-        window, renderer, x, y, &actor_index, &primitive_id, &out_pick->depth);
-    if (result != FVIZ_OK) return result;
+        window, renderer, x, y, association, &actor_index, &primitive_id, &out_pick->depth);
+    if (result != FVIZ_OK) goto done;
     actor = fviz_scene_actor(fviz_renderer_scene(renderer), actor_index);
-    if (actor == NULL) return FVIZ_ERROR_NOT_FOUND;
+    if (actor == NULL || fviz_actor_pickable(actor) == FVIZ_FALSE)
+    {
+        result = FVIZ_ERROR_NOT_FOUND;
+        goto done;
+    }
     poly_data = fviz_actor_const_poly_data(actor);
     out_pick->renderer = renderer;
     out_pick->actor = actor;
     out_pick->rendered_primitive_id = primitive_id;
-    out_pick->original_cell_id = fviz_render_window_provenance_id(
-        poly_data, "FVizOriginalCellIds", primitive_id, (FVizId)primitive_id);
-    out_pick->original_face_id = fviz_render_window_provenance_id(
-        poly_data, "FVizOriginalFaceIds", primitive_id, (FVizId)-1);
-    return FVIZ_OK;
+    if (association == FVIZ_SELECTION_CELL)
+    {
+        if (poly_data != NULL)
+        {
+            const FVizAttributeSet* cell_data = fviz_poly_data_const_cell_data(poly_data);
+            (void)fviz_provenance_resolve(
+                cell_data, FVIZ_PROVENANCE_CELL, primitive_id,
+                (FVizId)primitive_id, &out_pick->original_cell_id, NULL);
+            (void)fviz_provenance_resolve(
+                cell_data, FVIZ_PROVENANCE_FACE, primitive_id,
+                FVIZ_INVALID_ID, &out_pick->original_face_id, NULL);
+        }
+    }
+
+done:
+    event_data.result = result;
+    event_data.hardware_pick = *out_pick;
+    fviz_render_window_pick_event_end(window, &event_data);
+    if (result == FVIZ_OK)
+    {
+        (void)fviz_object_invoke_event((FVizObject*)renderer, FVIZ_EVENT_PICK, &event_data);
+        (void)fviz_object_invoke_event((FVizObject*)actor, FVIZ_EVENT_PICK, &event_data);
+    }
+    return result;
 }
 
 FVizResult fviz_render_window_set_renderer(FVizRenderWindow* window, FVizRenderer* renderer)
@@ -375,7 +964,14 @@ FVizResult fviz_render_window_set_renderer(FVizRenderWindow* window, FVizRendere
     /* Keep the replacement alive when it is already owned by this window. */
     if (fviz_retain(renderer) == NULL) return fviz_last_error_code();
     for (i = 0u; i < fviz_array_count(window->renderers); ++i)
-        fviz_release(*(FVizRenderer**)fviz_array_at(window->renderers, i));
+    {
+        FVizRenderer* existing = *(FVizRenderer**)fviz_array_at(window->renderers, i);
+        FVizObserverTag* tag = (FVizObserverTag*)fviz_array_at(window->renderer_modified_tags, i);
+        if (tag != NULL && *tag != FVIZ_OBSERVER_TAG_INVALID)
+            (void)fviz_object_remove_observer((FVizObject*)existing, *tag);
+        fviz_release(existing);
+    }
+    fviz_array_clear(window->renderer_modified_tags);
     fviz_array_clear(window->renderers);
     window->renderer = NULL;
     result = fviz_render_window_add_renderer(window, renderer);
@@ -401,11 +997,25 @@ FVizResult fviz_render_window_add_renderer(FVizRenderWindow* window, FVizRendere
         if (*(FVizRenderer**)fviz_array_at(window->renderers, i) == renderer)
             return FVIZ_OK;
     }
-    if (fviz_retain(renderer) == NULL) return fviz_last_error_code();
-    if (fviz_array_push(window->renderers, &renderer) != FVIZ_OK)
     {
-        fviz_release(renderer);
-        return fviz_last_error_code();
+        FVizObserverTag tag = FVIZ_OBSERVER_TAG_INVALID;
+        if (fviz_retain(renderer) == NULL) return fviz_last_error_code();
+        if (fviz_object_add_observer(
+                (FVizObject*)renderer, FVIZ_EVENT_MODIFIED, 0.0f,
+                fviz_render_window_renderer_modified, window, &tag) != FVIZ_OK)
+        {
+            fviz_release(renderer);
+            return fviz_last_error_code();
+        }
+        if (fviz_array_push(window->renderers, &renderer) != FVIZ_OK ||
+            fviz_array_push(window->renderer_modified_tags, &tag) != FVIZ_OK)
+        {
+            (void)fviz_object_remove_observer((FVizObject*)renderer, tag);
+            if (fviz_array_count(window->renderers) > fviz_array_count(window->renderer_modified_tags))
+                (void)fviz_array_resize(window->renderers, fviz_array_count(window->renderers) - 1u);
+            fviz_release(renderer);
+            return fviz_last_error_code();
+        }
     }
     if (window->renderer == NULL) window->renderer = renderer;
     fviz_object_modified((FVizObject*)window);
@@ -428,10 +1038,18 @@ FVizResult fviz_render_window_remove_renderer(FVizRenderWindow* window, FVizRend
     {
         if (items[i] == renderer)
         {
+            FVizObserverTag* tags = (FVizObserverTag*)fviz_array_data(window->renderer_modified_tags);
+            if (tags != NULL && tags[i] != FVIZ_OBSERVER_TAG_INVALID)
+                (void)fviz_object_remove_observer((FVizObject*)items[i], tags[i]);
             fviz_release(items[i]);
             if (i + 1u < count)
+            {
                 (void)memmove(&items[i], &items[i + 1u], (size_t)(count - i - 1u) * sizeof(FVizRenderer*));
+                if (tags != NULL)
+                    (void)memmove(&tags[i], &tags[i + 1u], (size_t)(count - i - 1u) * sizeof(FVizObserverTag));
+            }
             (void)fviz_array_resize(window->renderers, count - 1u);
+            (void)fviz_array_resize(window->renderer_modified_tags, count - 1u);
             window->renderer = count > 1u ? *(FVizRenderer**)fviz_array_at(window->renderers, 0u) : NULL;
             fviz_object_modified((FVizObject*)window);
             return FVIZ_OK;
@@ -488,6 +1106,16 @@ void fviz_render_window_get_size(const FVizRenderWindow* window, int* width, int
     if (height != NULL) *height = window->height;
 }
 
+uint32_t fviz_render_window_dpi(const FVizRenderWindow* window)
+{
+    return window != NULL && window->dpi > 0u ? window->dpi : 96u;
+}
+
+float fviz_render_window_content_scale(const FVizRenderWindow* window)
+{
+    return (float)fviz_render_window_dpi(window) / 96.0f;
+}
+
 FVizRenderWindowInteractor* fviz_render_window_interactor(FVizRenderWindow* window)
 {
     return window != NULL ? window->interactor : NULL;
@@ -511,13 +1139,195 @@ FVizResult fviz_render_window_show(FVizRenderWindow* window)
 
 FVizResult fviz_render_window_render(FVizRenderWindow* window)
 {
+    FVizResult result;
     if (window == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     if (window->state == FVIZ_RENDER_WINDOW_FINALIZED) return FVIZ_ERROR_INVALID_STATE;
-    return fviz_internal_render_window_render_platform(window);
+    if (window->render_in_progress != FVIZ_FALSE)
+    {
+        /* A callback may request another frame, but recursive rendering on the
+         * same native GL context is intentionally rejected. */
+        fviz_render_window_request_render_reason(window, FVIZ_RENDER_REQUEST_DIRECT);
+        fviz_internal_set_error(FVIZ_ERROR_BUSY, "render window is already rendering");
+        return FVIZ_ERROR_BUSY;
+    }
+    window->active_render_reasons = window->pending_render_reasons != FVIZ_RENDER_REQUEST_NONE
+        ? window->pending_render_reasons
+        : FVIZ_RENDER_REQUEST_DIRECT;
+    window->pending_render_reasons = FVIZ_RENDER_REQUEST_NONE;
+    window->render_requested = FVIZ_FALSE;
+    window->render_in_progress = FVIZ_TRUE;
+    (void)fviz_object_invoke_event((FVizObject*)window, FVIZ_EVENT_RENDER_START, NULL);
+    result = fviz_internal_render_window_render_platform(window);
+    (void)fviz_object_invoke_event((FVizObject*)window, FVIZ_EVENT_RENDER_END, &result);
+    window->render_in_progress = FVIZ_FALSE;
+    window->frame_scheduler_statistics.last_frame_reasons = window->active_render_reasons;
+    window->frame_scheduler_statistics.last_frame_quality =
+        fviz_render_window_frame_quality(window);
+    if (window->frame_scheduler_statistics.rendered_frame_count != UINT64_MAX)
+        ++window->frame_scheduler_statistics.rendered_frame_count;
+    window->last_statistics.request_reasons = window->active_render_reasons;
+    window->last_statistics.frame_quality =
+        window->frame_scheduler_statistics.last_frame_quality;
+    if (window->render_requested != FVIZ_FALSE)
+        fviz_internal_render_window_schedule_render_platform(window);
+    return result;
+}
+
+void fviz_render_window_request_render(FVizRenderWindow* window)
+{
+    fviz_render_window_request_render_reason(window, FVIZ_RENDER_REQUEST_EXTERNAL);
+}
+
+void fviz_render_window_request_render_reason(
+    FVizRenderWindow* window,
+    FVizRenderRequestReasons reasons)
+{
+    if (window == NULL || window->state == FVIZ_RENDER_WINDOW_FINALIZED) return;
+    if (reasons == FVIZ_RENDER_REQUEST_NONE) reasons = FVIZ_RENDER_REQUEST_EXTERNAL;
+    window->pending_render_reasons |= reasons;
+    if (window->frame_scheduler_statistics.request_count != UINT64_MAX)
+        ++window->frame_scheduler_statistics.request_count;
+    if (window->render_requested != FVIZ_FALSE)
+    {
+        if (window->frame_scheduler_statistics.coalesced_request_count != UINT64_MAX)
+            ++window->frame_scheduler_statistics.coalesced_request_count;
+        window->frame_scheduler_statistics.pending_reasons = window->pending_render_reasons;
+        return;
+    }
+    window->render_requested = FVIZ_TRUE;
+    window->frame_scheduler_statistics.pending_reasons = window->pending_render_reasons;
+    if (window->render_request_serial != UINT64_MAX) ++window->render_request_serial;
+    (void)fviz_object_invoke_event(
+        (FVizObject*)window, FVIZ_EVENT_RENDER_REQUESTED, &window->render_request_serial);
+    fviz_internal_render_window_schedule_render_platform(window);
+}
+
+FVizBool fviz_render_window_render_requested(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->render_requested : FVIZ_FALSE;
+}
+
+uint64_t fviz_render_window_render_request_serial(const FVizRenderWindow* window)
+{
+    return window != NULL ? window->render_request_serial : 0u;
+}
+
+FVizRenderRequestReasons fviz_render_window_pending_render_reasons(
+    const FVizRenderWindow* window)
+{
+    return window != NULL ? window->pending_render_reasons : FVIZ_RENDER_REQUEST_NONE;
+}
+
+FVizFrameQuality fviz_render_window_frame_quality(const FVizRenderWindow* window)
+{
+    return window != NULL &&
+        window->frame_scheduler_options.interactive_quality != FVIZ_FALSE &&
+        window->interaction_active != FVIZ_FALSE
+        ? FVIZ_FRAME_QUALITY_INTERACTIVE
+        : FVIZ_FRAME_QUALITY_STILL;
+}
+
+FVizResult fviz_render_window_set_frame_scheduler_options(
+    FVizRenderWindow* window,
+    const FVizFrameSchedulerOptions* options)
+{
+    if (window == NULL || options == NULL ||
+        (options->struct_size != 0u &&
+         options->struct_size < sizeof(FVizFrameSchedulerOptions)) ||
+        options->interactive_target_fps < 0.0 ||
+        options->still_target_fps < 0.0 ||
+        options->interactive_target_fps > 1000.0 ||
+        options->still_target_fps > 1000.0)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    window->frame_scheduler_options = *options;
+    window->frame_scheduler_options.struct_size =
+        (uint32_t)sizeof(window->frame_scheduler_options);
+    window->frame_scheduler_options.interactive_quality =
+        options->interactive_quality != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_render_window_request_render_reason(window, FVIZ_RENDER_REQUEST_SCENE);
+    return FVIZ_OK;
+}
+
+void fviz_render_window_get_frame_scheduler_options(
+    const FVizRenderWindow* window,
+    FVizFrameSchedulerOptions* out_options)
+{
+    if (out_options == NULL) return;
+    fviz_frame_scheduler_options_initialize(out_options);
+    if (window != NULL) *out_options = window->frame_scheduler_options;
+}
+
+void fviz_render_window_get_frame_scheduler_statistics(
+    const FVizRenderWindow* window,
+    FVizFrameSchedulerStatistics* out_statistics)
+{
+    if (out_statistics == NULL) return;
+    (void)memset(out_statistics, 0, sizeof(*out_statistics));
+    out_statistics->struct_size = (uint32_t)sizeof(*out_statistics);
+    if (window == NULL) return;
+    *out_statistics = window->frame_scheduler_statistics;
+    out_statistics->struct_size = (uint32_t)sizeof(*out_statistics);
+    out_statistics->pending_reasons = window->pending_render_reasons;
+}
+
+void fviz_render_window_reset_frame_scheduler_statistics(FVizRenderWindow* window)
+{
+    if (window == NULL) return;
+    (void)memset(
+        &window->frame_scheduler_statistics,
+        0,
+        sizeof(window->frame_scheduler_statistics));
+    window->frame_scheduler_statistics.struct_size =
+        (uint32_t)sizeof(window->frame_scheduler_statistics);
+    window->frame_scheduler_statistics.pending_reasons = window->pending_render_reasons;
+    window->frame_scheduler_statistics.last_frame_quality =
+        fviz_render_window_frame_quality(window);
+}
+
+FVizResult fviz_render_window_set_gpu_memory_options(
+    FVizRenderWindow* window,
+    const FVizGPUMemoryOptions* options)
+{
+    if (window == NULL || options == NULL ||
+        (options->struct_size != 0u && options->struct_size < sizeof(*options)) ||
+        options->unused_resource_retention_frames > 1000000u)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    window->gpu_memory_options = *options;
+    window->gpu_memory_options.struct_size =
+        (uint32_t)sizeof(window->gpu_memory_options);
+    if (window->gl_device != NULL)
+        fviz_internal_gl_device_set_memory_options(
+            (FVizGLDevice*)window->gl_device, &window->gpu_memory_options);
+    fviz_render_window_request_render_reason(window, FVIZ_RENDER_REQUEST_SCENE);
+    return FVIZ_OK;
+}
+
+void fviz_render_window_get_gpu_memory_options(
+    const FVizRenderWindow* window,
+    FVizGPUMemoryOptions* out_options)
+{
+    if (out_options == NULL) return;
+    fviz_gpu_memory_options_initialize(out_options);
+    if (window != NULL) *out_options = window->gpu_memory_options;
+}
+
+FVizResult fviz_render_window_release_gpu_mesh_resources(FVizRenderWindow* window)
+{
+    if (window == NULL || window->state == FVIZ_RENDER_WINDOW_FINALIZED)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    return fviz_internal_render_window_release_gpu_mesh_resources_platform(window);
+}
+
+FVizResult fviz_render_window_render_if_requested(FVizRenderWindow* window)
+{
+    if (window == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    return window->render_requested != FVIZ_FALSE
+        ? fviz_render_window_render(window)
+        : FVIZ_OK;
 }
 
 FVizResult fviz_render_window_run(FVizRenderWindow* window)
@@ -529,6 +1339,12 @@ FVizResult fviz_render_window_run(FVizRenderWindow* window)
     }
     if (window->state == FVIZ_RENDER_WINDOW_FINALIZED || window->offscreen != FVIZ_FALSE)
         return FVIZ_ERROR_INVALID_STATE;
+    if (window->host_native_handle != NULL || window->external_opengl != FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "embedded/external render windows use the host application's event loop");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
     return fviz_internal_render_window_run_platform(window);
 }
 
@@ -545,9 +1361,10 @@ FVizResult fviz_render_window_process_events(FVizRenderWindow* window)
 
 void fviz_render_window_request_close(FVizRenderWindow* window)
 {
-    if (window != NULL)
+    if (window != NULL && window->close_requested == FVIZ_FALSE)
     {
         window->close_requested = FVIZ_TRUE;
+        (void)fviz_object_invoke_event((FVizObject*)window, FVIZ_EVENT_WINDOW_CLOSE, NULL);
         fviz_internal_render_window_request_close_platform(window);
     }
 }
@@ -555,6 +1372,16 @@ void fviz_render_window_request_close(FVizRenderWindow* window)
 void* fviz_render_window_native_handle(FVizRenderWindow* window)
 {
     return window != NULL ? window->native_window : NULL;
+}
+
+void* fviz_render_window_host_native_handle(FVizRenderWindow* window)
+{
+    return window != NULL ? window->host_native_handle : NULL;
+}
+
+FVizBool fviz_render_window_is_attached(const FVizRenderWindow* window)
+{
+    return window != NULL && window->host_native_handle != NULL ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
 FVizBool fviz_render_window_supported(void)
@@ -608,9 +1435,10 @@ FVizResult fviz_render_window_pick(
     FVizRayHit* out_hit)
 {
     FVizCamera* camera;
-    FVizRenderer* renderer;
+    FVizRenderer* renderer = NULL;
     FVizRay ray;
-    FVizResult result;
+    FVizResult result = FVIZ_OK;
+    FVizPickEventData event_data;
     float minimum_x;
     float minimum_y;
     float maximum_x;
@@ -621,27 +1449,35 @@ FVizResult fviz_render_window_pick(
     int viewport_height;
     if (window == NULL || out_hit == NULL)
     {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window, renderer and out_hit must not be NULL");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "window and out_hit must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    (void)memset(out_hit, 0, sizeof(*out_hit));
+    fviz_render_window_pick_event_initialize(
+        &event_data, x, y, FVIZ_SELECTION_CELL, FVIZ_FALSE);
+    if (fviz_render_window_pick_event_begin(window, &event_data) != FVIZ_FALSE)
+        return FVIZ_ERROR_BUSY;
     renderer = fviz_render_window_find_renderer(window, x, y);
     if (renderer == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "no interactive renderer contains the pick position");
-        return FVIZ_ERROR_NOT_FOUND;
+        result = FVIZ_ERROR_NOT_FOUND;
+        goto done;
     }
     result = fviz_render_window_ensure_pick_bvh(window, renderer);
-    if (result != FVIZ_OK) return result;
+    if (result != FVIZ_OK) goto done;
     if (window->pick_bvh == NULL || fviz_bvh_valid(window->pick_bvh) == FVIZ_FALSE)
     {
         fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "no pickable geometry in the scene");
-        return FVIZ_ERROR_NOT_FOUND;
+        result = FVIZ_ERROR_NOT_FOUND;
+        goto done;
     }
     camera = fviz_renderer_camera(renderer);
     if (camera == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "renderer has no camera");
-        return FVIZ_ERROR_INVALID_STATE;
+        result = FVIZ_ERROR_INVALID_STATE;
+        goto done;
     }
     fviz_renderer_get_viewport(
         renderer, &minimum_x, &minimum_y, &maximum_x, &maximum_y);
@@ -656,9 +1492,17 @@ FVizResult fviz_render_window_pick(
     if (fviz_bvh_ray_cast(window->pick_bvh, ray, out_hit) == FVIZ_FALSE)
     {
         fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "pick ray did not intersect the scene");
-        return FVIZ_ERROR_NOT_FOUND;
+        result = FVIZ_ERROR_NOT_FOUND;
+        goto done;
     }
-    return FVIZ_OK;
+
+done:
+    event_data.result = result;
+    if (result == FVIZ_OK) event_data.ray_hit = *out_hit;
+    fviz_render_window_pick_event_end(window, &event_data);
+    if (result == FVIZ_OK && renderer != NULL)
+        (void)fviz_object_invoke_event((FVizObject*)renderer, FVIZ_EVENT_PICK, &event_data);
+    return result;
 }
 
 void fviz_render_window_set_pick_callback(
@@ -713,6 +1557,55 @@ static FVizBool fviz_render_window_project_point(
     return FVIZ_TRUE;
 }
 
+FVizResult fviz_render_window_select_polygon(
+    FVizRenderWindow* window,
+    const int* xy_points,
+    FVizSize point_count,
+    FVizSelectionAssociation association,
+    FVizSelection** out_selection)
+{
+    FVizRenderer* renderer;
+    int anchor_x;
+    int anchor_y;
+    if (window == NULL || xy_points == NULL || point_count < 3u || out_selection == NULL ||
+        association < FVIZ_SELECTION_ACTOR || association > FVIZ_SELECTION_GLYPH_INSTANCE)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    *out_selection = NULL;
+    anchor_x = xy_points[0];
+    anchor_y = xy_points[1];
+    if (anchor_x < 0 || anchor_y < 0 || anchor_x >= window->width || anchor_y >= window->height)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    renderer = fviz_render_window_find_renderer(window, anchor_x, anchor_y);
+    if (renderer == NULL) return FVIZ_ERROR_NOT_FOUND;
+    return fviz_selection_select_polygon(
+        renderer, window->width, window->height, xy_points, point_count, association, out_selection);
+}
+
+FVizResult fviz_render_window_select_rectangle_association(
+    FVizRenderWindow* window,
+    int start_x,
+    int start_y,
+    int end_x,
+    int end_y,
+    FVizSelectionAssociation association,
+    FVizSelection** out_selection)
+{
+    const int minimum_x = start_x < end_x ? start_x : end_x;
+    const int minimum_y = start_y < end_y ? start_y : end_y;
+    const int maximum_x = start_x > end_x ? start_x : end_x;
+    const int maximum_y = start_y > end_y ? start_y : end_y;
+    const int polygon[8] = {
+        minimum_x, minimum_y,
+        maximum_x, minimum_y,
+        maximum_x, maximum_y,
+        minimum_x, maximum_y
+    };
+    if (window == NULL || out_selection == NULL || minimum_x < 0 || minimum_y < 0 ||
+        maximum_x >= window->width || maximum_y >= window->height)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    return fviz_render_window_select_polygon(window, polygon, 4u, association, out_selection);
+}
+
 FVizResult fviz_render_window_select_rectangle(
     FVizRenderWindow* window,
     int start_x,
@@ -721,69 +1614,8 @@ FVizResult fviz_render_window_select_rectangle(
     int end_y,
     FVizSelection** out_selection)
 {
-    FVizSelection* selection = NULL;
-    FVizRenderer* renderer;
-    FVizScene* scene;
-    FVizSize actor_index;
-    const int minimum_x = start_x < end_x ? start_x : end_x;
-    const int minimum_y = start_y < end_y ? start_y : end_y;
-    const int maximum_x = start_x > end_x ? start_x : end_x;
-    const int maximum_y = start_y > end_y ? start_y : end_y;
-    if (window == NULL || out_selection == NULL || minimum_x < 0 || minimum_y < 0 ||
-        maximum_x >= window->width || maximum_y >= window->height)
-    {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "selection rectangle is outside the render window");
-        return FVIZ_ERROR_INVALID_ARGUMENT;
-    }
-    *out_selection = NULL;
-    renderer = fviz_render_window_find_renderer(
-        window, (minimum_x + maximum_x) / 2, (minimum_y + maximum_y) / 2);
-    if (renderer == NULL)
-    {
-        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "selection rectangle has no interactive renderer");
-        return FVIZ_ERROR_NOT_FOUND;
-    }
-    if (fviz_renderer_update(renderer) != FVIZ_OK) return fviz_last_error_code();
-    if (fviz_selection_create(&selection) != FVIZ_OK) return fviz_last_error_code();
-    scene = fviz_renderer_scene(renderer);
-    for (actor_index = 0u; scene != NULL && actor_index < fviz_scene_actor_count(scene); ++actor_index)
-    {
-        FVizActor* actor = fviz_scene_actor(scene, actor_index);
-        const FVizPolyData* poly_data;
-        const FVizVec3* points;
-        const uint32_t* indices;
-        FVizSize triangle_index;
-        if (actor == NULL || fviz_actor_is_visible(actor) == FVIZ_FALSE) continue;
-        poly_data = fviz_actor_const_poly_data(actor);
-        if (poly_data == NULL) continue;
-        points = fviz_poly_data_points(poly_data);
-        indices = fviz_poly_data_triangle_indices(poly_data);
-        for (triangle_index = 0u;
-             triangle_index < fviz_poly_data_triangle_count(poly_data);
-             ++triangle_index)
-        {
-            const uint32_t a = indices[triangle_index * 3u + 0u];
-            const uint32_t b = indices[triangle_index * 3u + 1u];
-            const uint32_t c = indices[triangle_index * 3u + 2u];
-            FVizVec3 centroid = fviz_vec3_scale(
-                fviz_vec3_add(fviz_vec3_add(points[a], points[b]), points[c]), 1.0f / 3.0f);
-            int x;
-            int y;
-            if (fviz_render_window_project_point(
-                    renderer, actor, centroid, window->width, window->height, &x, &y) == FVIZ_TRUE &&
-                x >= minimum_x && x <= maximum_x && y >= minimum_y && y <= maximum_y)
-            {
-                if (fviz_selection_add(
-                        selection, actor, FVIZ_SELECTION_CELL, triangle_index) != FVIZ_OK)
-                {
-                    fviz_release(selection);
-                    return fviz_last_error_code();
-                }
-            }
-        }
-    }
-    *out_selection = selection;
-    return FVIZ_OK;
+    return fviz_render_window_select_rectangle_association(
+        window, start_x, start_y, end_x, end_y, FVIZ_SELECTION_CELL, out_selection);
 }
 
 FVizResult fviz_render_window_select_at(
@@ -800,26 +1632,47 @@ FVizResult fviz_render_window_select_at(
     FVizSize rendered_id = 0u;
     FVizSelection* selection = NULL;
     FVizResult result;
+    FVizBool refine_point_or_edge = FVIZ_FALSE;
     if (window == NULL || out_selection == NULL || x < 0 || y < 0 ||
         x >= window->width || y >= window->height ||
-        association < FVIZ_SELECTION_ACTOR || association > FVIZ_SELECTION_CELL)
+        association < FVIZ_SELECTION_ACTOR || association > FVIZ_SELECTION_GLYPH_INSTANCE)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_selection = NULL;
     renderer = fviz_render_window_find_renderer(window, x, y);
     if (renderer == NULL) return FVIZ_ERROR_NOT_FOUND;
-    result = fviz_render_window_hardware_pick(window, x, y, &hardware_pick);
+    result = fviz_render_window_hardware_pick_association(
+        window, x, y, association, &hardware_pick);
     if (result == FVIZ_OK)
     {
         actor = hardware_pick.actor;
         rendered_id = hardware_pick.rendered_primitive_id;
     }
-    else if (result == FVIZ_ERROR_NOT_SUPPORTED)
+    else if ((association == FVIZ_SELECTION_POINT || association == FVIZ_SELECTION_EDGE) &&
+             result == FVIZ_ERROR_NOT_FOUND)
+    {
+        /* Preserve a generous engineering-pick fallback when the integer point/edge
+           raster missed the exact cursor pixel: use the visible cell ID and refine
+           against that triangle in screen space below. */
+        result = fviz_render_window_hardware_pick_association(
+            window, x, y, FVIZ_SELECTION_CELL, &hardware_pick);
+        if (result == FVIZ_OK)
+        {
+            actor = hardware_pick.actor;
+            rendered_id = hardware_pick.rendered_primitive_id;
+            refine_point_or_edge = FVIZ_TRUE;
+        }
+        else if (result != FVIZ_ERROR_NOT_SUPPORTED)
+            return result;
+    }
+    if (actor == NULL && result == FVIZ_ERROR_NOT_SUPPORTED)
     {
         FVizScene* scene;
         FVizSize i;
         if (fviz_render_window_pick(window, x, y, &cpu_hit) != FVIZ_OK)
             return fviz_last_error_code();
         rendered_id = cpu_hit.triangle_index;
+        refine_point_or_edge = association == FVIZ_SELECTION_POINT || association == FVIZ_SELECTION_EDGE
+            ? FVIZ_TRUE : FVIZ_FALSE;
         scene = fviz_renderer_scene(renderer);
         for (i = 0u; scene != NULL && i < fviz_scene_actor_count(scene); ++i)
             if (fviz_actor_const_poly_data(fviz_scene_actor(scene, i)) == window->pick_poly_data)
@@ -828,10 +1681,10 @@ FVizResult fviz_render_window_select_at(
                 break;
             }
     }
-    else
+    else if (actor == NULL && result != FVIZ_OK)
         return result;
     if (actor == NULL) return FVIZ_ERROR_NOT_FOUND;
-    if (association == FVIZ_SELECTION_POINT)
+    if (association == FVIZ_SELECTION_POINT && refine_point_or_edge != FVIZ_FALSE)
     {
         const FVizPolyData* data = fviz_actor_const_poly_data(actor);
         const uint32_t* triangle;
@@ -862,6 +1715,52 @@ FVizResult fviz_render_window_select_at(
         }
         if (best_point == SIZE_MAX) return FVIZ_ERROR_NOT_FOUND;
         rendered_id = best_point;
+    }
+    else if (association == FVIZ_SELECTION_EDGE && refine_point_or_edge != FVIZ_FALSE)
+    {
+        const FVizPolyData* data = fviz_actor_const_poly_data(actor);
+        const uint32_t* triangle;
+        const FVizVec3* points;
+        FVizSize edge;
+        FVizSize best_edge = SIZE_MAX;
+        double best_distance2 = 1.0e300;
+        if (data == NULL || rendered_id >= fviz_poly_data_triangle_count(data))
+            return FVIZ_ERROR_NOT_FOUND;
+        triangle = fviz_poly_data_triangle_indices(data) + rendered_id * 3u;
+        points = fviz_poly_data_points(data);
+        for (edge = 0u; edge < 3u; ++edge)
+        {
+            const uint32_t ia = triangle[edge];
+            const uint32_t ib = triangle[(edge + 1u) % 3u];
+            int ax, ay, bx, by;
+            if (fviz_render_window_project_point(renderer, actor, points[ia],
+                    window->width, window->height, &ax, &ay) != FVIZ_FALSE &&
+                fviz_render_window_project_point(renderer, actor, points[ib],
+                    window->width, window->height, &bx, &by) != FVIZ_FALSE)
+            {
+                const double vx = (double)bx - (double)ax;
+                const double vy = (double)by - (double)ay;
+                const double wx = (double)x - (double)ax;
+                const double wy = (double)y - (double)ay;
+                const double vv = vx * vx + vy * vy;
+                double t = vv > 0.0 ? (wx * vx + wy * vy) / vv : 0.0;
+                double dx;
+                double dy;
+                double d2;
+                if (t < 0.0) t = 0.0;
+                if (t > 1.0) t = 1.0;
+                dx = (double)x - ((double)ax + t * vx);
+                dy = (double)y - ((double)ay + t * vy);
+                d2 = dx * dx + dy * dy;
+                if (d2 < best_distance2)
+                {
+                    best_distance2 = d2;
+                    best_edge = rendered_id * 3u + edge;
+                }
+            }
+        }
+        if (best_edge == SIZE_MAX) return FVIZ_ERROR_NOT_FOUND;
+        rendered_id = best_edge;
     }
     else if (association == FVIZ_SELECTION_ACTOR)
         rendered_id = 0u;

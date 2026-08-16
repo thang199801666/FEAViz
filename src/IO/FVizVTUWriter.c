@@ -3,9 +3,17 @@
 #include <string.h>
 
 #include <FViz/Core/FVizError.h>
+#include <FViz/Data/FVizGhost.h>
 #include <FViz/IO/FVizVTUWriter.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
+
+static uint64_t fviz_vtu_connectivity_value(const FVizCellArray* cells, FVizSize index)
+{
+    if (fviz_cell_array_id_storage(cells) == FVIZ_ID_STORAGE_UINT64)
+        return fviz_cell_array_connectivity64(cells)[index];
+    return (uint64_t)fviz_cell_array_connectivity(cells)[index];
+}
 
 static const char* fviz_vtu_writer_type_name(FVizDataType type)
 {
@@ -65,6 +73,72 @@ static void fviz_vtu_write_ascii_scalar(FILE* file, const void* tuple, FVizDataT
     }
 }
 
+static FVizBool fviz_vtu_is_native_ghost_array(
+    const char* name,
+    const FVizDataArray* array)
+{
+    return name != NULL && array != NULL && strcmp(name, FVIZ_GHOST_ARRAY_NAME) == 0 &&
+        fviz_data_array_type(array) == FVIZ_DATA_UINT8 &&
+        fviz_data_array_components(array) == 1u
+        ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+static FVizBool fviz_vtu_has_native_ghost_array(const FVizAttributeSet* attributes)
+{
+    const FVizDataArray* array = attributes != NULL
+        ? fviz_attribute_set_const_get(attributes, FVIZ_GHOST_ARRAY_NAME) : NULL;
+    return fviz_vtu_is_native_ghost_array(FVIZ_GHOST_ARRAY_NAME, array);
+}
+
+static uint8_t fviz_vtu_export_ghost_value(uint8_t value, FVizBool cell_association)
+{
+    uint8_t vtk_value = 0u;
+    if ((value & (uint8_t)FVIZ_GHOST_DUPLICATE) != 0u) vtk_value |= UINT8_C(1);
+    if ((value & (uint8_t)FVIZ_GHOST_HIDDEN) != 0u)
+        vtk_value |= cell_association != FVIZ_FALSE ? UINT8_C(32) : UINT8_C(2);
+    return vtk_value;
+}
+
+static FVizBool fviz_vtu_should_skip_export_attribute(
+    const FVizAttributeSet* attributes,
+    const char* name)
+{
+    return name != NULL && strcmp(name, FVIZ_VTK_GHOST_ARRAY_NAME) == 0 &&
+        fviz_vtu_has_native_ghost_array(attributes) != FVIZ_FALSE
+        ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+static const char* fviz_vtu_export_attribute_name(
+    const char* name,
+    const FVizDataArray* array,
+    FVizBool associated_data)
+{
+    return associated_data != FVIZ_FALSE &&
+        fviz_vtu_is_native_ghost_array(name, array) != FVIZ_FALSE
+        ? FVIZ_VTK_GHOST_ARRAY_NAME : name;
+}
+
+static FVizBool fviz_vtu_write_ascii_ghost_array(
+    FILE* file,
+    const char* indentation,
+    const FVizDataArray* array,
+    FVizBool cell_association)
+{
+    const uint8_t* values = (const uint8_t*)fviz_data_array_const_data(array);
+    FVizSize tuple_index;
+    if (fprintf(file,
+            "%s<DataArray type=\"UInt8\" Name=\"%s\" NumberOfComponents=\"1\" format=\"ascii\">\n%s  ",
+            indentation, FVIZ_VTK_GHOST_ARRAY_NAME, indentation) < 0)
+        return FVIZ_FALSE;
+    for (tuple_index = 0u; tuple_index < fviz_data_array_tuple_count(array); ++tuple_index)
+    {
+        if (fprintf(file, "%u ", (unsigned)fviz_vtu_export_ghost_value(
+                values[tuple_index], cell_association)) < 0)
+            return FVIZ_FALSE;
+    }
+    return fprintf(file, "\n%s</DataArray>\n", indentation) >= 0 ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
 static FVizBool fviz_vtu_write_ascii_array(
     FILE* file,
     const char* indentation,
@@ -122,15 +196,23 @@ static FVizBool fviz_vtu_write_attributes(
     static const char* role_attributes[FVIZ_ATTRIBUTE_ROLE_COUNT] = {
         "Scalars", "Vectors", "Normals", "Tensors", "GlobalIds"};
     FVizSize i;
+    const FVizBool cell_association = strcmp(section_name, "CellData") == 0 ? FVIZ_TRUE : FVIZ_FALSE;
+    const FVizBool associated_data =
+        (cell_association != FVIZ_FALSE || strcmp(section_name, "PointData") == 0)
+        ? FVIZ_TRUE : FVIZ_FALSE;
     if (fprintf(file, "      <%s", section_name) < 0) return FVIZ_FALSE;
     for (i = 0u; i < FVIZ_ATTRIBUTE_ROLE_COUNT; ++i)
     {
         const char* active_name = fviz_attribute_set_active_name(
             attributes, (FVizAttributeRole)i);
-        if (active_name != NULL)
+        const FVizDataArray* active_array = active_name != NULL
+            ? fviz_attribute_set_const_get(attributes, active_name) : NULL;
+        const char* exported_active = active_name != NULL
+            ? fviz_vtu_export_attribute_name(active_name, active_array, associated_data) : NULL;
+        if (exported_active != NULL)
         {
             if (fprintf(file, " %s=\"", role_attributes[i]) < 0 ||
-                fviz_vtu_write_xml_escaped(file, active_name) == FVIZ_FALSE ||
+                fviz_vtu_write_xml_escaped(file, exported_active) == FVIZ_FALSE ||
                 fputc('"', file) == EOF)
                 return FVIZ_FALSE;
         }
@@ -140,9 +222,20 @@ static FVizBool fviz_vtu_write_attributes(
     {
         const FVizDataArray* array = fviz_attribute_set_const_array_at(attributes, i);
         const char* name = fviz_attribute_set_name_at(attributes, i);
+        const FVizBool native_ghost = associated_data != FVIZ_FALSE &&
+            fviz_vtu_is_native_ghost_array(name, array) != FVIZ_FALSE;
+        const char* export_name;
+        if (fviz_vtu_should_skip_export_attribute(attributes, name) != FVIZ_FALSE) continue;
+        export_name = fviz_vtu_export_attribute_name(name, array, associated_data);
         if (options->output_mode == FVIZ_VTU_OUTPUT_ASCII)
         {
-            if (fviz_vtu_write_ascii_array(file, "        ", name, array) == FVIZ_FALSE)
+            if (native_ghost != FVIZ_FALSE)
+            {
+                if (fviz_vtu_write_ascii_ghost_array(
+                        file, "        ", array, cell_association) == FVIZ_FALSE)
+                    return FVIZ_FALSE;
+            }
+            else if (fviz_vtu_write_ascii_array(file, "        ", export_name, array) == FVIZ_FALSE)
                 return FVIZ_FALSE;
         }
         else
@@ -150,7 +243,7 @@ static FVizBool fviz_vtu_write_attributes(
             uint64_t bytes = (uint64_t)fviz_data_array_tuple_count(array) *
                 (uint64_t)fviz_data_array_tuple_stride(array);
             if (fviz_vtu_write_appended_tag(file, "        ",
-                    fviz_vtu_writer_type_name(fviz_data_array_type(array)), name,
+                    fviz_vtu_writer_type_name(fviz_data_array_type(array)), export_name,
                     fviz_data_array_components(array), offset, bytes,
                     options->header_width) == FVIZ_FALSE)
                 return FVIZ_FALSE;
@@ -186,16 +279,37 @@ static FVizBool fviz_vtu_write_raw_block(
 
 static FVizBool fviz_vtu_write_appended_attributes(
     FILE* file,
+    const char* section_name,
     const FVizAttributeSet* attributes,
     FVizVTUHeaderWidth width)
 {
+    const FVizBool cell_association = strcmp(section_name, "CellData") == 0 ? FVIZ_TRUE : FVIZ_FALSE;
+    const FVizBool associated_data =
+        (cell_association != FVIZ_FALSE || strcmp(section_name, "PointData") == 0)
+        ? FVIZ_TRUE : FVIZ_FALSE;
     FVizSize i;
     for (i = 0u; i < fviz_attribute_set_count(attributes); ++i)
     {
         const FVizDataArray* array = fviz_attribute_set_const_array_at(attributes, i);
+        const char* name = fviz_attribute_set_name_at(attributes, i);
+        const FVizBool native_ghost = associated_data != FVIZ_FALSE &&
+            fviz_vtu_is_native_ghost_array(name, array) != FVIZ_FALSE;
         const uint64_t bytes = (uint64_t)fviz_data_array_tuple_count(array) *
             (uint64_t)fviz_data_array_tuple_stride(array);
-        if (fviz_vtu_write_raw_block(file, width, fviz_data_array_const_data(array), bytes) == FVIZ_FALSE)
+        if (fviz_vtu_should_skip_export_attribute(attributes, name) != FVIZ_FALSE) continue;
+        if (native_ghost != FVIZ_FALSE)
+        {
+            const uint8_t* values = (const uint8_t*)fviz_data_array_const_data(array);
+            FVizSize tuple_index;
+            if (fviz_vtu_write_header_value(file, width, bytes) == FVIZ_FALSE) return FVIZ_FALSE;
+            for (tuple_index = 0u; tuple_index < fviz_data_array_tuple_count(array); ++tuple_index)
+            {
+                const uint8_t value = fviz_vtu_export_ghost_value(values[tuple_index], cell_association);
+                if (fwrite(&value, sizeof(value), 1u, file) != 1u) return FVIZ_FALSE;
+            }
+        }
+        else if (fviz_vtu_write_raw_block(
+                     file, width, fviz_data_array_const_data(array), bytes) == FVIZ_FALSE)
             return FVIZ_FALSE;
     }
     return FVIZ_TRUE;
@@ -299,7 +413,7 @@ FVizResult fviz_vtu_write(
         uint64_t running = 0u;
         if (fputs("        <DataArray type=\"UInt64\" Name=\"connectivity\" format=\"ascii\">\n          ", file) == EOF) ok = FVIZ_FALSE;
         for (i = 0u; ok != FVIZ_FALSE && i < connectivity_count; ++i)
-            if (fprintf(file, "%" PRIu32 " ", fviz_cell_array_connectivity(cells)[i]) < 0) ok = FVIZ_FALSE;
+            if (fprintf(file, "%" PRIu64 " ", fviz_vtu_connectivity_value(cells, i)) < 0) ok = FVIZ_FALSE;
         if (ok != FVIZ_FALSE && fputs("\n        </DataArray>\n        <DataArray type=\"UInt64\" Name=\"offsets\" format=\"ascii\">\n          ", file) == EOF) ok = FVIZ_FALSE;
         for (i = 0u; ok != FVIZ_FALSE && i < cell_count; ++i)
         {
@@ -317,11 +431,11 @@ FVizResult fviz_vtu_write(
     {
         uint64_t running = 0u;
         if (fputs("  <AppendedData encoding=\"raw\">_", file) == EOF) ok = FVIZ_FALSE;
-        if (ok != FVIZ_FALSE) ok = fviz_vtu_write_appended_attributes(file,
+        if (ok != FVIZ_FALSE) ok = fviz_vtu_write_appended_attributes(file, "PointData",
             fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), options->header_width);
-        if (ok != FVIZ_FALSE) ok = fviz_vtu_write_appended_attributes(file,
+        if (ok != FVIZ_FALSE) ok = fviz_vtu_write_appended_attributes(file, "CellData",
             fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)grid), options->header_width);
-        if (ok != FVIZ_FALSE) ok = fviz_vtu_write_appended_attributes(file,
+        if (ok != FVIZ_FALSE) ok = fviz_vtu_write_appended_attributes(file, "FieldData",
             fviz_unstructured_grid_field_data((FVizUnstructuredGrid*)grid), options->header_width);
         if (ok != FVIZ_FALSE) ok = fviz_vtu_write_raw_block(file, options->header_width,
             points, (uint64_t)point_count * 3u * sizeof(float));
@@ -329,7 +443,7 @@ FVizResult fviz_vtu_write(
                 (uint64_t)connectivity_count * sizeof(uint64_t)) == FVIZ_FALSE) ok = FVIZ_FALSE;
         for (i = 0u; ok != FVIZ_FALSE && i < connectivity_count; ++i)
         {
-            const uint64_t id = fviz_cell_array_connectivity(cells)[i];
+            const uint64_t id = fviz_vtu_connectivity_value(cells, i);
             if (fwrite(&id, sizeof(id), 1u, file) != 1u) ok = FVIZ_FALSE;
         }
         if (ok != FVIZ_FALSE && fviz_vtu_write_header_value(file, options->header_width,

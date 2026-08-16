@@ -12,6 +12,9 @@ struct FVizDataSet
     FVizAttributeSet* point_data;
     FVizAttributeSet* cell_data;
     FVizAttributeSet* field_data;
+    FVizObserverTag point_data_modified_tag;
+    FVizObserverTag cell_data_modified_tag;
+    FVizObserverTag field_data_modified_tag;
 };
 
 #endif /* FVIZ_INTERNAL_DATA_DATA_SET_PRIVATE_H */

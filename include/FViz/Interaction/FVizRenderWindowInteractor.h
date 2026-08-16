@@ -48,6 +48,7 @@ FVIZ_API FVizRenderer* fviz_render_window_interactor_captured_renderer(
     FVizRenderWindowInteractor* interactor);
 FVIZ_API void fviz_render_window_interactor_grab_focus(FVizRenderWindowInteractor* interactor);
 FVIZ_API void fviz_render_window_interactor_release_focus(FVizRenderWindowInteractor* interactor);
+FVIZ_API void fviz_render_window_interactor_cancel_interaction(FVizRenderWindowInteractor* interactor);
 FVIZ_API FVizBool fviz_render_window_interactor_has_focus(
     const FVizRenderWindowInteractor* interactor);
 FVIZ_API FVizResult fviz_render_window_interactor_create_timer(
@@ -93,6 +94,8 @@ FVIZ_API FVizBool fviz_render_window_interactor_process_event(
     const FVizInteractionEvent* event);
 FVIZ_API FVizResult fviz_render_window_interactor_start(FVizRenderWindowInteractor* interactor);
 FVIZ_API FVizResult fviz_render_window_interactor_render(FVizRenderWindowInteractor* interactor);
+FVIZ_API FVizResult fviz_render_window_interactor_request_render(
+    FVizRenderWindowInteractor* interactor);
 
 FVIZ_EXTERN_C_END
 

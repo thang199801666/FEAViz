@@ -3,6 +3,15 @@
 
 #define CHECK(expr) do { if (!(expr)) return __LINE__; } while (0)
 
+static FVizBool count_modified(
+    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+{
+    int* count = (int*)client_data;
+    (void)caller; (void)event_id; (void)call_data;
+    ++(*count);
+    return FVIZ_FALSE;
+}
+
 int main(void)
 {
     FVizPolyData* data = NULL;
@@ -11,9 +20,16 @@ int main(void)
     const FVizVec3* normals;
     float scalar = 1.0f;
     FVizMTime poly_mtime;
+    FVizMTime geometry_mtime;
+    FVizMTime topology_mtime;
+    FVizMTime attribute_mtime;
     FVizPolyData* shallow = NULL;
     FVizPolyData* deep = NULL;
     FVizPolyData* structure = NULL;
+    FVizDataArray* attribute_only = NULL;
+    FVizObserverTag modified_tag = FVIZ_OBSERVER_TAG_INVALID;
+    FVizDirtyRange dirty_range;
+    int modified_count = 0;
     CHECK(fviz_poly_data_create(&data) == FVIZ_OK);
     CHECK(fviz_poly_data_add_point(data, fviz_vec3(0,0,0), &a) == FVIZ_OK);
     CHECK(fviz_poly_data_add_point(data, fviz_vec3(1,0,0), &b) == FVIZ_OK);
@@ -35,6 +51,31 @@ int main(void)
     CHECK(fviz_data_array_set_tuple(scalars, 1u, &scalar) == FVIZ_OK);
     CHECK(fviz_object_mtime((const FVizObject*)data) > poly_mtime);
     CHECK(fviz_attribute_set_add(fviz_poly_data_point_data(data), "result", scalars) == FVIZ_OK);
+    CHECK(fviz_data_array_create(FVIZ_DATA_FLOAT32, 1u, &attribute_only) == FVIZ_OK);
+    CHECK(fviz_data_array_resize(attribute_only, 3u) == FVIZ_OK);
+    CHECK(fviz_attribute_set_add(fviz_poly_data_point_data(data), "attribute_only", attribute_only) == FVIZ_OK);
+    CHECK(fviz_object_add_observer(
+        (FVizObject*)data, FVIZ_EVENT_MODIFIED, 0.0f, count_modified, &modified_count, &modified_tag) == FVIZ_OK);
+    modified_count = 0;
+    geometry_mtime = fviz_poly_data_geometry_mtime(data);
+    topology_mtime = fviz_poly_data_topology_mtime(data);
+    attribute_mtime = fviz_poly_data_attribute_mtime(data);
+    scalar = 3.0f;
+    CHECK(fviz_data_array_set_tuple(attribute_only, 2u, &scalar) == FVIZ_OK);
+    CHECK(modified_count == 1);
+    CHECK(fviz_poly_data_geometry_mtime(data) == geometry_mtime);
+    CHECK(fviz_poly_data_topology_mtime(data) == topology_mtime);
+    CHECK(fviz_poly_data_attribute_mtime(data) > attribute_mtime);
+    attribute_mtime = fviz_poly_data_attribute_mtime(data);
+    CHECK(fviz_poly_data_set_point(data, 0u, fviz_vec3(0.0f, 0.0f, 0.0f)) == FVIZ_OK);
+    CHECK(fviz_poly_data_geometry_mtime(data) == geometry_mtime);
+    CHECK(fviz_poly_data_attribute_mtime(data) == attribute_mtime);
+    CHECK(fviz_poly_data_set_point(data, 0u, fviz_vec3(0.0f, 0.0f, 0.25f)) == FVIZ_OK);
+    CHECK(fviz_poly_data_geometry_mtime(data) > geometry_mtime);
+    CHECK(fviz_poly_data_geometry_dirty_range_since(data, geometry_mtime, &dirty_range) == FVIZ_OK);
+    CHECK(dirty_range.full == FVIZ_FALSE && dirty_range.first == 0u && dirty_range.count == 1u);
+    CHECK(fviz_poly_data_topology_mtime(data) == topology_mtime);
+    CHECK(fviz_poly_data_attribute_mtime(data) == attribute_mtime);
     CHECK(fviz_poly_data_shallow_copy(data, &shallow) == FVIZ_OK);
     CHECK(fviz_poly_data_deep_copy(data, &deep) == FVIZ_OK);
     CHECK(fviz_poly_data_copy_structure(data, &structure) == FVIZ_OK);
@@ -53,6 +94,8 @@ int main(void)
         fviz_attribute_set_const_get(fviz_poly_data_const_point_data(shallow), "result"), 0u) == 7.0f);
     CHECK(*(const float*)fviz_data_array_const_tuple(
         fviz_attribute_set_const_get(fviz_poly_data_const_point_data(deep), "result"), 0u) != 7.0f);
+    CHECK(fviz_object_remove_observer((FVizObject*)data, modified_tag) == FVIZ_OK);
+    fviz_release(attribute_only);
     fviz_release(structure);
     fviz_release(deep);
     fviz_release(shallow);

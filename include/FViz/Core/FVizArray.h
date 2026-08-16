@@ -23,7 +23,10 @@ FVIZ_API const void* fviz_array_const_at(const FVizArray* array, FVizSize index)
 FVIZ_API FVizResult fviz_array_reserve(FVizArray* array, FVizSize capacity);
 FVIZ_API FVizResult fviz_array_resize(FVizArray* array, FVizSize count);
 FVIZ_API FVizResult fviz_array_push(FVizArray* array, const void* value);
+/* Bulk append grows geometrically and updates MTime once for the whole range. */
+FVIZ_API FVizResult fviz_array_append(FVizArray* array, const void* values, FVizSize count);
 FVIZ_API FVizResult fviz_array_push_uninitialized(FVizArray* array, void** out_slot);
+FVIZ_API FVizResult fviz_array_append_uninitialized(FVizArray* array, FVizSize count, void** out_first_slot);
 FVIZ_API void fviz_array_clear(FVizArray* array);
 
 FVIZ_EXTERN_C_END

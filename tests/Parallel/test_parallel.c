@@ -63,6 +63,15 @@ int main(void)
     fviz_parallel_set_thread_limit(4u);
     CHECK(fviz_parallel_for(0u, count, 4096u, nested_range, &nested) == FVIZ_OK);
     for (i = 0u; i < count; ++i) CHECK(values[i] == 1u);
+    {
+        uint64_t scan_values[8] = {1u,0u,1u,1u,0u,0u,1u,1u};
+        uint64_t total = 0u;
+        CHECK(fviz_parallel_exclusive_scan_u64(
+            fviz_parallel_default_context(), scan_values, scan_values, 8u, 0u, &total) == FVIZ_OK);
+        CHECK(total == 5u);
+        CHECK(scan_values[0] == 0u && scan_values[1] == 1u && scan_values[2] == 1u);
+        CHECK(scan_values[3] == 2u && scan_values[4] == 3u && scan_values[7] == 4u);
+    }
     CHECK(fviz_parallel_for(10u, 10u, 1u, fill_range, &context) == FVIZ_OK);
     CHECK(fviz_parallel_for(10u, 9u, 1u, fill_range, &context) == FVIZ_ERROR_INVALID_ARGUMENT);
     CHECK(fviz_parallel_for(0u, 1u, 1u, NULL, &context) == FVIZ_ERROR_INVALID_ARGUMENT);

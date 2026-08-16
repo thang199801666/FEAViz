@@ -19,10 +19,11 @@ static const FVizObjectClass g_fviz_renderer_widget_class = {
     NULL
 };
 
-FVizResult fviz_renderer_widget_create(
+FVizResult fviz_renderer_widget_create_with_options(
     int width,
     int height,
     const char* title,
+    const FVizRenderWindowOptions* options,
     FVizRendererWidget** out_widget)
 {
     FVizRendererWidget* widget;
@@ -35,13 +36,106 @@ FVizResult fviz_renderer_widget_create(
     widget = (FVizRendererWidget*)fviz_internal_object_allocate(
         sizeof(FVizRendererWidget), &g_fviz_renderer_widget_class, NULL);
     if (widget == NULL) return fviz_last_error_code();
-    if (fviz_render_window_create(width, height, title, &widget->window) != FVIZ_OK)
+    if (fviz_render_window_create_with_options(
+            width, height, title, options, &widget->window) != FVIZ_OK)
     {
         fviz_release(widget);
         return fviz_last_error_code();
     }
     *out_widget = widget;
     return FVIZ_OK;
+}
+
+FVizResult fviz_renderer_widget_create(
+    int width,
+    int height,
+    const char* title,
+    FVizRendererWidget** out_widget)
+{
+    FVizRenderWindowOptions options;
+    fviz_render_window_options_initialize(&options);
+    return fviz_renderer_widget_create_with_options(
+        width, height, title, &options, out_widget);
+}
+
+FVizResult fviz_renderer_widget_create_attached_with_options(
+    void* host_native_handle,
+    int width,
+    int height,
+    const FVizRenderWindowOptions* options,
+    FVizRendererWidget** out_widget)
+{
+    FVizRendererWidget* widget;
+    if (out_widget == NULL || host_native_handle == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "attached renderer widget requires a host native handle and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_widget = NULL;
+    widget = (FVizRendererWidget*)fviz_internal_object_allocate(
+        sizeof(FVizRendererWidget), &g_fviz_renderer_widget_class, NULL);
+    if (widget == NULL) return fviz_last_error_code();
+    if (fviz_render_window_create_attached_with_options(
+            host_native_handle, width, height, options, &widget->window) != FVIZ_OK)
+    {
+        fviz_release(widget);
+        return fviz_last_error_code();
+    }
+    *out_widget = widget;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_renderer_widget_create_attached(
+    void* host_native_handle,
+    int width,
+    int height,
+    FVizRendererWidget** out_widget)
+{
+    FVizRenderWindowOptions options;
+    fviz_render_window_options_initialize(&options);
+    return fviz_renderer_widget_create_attached_with_options(
+        host_native_handle, width, height, &options, out_widget);
+}
+
+FVizResult fviz_renderer_widget_create_external_opengl_with_options(
+    int width,
+    int height,
+    const FVizExternalOpenGLSurface* surface,
+    const FVizRenderWindowOptions* options,
+    FVizRendererWidget** out_widget)
+{
+    FVizRendererWidget* widget;
+    if (out_widget == NULL || surface == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "external renderer widget requires a surface contract and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_widget = NULL;
+    widget = (FVizRendererWidget*)fviz_internal_object_allocate(
+        sizeof(FVizRendererWidget), &g_fviz_renderer_widget_class, NULL);
+    if (widget == NULL) return fviz_last_error_code();
+    if (fviz_render_window_create_external_opengl_with_options(
+            width, height, surface, options, &widget->window) != FVIZ_OK)
+    {
+        fviz_release(widget);
+        return fviz_last_error_code();
+    }
+    *out_widget = widget;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_renderer_widget_create_external_opengl(
+    int width,
+    int height,
+    const FVizExternalOpenGLSurface* surface,
+    FVizRendererWidget** out_widget)
+{
+    FVizRenderWindowOptions options;
+    fviz_render_window_options_initialize(&options);
+    return fviz_renderer_widget_create_external_opengl_with_options(
+        width, height, surface, &options, out_widget);
 }
 
 FVizRenderWindow* fviz_renderer_widget_window(FVizRendererWidget* widget)
@@ -137,6 +231,66 @@ FVizResult fviz_renderer_widget_render(FVizRendererWidget* widget)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     return fviz_render_window_render(widget->window);
+}
+
+FVizResult fviz_renderer_widget_resize(FVizRendererWidget* widget, int width, int height)
+{
+    if (widget == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "widget must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    return fviz_render_window_resize(widget->window, width, height);
+}
+
+FVizResult fviz_renderer_widget_sync_host_size(FVizRendererWidget* widget)
+{
+    if (widget == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "widget must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    return fviz_render_window_sync_host_size(widget->window);
+}
+
+FVizResult fviz_renderer_widget_reparent(FVizRendererWidget* widget, void* host_native_handle)
+{
+    if (widget == NULL || host_native_handle == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "widget and host_native_handle must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    return fviz_render_window_reparent(widget->window, host_native_handle);
+}
+
+void* fviz_renderer_widget_native_handle(FVizRendererWidget* widget)
+{
+    return widget != NULL ? fviz_render_window_native_handle(widget->window) : NULL;
+}
+
+void* fviz_renderer_widget_host_native_handle(FVizRendererWidget* widget)
+{
+    return widget != NULL ? fviz_render_window_host_native_handle(widget->window) : NULL;
+}
+
+FVizBool fviz_renderer_widget_is_attached(const FVizRendererWidget* widget)
+{
+    return widget != NULL ? fviz_render_window_is_attached(widget->window) : FVIZ_FALSE;
+}
+
+FVizBool fviz_renderer_widget_is_external_opengl(const FVizRendererWidget* widget)
+{
+    return widget != NULL ? fviz_render_window_is_external_opengl(widget->window) : FVIZ_FALSE;
+}
+
+FVizResult fviz_renderer_widget_sync_external_surface_size(FVizRendererWidget* widget)
+{
+    if (widget == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "widget must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    return fviz_render_window_sync_external_surface_size(widget->window);
 }
 
 FVizResult fviz_renderer_widget_process_events(FVizRendererWidget* widget)

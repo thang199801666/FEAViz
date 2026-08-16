@@ -2,6 +2,7 @@
 #define FVIZ_INTERNAL_PIPELINE_EXECUTIVE_PRIVATE_H
 
 #include <FViz/Core/FVizObjectPrivate.h>
+#include <FViz/Core/FVizArena.h>
 #include <FViz/Pipeline/FVizExecutive.h>
 
 struct FVizExecutive
@@ -13,6 +14,7 @@ struct FVizExecutive
     uint64_t execution_count;
     uint64_t cache_hit_count;
     uint64_t last_transaction_id;
+    FVizArena* scratch_arena;
 };
 
 FVizResult fviz_internal_executive_create(

@@ -44,6 +44,10 @@ int main(void)
     FVizSize i;
 
     CHECK(fviz_renderer_create(&renderer) == FVIZ_OK);
+    CHECK(fviz_renderer_compile_render_graph(renderer) == FVIZ_OK);
+    CHECK(fviz_renderer_render_graph(renderer) != NULL);
+    CHECK(fviz_render_graph_execution_count(
+        fviz_renderer_render_graph(renderer)) == 6u);
     CHECK(fviz_renderer_pass_count(renderer) == 6u);
     for (i = 0u; i < fviz_renderer_pass_count(renderer); ++i)
     {
@@ -58,6 +62,9 @@ int main(void)
         destroy_pass_state, &custom) == FVIZ_OK);
     CHECK(fviz_renderer_add_pass(renderer, custom) == FVIZ_OK);
     CHECK(fviz_renderer_pass_count(renderer) == 7u);
+    CHECK(fviz_renderer_compile_render_graph(renderer) == FVIZ_OK);
+    CHECK(fviz_render_graph_execution_count(
+        fviz_renderer_render_graph(renderer)) == 7u);
     (void)memset(&context, 0, sizeof(context));
     context.struct_size = (uint32_t)sizeof(context);
     context.viewport_width = 400;
@@ -81,6 +88,9 @@ int main(void)
     CHECK(fviz_renderer_display_to_world_ray(renderer, 200.0f, 300.0f, 800, 600, &ray) == FVIZ_ERROR_NOT_FOUND);
 
     CHECK(fviz_renderer_remove_pass(renderer, custom) == FVIZ_OK);
+    CHECK(fviz_renderer_compile_render_graph(renderer) == FVIZ_OK);
+    CHECK(fviz_render_graph_execution_count(
+        fviz_renderer_render_graph(renderer)) == 6u);
     CHECK(state.destructions == 0u);
     fviz_release(custom);
     CHECK(state.destructions == 1u);
@@ -95,6 +105,8 @@ int main(void)
         FVizActor* front_actor = NULL;
         FVizDataArray* original_cell_ids = NULL;
         FVizHardwarePick pick;
+        FVizRenderStatistics render_statistics;
+        FVizRenderPassStatistics pass_statistics;
         uint64_t original_cell_id = 42u;
         uint32_t a;
         uint32_t b;
@@ -135,6 +147,17 @@ int main(void)
         fviz_renderer_fit_camera(fviz_render_window_renderer(window), 1.2f);
         CHECK(fviz_render_window_resize(window, 96, 64) == FVIZ_OK);
         CHECK(fviz_render_window_render(window) == FVIZ_OK);
+        fviz_render_window_get_statistics(window, &render_statistics);
+        CHECK(render_statistics.render_graph_compile_generation > 0u);
+        CHECK(render_statistics.render_graph_pass_count == 6u);
+        CHECK(fviz_render_window_pass_statistics_count(window) == 6u);
+        CHECK(fviz_render_window_get_pass_statistics(
+            window, 0u, &pass_statistics) == FVIZ_OK);
+        CHECK(pass_statistics.graph_pass_id != FVIZ_RENDER_GRAPH_PASS_ID_INVALID);
+        CHECK(pass_statistics.stage == FVIZ_RENDER_PASS_CLEAR);
+        CHECK(pass_statistics.cpu_seconds >= 0.0);
+        CHECK(pass_statistics.result == FVIZ_OK);
+        CHECK(strcmp(pass_statistics.name, "clear") == 0);
         pixels = (uint8_t*)fviz_alloc(pixel_count * 4u);
         depth = (float*)fviz_alloc(pixel_count * sizeof(*depth));
         CHECK(pixels != NULL && depth != NULL);

@@ -11,6 +11,7 @@
 #include <FViz/Data/FVizDataArray.h>
 #include <FViz/Math/FVizBounds.h>
 #include <FViz/Math/FVizVec3.h>
+#include <FViz/Mesh/FVizCellArray.h>
 
 FVIZ_EXTERN_C_BEGIN
 
@@ -31,17 +32,65 @@ FVIZ_API FVizSize fviz_poly_data_memory_size(const FVizPolyData* poly_data);
 FVIZ_API void fviz_poly_data_clear(FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_poly_data_reserve(FVizPolyData* poly_data, FVizSize point_capacity, FVizSize triangle_capacity);
 FVIZ_API FVizResult fviz_poly_data_add_point(FVizPolyData* poly_data, FVizVec3 point, uint32_t* out_index);
+FVIZ_API FVizResult fviz_poly_data_add_points(
+    FVizPolyData* poly_data, const FVizVec3* points, FVizSize point_count, uint32_t* out_first_index);
+FVIZ_API FVizResult fviz_poly_data_add_points_ids(
+    FVizPolyData* poly_data, const FVizVec3* points, FVizSize point_count, FVizId* out_first_id);
+/* Replaces coordinates in bulk. Existing topology requires an unchanged point count. */
+FVIZ_API FVizResult fviz_poly_data_set_points(
+    FVizPolyData* poly_data, const FVizVec3* points, FVizSize point_count);
+FVIZ_API FVizResult fviz_poly_data_set_points_range(
+    FVizPolyData* poly_data, FVizSize first, const FVizVec3* points, FVizSize point_count);
+FVIZ_API FVizResult fviz_poly_data_set_point(FVizPolyData* poly_data, FVizSize index, FVizVec3 point);
+FVIZ_API FVizResult fviz_poly_data_get_point(const FVizPolyData* poly_data, FVizSize index, FVizVec3* out_point);
 FVIZ_API FVizResult fviz_poly_data_add_triangle(FVizPolyData* poly_data, uint32_t a, uint32_t b, uint32_t c);
+FVIZ_API FVizResult fviz_poly_data_add_triangles(
+    FVizPolyData* poly_data, const uint32_t* triangle_indices, FVizSize triangle_count);
 FVIZ_API FVizResult fviz_poly_data_add_line(FVizPolyData* poly_data, uint32_t a, uint32_t b);
+FVIZ_API FVizResult fviz_poly_data_add_lines(
+    FVizPolyData* poly_data, const uint32_t* line_indices, FVizSize line_count);
+FVIZ_API FVizResult fviz_poly_data_add_vertex(FVizPolyData* poly_data, uint32_t point_id);
+FVIZ_API FVizResult fviz_poly_data_add_poly_vertex(
+    FVizPolyData* poly_data, FVizSize point_count, const uint32_t* point_ids);
+FVIZ_API FVizResult fviz_poly_data_add_poly_line(
+    FVizPolyData* poly_data, FVizSize point_count, const uint32_t* point_ids);
+FVIZ_API FVizResult fviz_poly_data_add_polygon(
+    FVizPolyData* poly_data, FVizSize point_count, const uint32_t* point_ids);
+FVIZ_API FVizResult fviz_poly_data_add_quad(
+    FVizPolyData* poly_data, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
+FVIZ_API FVizResult fviz_poly_data_add_triangle_strip(
+    FVizPolyData* poly_data, FVizSize point_count, const uint32_t* point_ids);
+/* Native logical-cell path. LINE/TRIANGLE cells also populate the legacy render-ready
+ * index cache when all IDs fit in uint32_t; wider IDs remain valid logical topology. */
+FVIZ_API FVizResult fviz_poly_data_add_cell_ids(
+    FVizPolyData* poly_data, FVizCellType type, FVizSize point_count, const FVizId* point_ids);
 FVIZ_API FVizSize fviz_poly_data_point_count(const FVizPolyData* poly_data);
 FVIZ_API FVizSize fviz_poly_data_triangle_count(const FVizPolyData* poly_data);
 FVIZ_API FVizSize fviz_poly_data_line_count(const FVizPolyData* poly_data);
+/* VTK-style logical cell counts. Legacy triangle_count/line_count remain render-ready primitive counts. */
+FVIZ_API FVizSize fviz_poly_data_vert_cell_count(const FVizPolyData* poly_data);
+FVIZ_API FVizSize fviz_poly_data_line_cell_count(const FVizPolyData* poly_data);
+FVIZ_API FVizSize fviz_poly_data_poly_cell_count(const FVizPolyData* poly_data);
+FVIZ_API FVizSize fviz_poly_data_strip_cell_count(const FVizPolyData* poly_data);
+FVIZ_API FVizSize fviz_poly_data_cell_count(const FVizPolyData* poly_data);
+FVIZ_API const FVizCellArray* fviz_poly_data_verts(const FVizPolyData* poly_data);
+FVIZ_API const FVizCellArray* fviz_poly_data_lines(const FVizPolyData* poly_data);
+FVIZ_API const FVizCellArray* fviz_poly_data_polys(const FVizPolyData* poly_data);
+FVIZ_API const FVizCellArray* fviz_poly_data_strips(const FVizPolyData* poly_data);
 FVIZ_API const FVizVec3* fviz_poly_data_points(const FVizPolyData* poly_data);
 FVIZ_API const FVizVec3* fviz_poly_data_normals(const FVizPolyData* poly_data);
 FVIZ_API const uint32_t* fviz_poly_data_triangle_indices(const FVizPolyData* poly_data);
 FVIZ_API const uint32_t* fviz_poly_data_line_indices(const FVizPolyData* poly_data);
 FVIZ_API FVizBool fviz_poly_data_has_normals(const FVizPolyData* poly_data);
 FVIZ_API FVizBounds fviz_poly_data_bounds(const FVizPolyData* poly_data);
+/* Fine-grained revisions for render/spatial caches.  Geometry tracks points and
+ * normals, topology tracks connectivity, and attributes track scalar/field data.
+ * The aggregate FVizObject MTime remains the authoritative all-content revision. */
+FVIZ_API FVizMTime fviz_poly_data_geometry_mtime(const FVizPolyData* poly_data);
+FVIZ_API FVizResult fviz_poly_data_geometry_dirty_range_since(
+    const FVizPolyData* poly_data, FVizMTime since_mtime, FVizDirtyRange* out_range);
+FVIZ_API FVizMTime fviz_poly_data_topology_mtime(const FVizPolyData* poly_data);
+FVIZ_API FVizMTime fviz_poly_data_attribute_mtime(const FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_poly_data_validate(const FVizPolyData* poly_data);
 FVIZ_API FVizResult fviz_poly_data_set_scalars(FVizPolyData* poly_data, FVizDataArray* scalars);

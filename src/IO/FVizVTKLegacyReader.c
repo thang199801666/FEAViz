@@ -6,7 +6,7 @@
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
 #include <FViz/Data/FVizDataType.h>
-#include <FViz/FEA/FVizUnstructuredGrid.h>
+#include <FViz/Data/FVizUnstructuredGrid.h>
 #include <FViz/IO/FVizVTKLegacyReader.h>
 
 #include <FViz/Core/FVizErrorInternal.h>

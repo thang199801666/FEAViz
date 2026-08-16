@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "updatePolicy": "manual-review-only",
+  "cases": [
+    {
+      "name": "deterministic-colored-triangle",
+      "backend": "OpenGL",
+      "requiredFeatures": ["modern-pipeline", "rgba8-readback"],
+      "comparison": { "mode": "exact" },
+      "fixture": "test_visual_regression.c"
+    }
+  ]
+}

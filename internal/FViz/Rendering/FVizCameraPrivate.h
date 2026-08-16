@@ -13,6 +13,8 @@ struct FVizCamera
     float fov_degrees;
     float near_plane;
     float far_plane;
+    float parallel_scale;
+    FVizCameraProjectionMode projection_mode;
 };
 
 #endif /* FVIZ_INTERNAL_RENDERING_CAMERA_PRIVATE_H */

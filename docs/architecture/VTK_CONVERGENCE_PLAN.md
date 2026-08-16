@@ -1,10 +1,15 @@
 # FEAViz VTK convergence plan
 
-Status: proposed implementation baseline
+> **Historical/reference document:** from FEAViz 0.40 onward the active roadmap is `FEAVIZ_MODULAR_MASTER_PLAN_0_40_TO_1_0.md`. VTK format/class parity is not a release target; this file is retained only for architectural comparison and regression context.
 
-Baseline: FEAViz 0.9.0
 
-Last updated: 2026-08-12
+Status: historical comparison baseline
+
+Baseline: FEAViz 0.21.0
+
+> The active forward plan from FEAViz 0.38 to 1.0 is `VTK_PARITY_MASTER_PLAN_0_38_TO_1_0.md`. This document is retained as the historical convergence record.
+
+Last updated: 2026-08-13
 
 ## 1. Objective
 
@@ -149,12 +154,97 @@ threads, and file-compression implementation details remain private.
 | Object runtime | Refcount, type hierarchy, error state, MTime | Contract audit, weak references, thread-safety matrix |
 | Pipeline | Typed indexed ports and output proxies | Real requests, custom algorithms, graph transaction, output-specific cache |
 | Executive | Request-state labels and update statistics | Actual per-stage dispatch, information propagation, pieces/extents/time |
-| Data | PolyData and UnstructuredGrid | Copy contracts, associations, provenance, general topology, 64-bit IDs |
+| Data | Generalized PolyData (`Verts/Lines/Polys/Strips`) and UnstructuredGrid | 64-bit-native PolyData IDs, reusable cell traits, structured datasets |
 | Parallel | Persistent global `parallel_for` pool | Context, task groups, cancellation, TLS scratch, deterministic algorithms |
 | Rendering | OpenGL scene, viewport, layers, scalar legend | Pass graph, transparency, offscreen FBO, clipping, hardware selection |
 | Interaction | Trackball camera, observers, rubber band | Timers, focus/capture, actor style, highlight, widgets, persistent selection |
 | IO | OBJ/STL/VTU/legacy readers | Writers, compression, round-trip, streaming and fuzz coverage |
 | Delivery | Local MSVC tests and install consumers | CI matrix, sanitizers, visual/performance regression, ABI documentation |
+
+### 5.1 0.19 geometry and performance convergence update
+
+The common mesh-processing layer now includes connected Clip, Smooth, Decimate,
+and Probe algorithms in addition to the 0.18 generalized PolyData filters. Clip
+interpolates point attributes and preserves provenance; Smooth reuses CSR
+adjacency with parallel iterations; Probe uses a cached AABB cell hierarchy.
+Mesh construction and common fan-out paths use geometric growth and bulk writes.
+The triangle BVH uses true centroid median splits and distance-pruned traversal.
+Remaining high-value gaps are native 64-bit PolyData connectivity, `FVizImageData`,
+VTP/PVD interchange, higher-quality smoothing/decimation, and broader resampling.
+
+### 5.2 0.20 renderer, interaction, and antialiasing convergence update
+
+The Windows rendering path now requests multisampled pixel formats, exposes the
+actual sample count, and can resolve the frame through a tunable FXAA post-pass.
+Adaptive quality keeps MSAA during drag while allowing the post-pass to be
+skipped until the final still frame. Camera state supports perspective and
+parallel projection, materials and up to four lights are renderer-controlled,
+and high-frequency camera/actor/clipping changes remain uniform-only rather than
+invalidating resident geometry buffers. Interaction has explicit manipulation
+states, DPI/content-scale metadata, pixel-derived pan math, multi-viewport
+routing, capture-loss cancellation, and desired-update-rate frame pacing.
+Remaining renderer gaps with the highest VTK value are depth peeling/OIT, richer
+line/point primitives, scalable text/annotation rendering, and native Windows
+visual-regression coverage for MSAA/FXAA combinations.
+
+### 5.3 0.21 render-target and transparency convergence update
+
+0.21 introduces backend-neutral render-target descriptors, sRGB-aware WGL/FXAA
+handling, and a real weighted-blended OIT backend. The OIT path seeds its depth
+attachment from the opaque scene, renders translucent geometry into separate
+accumulation and revealage passes using MSAA-matched renderbuffers, resolves
+those buffers, then composites over opaque color. Unsupported OIT requests fall
+back to sorted alpha and report the applied mode. The first 0.22 rendering work
+is also present: modern edge rendering no longer depends on driver line-width
+limits and instead expands logical edges into pixel-width screen-space quads with
+analytical coverage AA. 0.22 completes segment cap/dash control, direct general-PolyData
+Line/PolyLine expansion, point square/circle/sphere-impostor rendering, and a true
+GPU-instanced `FVizGlyphMapper` with a reusable `FVizArrowSource`. Glyph instances
+can also be generated from active/named point vectors with magnitude scaling/color.
+Source-line, triangle-edge, point, source-geometry, and dynamic instance buffers are
+kept as separate cache concerns so visual toggles and vector animation avoid full
+mesh re-upload. 0.23 adds adjacency buffers with miter-limit and endpoint-aware
+round-join refinement while retaining ordinary line buffers for fallback.
+
+### 5.4 0.23 text and annotation convergence update
+
+0.23 adds backend-neutral font-atlas, font, text-property, 2D text actor, billboard
+text actor, and batched 3D label-set contracts. A dependency-free built-in coverage
+atlas keeps core deployments self-contained, while custom Unicode coverage atlases
+allow FreeType, DirectWrite, or other rasterizers to feed FEAViz without becoming
+required core dependencies. Modern OpenGL keeps one atlas texture plus persistent
+dynamic text buffers, reuses CPU staging storage, and can submit a shared-style 3D
+label set as one draw. Render-window content scale is applied to logical text sizes,
+pixel offsets, and scalar-legend layout while normalized viewport anchors remain
+resolution-independent. Scalar legends now share the text stack for title, units,
+format-controlled numeric ticks, and label/title properties.
+
+The next renderer/interaction dependency is not more ad-hoc widgets: 0.24 should
+introduce reusable widget representation/manipulator/state-machine contracts, after
+which Selection 2.0 can move picking to integer ID render targets and large-scene
+interaction can add hover throttling, culling, and LOD.
+
+### 5.5 0.24 widget-framework convergence update
+
+0.24 introduces a reusable `FVizWidget` / `FVizWidgetRepresentation` /
+`FVizWidgetManipulator` split. Widgets consume interactor observers at higher
+priority than camera styles, representations retain renderer props with a
+separate local-visibility mask, and manipulators constrain display-space drags
+to view planes, explicit planes, or world axes. The first concrete family is
+Handle, Plane, Box, Line, Distance, Angle, SectionCut, and Probe. Stable mapper
+clipping-plane IDs let SectionCut own one plane per target actor without
+clearing unrelated clipping state.
+
+The remaining interaction dependency shifts to Selection 2.0: integer ID
+attachments, point/cell/edge/glyph IDs, region/lasso selection, and throttled
+hover should become the shared picking substrate for richer widget handles.
+
+### 5.6 0.25 selection/large-scene convergence update
+
+0.25 replaces color-packed picking with a dedicated integer selection target and makes Actor, Point, Cell, Edge, and GlyphInstance first-class associations. Point/edge raster picking is depth-qualified by an opaque surface prepass; headless rectangle/lasso/frustum selection shares the same association contracts. `FVizSelectionModel` centralizes Replace/Add/Subtract/Toggle and throttled hover behavior so applications no longer need to merge ad-hoc selection lists.
+
+Large-scene rendering now rejects props before GPU resource creation using cached actor world bounds and cached camera frustum planes. Optional projected-size culling handles sub-pixel props, while world-frustum engineering selection deliberately remains independent of render LOD. Optional asynchronous GPU timer queries extend the existing CPU/draw/upload statistics without forcing synchronization. Full alternate-mesh LOD and occlusion-driven submission remain later renderer refinements rather than blockers for the 0.26 data-model work.
+
 
 ## 6. Release dependency order
 
@@ -1029,3 +1119,13 @@ executive. Recommended commit-sized sequence:
 
 Do not begin parallel algorithm conversion or hardware selection until the
 0.10 executive definition of done is satisfied.
+
+
+### 5.7 0.26 data-model convergence update
+
+0.26 adds the first structured dataset (`FVizImageData`) with VTK-style extent/origin/spacing/direction semantics and introduces native 32/64-bit connectivity storage through `FVizCellArray`/`FVizCellView`. `FVizPoints`, `FVizPolyData`, `FVizUnstructuredGrid`, VTU IO, PointLocator, Probe, and core FEA transformations now have native-ID paths while ordinary renderable meshes retain compact uint32 fast paths. Shared `FVizCellTypeTraits` centralizes topology and linear interpolation weights, reducing duplicated cell definitions across surface extraction and probing. The next convergence step is time/composite-aware IO and resampling rather than further renderer breadth.
+
+
+### 5.8 0.27 temporal/composite and interoperability update
+
+0.27 adds `FVizPartitionedDataSet` and `FVizTemporalDataSet`, time metadata/requests in the executive, PVD temporal-source semantics, ASCII VTP interchange, structured/unstructured resampling, and a pipeline array calculator for derived engineering results. Equal-time PVD entries become one partitioned dataset, while one-file time steps remain direct datasets. VTP ASCII was checked bidirectionally against VTK 9.6.2; that external gate exposed tag-bounded attribute parsing, FieldData tuple metadata, and nested InformationKey issues that self-roundtrip tests did not catch. Remaining convergence work shifts to stabilization, composite-aware algorithm breadth, streaming requests, and optional compressed XML/VTKHDF rather than adding more renderer surface area.

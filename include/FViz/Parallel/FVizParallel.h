@@ -74,6 +74,9 @@ FVIZ_API FVizResult fviz_task_group_create(
     FVizCancellationToken* cancellation,
     FVizTaskGroup** out_group);
 FVIZ_API void fviz_task_group_destroy(FVizTaskGroup* group);
+/* Queued task ranges are independent work items and may execute concurrently
+ * during wait(). Callers must partition writes or provide their own synchronization
+ * when multiple tasks access the same mutable memory. */
 FVIZ_API FVizResult fviz_task_group_run(
     FVizTaskGroup* group,
     FVizSize begin,
@@ -89,6 +92,7 @@ FVIZ_API FVizResult fviz_parallel_sum_f64(
     FVizSize count,
     double* out_sum,
     FVizCancellationToken* cancellation);
+/* input and output may alias for in-place scans. */
 FVIZ_API FVizResult fviz_parallel_exclusive_scan_u64(
     FVizParallelContext* context,
     const uint64_t* input,

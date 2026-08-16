@@ -5,8 +5,11 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
+#include <FViz/Data/FVizAttributeSet.h>
+#include <FViz/Data/FVizDataArray.h>
 #include <FViz/Data/FVizDataType.h>
-#include <FViz/FEA/FVizUnstructuredGrid.h>
+#include <FViz/Data/FVizGhost.h>
+#include <FViz/Data/FVizUnstructuredGrid.h>
 #include <FViz/IO/FVizVTUReader.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
@@ -38,24 +41,24 @@ static FVizSize fviz_vtu_b64_decode(const char* begin, const char* end, unsigned
 {
     FVizSize out_count = 0u;
     const char* cursor = begin;
-    int buffer = 0;
-    int bits = 0;
+    uint32_t buffer = 0u;
+    uint32_t bits = 0u;
     while (cursor < end)
     {
         char c = *cursor++;
         const char* pos;
-        int value;
+        uint32_t value;
         if (c == '=') break;
         if (isspace((unsigned char)c)) continue;
         pos = strchr(fviz_vtu_b64_chars, c);
         if (pos == NULL) break;
-        value = (int)(pos - fviz_vtu_b64_chars);
-        buffer = (buffer << 6) | value;
-        bits += 6;
+        value = (uint32_t)(pos - fviz_vtu_b64_chars);
+        buffer = (buffer << 6u) | value;
+        bits += 6u;
         if (bits >= 8)
         {
-            bits -= 8;
-            if (out_count < max_out) out[out_count++] = (unsigned char)((buffer >> bits) & 0xFF);
+            bits -= 8u;
+            if (out_count < max_out) out[out_count++] = (unsigned char)((buffer >> bits) & UINT32_C(0xFF));
         }
     }
     return out_count;
@@ -77,6 +80,14 @@ static FVizCellType fviz_vtu_cell_type(int type)
         case 12: return FVIZ_CELL_HEXAHEDRON;
         case 13: return FVIZ_CELL_WEDGE;
         case 14: return FVIZ_CELL_PYRAMID;
+        case 21: return FVIZ_CELL_QUADRATIC_EDGE;
+        case 22: return FVIZ_CELL_QUADRATIC_TRIANGLE;
+        case 23: return FVIZ_CELL_QUADRATIC_QUAD;
+        case 24: return FVIZ_CELL_QUADRATIC_TETRA;
+        case 25: return FVIZ_CELL_QUADRATIC_HEXAHEDRON;
+        case 26: return FVIZ_CELL_QUADRATIC_WEDGE;
+        case 27: return FVIZ_CELL_QUADRATIC_PYRAMID;
+        case 28: return FVIZ_CELL_BIQUADRATIC_QUAD;
         default: return (FVizCellType)0;
     }
 }
@@ -182,7 +193,13 @@ static FVizResult fviz_vtu_decode_binary(const FVizDataArrayBlock* block, FVizDe
     }
     if (strcmp(block->format, "binary") == 0 || strcmp(block->format, "appended") == 0)
     {
-        max_bytes = (FVizSize)(block->content_end - block->content_begin) * 3u / 4u + 8u;
+        {
+            const FVizSize encoded_bytes = (FVizSize)(block->content_end - block->content_begin);
+            FVizSize scaled;
+            if (fviz_size_multiply(encoded_bytes, 3u, &scaled) != FVIZ_OK ||
+                fviz_size_add(scaled / 4u, 8u, &max_bytes) != FVIZ_OK)
+                return FVIZ_ERROR_OVERFLOW;
+        }
         bytes = (unsigned char*)fviz_alloc(max_bytes);
         if (bytes == NULL) return fviz_last_error_code();
         count = fviz_vtu_b64_decode(block->content_begin, block->content_end, bytes, max_bytes);
@@ -305,14 +322,13 @@ static FVizResult fviz_vtu_parse_points(
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "VTU point count does not match Piece metadata");
         return FVIZ_ERROR_INVALID_STATE;
     }
-    for (i = 0u; i + 2u < count; i += 3u)
+    (void)i;
+    _Static_assert(sizeof(FVizVec3) == 3u * sizeof(float), "FVizVec3 must be tightly packed for VTU point ingestion");
+    if (fviz_unstructured_grid_add_points_ids(
+            grid, (const FVizVec3*)values, expected_point_count, NULL) != FVIZ_OK)
     {
-        if (fviz_unstructured_grid_add_point(grid,
-                fviz_vec3(values[i], values[i + 1u], values[i + 2u]), NULL) != FVIZ_OK)
-        {
-            fviz_free(values);
-            return fviz_last_error_code();
-        }
+        fviz_free(values);
+        return fviz_last_error_code();
     }
     fviz_free(values);
     return FVIZ_OK;
@@ -420,7 +436,7 @@ static FVizResult fviz_vtu_parse_cells(
         const int64_t begin_offset = i == 0u ? 0 : off[i - 1u];
         const FVizSize count = (FVizSize)(end_offset - begin_offset);
         FVizCellType type = fviz_vtu_cell_type((int)typ[i]);
-        uint32_t* ids;
+        FVizId* ids;
         FVizSize k;
         if (type == (FVizCellType)0)
         {
@@ -434,7 +450,7 @@ static FVizResult fviz_vtu_parse_cells(
             result = FVIZ_ERROR_INVALID_STATE;
             goto cleanup;
         }
-        ids = (uint32_t*)fviz_alloc(count * sizeof(uint32_t));
+        ids = (FVizId*)fviz_alloc(count * sizeof(FVizId));
         if (ids == NULL)
         {
             result = fviz_last_error_code();
@@ -442,17 +458,16 @@ static FVizResult fviz_vtu_parse_cells(
         }
         for (k = 0u; k < count; ++k)
         {
-            if (conn[j + k] < 0 || (uint64_t)conn[j + k] > UINT32_MAX)
+            if (conn[j + k] < 0)
             {
                 fviz_free(ids);
-                fviz_internal_set_error(FVIZ_ERROR_OVERFLOW,
-                    "VTU connectivity exceeds the supported in-memory point-ID width");
-                result = FVIZ_ERROR_OVERFLOW;
+                fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "VTU connectivity contains a negative point ID");
+                result = FVIZ_ERROR_INVALID_STATE;
                 goto cleanup;
             }
-            ids[k] = (uint32_t)conn[j + k];
+            ids[k] = (FVizId)(uint64_t)conn[j + k];
         }
-        if (fviz_unstructured_grid_add_cell(grid, type, count, ids) != FVIZ_OK)
+        if (fviz_unstructured_grid_add_cell_ids(grid, type, count, ids) != FVIZ_OK)
         {
             fviz_free(ids);
             result = fviz_last_error_code();
@@ -614,6 +629,58 @@ static FVizResult fviz_vtu_parse_data_arrays(
         fviz_release(array);
     }
     return FVIZ_OK;
+}
+
+static FVizResult fviz_vtu_normalize_vtk_ghost_array(
+    FVizAttributeSet* attributes,
+    FVizBool cell_association)
+{
+    const FVizDataArray* vtk_ghosts;
+    FVizDataArray* normalized = NULL;
+    const uint8_t* source;
+    uint8_t* destination;
+    FVizSize count;
+    FVizSize i;
+    FVizResult result;
+    if (attributes == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (fviz_attribute_set_const_get(attributes, FVIZ_GHOST_ARRAY_NAME) != NULL)
+        return FVIZ_OK;
+    vtk_ghosts = fviz_attribute_set_const_get(attributes, FVIZ_VTK_GHOST_ARRAY_NAME);
+    if (vtk_ghosts == NULL || fviz_data_array_type(vtk_ghosts) != FVIZ_DATA_UINT8 ||
+        fviz_data_array_components(vtk_ghosts) != 1u)
+        return FVIZ_OK;
+    count = fviz_data_array_tuple_count(vtk_ghosts);
+    result = fviz_data_array_create(FVIZ_DATA_UINT8, 1u, &normalized);
+    if (result == FVIZ_OK) result = fviz_data_array_resize(normalized, count);
+    if (result != FVIZ_OK)
+    {
+        fviz_release(normalized);
+        return fviz_last_error_code();
+    }
+    source = (const uint8_t*)fviz_data_array_const_data(vtk_ghosts);
+    destination = (uint8_t*)fviz_data_array_data(normalized);
+    for (i = 0u; i < count; ++i)
+    {
+        uint8_t flags = (uint8_t)FVIZ_GHOST_NONE;
+        if ((source[i] & UINT8_C(1)) != 0u) flags |= (uint8_t)FVIZ_GHOST_DUPLICATE;
+        if (cell_association != FVIZ_FALSE)
+        {
+            /* VTK REFINEDCELL (8) and HIDDENCELL (32) should both be ignored
+             * by FEAViz rendering/statistics, while connectivity/exterior bits
+             * remain informational in the preserved vtkGhostType array. */
+            if ((source[i] & (UINT8_C(8) | UINT8_C(32))) != 0u)
+                flags |= (uint8_t)FVIZ_GHOST_HIDDEN;
+        }
+        else if ((source[i] & UINT8_C(2)) != 0u)
+        {
+            flags |= (uint8_t)FVIZ_GHOST_HIDDEN;
+        }
+        destination[i] = flags;
+    }
+    fviz_object_modified((FVizObject*)normalized);
+    result = fviz_attribute_set_add(attributes, FVIZ_GHOST_ARRAY_NAME, normalized);
+    fviz_release(normalized);
+    return result;
 }
 
 static void fviz_vtu_apply_active_roles(
@@ -817,6 +884,13 @@ FVizResult fviz_vtu_read_with_options(
                 if (section_close != NULL && open < section_close) { section_kind = 3; break; }
                 ++section_open;
             }
+            section_open = text;
+            while ((section_open = strstr(section_open, "<Points")) != NULL && section_open < open)
+            {
+                const char* section_close = strstr(section_open, "</Points>");
+                if (section_close != NULL && open < section_close) { section_kind = 4; break; }
+                ++section_open;
+            }
         }
         if (!fviz_find_data_array(open, text + file_size, &open_end, &close)) break;
         self_closing = open_end >= open + 2 && open_end[-2] == '/' ? FVIZ_TRUE : FVIZ_FALSE;
@@ -831,8 +905,15 @@ FVizResult fviz_vtu_read_with_options(
             (void)memset(&block, 0, sizeof(block));
             if (!fviz_attr_string(tag, "Name", block.name, sizeof(block.name)))
             {
-                cursor = self_closing != FVIZ_FALSE ? open_end : close + strlen("</DataArray>");
-                continue;
+                /* A VTK XML Points DataArray is not required to carry a Name
+                 * attribute. Treat the sole array in <Points> as geometry. */
+                if (section_kind == 4)
+                    (void)strcpy(block.name, "Points");
+                else
+                {
+                    cursor = self_closing != FVIZ_FALSE ? open_end : close + strlen("</DataArray>");
+                    continue;
+                }
             }
             if (!fviz_attr_string(tag, "format", block.format, sizeof(block.format)))
             {
@@ -946,6 +1027,12 @@ FVizResult fviz_vtu_read_with_options(
             cell_data_blocks, cell_data_count, text + file_size,
             expected_cell_count, options->maximum_array_values);
     }
+    if (result == FVIZ_OK)
+        result = fviz_vtu_normalize_vtk_ghost_array(
+            fviz_unstructured_grid_point_data(grid), FVIZ_FALSE);
+    if (result == FVIZ_OK)
+        result = fviz_vtu_normalize_vtk_ghost_array(
+            fviz_unstructured_grid_cell_data(grid), FVIZ_TRUE);
     if (result == FVIZ_OK)
     {
         result = fviz_vtu_parse_data_arrays(

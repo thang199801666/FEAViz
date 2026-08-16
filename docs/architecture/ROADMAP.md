@@ -65,7 +65,7 @@
 - [x] Mesh validation
 - [x] Smooth vertex-normal generation
 - [x] Dedicated Points / CellArray objects
-- [ ] Lines / vertices / general polygons
+- [x] Verts / PolyVertex / Line / PolyLine / Polygon / Quad / TriangleStrip topology (0.18.0)
 - [ ] 64-bit connectivity path
 
 ## Phase 6 — Mesh IO — FIRST USABLE IMPLEMENTATION COMPLETE
@@ -259,16 +259,20 @@ OBJ/STL file
 - [x] Central graph traversal and execution state
 - [x] Information, allocation, extent/piece, and data request states
 - [x] Progress reporting and cooperative cancellation entry points
-- [ ] Shared-upstream cache and branch fan-out correctness
-- [ ] Pipeline graph diagnostics
+- [x] Shared-upstream cache and branch fan-out correctness
+- [x] Pipeline graph diagnostics
 
 ## Phase 26 - Persistent parallel runtime - COMPLETED in 0.12.0
 
 - [x] Bounded persistent worker pool with reusable dispatch
-- [ ] Task groups, cooperative cancellation, and thread-local scratch storage
+- [x] Task groups, cooperative cancellation, and thread-local scratch storage
 - [x] Nested `parallel_for` serial fallback and thread-limit tests
-- [ ] Parallel surface, cell-to-point, contour/slice, and BVH phases
-- [ ] Serial/parallel equivalence tests and large HEX8 benchmarks
+- [ ] Parallel slice polygon construction and BVH tree construction phases
+- [x] Parallel slice cell-plane classification with deterministic merge
+- [x] Parallel BVH primitive bounds/centroid setup with equivalence coverage
+- [x] Parallel contour extraction with deterministic topology
+- [x] Parallel surface extraction with deterministic topology
+- [x] Parallel cell-to-point phase and serial/parallel equivalence test
 
 ## Phase 27 - Renderer/window/widget architecture - COMPLETED in 0.13.0
 
@@ -302,11 +306,57 @@ OBJ/STL file
 - [x] PLY and typed VTU ASCII/appended-raw read/write paths
 - [ ] Optional compressed VTU backend (explicitly deferred; unsupported builds report it)
 
+## VTK-style algorithm breadth increment - COMPLETE in 0.17.0
+
+- [x] Demand-driven plane, cube, and sphere geometry sources
+- [x] Transform, elevation, append, and clean PolyData filters
+- [x] Generic numeric DataArray component/range helpers and deep copy
+- [x] Public AttributeSet shallow/deep copy
+- [x] Mutable PolyData point API with correct MTime/bounds invalidation
+- [x] Triangle and line topology validation
+- [x] Deterministic tolerance-based point merging with attribute/provenance preservation
+- [x] Source-to-filter-to-mapper regression and standalone C/C++ public-header checks
+- [x] ASan/UBSan regression coverage for the new algorithm path
+
+## General PolyData topology and geometry processing - COMPLETE in 0.18.0
+
+- [x] VTK-style logical `Verts`, `Lines`, `Polys`, and `Strips` on `FVizPolyData`
+- [x] Variable-length `FVizCellArray` connectivity and deep copy
+- [x] PolyVertex, PolyLine, Polygon/Quad, and TriangleStrip public construction APIs
+- [x] Generalized PolyData validation and polygon/strip normal generation
+- [x] Demand-driven TriangleFilter and PolyDataNormalsFilter
+- [x] FeatureEdges classification for boundary/feature/non-manifold/manifold edges
+- [x] Connectivity region labeling and largest-region extraction
+- [x] Generalized CleanPolyData topology remapping and degeneration handling
+- [x] AppendPolyData preservation of generalized topology and common cell arrays
+- [x] Transitive `FVizOriginalCellIds` through topology-changing filters
+- [x] Headless generalized-PolyData pipeline example and regression coverage
+
+## Mesh processing and performance - COMPLETE in 0.19.0
+
+- [x] Demand-driven plane ClipPolyData with edge intersection reuse and point-data interpolation
+- [x] CSR-based parallel Laplacian SmoothPolyData
+- [x] Deterministic vertex-clustering DecimatePolyData
+- [x] ProbeFilter with source/sampling ports and valid-point mask
+- [x] Cached AABB hierarchy for UnstructuredGrid point location with stale fallback/rebuild
+- [x] VTK-compatible HEX8 off-center shape-function interpolation
+- [x] True centroid-median BVH partitioning and near-first closest-hit pruning
+- [x] Geometric dynamic-array/cell growth and public bulk mesh mutation APIs
+- [x] Bulk source, VTU ingestion, append, normals, and surface-extraction paths
+- [x] Wall-clock MeshBuild/PointLocator/BVH/ParallelHEX benchmark smoke gates
+- [x] Headless Clip -> Smooth -> Decimate pipeline example
+
+The next breadth priorities are `FVizImageData`, native 64-bit PolyData
+connectivity, VTP/PVD interchange, richer resampling, and quality-aware geometry
+processing. See `VTK_FEATURE_MATRIX.md`.
+
 ## Phase 30 - Stable public release - PLANNED for 1.0.0
 
-- [ ] ABI-1 API, ownership, thread-safety, and error-contract audit
+- [ ] Complete ABI-1 API, ownership, thread-safety, and error-contract audit
+- [x] Core ownership, null-output, self-assignment, and failure-contract regressions
 - [x] Shared/static install-tree consumer tests
-- [ ] Sanitizer, performance, and visual-regression release gates
+- [ ] Full sanitizer matrix, performance scaling, and visual-regression release gates
+- [x] MSVC ASan, benchmark smoke, and visual-regression gates
 - [ ] API, migration, architecture, and FEA workflow documentation
 
 The detailed milestone scope, validation plan, dependencies, work packages,
@@ -315,10 +365,49 @@ release gates, and risk register are in
 0.9-to-1.0 proposal remains in
 [`DEVELOPMENT_PLAN_0_9_TO_1_0.md`](DEVELOPMENT_PLAN_0_9_TO_1_0.md).
 
-## Immediate work after 0.9.1
+## Renderer, interaction, and antialiasing - COMPLETE in 0.20.0
 
-1. Add executable request descriptors and output-specific request keys.
-2. Expose public custom source/filter/sink callbacks.
-3. Move all graph traversal into an executive transaction.
-4. Prove shared-upstream fan-out, multi-input, and multi-output behavior.
-5. Add progress/cancellation propagation and graph diagnostics.
+- [x] Perspective/parallel camera with projection-preserving toggle and correct MTime
+- [x] Stateful trackball rotate/pan/dolly, double-click fit, capture-loss cancellation, and multi-viewport routing
+- [x] DPI/content-scale event propagation and pixel-correct camera pan math
+- [x] WGL multisample pixel-format negotiation with graceful fallback and actual sample-count reporting
+- [x] Tunable FXAA post-process with MSAA framebuffer resolve and optional-failure fallback
+- [x] Adaptive AA during interaction plus forced full-quality still frame
+- [x] Actor material, smooth/flat shading, culling, gradient backgrounds, and up to four renderer lights
+- [x] Uniform-only camera/actor/clipping updates without geometry-buffer invalidation
+- [x] Persistent overlay buffers, stale GPU-resource collection, translucent sorting, and hardened hardware-pick state
+- [x] Desired-update-rate frame pacing on native Win32 interaction
+- [x] Render-quality example and expanded renderer/interaction regression coverage
+
+## Render targets and transparency - COMPLETE in 0.21.0
+
+- [x] Backend-neutral render-target descriptors and multisample/depth/integer attachment contracts
+- [x] Weighted-blended order-independent transparency with sorted-alpha fallback
+- [x] sRGB-capable framebuffer negotiation and sRGB-aware FXAA resolve
+- [x] Initial shader-expanded screen-space antialiased line path
+
+## Primitive and glyph rendering - COMPLETE in 0.22.0
+
+- [x] Pixel-stable AA lines with cap/dash control and direct PolyLine topology
+- [x] Point sprites/circles/sphere impostors
+- [x] GPU-instanced `FVizGlyphMapper` with vector-driven arrow construction
+- [x] Independent surface/edge/point/glyph GPU cache revisions
+- [x] Polyline adjacency buffers and public join/miter-limit controls
+
+## Text and annotations - COMPLETE in 0.23.0
+
+- [x] Font-atlas/font/text-property abstractions with dependency-free builtin fallback
+- [x] Custom Unicode coverage atlas extension point for external rasterizers
+- [x] 2D text actors and depth-tested world-space billboard labels
+- [x] Batched 3D label sets for node/element-style annotations
+- [x] Scalar legend title/units/numeric ticks using the shared text stack
+- [x] DPI/content-scale propagation through text and legend geometry
+- [x] Persistent atlas/VBO plus reusable CPU glyph staging
+- [x] Adjacency-aware miter/round line refinement with legacy line fallback retained
+
+## Immediate work after 0.27.0
+
+1. Run a 0.28 stabilization milestone with Windows GPU visual baselines, 32/64-bit connectivity stress gates, temporal/PVD cache tests, and large-scene performance thresholds.
+2. Add appended/compressed VTP or VTKHDF only behind explicit IO capability/fuzz/security gates.
+3. Continue converting remaining PolyData algorithms to width-agnostic cell views and make composite-aware dispatch reusable across filters.
+4. Begin StructuredGrid/RectilinearGrid and piece/ghost streaming only after the 0.28 stability gate.

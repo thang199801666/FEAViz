@@ -19,6 +19,13 @@ enum
 typedef uint64_t FVizId;
 typedef size_t FVizSize;
 
+typedef struct FVizDirtyRange
+{
+    FVizSize first;
+    FVizSize count;
+    FVizBool full;
+} FVizDirtyRange;
+
 #define FVIZ_INVALID_ID UINT64_MAX
 
 FVIZ_EXTERN_C_END

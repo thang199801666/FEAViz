@@ -11,6 +11,7 @@ struct FVizCellArray
     FVizArray* types;
     FVizArray* offsets;
     FVizArray* connectivity;
+    FVizIdStorage id_storage;
 };
 
 #endif /* FVIZ_INTERNAL_MESH_CELL_ARRAY_PRIVATE_H */

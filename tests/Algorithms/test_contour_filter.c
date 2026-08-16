@@ -1,4 +1,5 @@
 #include <math.h>
+#include <string.h>
 
 #include <FViz/FViz.h>
 
@@ -114,9 +115,69 @@ static int test_contour_no_scalar(void)
     return 0;
 }
 
+static int test_contour_thread_equivalence(void)
+{
+    FVizPolyData* data = NULL;
+    FVizDataArray* scalars = NULL;
+    FVizContourFilter* filter = NULL;
+    FVizContourFilter* parallel_filter = NULL;
+    FVizPolyData* serial;
+    FVizPolyData* parallel;
+    const float levels[2] = {2.0f, 4.0f};
+    CHECK(build_height_field(&data, &scalars) == FVIZ_OK);
+    CHECK(fviz_contour_filter_create("height", levels, 2u, &filter) == FVIZ_OK);
+    CHECK(fviz_contour_filter_create("height", levels, 2u, &parallel_filter) == FVIZ_OK);
+    CHECK(fviz_contour_filter_set_input(filter, data) == FVIZ_OK);
+    fviz_parallel_set_thread_limit(1u);
+    CHECK(fviz_contour_filter_update(filter) == FVIZ_OK);
+    serial = fviz_contour_filter_output(filter);
+    CHECK(serial != NULL);
+    fviz_parallel_set_thread_limit(4u);
+    CHECK(fviz_contour_filter_set_input(parallel_filter, data) == FVIZ_OK);
+    CHECK(fviz_contour_filter_update(parallel_filter) == FVIZ_OK);
+    parallel = fviz_contour_filter_output(parallel_filter);
+    CHECK(parallel != NULL);
+    CHECK(fviz_poly_data_line_count(serial) == fviz_poly_data_line_count(parallel));
+    CHECK(fviz_poly_data_point_count(serial) == fviz_poly_data_point_count(parallel));
+    CHECK(memcmp(fviz_poly_data_line_indices(serial), fviz_poly_data_line_indices(parallel),
+        fviz_poly_data_line_count(serial) * 2u * sizeof(uint32_t)) == 0);
+    fviz_parallel_set_thread_limit(0u);
+    fviz_release(parallel_filter);
+    fviz_release(filter);
+    fviz_release(scalars);
+    fviz_release(data);
+    return 0;
+}
+
+static int test_contour_numeric_types(void)
+{
+    FVizPolyData* data = NULL;
+    FVizDataArray* scalars = NULL;
+    FVizContourFilter* filter = NULL;
+    const FVizVec3 points[3] = {{0,0,0},{1,0,0},{0,1,0}};
+    const double values[3] = {0.0, 2.0, 2.0};
+    const float level[1] = {1.0f};
+    CHECK(fviz_poly_data_create(&data) == FVIZ_OK);
+    CHECK(fviz_poly_data_add_points(data, points, 3u, NULL) == FVIZ_OK);
+    CHECK(fviz_poly_data_add_triangle(data, 0u, 1u, 2u) == FVIZ_OK);
+    CHECK(fviz_data_array_create(FVIZ_DATA_FLOAT64, 1u, &scalars) == FVIZ_OK);
+    CHECK(fviz_data_array_append_tuples(scalars, values, 3u) == FVIZ_OK);
+    CHECK(fviz_attribute_set_add(fviz_poly_data_point_data(data), "height64", scalars) == FVIZ_OK);
+    CHECK(fviz_contour_filter_create("height64", level, 1u, &filter) == FVIZ_OK);
+    CHECK(fviz_contour_filter_set_input(filter, data) == FVIZ_OK);
+    CHECK(fviz_contour_filter_update(filter) == FVIZ_OK);
+    CHECK(fviz_poly_data_line_count(fviz_contour_filter_output(filter)) == 1u);
+    fviz_release(filter);
+    fviz_release(scalars);
+    fviz_release(data);
+    return 0;
+}
+
+
 int main(void)
 {
     CHECK(test_contour_lines() == 0);
     CHECK(test_contour_no_scalar() == 0);
-    return 0;
+    CHECK(test_contour_numeric_types() == 0);
+    return test_contour_thread_equivalence();
 }

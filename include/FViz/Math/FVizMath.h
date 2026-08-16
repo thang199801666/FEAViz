@@ -2,11 +2,13 @@
 #define FVIZ_MATH_MATH_H
 
 #include <FViz/Math/FVizBounds.h>
+#include <FViz/Math/FVizFrustum.h>
 #include <FViz/Math/FVizMat3.h>
 #include <FViz/Math/FVizMat4.h>
 #include <FViz/Math/FVizPlane.h>
 #include <FViz/Math/FVizQuat.h>
 #include <FViz/Math/FVizRay.h>
+#include <FViz/Math/FVizTensor.h>
 #include <FViz/Math/FVizVec2.h>
 #include <FViz/Math/FVizVec3.h>
 #include <FViz/Math/FVizVec4.h>

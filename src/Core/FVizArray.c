@@ -123,7 +123,7 @@ static FVizResult fviz_array_ensure(FVizArray* array, FVizSize required)
     return fviz_array_reserve(array, capacity);
 }
 
-FVizResult fviz_array_resize(FVizArray* array, FVizSize count)
+FVizResult fviz_internal_array_resize_untracked(FVizArray* array, FVizSize count)
 {
     FVizSize old_count;
     FVizResult result;
@@ -134,54 +134,97 @@ FVizResult fviz_array_resize(FVizArray* array, FVizSize count)
     }
     old_count = array->count;
     result = fviz_array_ensure(array, count);
-    if (result != FVIZ_OK)
-    {
-        return result;
-    }
+    if (result != FVIZ_OK) return result;
     if (count > old_count)
-    {
         (void)memset(array->data + old_count * array->stride, 0, (count - old_count) * array->stride);
-    }
     array->count = count;
-    if (count != old_count) fviz_object_modified((FVizObject*)array);
     return FVIZ_OK;
+}
+
+FVizResult fviz_array_resize(FVizArray* array, FVizSize count)
+{
+    const FVizSize old_count = array != NULL ? array->count : 0u;
+    const FVizResult result = fviz_internal_array_resize_untracked(array, count);
+    if (result == FVIZ_OK && array != NULL && count != old_count)
+        fviz_object_modified((FVizObject*)array);
+    return result;
+}
+
+FVizResult fviz_internal_array_append_uninitialized(
+    FVizArray* array, FVizSize count, void** out_first_slot)
+{
+    FVizSize required;
+    FVizResult result;
+    if (array == NULL || out_first_slot == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "array and output slot must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    *out_first_slot = NULL;
+    if (count == 0u)
+    {
+        *out_first_slot = array->data != NULL
+            ? array->data + array->count * array->stride
+            : NULL;
+        return FVIZ_OK;
+    }
+    if (count > (FVizSize)-1 - array->count)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "array append count overflow");
+        return FVIZ_ERROR_OVERFLOW;
+    }
+    required = array->count + count;
+    result = fviz_array_ensure(array, required);
+    if (result != FVIZ_OK) return result;
+    *out_first_slot = array->data + array->count * array->stride;
+    array->count = required;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_array_append_uninitialized(FVizArray* array, FVizSize count, void** out_first_slot)
+{
+    const FVizResult result = fviz_internal_array_append_uninitialized(array, count, out_first_slot);
+    if (result == FVIZ_OK && count != 0u) fviz_object_modified((FVizObject*)array);
+    return result;
 }
 
 FVizResult fviz_array_push_uninitialized(FVizArray* array, void** out_slot)
 {
+    return fviz_array_append_uninitialized(array, 1u, out_slot);
+}
+
+FVizResult fviz_internal_array_append(FVizArray* array, const void* values, FVizSize count)
+{
+    void* slot;
+    FVizSize bytes;
     FVizResult result;
-    if (array == NULL || out_slot == NULL)
+    if (array == NULL || (values == NULL && count != 0u))
     {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "array and out_slot must not be NULL");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "array append requires valid storage and values");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    *out_slot = NULL;
-    result = fviz_array_ensure(array, array->count + 1u);
-    if (result != FVIZ_OK)
-    {
-        return result;
-    }
-    *out_slot = array->data + array->count * array->stride;
-    array->count += 1u;
-    fviz_object_modified((FVizObject*)array);
-    return FVIZ_OK;
+    if (count == 0u) return FVIZ_OK;
+    if (fviz_size_multiply(count, array->stride, &bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
+    result = fviz_internal_array_append_uninitialized(array, count, &slot);
+    if (result == FVIZ_OK) (void)memcpy(slot, values, bytes);
+    return result;
+}
+
+FVizResult fviz_array_append(FVizArray* array, const void* values, FVizSize count)
+{
+    const FVizResult result = fviz_internal_array_append(array, values, count);
+    if (result == FVIZ_OK && count != 0u) fviz_object_modified((FVizObject*)array);
+    return result;
 }
 
 FVizResult fviz_array_push(FVizArray* array, const void* value)
 {
-    void* slot;
-    FVizResult result;
-    if (value == NULL)
-    {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "array value must not be NULL");
-        return FVIZ_ERROR_INVALID_ARGUMENT;
-    }
-    result = fviz_array_push_uninitialized(array, &slot);
-    if (result == FVIZ_OK)
-    {
-        (void)memcpy(slot, value, array->stride);
-    }
-    return result;
+    return fviz_array_append(array, value, 1u);
+}
+
+void fviz_internal_array_clear(FVizArray* array)
+{
+    if (array != NULL) array->count = 0u;
 }
 
 void fviz_array_clear(FVizArray* array)
@@ -189,7 +232,7 @@ void fviz_array_clear(FVizArray* array)
     if (array != NULL)
     {
         const FVizBool changed = array->count != 0u ? FVIZ_TRUE : FVIZ_FALSE;
-        array->count = 0u;
+        fviz_internal_array_clear(array);
         if (changed == FVIZ_TRUE) fviz_object_modified((FVizObject*)array);
     }
 }

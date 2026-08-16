@@ -97,6 +97,25 @@ static int test_transform(void)
     return 0;
 }
 
+static int test_tensor(void)
+{
+    const double components[6] = {4.0, 2.0, 1.0, 0.0, 0.0, 0.0};
+    FVizSymmetricTensor3d tensor;
+    FVizSymmetricTensor3d deviatoric;
+    double values[3];
+    double vectors[9];
+    CHECK(fviz_symmetric_tensor3d_from_components(components, 6u, &tensor) == FVIZ_OK);
+    CHECK(fabs(fviz_symmetric_tensor3d_trace(&tensor) - 7.0) < 1.0e-12);
+    CHECK(fviz_symmetric_tensor3d_eigensystem(&tensor, values, vectors) == FVIZ_OK);
+    CHECK(fabs(values[0] - 4.0) < 1.0e-12);
+    CHECK(fabs(values[1] - 2.0) < 1.0e-12);
+    CHECK(fabs(values[2] - 1.0) < 1.0e-12);
+    CHECK(fabs(vectors[0] - 1.0) < 1.0e-12);
+    CHECK(fviz_symmetric_tensor3d_deviatoric(&tensor, &deviatoric) == FVIZ_OK);
+    CHECK(fabs(fviz_symmetric_tensor3d_trace(&deviatoric)) < 1.0e-12);
+    return 0;
+}
+
 int main(void)
 {
     FVizVec3 x = fviz_vec3(1,0,0);
@@ -117,5 +136,6 @@ int main(void)
     CHECK(test_ray() == 0);
     CHECK(test_plane() == 0);
     CHECK(test_transform() == 0);
+    CHECK(test_tensor() == 0);
     return 0;
 }

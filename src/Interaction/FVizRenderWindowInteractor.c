@@ -8,6 +8,31 @@
 
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Interaction/FVizRenderWindowInteractorPrivate.h>
+#include <FViz/Rendering/FVizRenderWindowPrivate.h>
+
+FVizEventId fviz_interaction_event_id(FVizInteractionEventType type)
+{
+    switch (type)
+    {
+        case FVIZ_INTERACTION_MOUSE_BUTTON_DOWN: return FVIZ_EVENT_MOUSE_BUTTON_DOWN;
+        case FVIZ_INTERACTION_MOUSE_BUTTON_UP: return FVIZ_EVENT_MOUSE_BUTTON_UP;
+        case FVIZ_INTERACTION_MOUSE_MOVE: return FVIZ_EVENT_MOUSE_MOVE;
+        case FVIZ_INTERACTION_MOUSE_WHEEL: return FVIZ_EVENT_MOUSE_WHEEL;
+        case FVIZ_INTERACTION_KEY_DOWN: return FVIZ_EVENT_KEY_DOWN;
+        case FVIZ_INTERACTION_KEY_UP: return FVIZ_EVENT_KEY_UP;
+        case FVIZ_INTERACTION_RESIZE: return FVIZ_EVENT_RESIZE;
+        case FVIZ_INTERACTION_ENTER: return FVIZ_EVENT_ENTER;
+        case FVIZ_INTERACTION_LEAVE: return FVIZ_EVENT_LEAVE;
+        case FVIZ_INTERACTION_EXPOSE: return FVIZ_EVENT_EXPOSE;
+        case FVIZ_INTERACTION_FOCUS_IN: return FVIZ_EVENT_FOCUS_IN;
+        case FVIZ_INTERACTION_FOCUS_OUT: return FVIZ_EVENT_FOCUS_OUT;
+        case FVIZ_INTERACTION_TIMER: return FVIZ_EVENT_TIMER;
+        case FVIZ_INTERACTION_DOUBLE_CLICK: return FVIZ_EVENT_DOUBLE_CLICK;
+        case FVIZ_INTERACTION_CHAR: return FVIZ_EVENT_CHAR;
+        case FVIZ_INTERACTION_EVENT_ANY: return FVIZ_EVENT_INTERACTION_ANY;
+        default: return FVIZ_EVENT_INTERACTION_ANY;
+    }
+}
 
 static void fviz_render_window_interactor_destroy(FVizObject* object)
 {
@@ -89,13 +114,25 @@ FVizResult fviz_render_window_interactor_initialize(FVizRenderWindowInteractor* 
 
 void fviz_render_window_interactor_enable(FVizRenderWindowInteractor* interactor)
 {
-    if (interactor != NULL && interactor->initialized == FVIZ_TRUE)
+    if (interactor != NULL && interactor->initialized == FVIZ_TRUE &&
+        interactor->enabled == FVIZ_FALSE)
+    {
         interactor->enabled = FVIZ_TRUE;
+        fviz_object_modified((FVizObject*)interactor);
+        (void)fviz_object_invoke_event((FVizObject*)interactor, FVIZ_EVENT_ENABLE, NULL);
+    }
 }
 
 void fviz_render_window_interactor_disable(FVizRenderWindowInteractor* interactor)
 {
-    if (interactor != NULL) interactor->enabled = FVIZ_FALSE;
+    if (interactor != NULL && interactor->enabled != FVIZ_FALSE)
+    {
+        fviz_render_window_interactor_cancel_interaction(interactor);
+        fviz_render_window_interactor_release_focus(interactor);
+        interactor->enabled = FVIZ_FALSE;
+        fviz_object_modified((FVizObject*)interactor);
+        (void)fviz_object_invoke_event((FVizObject*)interactor, FVIZ_EVENT_DISABLE, NULL);
+    }
 }
 
 FVizBool fviz_render_window_interactor_enabled(const FVizRenderWindowInteractor* interactor)
@@ -107,7 +144,8 @@ void fviz_render_window_interactor_set_done(FVizRenderWindowInteractor* interact
 {
     if (interactor == NULL) return;
     interactor->done = done != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
-    if (interactor->done == FVIZ_TRUE && interactor->window != NULL)
+    if (interactor->done == FVIZ_TRUE && interactor->window != NULL &&
+        fviz_render_window_is_attached(interactor->window) == FVIZ_FALSE)
         fviz_render_window_request_close(interactor->window);
 }
 
@@ -167,11 +205,33 @@ void fviz_render_window_interactor_grab_focus(FVizRenderWindowInteractor* intera
     if (interactor != NULL) interactor->has_focus = FVIZ_TRUE;
 }
 
+static void fviz_render_window_interactor_cancel_interaction_internal(
+    FVizRenderWindowInteractor* interactor,
+    FVizBool emit_end_event)
+{
+    FVizBool was_active;
+    if (interactor == NULL) return;
+    was_active = interactor->style != NULL &&
+        fviz_interactor_style_state(interactor->style) != FVIZ_INTERACTION_STATE_NONE
+        ? FVIZ_TRUE : FVIZ_FALSE;
+    interactor->captured_renderer = NULL;
+    fviz_interactor_style_cancel_interaction(interactor->style);
+    fviz_internal_render_window_set_interaction_active(interactor->window, FVIZ_FALSE);
+    if (emit_end_event != FVIZ_FALSE && was_active != FVIZ_FALSE)
+        (void)fviz_object_invoke_event(
+            (FVizObject*)interactor, FVIZ_EVENT_END_INTERACTION, NULL);
+}
+
+void fviz_render_window_interactor_cancel_interaction(FVizRenderWindowInteractor* interactor)
+{
+    fviz_render_window_interactor_cancel_interaction_internal(interactor, FVIZ_TRUE);
+}
+
 void fviz_render_window_interactor_release_focus(FVizRenderWindowInteractor* interactor)
 {
     if (interactor == NULL) return;
     interactor->has_focus = FVIZ_FALSE;
-    interactor->captured_renderer = NULL;
+    fviz_render_window_interactor_cancel_interaction_internal(interactor, FVIZ_TRUE);
 }
 
 FVizBool fviz_render_window_interactor_has_focus(
@@ -426,7 +486,7 @@ FVizResult fviz_render_window_interactor_add_observer(
     FVizInteractorObserver* observer;
     if (out_observer_id != NULL) *out_observer_id = FVIZ_OBSERVER_ID_INVALID;
     if (interactor == NULL || callback == NULL || out_observer_id == NULL ||
-        event_type < FVIZ_INTERACTION_EVENT_ANY || event_type > FVIZ_INTERACTION_TIMER)
+        event_type < FVIZ_INTERACTION_EVENT_ANY || event_type > FVIZ_INTERACTION_CHAR)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "invalid interactor observer arguments");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -521,10 +581,23 @@ FVizBool fviz_render_window_interactor_process_event(
     const FVizInteractionEvent* event)
 {
     FVizRenderer* renderer;
+    FVizInteractionEvent normalized_event;
+    FVizInteractionState previous_state;
+    FVizInteractionState current_state;
     FVizBool handled = FVIZ_FALSE;
     FVizBool top_level;
     if (interactor == NULL || interactor->window == NULL || event == NULL) return FVIZ_FALSE;
     if (interactor->enabled == FVIZ_FALSE) return FVIZ_FALSE;
+    previous_state = interactor->style != NULL
+        ? fviz_interactor_style_state(interactor->style)
+        : FVIZ_INTERACTION_STATE_NONE;
+    normalized_event = *event;
+    if (normalized_event.width <= 0 || normalized_event.height <= 0)
+        fviz_render_window_get_size(
+            interactor->window, &normalized_event.width, &normalized_event.height);
+    if (normalized_event.content_scale <= 0.0f)
+        normalized_event.content_scale = fviz_render_window_content_scale(interactor->window);
+    event = &normalized_event;
     top_level = interactor->dispatch_depth == 0u ? FVIZ_TRUE : FVIZ_FALSE;
     if (top_level == FVIZ_TRUE) ++interactor->dispatch_serial;
     ++interactor->dispatch_depth;
@@ -533,20 +606,32 @@ FVizBool fviz_render_window_interactor_process_event(
         handled = FVIZ_TRUE;
     if (handled == FVIZ_FALSE)
         handled = fviz_render_window_interactor_dispatch_observers(interactor, event);
+    if (handled == FVIZ_FALSE)
+        handled = fviz_object_invoke_event(
+            (FVizObject*)interactor, fviz_interaction_event_id(event->type), (void*)event);
     if (handled == FVIZ_FALSE && event->type == FVIZ_INTERACTION_KEY_DOWN && event->key == FVIZ_KEY_ESCAPE)
     {
-        fviz_render_window_request_close(interactor->window);
+        if (fviz_render_window_is_attached(interactor->window) != FVIZ_FALSE ||
+            fviz_render_window_is_external_opengl(interactor->window) != FVIZ_FALSE)
+            fviz_render_window_interactor_cancel_interaction_internal(interactor, FVIZ_FALSE);
+        else
+            fviz_render_window_request_close(interactor->window);
         handled = FVIZ_TRUE;
     }
     if (event->type == FVIZ_INTERACTION_FOCUS_IN) interactor->has_focus = FVIZ_TRUE;
-    else if (event->type == FVIZ_INTERACTION_FOCUS_OUT) fviz_render_window_interactor_release_focus(interactor);
+    else if (event->type == FVIZ_INTERACTION_FOCUS_OUT)
+    {
+        interactor->has_focus = FVIZ_FALSE;
+        fviz_render_window_interactor_cancel_interaction_internal(interactor, FVIZ_FALSE);
+    }
     if (handled == FVIZ_FALSE)
     {
         renderer = interactor->captured_renderer;
         if (renderer == NULL) renderer = event->type == FVIZ_INTERACTION_MOUSE_BUTTON_DOWN ||
             event->type == FVIZ_INTERACTION_MOUSE_BUTTON_UP ||
             event->type == FVIZ_INTERACTION_MOUSE_MOVE ||
-            event->type == FVIZ_INTERACTION_MOUSE_WHEEL
+            event->type == FVIZ_INTERACTION_MOUSE_WHEEL ||
+            event->type == FVIZ_INTERACTION_DOUBLE_CLICK
             ? fviz_render_window_find_renderer(interactor->window, event->x, event->y)
             : fviz_render_window_renderer(interactor->window);
         if (renderer == NULL) renderer = interactor->poked_renderer;
@@ -565,6 +650,29 @@ FVizBool fviz_render_window_interactor_process_event(
         }
         if (event->type == FVIZ_INTERACTION_MOUSE_BUTTON_UP)
             interactor->captured_renderer = NULL;
+    }
+    current_state = interactor->style != NULL
+        ? fviz_interactor_style_state(interactor->style)
+        : FVIZ_INTERACTION_STATE_NONE;
+    fviz_internal_render_window_set_interaction_active(
+        interactor->window,
+        current_state != FVIZ_INTERACTION_STATE_NONE ? FVIZ_TRUE : FVIZ_FALSE);
+    if (previous_state == FVIZ_INTERACTION_STATE_NONE &&
+        current_state != FVIZ_INTERACTION_STATE_NONE)
+    {
+        (void)fviz_object_invoke_event(
+            (FVizObject*)interactor, FVIZ_EVENT_START_INTERACTION, (void*)event);
+    }
+    else if (previous_state != FVIZ_INTERACTION_STATE_NONE &&
+             current_state == FVIZ_INTERACTION_STATE_NONE)
+    {
+        (void)fviz_object_invoke_event(
+            (FVizObject*)interactor, FVIZ_EVENT_END_INTERACTION, (void*)event);
+    }
+    else if (current_state != FVIZ_INTERACTION_STATE_NONE)
+    {
+        (void)fviz_object_invoke_event(
+            (FVizObject*)interactor, FVIZ_EVENT_INTERACTION, (void*)event);
     }
     --interactor->dispatch_depth;
     if (top_level == FVIZ_TRUE) fviz_interactor_observers_maintain(interactor);
@@ -592,3 +700,17 @@ FVizResult fviz_render_window_interactor_render(FVizRenderWindowInteractor* inte
     if (interactor->render_enabled == FVIZ_FALSE) return FVIZ_OK;
     return fviz_render_window_render(interactor->window);
 }
+FVizResult fviz_render_window_interactor_request_render(
+    FVizRenderWindowInteractor* interactor)
+{
+    if (interactor == NULL || interactor->window == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "interactor is not attached to a render window");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if (interactor->render_enabled == FVIZ_FALSE) return FVIZ_OK;
+    fviz_render_window_request_render(interactor->window);
+    return FVIZ_OK;
+}
+

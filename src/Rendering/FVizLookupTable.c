@@ -73,6 +73,7 @@ void fviz_lookup_table_set_range(FVizLookupTable* table, float minimum, float ma
     {
         maximum = minimum + 1.0f;
     }
+    if (table->range_min == minimum && table->range_max == maximum) return;
     table->range_min = minimum;
     table->range_max = maximum;
     fviz_object_modified((FVizObject*)table);
@@ -92,6 +93,9 @@ FVizResult fviz_lookup_table_set_color(FVizLookupTable* table, FVizSize index, f
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "lookup table color index out of range");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    if (table->colors[index * 3u + 0u] == red &&
+        table->colors[index * 3u + 1u] == green &&
+        table->colors[index * 3u + 2u] == blue) return FVIZ_OK;
     table->colors[index * 3u + 0u] = red;
     table->colors[index * 3u + 1u] = green;
     table->colors[index * 3u + 2u] = blue;
@@ -170,6 +174,8 @@ void fviz_lookup_table_set_nan_color(
     FVizLookupTable* table, float red, float green, float blue)
 {
     if (table == NULL) return;
+    if (table->nan_color[0] == red && table->nan_color[1] == green &&
+        table->nan_color[2] == blue) return;
     table->nan_color[0] = red;
     table->nan_color[1] = green;
     table->nan_color[2] = blue;
@@ -180,10 +186,15 @@ void fviz_lookup_table_set_below_range_color(
     FVizLookupTable* table, float red, float green, float blue, FVizBool enabled)
 {
     if (table == NULL) return;
-    table->below_range_color[0] = red;
-    table->below_range_color[1] = green;
-    table->below_range_color[2] = blue;
-    table->use_below_range_color = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    {
+        const FVizBool normalized = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+        if (table->below_range_color[0] == red && table->below_range_color[1] == green &&
+            table->below_range_color[2] == blue && table->use_below_range_color == normalized) return;
+        table->below_range_color[0] = red;
+        table->below_range_color[1] = green;
+        table->below_range_color[2] = blue;
+        table->use_below_range_color = normalized;
+    }
     fviz_object_modified((FVizObject*)table);
 }
 
@@ -191,10 +202,15 @@ void fviz_lookup_table_set_above_range_color(
     FVizLookupTable* table, float red, float green, float blue, FVizBool enabled)
 {
     if (table == NULL) return;
-    table->above_range_color[0] = red;
-    table->above_range_color[1] = green;
-    table->above_range_color[2] = blue;
-    table->use_above_range_color = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    {
+        const FVizBool normalized = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+        if (table->above_range_color[0] == red && table->above_range_color[1] == green &&
+            table->above_range_color[2] == blue && table->use_above_range_color == normalized) return;
+        table->above_range_color[0] = red;
+        table->above_range_color[1] = green;
+        table->above_range_color[2] = blue;
+        table->use_above_range_color = normalized;
+    }
     fviz_object_modified((FVizObject*)table);
 }
 

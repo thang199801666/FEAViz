@@ -11,10 +11,23 @@ function(fviz_configure_install target)
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 
+    # Core package headers are installed independently of optional domain modules.
+    # In a Core-only build, no FEA-domain header is installed, so the package is a
+    # genuinely standalone generic visualization SDK rather than a Core binary next
+    # to unusable FEA declarations.
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/FViz"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-        FILES_MATCHING PATTERN "*.h"
+        FILES_MATCHING
+        PATTERN "*.h"
+        PATTERN "FEA" EXCLUDE
     )
+
+    if(FVIZ_BUILD_FEA)
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/FViz/FEA"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/FViz"
+            FILES_MATCHING PATTERN "*.h"
+        )
+    endif()
 
     install(FILES
         "${CMAKE_CURRENT_BINARY_DIR}/generated/include/FViz/FVizVersion.h"

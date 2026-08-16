@@ -5,7 +5,7 @@
 #include <FViz/Core/FVizObject.h>
 #include <FViz/Core/FVizResult.h>
 #include <FViz/Core/FVizTypes.h>
-#include <FViz/FEA/FVizUnstructuredGrid.h>
+#include <FViz/Data/FVizUnstructuredGrid.h>
 #include <FViz/Mesh/FVizPolyData.h>
 
 FVIZ_EXTERN_C_BEGIN

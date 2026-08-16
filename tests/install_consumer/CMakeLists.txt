@@ -1,7 +1,16 @@
 cmake_minimum_required(VERSION 3.24)
 project(FEAVizInstallConsumer LANGUAGES C)
 
-find_package(FEAViz 0.16 REQUIRED CONFIG)
+option(FVIZ_CONSUMER_REQUIRE_FEA "Require and link the optional FEA component" OFF)
+if(FVIZ_CONSUMER_REQUIRE_FEA)
+    find_package(FEAViz 0.41 REQUIRED CONFIG COMPONENTS Core FEA)
+else()
+    find_package(FEAViz 0.41 REQUIRED CONFIG COMPONENTS Core)
+endif()
 
 add_executable(FEAVizInstallConsumer main.c)
-target_link_libraries(FEAVizInstallConsumer PRIVATE FEAViz::FEAViz)
+if(FVIZ_CONSUMER_REQUIRE_FEA)
+    target_link_libraries(FEAVizInstallConsumer PRIVATE FEAViz::FEA)
+else()
+    target_link_libraries(FEAVizInstallConsumer PRIVATE FEAViz::Core)
+endif()

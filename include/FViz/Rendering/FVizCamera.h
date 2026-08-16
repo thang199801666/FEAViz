@@ -12,6 +12,13 @@
 FVIZ_EXTERN_C_BEGIN
 
 typedef struct FVizCamera FVizCamera;
+
+typedef enum FVizCameraProjectionMode
+{
+    FVIZ_CAMERA_PERSPECTIVE = 0,
+    FVIZ_CAMERA_PARALLEL = 1
+} FVizCameraProjectionMode;
+
 #define FVIZ_TYPE_CAMERA UINT64_C(0x027BBE745BF99062)
 
 FVIZ_API FVizResult fviz_camera_create(FVizCamera** out_camera);
@@ -22,7 +29,14 @@ FVIZ_API FVizVec3 fviz_camera_position(const FVizCamera* camera);
 FVIZ_API FVizVec3 fviz_camera_target(const FVizCamera* camera);
 FVIZ_API FVizVec3 fviz_camera_up(const FVizCamera* camera);
 FVIZ_API void fviz_camera_set_perspective(FVizCamera* camera, float vertical_fov_degrees, float near_plane, float far_plane);
+FVIZ_API void fviz_camera_set_clipping_range(FVizCamera* camera, float near_plane, float far_plane);
 FVIZ_API float fviz_camera_fov_degrees(const FVizCamera* camera);
+FVIZ_API float fviz_camera_near_plane(const FVizCamera* camera);
+FVIZ_API float fviz_camera_far_plane(const FVizCamera* camera);
+FVIZ_API void fviz_camera_set_projection_mode(FVizCamera* camera, FVizCameraProjectionMode mode);
+FVIZ_API FVizCameraProjectionMode fviz_camera_projection_mode(const FVizCamera* camera);
+FVIZ_API void fviz_camera_set_parallel_scale(FVizCamera* camera, float scale);
+FVIZ_API float fviz_camera_parallel_scale(const FVizCamera* camera);
 FVIZ_API FVizMat4 fviz_camera_view_matrix(const FVizCamera* camera);
 FVIZ_API FVizMat4 fviz_camera_projection_matrix(const FVizCamera* camera, float aspect_ratio);
 FVIZ_API void fviz_camera_fit_bounds(FVizCamera* camera, const FVizBounds* bounds, float padding);

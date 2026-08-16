@@ -51,12 +51,29 @@ typedef struct FVizPipelineRequestInfo
 } FVizPipelineRequestInfo;
 
 FVIZ_API void fviz_pipeline_request_initialize(FVizPipelineRequestInfo* request);
+FVIZ_API FVizResult fviz_pipeline_request_set_time(FVizPipelineRequestInfo* request, double time);
+FVIZ_API void fviz_pipeline_request_clear_time(FVizPipelineRequestInfo* request);
+FVIZ_API FVizResult fviz_pipeline_request_set_piece(
+    FVizPipelineRequestInfo* request, uint32_t piece, uint32_t number_of_pieces, uint32_t ghost_levels);
+FVIZ_API FVizResult fviz_pipeline_request_set_extent(
+    FVizPipelineRequestInfo* request, const int64_t extent[6]);
+FVIZ_API void fviz_pipeline_request_clear_extent(FVizPipelineRequestInfo* request);
 
 FVIZ_API FVizAlgorithm* fviz_executive_algorithm(FVizExecutive* executive);
 FVIZ_API FVizResult fviz_executive_update(FVizExecutive* executive, uint32_t output_port);
 FVIZ_API FVizResult fviz_executive_update_request(
     FVizExecutive* executive,
     const FVizPipelineRequestInfo* request);
+/* Convenience demand-driven update helpers. These build a versioned request
+ * and route it through the same cache/transaction path as update_request(). */
+FVIZ_API FVizResult fviz_executive_update_piece(
+    FVizExecutive* executive, uint32_t output_port,
+    uint32_t piece, uint32_t number_of_pieces, uint32_t ghost_levels);
+FVIZ_API FVizResult fviz_executive_update_extent(
+    FVizExecutive* executive, uint32_t output_port,
+    const int64_t extent[6], uint32_t ghost_levels);
+FVIZ_API FVizResult fviz_executive_update_time(
+    FVizExecutive* executive, uint32_t output_port, double time);
 FVIZ_API uint64_t fviz_executive_last_transaction_id(const FVizExecutive* executive);
 /* Query mode: pass NULL/0 for text/capacity and read out_required_size. */
 FVIZ_API FVizResult fviz_executive_write_dot(

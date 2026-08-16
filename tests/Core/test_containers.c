@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include <FViz/FViz.h>
 
 #define CHECK(expr) do { if (!(expr)) return __LINE__; } while (0)
@@ -130,11 +132,70 @@ static int test_hash_map_grow(void)
     return 0;
 }
 
+
+static int test_hash_map_tombstone_reuse(void)
+{
+    FVizHashMap* map = NULL;
+    FVizSize capacity;
+    FVizMTime mtime;
+    FVizId i;
+    CHECK(fviz_hash_map_create_reserve(16u, &map) == FVIZ_OK);
+    capacity = fviz_hash_map_capacity(map);
+    CHECK(capacity >= 16u);
+    for (i = 0u; i < 6u; ++i)
+    {
+        CHECK(fviz_hash_map_set(map, i + 1u, (void*)(uintptr_t)(i + 1u)) == FVIZ_OK);
+    }
+    for (i = 0u; i < 6u; ++i) CHECK(fviz_hash_map_erase(map, i + 1u) == FVIZ_TRUE);
+    CHECK(fviz_hash_map_count(map) == 0u);
+    for (i = 0u; i < 6u; ++i)
+    {
+        CHECK(fviz_hash_map_set(map, i + 101u, (void*)(uintptr_t)(i + 101u)) == FVIZ_OK);
+    }
+    CHECK(fviz_hash_map_capacity(map) == capacity);
+    mtime = fviz_object_mtime((FVizObject*)map);
+    CHECK(fviz_hash_map_set(map, 101u, (void*)(uintptr_t)101u) == FVIZ_OK);
+    CHECK(fviz_object_mtime((FVizObject*)map) == mtime);
+    for (i = 0u; i < 6u; ++i) CHECK(fviz_hash_map_erase(map, i + 101u) == FVIZ_TRUE);
+    CHECK(fviz_hash_map_count(map) == 0u);
+    mtime = fviz_object_mtime((FVizObject*)map);
+    fviz_hash_map_clear(map);
+    CHECK(fviz_object_mtime((FVizObject*)map) > mtime);
+    CHECK(fviz_hash_map_capacity(map) == capacity);
+    fviz_release(map);
+    return 0;
+}
+
+static int test_string_aliasing(void)
+{
+    FVizString* string = NULL;
+    const char* self;
+    CHECK(fviz_string_create_from("abcdef", &string) == FVIZ_OK);
+    CHECK(string != NULL);
+
+    self = fviz_string_c_str(string);
+    CHECK(fviz_string_append(string, self) == FVIZ_OK);
+    CHECK(strcmp(fviz_string_c_str(string), "abcdefabcdef") == 0);
+
+    self = fviz_string_c_str(string) + 3;
+    CHECK(fviz_string_set(string, self) == FVIZ_OK);
+    CHECK(strcmp(fviz_string_c_str(string), "defabcdef") == 0);
+
+    self = fviz_string_c_str(string) + 3;
+    CHECK(fviz_string_append(string, self) == FVIZ_OK);
+    CHECK(strcmp(fviz_string_c_str(string), "defabcdefabcdef") == 0);
+
+    fviz_release(string);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_bit_array_basic() == 0);
     CHECK(test_bit_array_resize() == 0);
     CHECK(test_hash_map_basic() == 0);
     CHECK(test_hash_map_grow() == 0);
+    CHECK(test_hash_map_tombstone_reuse() == 0);
+    CHECK(test_string_aliasing() == 0);
     return 0;
 }

@@ -43,6 +43,8 @@ int main(void)
     uint64_t baseline_hash;
     FVizSize i;
     FVizSize changed = 0u;
+    FVizImageComparisonOptions comparison_options;
+    FVizImageComparisonResult comparison_result;
 
     if (fviz_render_window_supported() == FVIZ_FALSE) return 0;
     CHECK(fviz_render_window_create_offscreen(width, height, &window) == FVIZ_OK);
@@ -86,6 +88,11 @@ int main(void)
     CHECK(fviz_render_window_render(window) == FVIZ_OK);
     CHECK(fviz_render_window_read_rgba8(window, repeated, byte_count) == FVIZ_OK);
     CHECK(image_hash(repeated, byte_count) == baseline_hash);
+    fviz_image_comparison_options_initialize(&comparison_options);
+    CHECK(fviz_image_compare_rgba8(
+        baseline, repeated, (FVizSize)width * (FVizSize)height,
+        &comparison_options, &comparison_result, NULL, 0u) == FVIZ_OK);
+    CHECK(comparison_result.matches == FVIZ_TRUE);
 
     CHECK(fviz_mapper_add_clipping_plane(
         fviz_actor_mapper(actor),
@@ -96,6 +103,11 @@ int main(void)
     for (i = 0u; i < byte_count; ++i)
         if (baseline[i] != clipped[i]) ++changed;
     CHECK(changed > 100u);
+    CHECK(fviz_image_compare_rgba8(
+        baseline, clipped, (FVizSize)width * (FVizSize)height,
+        &comparison_options, &comparison_result, NULL, 0u) == FVIZ_OK);
+    CHECK(comparison_result.matches == FVIZ_FALSE);
+    CHECK(comparison_result.differing_pixels > 25u);
     CHECK(fviz_render_window_write_ppm(window, "FVizVisualRegression.ppm") == FVIZ_OK);
     CHECK(remove("FVizVisualRegression.ppm") == 0);
 

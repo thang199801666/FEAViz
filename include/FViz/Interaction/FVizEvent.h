@@ -1,6 +1,7 @@
 #ifndef FVIZ_INTERACTION_EVENT_H
 #define FVIZ_INTERACTION_EVENT_H
 
+#include <FViz/Core/FVizCommand.h>
 #include <FViz/Core/FVizTypes.h>
 
 FVIZ_EXTERN_C_BEGIN
@@ -20,7 +21,9 @@ typedef enum FVizInteractionEventType
     FVIZ_INTERACTION_EXPOSE = 10,
     FVIZ_INTERACTION_FOCUS_IN = 11,
     FVIZ_INTERACTION_FOCUS_OUT = 12,
-    FVIZ_INTERACTION_TIMER = 13
+    FVIZ_INTERACTION_TIMER = 13,
+    FVIZ_INTERACTION_DOUBLE_CLICK = 14,
+    FVIZ_INTERACTION_CHAR = 15
 } FVizInteractionEventType;
 
 typedef enum FVizMouseButton
@@ -28,7 +31,9 @@ typedef enum FVizMouseButton
     FVIZ_MOUSE_BUTTON_NONE = 0,
     FVIZ_MOUSE_BUTTON_LEFT = 1,
     FVIZ_MOUSE_BUTTON_MIDDLE = 2,
-    FVIZ_MOUSE_BUTTON_RIGHT = 3
+    FVIZ_MOUSE_BUTTON_RIGHT = 3,
+    FVIZ_MOUSE_BUTTON_X1 = 4,
+    FVIZ_MOUSE_BUTTON_X2 = 5
 } FVizMouseButton;
 
 typedef enum FVizKey
@@ -52,7 +57,16 @@ typedef struct FVizInteractionEvent
     FVizBool shift;
     FVizBool control;
     FVizBool alt;
+    /* Appended fields preserve the ABI prefix of the original event structure. */
+    unsigned int character;
+    int delta_x;
+    int delta_y;
+    float content_scale;
 } FVizInteractionEvent;
+
+/* Maps native interaction kinds to the corresponding FVIZ_EVENT_* identifier
+ * used by the generic FVizObject observer system. */
+FVIZ_API FVizEventId fviz_interaction_event_id(FVizInteractionEventType type);
 
 FVIZ_EXTERN_C_END
 

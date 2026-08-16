@@ -6,18 +6,22 @@
 #include <FViz/Core/FVizObjectPrivate.h>
 #include <FViz/Pipeline/FVizAlgorithm.h>
 
+typedef struct FVizTaskContext FVizTaskContext;
+
 typedef FVizResult (*FVizAlgorithmExecuteFn)(FVizAlgorithm* algorithm);
 
 typedef struct FVizAlgorithmConnection
 {
     FVizAlgorithm* producer;
     uint32_t output_port;
+    FVizObserverTag producer_modified_tag;
 } FVizAlgorithmConnection;
 
 typedef struct FVizAlgorithmInputPort
 {
     FVizAlgorithmPortInfo info;
     FVizDataObject* direct_data;
+    FVizObserverTag direct_data_modified_tag;
     FVizArray* connections;
 } FVizAlgorithmInputPort;
 
@@ -25,6 +29,9 @@ typedef struct FVizAlgorithmOutputPort
 {
     FVizAlgorithmPortInfo info;
     FVizDataObject* data;
+    FVizArray* time_steps;
+    int64_t whole_extent[6];
+    FVizBool has_whole_extent;
     FVizMTime last_input_mtime;
     FVizMTime last_algorithm_mtime;
     uint64_t last_request_key;
@@ -48,11 +55,20 @@ struct FVizAlgorithm
     FVizAlgorithmExecuteFn execute;
     FVizAlgorithmCallbacks callbacks;
     void* state;
+    FVizObject* observed_state_object;
+    FVizObserverTag observed_state_modified_tag;
+    FVizObserverTag observed_state_delete_tag;
     FVizBool custom;
     FVizExecutive* executive;
     FVizAlgorithmProgressFn progress_callback;
     void* progress_user_data;
     double progress;
+    /* While a context-based async update is running on a worker, report_progress
+     * forwards monotonic values to this task context so the owning future exposes
+     * live pipeline progress. Set/cleared by the async worker under the documented
+     * externally-synchronized pipeline mutation contract. */
+    FVizTaskContext* async_progress_context;
+    double async_progress_last;
     FVizAtomicU32 abort_requested;
     FVizMTime last_input_mtime;
     FVizMTime last_algorithm_mtime;
@@ -89,6 +105,12 @@ FVizResult fviz_internal_algorithm_set_output_data(
     uint32_t port,
     FVizDataObject* data_object);
 FVizResult fviz_internal_algorithm_update_now(FVizAlgorithm* algorithm);
+FVizResult fviz_internal_algorithm_map_input_request(
+    FVizAlgorithm* algorithm,
+    uint32_t input_port,
+    uint32_t connection,
+    const FVizPipelineRequestInfo* downstream_request,
+    FVizPipelineRequestInfo* upstream_request);
 FVizResult fviz_internal_algorithm_process_request(
     FVizAlgorithm* algorithm,
     const FVizPipelineRequestInfo* request,

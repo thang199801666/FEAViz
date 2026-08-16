@@ -4,6 +4,14 @@
 #include <string.h>
 #include <time.h>
 
+
+static double benchmark_wall_seconds(void)
+{
+    struct timespec value;
+    if (timespec_get(&value, TIME_UTC) != TIME_UTC) return 0.0;
+    return (double)value.tv_sec + (double)value.tv_nsec * 1.0e-9;
+}
+
 typedef struct WarpData
 {
     const FVizVec3* input;
@@ -52,8 +60,8 @@ static int run_case(uint32_t cells_per_axis, uint32_t thread_count)
     FVizParallelContext* context = NULL;
     FVizParallelStatistics statistics;
     WarpData data;
-    clock_t started;
-    clock_t finished;
+    double started;
+    double finished;
     FVizSize i;
     uint32_t iteration;
     uint64_t hash;
@@ -71,7 +79,7 @@ static int run_case(uint32_t cells_per_axis, uint32_t thread_count)
     data.input = input;
     data.output = output;
     data.scale = 4.0f;
-    started = clock();
+    started = benchmark_wall_seconds();
     for (iteration = 0u; iteration < 5u; ++iteration)
     {
         if (fviz_parallel_context_for(
@@ -79,7 +87,7 @@ static int run_case(uint32_t cells_per_axis, uint32_t thread_count)
                 warp_range, &data, NULL) != FVIZ_OK)
             return 4;
     }
-    finished = clock();
+    finished = benchmark_wall_seconds();
     hash = hash_points(output, point_count);
     fviz_parallel_context_get_statistics(context, &statistics);
     printf(
@@ -88,7 +96,7 @@ static int run_case(uint32_t cells_per_axis, uint32_t thread_count)
         (unsigned long long)cell_count,
         (unsigned long long)point_count,
         fviz_parallel_context_thread_count(context),
-        (double)(finished - started) / (double)CLOCKS_PER_SEC / 5.0,
+        (finished - started) / 5.0,
         (unsigned long long)hash,
         (unsigned long long)statistics.chunk_count,
         (unsigned long long)(point_count * (sizeof(*input) + sizeof(*output))));

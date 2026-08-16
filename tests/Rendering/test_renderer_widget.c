@@ -142,6 +142,9 @@ int main(void)
     CHECK(fviz_object_type_id((const FVizObject*)widget) == FVIZ_TYPE_RENDERER_WIDGET);
     CHECK(fviz_renderer_widget_window(widget) != NULL);
     CHECK(fviz_renderer_widget_renderer(widget) != NULL);
+    CHECK(fviz_renderer_widget_is_attached(widget) == FVIZ_FALSE);
+    CHECK(fviz_renderer_widget_host_native_handle(widget) == NULL);
+    CHECK(fviz_renderer_widget_sync_host_size(widget) == FVIZ_ERROR_INVALID_STATE);
     window = fviz_renderer_widget_window(widget);
     CHECK(fviz_render_window_renderer_count(window) == 1u);
     CHECK(fviz_render_window_set_renderer(

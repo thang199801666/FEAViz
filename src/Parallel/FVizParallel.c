@@ -721,24 +721,114 @@ FVizResult fviz_task_group_run(
     return FVIZ_OK;
 }
 
+typedef struct FVizTaskGroupDispatchContext
+{
+    FVizTaskGroup* group;
+    FVizSize* chunk_offsets;
+} FVizTaskGroupDispatchContext;
+
+static FVizSize fviz_task_group_find_task(
+    const FVizTaskGroupDispatchContext* context,
+    FVizSize chunk_index)
+{
+    FVizSize first = 0u;
+    FVizSize count = context->group->task_count;
+    while (count > 0u)
+    {
+        const FVizSize step = count / 2u;
+        const FVizSize middle = first + step;
+        if (context->chunk_offsets[middle + 1u] <= chunk_index)
+        {
+            first = middle + 1u;
+            count -= step + 1u;
+        }
+        else
+            count = step;
+    }
+    return first;
+}
+
+static FVizResult fviz_task_group_execute_chunks(
+    FVizSize begin,
+    FVizSize end,
+    void* user_data)
+{
+    FVizTaskGroupDispatchContext* context = (FVizTaskGroupDispatchContext*)user_data;
+    FVizSize chunk_index;
+    for (chunk_index = begin; chunk_index < end; ++chunk_index)
+    {
+        const FVizSize task_index = fviz_task_group_find_task(context, chunk_index);
+        const FVizQueuedTask* task;
+        FVizSize grain;
+        FVizSize local_chunk;
+        FVizSize chunk_begin;
+        FVizSize chunk_end;
+        FVizResult result;
+        if (task_index >= context->group->task_count) return FVIZ_ERROR_INTERNAL;
+        task = &context->group->tasks[task_index];
+        grain = task->grain_size != 0u ? task->grain_size : FVIZ_PARALLEL_DEFAULT_GRAIN;
+        local_chunk = chunk_index - context->chunk_offsets[task_index];
+        if (local_chunk > ((FVizSize)-1 - task->begin) / grain)
+            return FVIZ_ERROR_OVERFLOW;
+        chunk_begin = task->begin + local_chunk * grain;
+        chunk_end = chunk_begin + grain;
+        if (chunk_end < chunk_begin || chunk_end > task->end) chunk_end = task->end;
+        if (chunk_begin >= chunk_end) continue;
+        result = task->function(chunk_begin, chunk_end, task->user_data);
+        if (result != FVIZ_OK) return result;
+    }
+    return FVIZ_OK;
+}
+
 FVizResult fviz_task_group_wait(FVizTaskGroup* group)
 {
-    FVizResult result = FVIZ_OK;
+    FVizTaskGroupDispatchContext dispatch;
+    FVizSize* offsets = NULL;
+    FVizSize allocation_size;
+    FVizSize total_chunks = 0u;
     FVizSize i;
+    FVizResult result = FVIZ_OK;
     if (group == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (group->task_count == 0u) return FVIZ_OK;
+    if (fviz_size_multiply(group->task_count + 1u, sizeof(*offsets), &allocation_size) != FVIZ_OK)
+    {
+        group->task_count = 0u;
+        return FVIZ_ERROR_OVERFLOW;
+    }
+    offsets = (FVizSize*)fviz_alloc(allocation_size);
+    if (offsets == NULL)
+    {
+        group->task_count = 0u;
+        return FVIZ_ERROR_OUT_OF_MEMORY;
+    }
+    offsets[0] = 0u;
     for (i = 0u; i < group->task_count; ++i)
     {
         const FVizQueuedTask* task = &group->tasks[i];
-        result = fviz_parallel_context_for(
-            group->context,
-            task->begin,
-            task->end,
-            task->grain_size,
-            task->function,
-            task->user_data,
-            group->cancellation);
-        if (result != FVIZ_OK) break;
+        const FVizSize item_count = task->end - task->begin;
+        const FVizSize grain = task->grain_size != 0u ? task->grain_size : FVIZ_PARALLEL_DEFAULT_GRAIN;
+        const FVizSize chunks = item_count / grain + (item_count % grain != 0u ? 1u : 0u);
+        if (chunks > (FVizSize)-1 - total_chunks)
+        {
+            result = FVIZ_ERROR_OVERFLOW;
+            goto done;
+        }
+        total_chunks += chunks;
+        offsets[i + 1u] = total_chunks;
     }
+    if (total_chunks != 0u)
+    {
+        dispatch.group = group;
+        dispatch.chunk_offsets = offsets;
+        /* One scheduler dispatch lets chunks from independent queued tasks execute
+         * concurrently.  The chunk ordinal also preserves deterministic
+         * first-failure ordering inside fviz_parallel_dispatch(). */
+        result = fviz_parallel_context_for(
+            group->context, 0u, total_chunks, 1u,
+            fviz_task_group_execute_chunks, &dispatch, group->cancellation);
+    }
+done:
+    fviz_free(offsets);
     group->task_count = 0u;
     return result;
 }
@@ -793,6 +883,127 @@ FVizResult fviz_parallel_sum_f64(
     return result;
 }
 
+#define FVIZ_PARALLEL_SCAN_GRAIN 4096u
+#define FVIZ_PARALLEL_SORT_THRESHOLD 4096u
+#define FVIZ_PARALLEL_SORT_PAIR_GRAIN 32u
+
+typedef struct FVizScanContext
+{
+    const uint64_t* input;
+    uint64_t* output;
+    uint64_t* block_values;
+    FVizSize count;
+    FVizSize grain;
+    FVizBool inclusive;
+} FVizScanContext;
+
+static FVizResult fviz_parallel_scan_blocks(FVizSize begin, FVizSize end, void* user_data)
+{
+    FVizScanContext* context = (FVizScanContext*)user_data;
+    FVizSize block;
+    for (block = begin; block < end; ++block)
+    {
+        const FVizSize first = block * context->grain;
+        FVizSize last = first + context->grain;
+        uint64_t sum = 0u;
+        FVizSize i;
+        if (last < first || last > context->count) last = context->count;
+        for (i = first; i < last; ++i)
+        {
+            const uint64_t value = context->input[i];
+            if (context->inclusive != FVIZ_FALSE)
+            {
+                if (UINT64_MAX - sum < value) return FVIZ_ERROR_OVERFLOW;
+                sum += value;
+                context->output[i] = sum;
+            }
+            else
+            {
+                context->output[i] = sum;
+                if (UINT64_MAX - sum < value) return FVIZ_ERROR_OVERFLOW;
+                sum += value;
+            }
+        }
+        context->block_values[block] = sum;
+    }
+    return FVIZ_OK;
+}
+
+static FVizResult fviz_parallel_scan_add_offsets(FVizSize begin, FVizSize end, void* user_data)
+{
+    FVizScanContext* context = (FVizScanContext*)user_data;
+    FVizSize block;
+    for (block = begin; block < end; ++block)
+    {
+        const uint64_t offset = context->block_values[block];
+        const FVizSize first = block * context->grain;
+        FVizSize last = first + context->grain;
+        FVizSize i;
+        if (offset == 0u) continue;
+        if (last < first || last > context->count) last = context->count;
+        for (i = first; i < last; ++i)
+        {
+            if (UINT64_MAX - context->output[i] < offset) return FVIZ_ERROR_OVERFLOW;
+            context->output[i] += offset;
+        }
+    }
+    return FVIZ_OK;
+}
+
+static FVizResult fviz_parallel_scan_u64(
+    FVizParallelContext* context,
+    const uint64_t* input,
+    uint64_t* output,
+    FVizSize count,
+    uint64_t initial_value,
+    FVizBool inclusive,
+    uint64_t* out_total)
+{
+    FVizScanContext scan;
+    FVizSize block_count;
+    FVizSize allocation_size;
+    uint64_t running = initial_value;
+    FVizSize block;
+    FVizResult result;
+    if (context == NULL || (count != 0u && (input == NULL || output == NULL)))
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (out_total != NULL) *out_total = initial_value;
+    if (count == 0u) return FVIZ_OK;
+    block_count = count / FVIZ_PARALLEL_SCAN_GRAIN +
+        (count % FVIZ_PARALLEL_SCAN_GRAIN != 0u ? 1u : 0u);
+    if (fviz_size_multiply(block_count, sizeof(uint64_t), &allocation_size) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
+    scan.block_values = (uint64_t*)fviz_alloc(allocation_size);
+    if (scan.block_values == NULL) return FVIZ_ERROR_OUT_OF_MEMORY;
+    scan.input = input;
+    scan.output = output;
+    scan.count = count;
+    scan.grain = FVIZ_PARALLEL_SCAN_GRAIN;
+    scan.inclusive = inclusive;
+    result = fviz_parallel_context_for(
+        context, 0u, block_count, 1u, fviz_parallel_scan_blocks, &scan, NULL);
+    if (result != FVIZ_OK) goto done;
+    /* Convert block sums in place to offsets.  This serial O(blocks) phase is
+     * small (one value per ~4K elements) and keeps the result deterministic. */
+    for (block = 0u; block < block_count; ++block)
+    {
+        const uint64_t block_sum = scan.block_values[block];
+        scan.block_values[block] = running;
+        if (UINT64_MAX - running < block_sum)
+        {
+            result = FVIZ_ERROR_OVERFLOW;
+            goto done;
+        }
+        running += block_sum;
+    }
+    result = fviz_parallel_context_for(
+        context, 0u, block_count, 1u, fviz_parallel_scan_add_offsets, &scan, NULL);
+    if (result == FVIZ_OK && out_total != NULL) *out_total = running;
+done:
+    fviz_free(scan.block_values);
+    return result;
+}
+
 FVizResult fviz_parallel_exclusive_scan_u64(
     FVizParallelContext* context,
     const uint64_t* input,
@@ -801,19 +1012,8 @@ FVizResult fviz_parallel_exclusive_scan_u64(
     uint64_t initial_value,
     uint64_t* out_total)
 {
-    uint64_t sum = initial_value;
-    FVizSize i;
-    if (context == NULL || (count != 0u && (input == NULL || output == NULL)))
-        return FVIZ_ERROR_INVALID_ARGUMENT;
-    for (i = 0u; i < count; ++i)
-    {
-        const uint64_t value = input[i];
-        output[i] = sum;
-        if (UINT64_MAX - sum < value) return FVIZ_ERROR_OVERFLOW;
-        sum += value;
-    }
-    if (out_total != NULL) *out_total = sum;
-    return FVIZ_OK;
+    return fviz_parallel_scan_u64(
+        context, input, output, count, initial_value, FVIZ_FALSE, out_total);
 }
 
 FVizResult fviz_parallel_inclusive_scan_u64(
@@ -823,17 +1023,55 @@ FVizResult fviz_parallel_inclusive_scan_u64(
     FVizSize count,
     uint64_t* out_total)
 {
-    uint64_t sum = 0u;
-    FVizSize i;
-    if (context == NULL || (count != 0u && (input == NULL || output == NULL)))
-        return FVIZ_ERROR_INVALID_ARGUMENT;
-    for (i = 0u; i < count; ++i)
+    return fviz_parallel_scan_u64(
+        context, input, output, count, 0u, FVIZ_TRUE, out_total);
+}
+
+typedef struct FVizStableMergeContext
+{
+    const uint64_t* keys;
+    const FVizSize* source;
+    FVizSize* destination;
+    FVizSize count;
+    FVizSize width;
+} FVizStableMergeContext;
+
+static FVizResult fviz_parallel_stable_merge_pairs(
+    FVizSize begin, FVizSize end, void* user_data)
+{
+    FVizStableMergeContext* context = (FVizStableMergeContext*)user_data;
+    FVizSize pair;
+    for (pair = begin; pair < end; ++pair)
     {
-        if (UINT64_MAX - sum < input[i]) return FVIZ_ERROR_OVERFLOW;
-        sum += input[i];
-        output[i] = sum;
+        const FVizSize span = context->width <= (FVizSize)-1 / 2u
+            ? context->width * 2u : context->count;
+        const FVizSize left = pair * span;
+        FVizSize middle;
+        FVizSize right;
+        FVizSize a;
+        FVizSize b;
+        FVizSize out;
+        if (left >= context->count) continue;
+        middle = left + context->width;
+        if (middle < left || middle > context->count) middle = context->count;
+        right = middle + context->width;
+        if (right < middle || right > context->count) right = context->count;
+        a = left;
+        b = middle;
+        out = left;
+        while (a < middle && b < right)
+        {
+            const FVizSize ia = context->source[a];
+            const FVizSize ib = context->source[b];
+            /* <= preserves the original index order for equal keys. */
+            if (context->keys[ia] <= context->keys[ib])
+                context->destination[out++] = context->source[a++];
+            else
+                context->destination[out++] = context->source[b++];
+        }
+        while (a < middle) context->destination[out++] = context->source[a++];
+        while (b < right) context->destination[out++] = context->source[b++];
     }
-    if (out_total != NULL) *out_total = sum;
     return FVIZ_OK;
 }
 
@@ -844,9 +1082,12 @@ FVizResult fviz_parallel_stable_sort_u64_indices(
     FVizSize count)
 {
     FVizSize* temporary;
+    FVizSize* source;
+    FVizSize* destination;
     FVizSize width;
     FVizSize i;
     FVizSize allocation_size;
+    FVizResult result = FVIZ_OK;
     if (context == NULL || (count != 0u && (keys == NULL || indices == NULL)))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     if (count < 2u) return FVIZ_OK;
@@ -856,30 +1097,39 @@ FVizResult fviz_parallel_stable_sort_u64_indices(
         if (indices[i] >= count) return FVIZ_ERROR_INVALID_ARGUMENT;
     temporary = (FVizSize*)fviz_alloc(allocation_size);
     if (temporary == NULL) return FVIZ_ERROR_OUT_OF_MEMORY;
+    source = indices;
+    destination = temporary;
     for (width = 1u; width < count; width = width > count / 2u ? count : width * 2u)
     {
-        for (i = 0u; i < count; i += width > (FVizSize)-1 / 2u ? count : width * 2u)
+        FVizStableMergeContext merge;
+        const FVizSize span = width <= (FVizSize)-1 / 2u ? width * 2u : count;
+        const FVizSize pair_count = count / span + (count % span != 0u ? 1u : 0u);
+        merge.keys = keys;
+        merge.source = source;
+        merge.destination = destination;
+        merge.count = count;
+        merge.width = width;
+        if (count >= FVIZ_PARALLEL_SORT_THRESHOLD && fviz_parallel_context_thread_count(context) > 1u)
         {
-            FVizSize left = i;
-            FVizSize middle = i + width < count ? i + width : count;
-            FVizSize right = middle + width < count ? middle + width : count;
-            FVizSize a = left;
-            FVizSize b = middle;
-            FVizSize out = left;
-            while (a < middle && b < right)
-            {
-                const FVizSize ia = indices[a];
-                const FVizSize ib = indices[b];
-                if (keys[ia] <= keys[ib]) temporary[out++] = indices[a++];
-                else temporary[out++] = indices[b++];
-            }
-            while (a < middle) temporary[out++] = indices[a++];
-            while (b < right) temporary[out++] = indices[b++];
+            result = fviz_parallel_context_for(
+                context, 0u, pair_count, FVIZ_PARALLEL_SORT_PAIR_GRAIN,
+                fviz_parallel_stable_merge_pairs, &merge, NULL);
         }
-        memcpy(indices, temporary, count * sizeof(*indices));
+        else
+        {
+            result = fviz_parallel_stable_merge_pairs(0u, pair_count, &merge);
+        }
+        if (result != FVIZ_OK) break;
+        {
+            FVizSize* swap = source;
+            source = destination;
+            destination = swap;
+        }
     }
+    if (result == FVIZ_OK && source != indices)
+        (void)memcpy(indices, source, count * sizeof(*indices));
     fviz_free(temporary);
-    return FVIZ_OK;
+    return result;
 }
 
 void* fviz_parallel_scratch_allocate(FVizSize size, FVizSize alignment)

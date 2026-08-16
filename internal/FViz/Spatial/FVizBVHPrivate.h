@@ -29,6 +29,8 @@ struct FVizBVH
     FVizBounds* triangle_bounds_cache;
     FVizVec3* triangle_centroids;
     FVizPolyData* poly_data;
+    FVizMTime source_geometry_mtime;
+    FVizMTime source_topology_mtime;
     FVizBool valid;
 };
 

@@ -3,7 +3,7 @@
 
 #include <FViz/Core/FVizApi.h>
 #include <FViz/Core/FVizResult.h>
-#include <FViz/FEA/FVizUnstructuredGrid.h>
+#include <FViz/Data/FVizUnstructuredGrid.h>
 
 FVIZ_EXTERN_C_BEGIN
 

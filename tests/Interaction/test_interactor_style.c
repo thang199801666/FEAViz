@@ -26,6 +26,8 @@ static int test_trackball_camera(void)
     FVizVec3 after;
     float distance_before;
     float distance_after;
+    FVizMTime mtime_before;
+    FVizMTime mtime_after;
     CHECK(fviz_renderer_create(&renderer) == FVIZ_OK);
     CHECK(fviz_interactor_style_trackball_camera_create(&style) == FVIZ_OK);
     CHECK(fviz_object_type_id((const FVizObject*)style) == FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_CAMERA);
@@ -38,13 +40,18 @@ static int test_trackball_camera(void)
 
     camera = fviz_renderer_camera(renderer);
     before = fviz_camera_position(camera);
+    mtime_before = fviz_object_mtime((const FVizObject*)camera);
     event = event_at(FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_LEFT, 10, 10);
     CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_interactor_style_state(style) == FVIZ_INTERACTION_STATE_ROTATE);
     event = event_at(FVIZ_INTERACTION_MOUSE_MOVE, FVIZ_MOUSE_BUTTON_NONE, 30, 20);
     CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
     event = event_at(FVIZ_INTERACTION_MOUSE_BUTTON_UP, FVIZ_MOUSE_BUTTON_LEFT, 30, 20);
     CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_interactor_style_state(style) == FVIZ_INTERACTION_STATE_NONE);
     after = fviz_camera_position(camera);
+    mtime_after = fviz_object_mtime((const FVizObject*)camera);
+    CHECK(mtime_after > mtime_before);
     CHECK(fviz_vec3_length(fviz_vec3_sub(after, before)) > 0.01f);
 
     distance_before = fviz_vec3_length(fviz_vec3_sub(after, fviz_camera_target(camera)));
@@ -65,6 +72,32 @@ static int test_trackball_camera(void)
     distance_after = fviz_vec3_length(
         fviz_vec3_sub(fviz_camera_position(camera), fviz_camera_target(camera)));
     CHECK(distance_after > distance_before);
+
+    event = event_at(FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_LEFT, 5, 5);
+    event.shift = FVIZ_TRUE;
+    before = fviz_camera_position(camera);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_interactor_style_state(style) == FVIZ_INTERACTION_STATE_PAN);
+    event = event_at(FVIZ_INTERACTION_MOUSE_MOVE, FVIZ_MOUSE_BUTTON_NONE, 25, 15);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_vec3_length(fviz_vec3_sub(fviz_camera_position(camera), before)) > 0.001f);
+    fviz_interactor_style_cancel_interaction(style);
+    CHECK(fviz_interactor_style_state(style) == FVIZ_INTERACTION_STATE_NONE);
+    CHECK(fviz_vec3_length(fviz_vec3_sub(fviz_camera_position(camera), before)) < 1.0e-6f);
+
+    event = event_at(FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_LEFT, 5, 5);
+    event.control = FVIZ_TRUE;
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_interactor_style_state(style) == FVIZ_INTERACTION_STATE_DOLLY);
+    fviz_interactor_style_cancel_interaction(style);
+
+    fviz_camera_set_projection_mode(camera, FVIZ_CAMERA_PARALLEL);
+    fviz_camera_set_parallel_scale(camera, 4.0f);
+    CHECK(fviz_camera_projection_mode(camera) == FVIZ_CAMERA_PARALLEL);
+    event = event_at(FVIZ_INTERACTION_MOUSE_WHEEL, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
+    event.wheel_delta = 2.0f;
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_camera_parallel_scale(camera) < 4.0f);
 
     fviz_release(style);
     fviz_release(renderer);
@@ -88,6 +121,12 @@ static int test_keyboard_style(void)
     event.key = 's';
     CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
     CHECK(fviz_actor_wireframe(actor) == FVIZ_FALSE);
+    event.key = 'P';
+    CHECK(fviz_camera_projection_mode(fviz_renderer_camera(renderer)) == FVIZ_CAMERA_PERSPECTIVE);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_camera_projection_mode(fviz_renderer_camera(renderer)) == FVIZ_CAMERA_PARALLEL);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    CHECK(fviz_camera_projection_mode(fviz_renderer_camera(renderer)) == FVIZ_CAMERA_PERSPECTIVE);
     event.key = 'X';
     CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_FALSE);
     fviz_release(actor);
@@ -151,6 +190,14 @@ static int test_trackball_actor(void)
     CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
     after = fviz_actor_orientation(actor);
     CHECK(fabsf(fviz_quat_dot(before, after)) < 0.999f);
+    before = after;
+    event = event_at(FVIZ_INTERACTION_MOUSE_BUTTON_DOWN, FVIZ_MOUSE_BUTTON_LEFT, 30, 20);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    event = event_at(FVIZ_INTERACTION_MOUSE_MOVE, FVIZ_MOUSE_BUTTON_NONE, 50, 40);
+    CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);
+    fviz_interactor_style_cancel_interaction(style);
+    after = fviz_actor_orientation(actor);
+    CHECK(fabsf(fviz_quat_dot(before, after)) > 0.999999f);
     event = event_at(FVIZ_INTERACTION_MOUSE_WHEEL, FVIZ_MOUSE_BUTTON_NONE, 0, 0);
     event.wheel_delta = 1.0f;
     CHECK(fviz_interactor_style_process_event(style, renderer, &event) == FVIZ_TRUE);

@@ -45,6 +45,12 @@ FVIZ_API FVizDataArray* fviz_attribute_set_active(
 FVIZ_API const FVizDataArray* fviz_attribute_set_const_active(
     const FVizAttributeSet* set,
     FVizAttributeRole role);
+FVIZ_API FVizResult fviz_attribute_set_shallow_copy(
+    const FVizAttributeSet* source,
+    FVizAttributeSet** out_copy);
+FVIZ_API FVizResult fviz_attribute_set_deep_copy(
+    const FVizAttributeSet* source,
+    FVizAttributeSet** out_copy);
 
 FVIZ_EXTERN_C_END
 

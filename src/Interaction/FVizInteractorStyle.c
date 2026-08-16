@@ -3,6 +3,7 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Interaction/FVizInteractorStyle.h>
+#include <FViz/Math/FVizMath.h>
 #include <FViz/Rendering/FVizActor.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
@@ -11,8 +12,44 @@
 static void fviz_interactor_style_destroy(FVizObject* object)
 {
     FVizInteractorStyle* style = (FVizInteractorStyle*)object;
+    fviz_release(style->snapshot_camera);
     fviz_release(style->actor);
+    style->snapshot_camera = NULL;
     style->actor = NULL;
+}
+
+static void fviz_interactor_style_finish_transaction(FVizInteractorStyle* style)
+{
+    if (style == NULL) return;
+    fviz_release(style->snapshot_camera);
+    style->snapshot_camera = NULL;
+    style->transaction_active = FVIZ_FALSE;
+}
+
+static void fviz_interactor_style_begin_camera_transaction(
+    FVizInteractorStyle* style, FVizCamera* camera)
+{
+    if (style == NULL || camera == NULL || style->transaction_active != FVIZ_FALSE) return;
+    style->snapshot_camera = (FVizCamera*)fviz_retain(camera);
+    if (style->snapshot_camera == NULL) return;
+    style->snapshot_camera_position = fviz_camera_position(camera);
+    style->snapshot_camera_target = fviz_camera_target(camera);
+    style->snapshot_camera_up = fviz_camera_up(camera);
+    style->snapshot_camera_fov = fviz_camera_fov_degrees(camera);
+    style->snapshot_camera_near = fviz_camera_near_plane(camera);
+    style->snapshot_camera_far = fviz_camera_far_plane(camera);
+    style->snapshot_camera_parallel_scale = fviz_camera_parallel_scale(camera);
+    style->snapshot_camera_projection = fviz_camera_projection_mode(camera);
+    style->transaction_active = FVIZ_TRUE;
+}
+
+static void fviz_interactor_style_begin_actor_transaction(FVizInteractorStyle* style)
+{
+    if (style == NULL || style->actor == NULL || style->transaction_active != FVIZ_FALSE) return;
+    style->snapshot_actor_position = fviz_actor_position(style->actor);
+    style->snapshot_actor_orientation = fviz_actor_orientation(style->actor);
+    style->snapshot_actor_scale = fviz_actor_scale(style->actor);
+    style->transaction_active = FVIZ_TRUE;
 }
 
 static const FVizObjectClass g_fviz_interactor_style_class = {
@@ -89,6 +126,8 @@ FVizResult fviz_interactor_style_trackball_actor_set_actor(
             FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_ACTOR) == FVIZ_FALSE)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     if (actor != NULL && fviz_retain(actor) == NULL) return fviz_last_error_code();
+    if (style->transaction_active != FVIZ_FALSE)
+        fviz_interactor_style_cancel_interaction(style);
     fviz_release(style->actor);
     style->actor = actor;
     fviz_object_modified((FVizObject*)style);
@@ -166,6 +205,7 @@ void fviz_interactor_style_rubber_band_reset(FVizInteractorStyle* style)
         return;
     style->rubber_active = FVIZ_FALSE;
     style->rubber_completed = FVIZ_FALSE;
+    style->state = FVIZ_INTERACTION_STATE_NONE;
 }
 
 void fviz_interactor_style_set_orbit_sensitivity(FVizInteractorStyle* style, float radians_per_pixel)
@@ -198,6 +238,44 @@ float fviz_interactor_style_dolly_factor(const FVizInteractorStyle* style)
     return style != NULL ? style->dolly_factor : 1.0f;
 }
 
+FVizInteractionState fviz_interactor_style_state(const FVizInteractorStyle* style)
+{
+    return style != NULL ? style->state : FVIZ_INTERACTION_STATE_NONE;
+}
+
+void fviz_interactor_style_cancel_interaction(FVizInteractorStyle* style)
+{
+    if (style == NULL) return;
+    if (style->transaction_active != FVIZ_FALSE)
+    {
+        if (style->snapshot_camera != NULL)
+        {
+            fviz_camera_set_position(style->snapshot_camera, style->snapshot_camera_position);
+            fviz_camera_set_target(style->snapshot_camera, style->snapshot_camera_target);
+            fviz_camera_set_up(style->snapshot_camera, style->snapshot_camera_up);
+            fviz_camera_set_perspective(
+                style->snapshot_camera, style->snapshot_camera_fov,
+                style->snapshot_camera_near, style->snapshot_camera_far);
+            fviz_camera_set_parallel_scale(
+                style->snapshot_camera, style->snapshot_camera_parallel_scale);
+            fviz_camera_set_projection_mode(
+                style->snapshot_camera, style->snapshot_camera_projection);
+        }
+        else if (style->actor != NULL)
+        {
+            fviz_actor_set_position(style->actor, style->snapshot_actor_position);
+            fviz_actor_set_orientation(style->actor, style->snapshot_actor_orientation);
+            fviz_actor_set_scale(style->actor, style->snapshot_actor_scale);
+        }
+    }
+    fviz_interactor_style_finish_transaction(style);
+    style->left_down = FVIZ_FALSE;
+    style->middle_down = FVIZ_FALSE;
+    style->right_down = FVIZ_FALSE;
+    style->rubber_active = FVIZ_FALSE;
+    style->state = FVIZ_INTERACTION_STATE_NONE;
+}
+
 static void fviz_interactor_style_toggle_wireframe(FVizRenderer* renderer)
 {
     FVizScene* scene = fviz_renderer_scene(renderer);
@@ -224,9 +302,25 @@ FVizBool fviz_interactor_style_process_event(
         switch (event->type)
         {
             case FVIZ_INTERACTION_MOUSE_BUTTON_DOWN:
-                if (event->button == FVIZ_MOUSE_BUTTON_LEFT) style->left_down = FVIZ_TRUE;
-                else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE) style->middle_down = FVIZ_TRUE;
-                else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT) style->right_down = FVIZ_TRUE;
+                if (event->button != FVIZ_MOUSE_BUTTON_LEFT &&
+                    event->button != FVIZ_MOUSE_BUTTON_MIDDLE &&
+                    event->button != FVIZ_MOUSE_BUTTON_RIGHT) return FVIZ_FALSE;
+                fviz_interactor_style_begin_actor_transaction(style);
+                if (event->button == FVIZ_MOUSE_BUTTON_LEFT)
+                {
+                    style->left_down = FVIZ_TRUE;
+                    style->state = FVIZ_INTERACTION_STATE_ACTOR_ROTATE;
+                }
+                else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE)
+                {
+                    style->middle_down = FVIZ_TRUE;
+                    style->state = FVIZ_INTERACTION_STATE_ACTOR_PAN;
+                }
+                else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT)
+                {
+                    style->right_down = FVIZ_TRUE;
+                    style->state = FVIZ_INTERACTION_STATE_ACTOR_DOLLY;
+                }
                 else return FVIZ_FALSE;
                 style->last_x = event->x;
                 style->last_y = event->y;
@@ -236,6 +330,12 @@ FVizBool fviz_interactor_style_process_event(
                 else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE) style->middle_down = FVIZ_FALSE;
                 else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT) style->right_down = FVIZ_FALSE;
                 else return FVIZ_FALSE;
+                if (style->left_down == FVIZ_FALSE && style->middle_down == FVIZ_FALSE &&
+                    style->right_down == FVIZ_FALSE)
+                {
+                    style->state = FVIZ_INTERACTION_STATE_NONE;
+                    fviz_interactor_style_finish_transaction(style);
+                }
                 style->last_x = event->x;
                 style->last_y = event->y;
                 return FVIZ_TRUE;
@@ -275,9 +375,9 @@ FVizBool fviz_interactor_style_process_event(
             }
             case FVIZ_INTERACTION_MOUSE_WHEEL:
             {
-                const float factor = event->wheel_delta > 0.0f
-                    ? 1.0f / style->dolly_factor : style->dolly_factor;
+                float factor;
                 if (event->wheel_delta == 0.0f) return FVIZ_FALSE;
+                factor = powf(style->dolly_factor, -event->wheel_delta);
                 fviz_actor_set_scale(actor, fviz_vec3_scale(fviz_actor_scale(actor), factor));
                 return FVIZ_TRUE;
             }
@@ -297,6 +397,7 @@ FVizBool fviz_interactor_style_process_event(
                 style->rubber_end_x = event->x;
                 style->rubber_end_y = event->y;
                 style->rubber_active = FVIZ_TRUE;
+                style->state = FVIZ_INTERACTION_STATE_RUBBER_BAND;
                 style->rubber_completed = FVIZ_FALSE;
                 return FVIZ_TRUE;
             case FVIZ_INTERACTION_MOUSE_MOVE:
@@ -310,6 +411,7 @@ FVizBool fviz_interactor_style_process_event(
                 style->rubber_end_x = event->x;
                 style->rubber_end_y = event->y;
                 style->rubber_active = FVIZ_FALSE;
+                style->state = FVIZ_INTERACTION_STATE_NONE;
                 style->rubber_completed = FVIZ_TRUE;
                 return FVIZ_TRUE;
             case FVIZ_INTERACTION_KEY_DOWN:
@@ -327,10 +429,34 @@ FVizBool fviz_interactor_style_process_event(
     if (camera == NULL) return FVIZ_FALSE;
     switch (event->type)
     {
+        case FVIZ_INTERACTION_DOUBLE_CLICK:
+            if (event->button != FVIZ_MOUSE_BUTTON_LEFT) return FVIZ_FALSE;
+            fviz_renderer_fit_camera(renderer, 1.2f);
+            return FVIZ_TRUE;
         case FVIZ_INTERACTION_MOUSE_BUTTON_DOWN:
-            if (event->button == FVIZ_MOUSE_BUTTON_LEFT) style->left_down = FVIZ_TRUE;
-            else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE) style->middle_down = FVIZ_TRUE;
-            else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT) style->right_down = FVIZ_TRUE;
+            if (event->button != FVIZ_MOUSE_BUTTON_LEFT &&
+                event->button != FVIZ_MOUSE_BUTTON_MIDDLE &&
+                event->button != FVIZ_MOUSE_BUTTON_RIGHT) return FVIZ_FALSE;
+            fviz_interactor_style_begin_camera_transaction(style, camera);
+            if (event->button == FVIZ_MOUSE_BUTTON_LEFT)
+            {
+                style->left_down = FVIZ_TRUE;
+                style->state = event->shift != FVIZ_FALSE
+                    ? FVIZ_INTERACTION_STATE_PAN
+                    : (event->control != FVIZ_FALSE
+                        ? FVIZ_INTERACTION_STATE_DOLLY
+                        : FVIZ_INTERACTION_STATE_ROTATE);
+            }
+            else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE)
+            {
+                style->middle_down = FVIZ_TRUE;
+                style->state = FVIZ_INTERACTION_STATE_PAN;
+            }
+            else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT)
+            {
+                style->right_down = FVIZ_TRUE;
+                style->state = FVIZ_INTERACTION_STATE_DOLLY;
+            }
             else return FVIZ_FALSE;
             style->last_x = event->x;
             style->last_y = event->y;
@@ -340,6 +466,12 @@ FVizBool fviz_interactor_style_process_event(
             else if (event->button == FVIZ_MOUSE_BUTTON_MIDDLE) style->middle_down = FVIZ_FALSE;
             else if (event->button == FVIZ_MOUSE_BUTTON_RIGHT) style->right_down = FVIZ_FALSE;
             else return FVIZ_FALSE;
+            if (style->left_down == FVIZ_FALSE && style->middle_down == FVIZ_FALSE &&
+                style->right_down == FVIZ_FALSE)
+            {
+                style->state = FVIZ_INTERACTION_STATE_NONE;
+                fviz_interactor_style_finish_transaction(style);
+            }
             style->last_x = event->x;
             style->last_y = event->y;
             return FVIZ_TRUE;
@@ -348,22 +480,44 @@ FVizBool fviz_interactor_style_process_event(
             const int dx = event->x - style->last_x;
             const int dy = event->y - style->last_y;
             FVizBool handled = FVIZ_FALSE;
-            if (style->left_down == FVIZ_TRUE)
+            if (style->state == FVIZ_INTERACTION_STATE_ROTATE)
             {
                 fviz_camera_orbit(camera,
                     -(float)dx * style->orbit_sensitivity,
                     -(float)dy * style->orbit_sensitivity);
                 handled = FVIZ_TRUE;
             }
-            else if (style->middle_down == FVIZ_TRUE)
+            else if (style->state == FVIZ_INTERACTION_STATE_PAN)
             {
-                const float distance = fviz_vec3_length(
-                    fviz_vec3_sub(fviz_camera_position(camera), fviz_camera_target(camera)));
-                const float scale = distance * style->pan_sensitivity;
-                fviz_camera_pan(camera, -(float)dx * scale, (float)dy * scale);
+                float viewport_height = event->height > 0 ? (float)event->height : 600.0f;
+                float minimum_x;
+                float minimum_y;
+                float maximum_x;
+                float maximum_y;
+                float half_height;
+                float world_per_pixel;
+                const float sensitivity_scale = style->pan_sensitivity / 0.0015f;
+                fviz_renderer_get_viewport(
+                    renderer, &minimum_x, &minimum_y, &maximum_x, &maximum_y);
+                (void)minimum_x;
+                (void)maximum_x;
+                viewport_height *= maximum_y - minimum_y;
+                if (viewport_height < 1.0f) viewport_height = 1.0f;
+                if (fviz_camera_projection_mode(camera) == FVIZ_CAMERA_PARALLEL)
+                    half_height = fviz_camera_parallel_scale(camera);
+                else
+                {
+                    const float distance = fviz_vec3_length(
+                        fviz_vec3_sub(fviz_camera_position(camera), fviz_camera_target(camera)));
+                    const float half_fov = fviz_camera_fov_degrees(camera) * FVIZ_PI_F / 360.0f;
+                    half_height = distance * tanf(half_fov);
+                }
+                world_per_pixel = 2.0f * half_height / viewport_height * sensitivity_scale;
+                fviz_camera_pan(
+                    camera, -(float)dx * world_per_pixel, (float)dy * world_per_pixel);
                 handled = FVIZ_TRUE;
             }
-            else if (style->right_down == FVIZ_TRUE)
+            else if (style->state == FVIZ_INTERACTION_STATE_DOLLY)
             {
                 fviz_camera_dolly(camera, powf(style->dolly_factor, -(float)dy * 0.1f));
                 handled = FVIZ_TRUE;
@@ -374,8 +528,7 @@ FVizBool fviz_interactor_style_process_event(
         }
         case FVIZ_INTERACTION_MOUSE_WHEEL:
             if (event->wheel_delta == 0.0f) return FVIZ_FALSE;
-            fviz_camera_dolly(camera,
-                event->wheel_delta > 0.0f ? style->dolly_factor : 1.0f / style->dolly_factor);
+            fviz_camera_dolly(camera, powf(style->dolly_factor, event->wheel_delta));
             return FVIZ_TRUE;
         case FVIZ_INTERACTION_KEY_DOWN:
         {
@@ -384,6 +537,32 @@ FVizBool fviz_interactor_style_process_event(
             if (key == 'F' || key == 'R')
             {
                 fviz_renderer_fit_camera(renderer, 1.2f);
+                return FVIZ_TRUE;
+            }
+            if (key == 'P')
+            {
+                const float distance = fviz_vec3_length(
+                    fviz_vec3_sub(fviz_camera_position(camera), fviz_camera_target(camera)));
+                const float half_fov = fviz_camera_fov_degrees(camera) * FVIZ_PI_F / 360.0f;
+                if (fviz_camera_projection_mode(camera) == FVIZ_CAMERA_PERSPECTIVE)
+                {
+                    fviz_camera_set_parallel_scale(camera, distance * tanf(half_fov));
+                    fviz_camera_set_projection_mode(camera, FVIZ_CAMERA_PARALLEL);
+                }
+                else
+                {
+                    const float tangent = tanf(half_fov);
+                    if (tangent > 1.0e-6f)
+                    {
+                        const FVizVec3 target = fviz_camera_target(camera);
+                        const FVizVec3 direction = fviz_vec3_normalize(fviz_vec3_sub(
+                            fviz_camera_position(camera), target));
+                        const float new_distance = fviz_camera_parallel_scale(camera) / tangent;
+                        fviz_camera_set_position(
+                            camera, fviz_vec3_add(target, fviz_vec3_scale(direction, new_distance)));
+                    }
+                    fviz_camera_set_projection_mode(camera, FVIZ_CAMERA_PERSPECTIVE);
+                }
                 return FVIZ_TRUE;
             }
             if (key == 'W')

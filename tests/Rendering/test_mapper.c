@@ -11,6 +11,16 @@ static int test_lookup_table(void)
     float r0, g0, b0;
     CHECK(fviz_lookup_table_create(256u, &table) == FVIZ_OK);
     CHECK(fviz_lookup_table_size(table) == 256u);
+    {
+        FVizMTime mtime;
+        fviz_lookup_table_get_range(table, &r, &g);
+        mtime = fviz_object_mtime((FVizObject*)table);
+        fviz_lookup_table_set_range(table, r, g);
+        CHECK(fviz_object_mtime((FVizObject*)table) == mtime);
+        fviz_lookup_table_get_color(table, 0u, &r, &g, &b);
+        CHECK(fviz_lookup_table_set_color(table, 0u, r, g, b) == FVIZ_OK);
+        CHECK(fviz_object_mtime((FVizObject*)table) == mtime);
+    }
     fviz_lookup_table_set_range(table, -10.0f, 10.0f);
     fviz_lookup_table_get_range(table, &r, &g);
     CHECK(r == -10.0f && g == 10.0f);
@@ -53,6 +63,28 @@ static int test_rainbow_lookup_table(void)
     CHECK(r == 1.0f && g == 0.0f && b == 0.0f);
     CHECK(fviz_lookup_table_build_preset(table, (FVizColorMapPreset)99) == FVIZ_ERROR_INVALID_ARGUMENT);
     fviz_release(table);
+    return 0;
+}
+
+
+static int test_mapper_lazy_lookup_table(void)
+{
+    FVizMapper* mapper = NULL;
+    FVizMapper* disabled = NULL;
+    FVizLookupTable* table;
+    float minimum = 0.0f;
+    float maximum = 0.0f;
+    CHECK(fviz_mapper_create(&mapper) == FVIZ_OK);
+    fviz_mapper_set_scalar_range(mapper, -5.0f, 25.0f);
+    table = fviz_mapper_lookup_table(mapper);
+    CHECK(table != NULL);
+    fviz_lookup_table_get_range(table, &minimum, &maximum);
+    CHECK(minimum == -5.0f && maximum == 25.0f);
+    CHECK(fviz_mapper_create(&disabled) == FVIZ_OK);
+    fviz_mapper_set_lookup_table(disabled, NULL);
+    CHECK(fviz_mapper_lookup_table(disabled) == NULL);
+    fviz_release(disabled);
+    fviz_release(mapper);
     return 0;
 }
 
@@ -105,10 +137,20 @@ static int test_mapper(void)
         selected.name != NULL);
     fviz_mapper_set_scalar_visibility(mapper, FVIZ_TRUE);
     CHECK(fviz_mapper_scalar_visibility(mapper) == FVIZ_TRUE);
+    {
+        const FVizMTime unchanged = fviz_object_mtime((FVizObject*)mapper);
+        fviz_mapper_set_scalar_visibility(mapper, FVIZ_TRUE);
+        CHECK(fviz_object_mtime((FVizObject*)mapper) == unchanged);
+    }
     fviz_mapper_set_scalar_range(mapper, 0.0f, 10.0f);
     CHECK(fviz_mapper_scalar_range_valid(mapper) == FVIZ_TRUE);
     fviz_mapper_get_scalar_range(mapper, &values[0], &values[1]);
     CHECK(values[0] == 0.0f && values[1] == 10.0f);
+    {
+        const FVizMTime unchanged = fviz_object_mtime((FVizObject*)mapper);
+        fviz_mapper_set_scalar_range(mapper, 0.0f, 10.0f);
+        CHECK(fviz_object_mtime((FVizObject*)mapper) == unchanged);
+    }
     fviz_mapper_use_automatic_scalar_range(mapper);
     CHECK(fviz_mapper_scalar_range_valid(mapper) == FVIZ_FALSE);
     fviz_mapper_set_scalar_interpolation(mapper, FVIZ_SCALAR_INTERPOLATION_POINT);
@@ -154,6 +196,7 @@ int main(void)
 {
     CHECK(test_lookup_table() == 0);
     CHECK(test_rainbow_lookup_table() == 0);
+    CHECK(test_mapper_lazy_lookup_table() == 0);
     CHECK(test_mapper() == 0);
     return 0;
 }

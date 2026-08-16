@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <string.h>
 
 #include <FViz/Core/FVizError.h>
@@ -90,20 +91,41 @@ FVizSize fviz_string_length(const FVizString* string)
     return string != NULL ? string->length : 0u;
 }
 
+static FVizBool fviz_string_source_offset(
+    const FVizString* string,
+    const char* text,
+    FVizSize* out_offset)
+{
+    uintptr_t base;
+    uintptr_t source;
+    uintptr_t end;
+    if (string == NULL || string->data == NULL || text == NULL || out_offset == NULL) return FVIZ_FALSE;
+    base = (uintptr_t)(const void*)string->data;
+    source = (uintptr_t)(const void*)text;
+    end = base + (uintptr_t)string->length;
+    if (source < base || source > end) return FVIZ_FALSE;
+    *out_offset = (FVizSize)(source - base);
+    return FVIZ_TRUE;
+}
+
 FVizResult fviz_string_set(FVizString* string, const char* text)
 {
     FVizSize length;
+    FVizSize source_offset = 0u;
+    FVizBool source_is_internal;
     if (string == NULL || text == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "string and text must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    source_is_internal = fviz_string_source_offset(string, text, &source_offset);
     length = (FVizSize)strlen(text);
     if (fviz_string_reserve(string, length + 1u) != FVIZ_OK)
     {
         return fviz_last_error_code();
     }
-    (void)memcpy(string->data, text, length + 1u);
+    if (source_is_internal != FVIZ_FALSE) text = string->data + source_offset;
+    (void)memmove(string->data, text, length + 1u);
     string->length = length;
     fviz_object_modified((FVizObject*)string);
     return FVIZ_OK;
@@ -113,23 +135,29 @@ FVizResult fviz_string_append(FVizString* string, const char* text)
 {
     FVizSize extra;
     FVizSize required;
+    FVizSize source_offset = 0u;
+    FVizSize old_length;
+    FVizBool source_is_internal;
     if (string == NULL || text == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "string and text must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
+    source_is_internal = fviz_string_source_offset(string, text, &source_offset);
     extra = (FVizSize)strlen(text);
-    required = string->length + extra + 1u;
-    if (required < string->length || fviz_string_reserve(string, required) != FVIZ_OK)
+    old_length = string->length;
+    required = old_length + extra + 1u;
+    if (required < old_length || fviz_string_reserve(string, required) != FVIZ_OK)
     {
-        if (required < string->length)
+        if (required < old_length)
         {
             fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "string append overflow");
         }
         return fviz_last_error_code();
     }
-    (void)memcpy(string->data + string->length, text, extra + 1u);
-    string->length += extra;
+    if (source_is_internal != FVIZ_FALSE) text = string->data + source_offset;
+    (void)memmove(string->data + old_length, text, extra + 1u);
+    string->length = old_length + extra;
     if (extra != 0u) fviz_object_modified((FVizObject*)string);
     return FVIZ_OK;
 }

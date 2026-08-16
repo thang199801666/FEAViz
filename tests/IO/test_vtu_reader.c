@@ -4,7 +4,7 @@
 
 #include <FViz/FViz.h>
 
-#define CHECK(expr) do { if (!(expr)) return __LINE__; } while (0)
+#define CHECK(expr) do { if (!(expr)) { fprintf(stderr, "check failed at %s:%d: %s\n", __FILE__, __LINE__, #expr); return __LINE__; } } while (0)
 
 #ifndef FVIZ_TESTDATA_DIR
 #define FVIZ_TESTDATA_DIR "."
@@ -206,12 +206,66 @@ static int test_vtu_round_trip_mode(FVizVTUOutputMode mode, FVizVTUHeaderWidth w
     return 0;
 }
 
+
+static int test_vtu_vtk_ghost_normalization(void)
+{
+    const char* path = "FVizVTKGhostInput.vtu";
+    FILE* file = fopen(path, "wb");
+    FVizUnstructuredGrid* grid = NULL;
+    const FVizDataArray* vtk_point_ghosts;
+    const FVizDataArray* vtk_cell_ghosts;
+    const FVizDataArray* point_ghosts;
+    const FVizDataArray* cell_ghosts;
+    const char* xml =
+        "<?xml version=\"1.0\"?>\n"
+        "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\">\n"
+        "<UnstructuredGrid><Piece NumberOfPoints=\"4\" NumberOfCells=\"1\">\n"
+        "<PointData><DataArray type=\"UInt8\" Name=\"vtkGhostType\" format=\"ascii\">0 1 2 0</DataArray></PointData>\n"
+        "<CellData><DataArray type=\"UInt8\" Name=\"vtkGhostType\" format=\"ascii\">40</DataArray></CellData>\n"
+        "<Points><DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">"
+        "0 0 0 1 0 0 0 1 0 0 0 1</DataArray></Points>\n"
+        "<Cells>"
+        "<DataArray type=\"Int64\" Name=\"connectivity\" format=\"ascii\">0 1 2 3</DataArray>"
+        "<DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">4</DataArray>"
+        "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">10</DataArray>"
+        "</Cells></Piece></UnstructuredGrid></VTKFile>\n";
+    CHECK(file != NULL);
+    CHECK(fwrite(xml, 1u, strlen(xml), file) == strlen(xml));
+    CHECK(fclose(file) == 0);
+    {
+        const FVizResult read_result = fviz_vtu_read(path, &grid);
+        if (read_result != FVIZ_OK)
+            fprintf(stderr, "vtk ghost VTU read failed: %d %s\n", (int)read_result, fviz_last_error_message());
+        CHECK(read_result == FVIZ_OK);
+    }
+    vtk_point_ghosts = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_point_data(grid), FVIZ_VTK_GHOST_ARRAY_NAME);
+    vtk_cell_ghosts = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_cell_data(grid), FVIZ_VTK_GHOST_ARRAY_NAME);
+    point_ghosts = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_point_data(grid), FVIZ_GHOST_ARRAY_NAME);
+    cell_ghosts = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_cell_data(grid), FVIZ_GHOST_ARRAY_NAME);
+    CHECK(vtk_point_ghosts != NULL && vtk_cell_ghosts != NULL);
+    CHECK(point_ghosts != NULL && cell_ghosts != NULL);
+    CHECK(((const uint8_t*)fviz_data_array_const_data(point_ghosts))[0] == FVIZ_GHOST_NONE);
+    CHECK(((const uint8_t*)fviz_data_array_const_data(point_ghosts))[1] == FVIZ_GHOST_DUPLICATE);
+    CHECK(((const uint8_t*)fviz_data_array_const_data(point_ghosts))[2] == FVIZ_GHOST_HIDDEN);
+    /* 40 == VTK REFINEDCELL (8) | HIDDENCELL (32), normalized to FEAViz hidden. */
+    CHECK((((const uint8_t*)fviz_data_array_const_data(cell_ghosts))[0] & FVIZ_GHOST_HIDDEN) != 0u);
+    CHECK(((const uint8_t*)fviz_data_array_const_data(vtk_cell_ghosts))[0] == 40u);
+    fviz_release(grid);
+    CHECK(remove(path) == 0);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(test_vtu_hex() == 0);
     CHECK(test_vtu_surface_scalars() == 0);
     CHECK(test_vtu_missing_file() == 0);
     CHECK(test_vtu_binary() == 0);
+    CHECK(test_vtu_vtk_ghost_normalization() == 0);
     CHECK(test_vtu_round_trip_mode(FVIZ_VTU_OUTPUT_ASCII, FVIZ_VTU_HEADER_UINT32) == 0);
     CHECK(test_vtu_round_trip_mode(FVIZ_VTU_OUTPUT_APPENDED_RAW, FVIZ_VTU_HEADER_UINT64) == 0);
     return 0;

@@ -13,6 +13,8 @@
 FVIZ_EXTERN_C_BEGIN
 
 typedef struct FVizMapper FVizMapper;
+typedef FVizId FVizClipPlaneId;
+#define FVIZ_CLIP_PLANE_ID_INVALID UINT64_C(0)
 #define FVIZ_TYPE_MAPPER UINT64_C(0x8A2C6F51D7B40E93)
 
 typedef enum FVizDataAssociation
@@ -80,12 +82,24 @@ FVIZ_API FVizScalarInterpolation fviz_mapper_scalar_interpolation(const FVizMapp
 FVIZ_API FVizResult fviz_mapper_set_opacity_array(FVizMapper* mapper, const char* name);
 FVIZ_API const char* fviz_mapper_opacity_array(const FVizMapper* mapper);
 FVIZ_API FVizResult fviz_mapper_add_clipping_plane(FVizMapper* mapper, FVizPlane plane);
+FVIZ_API FVizResult fviz_mapper_add_clipping_plane_with_id(
+    FVizMapper* mapper, FVizPlane plane, FVizClipPlaneId* out_id);
+FVIZ_API FVizResult fviz_mapper_update_clipping_plane(
+    FVizMapper* mapper, FVizClipPlaneId id, FVizPlane plane);
+FVIZ_API FVizResult fviz_mapper_remove_clipping_plane(
+    FVizMapper* mapper, FVizClipPlaneId id);
+FVIZ_API FVizClipPlaneId fviz_mapper_clipping_plane_id(
+    const FVizMapper* mapper, FVizSize index);
 FVIZ_API void fviz_mapper_remove_all_clipping_planes(FVizMapper* mapper);
 FVIZ_API FVizSize fviz_mapper_clipping_plane_count(const FVizMapper* mapper);
 FVIZ_API FVizResult fviz_mapper_clipping_plane(
     const FVizMapper* mapper,
     FVizSize index,
     FVizPlane* out_plane);
+/* Pinned mapper resources survive retention expiry and budget eviction until
+ * explicitly unpinned or manually purged from the render window. */
+FVIZ_API void fviz_mapper_set_gpu_residency_pinned(FVizMapper* mapper, FVizBool pinned);
+FVIZ_API FVizBool fviz_mapper_gpu_residency_pinned(const FVizMapper* mapper);
 
 FVIZ_EXTERN_C_END
 

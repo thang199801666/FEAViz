@@ -1,11 +1,17 @@
 /out/
 /build/
+/bin/
 /.vs/
 /.vscode/
 *.user
 *.suo
 *.VC.db
 *.VC.opendb
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.dll
 CMakeUserPresets.json
 compile_commands.json
 .DS_Store

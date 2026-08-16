@@ -11,6 +11,20 @@ FVIZ_EXTERN_C_BEGIN
 
 typedef struct FVizInteractorStyle FVizInteractorStyle;
 typedef struct FVizActor FVizActor;
+
+typedef enum FVizInteractionState
+{
+    FVIZ_INTERACTION_STATE_NONE = 0,
+    FVIZ_INTERACTION_STATE_ROTATE = 1,
+    FVIZ_INTERACTION_STATE_PAN = 2,
+    FVIZ_INTERACTION_STATE_DOLLY = 3,
+    FVIZ_INTERACTION_STATE_SPIN = 4,
+    FVIZ_INTERACTION_STATE_RUBBER_BAND = 5,
+    FVIZ_INTERACTION_STATE_ACTOR_ROTATE = 6,
+    FVIZ_INTERACTION_STATE_ACTOR_PAN = 7,
+    FVIZ_INTERACTION_STATE_ACTOR_DOLLY = 8
+} FVizInteractionState;
+
 #define FVIZ_TYPE_INTERACTOR_STYLE UINT64_C(0x71B932DE4A6C850F)
 #define FVIZ_TYPE_INTERACTOR_STYLE_TRACKBALL_CAMERA UINT64_C(0x2F8C4D71A9E630B5)
 #define FVIZ_TYPE_INTERACTOR_STYLE_RUBBER_BAND UINT64_C(0xC5087D31E9A642BF)
@@ -38,6 +52,8 @@ FVIZ_API void fviz_interactor_style_set_pan_sensitivity(FVizInteractorStyle* sty
 FVIZ_API float fviz_interactor_style_pan_sensitivity(const FVizInteractorStyle* style);
 FVIZ_API void fviz_interactor_style_set_dolly_factor(FVizInteractorStyle* style, float factor);
 FVIZ_API float fviz_interactor_style_dolly_factor(const FVizInteractorStyle* style);
+FVIZ_API FVizInteractionState fviz_interactor_style_state(const FVizInteractorStyle* style);
+FVIZ_API void fviz_interactor_style_cancel_interaction(FVizInteractorStyle* style);
 FVIZ_API FVizBool fviz_interactor_style_process_event(
     FVizInteractorStyle* style,
     FVizRenderer* renderer,

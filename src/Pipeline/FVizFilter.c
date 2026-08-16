@@ -8,6 +8,17 @@
 
 static void fviz_filter_destroy(FVizObject* object);
 static FVizMTime fviz_filter_mtime(const FVizObject* object);
+static void fviz_filter_copy_name(char destination[128], const char* source)
+{
+    FVizSize i = 0u;
+    while (i + 1u < 128u && source[i] != '\0')
+    {
+        destination[i] = source[i];
+        ++i;
+    }
+    destination[i] = '\0';
+}
+
 static FVizResult fviz_filter_execute_algorithm(FVizAlgorithm* algorithm);
 static const FVizObjectClass g_fviz_filter_class = {
     FVIZ_TYPE_FILTER, "FVizFilter", &g_fviz_algorithm_class, fviz_filter_destroy, fviz_filter_mtime
@@ -120,8 +131,7 @@ FVizResult fviz_threshold_filter_create(
     }
     if (fviz_filter_create_internal(FVIZ_FILTER_THRESHOLD, &g_fviz_threshold_filter_class, &filter) != FVIZ_OK)
         return fviz_last_error_code();
-    (void)strncpy(filter->scalar_name, scalar_name, sizeof(filter->scalar_name) - 1u);
-    filter->scalar_name[sizeof(filter->scalar_name) - 1u] = '\0';
+    fviz_filter_copy_name(filter->scalar_name, scalar_name);
     filter->minimum = minimum;
     filter->maximum = maximum;
     *out_filter = filter;
@@ -141,8 +151,7 @@ FVizResult fviz_warp_filter_create(
     }
     if (fviz_filter_create_internal(FVIZ_FILTER_WARP, &g_fviz_warp_filter_class, &filter) != FVIZ_OK)
         return fviz_last_error_code();
-    (void)strncpy(filter->vector_name, vector_name, sizeof(filter->vector_name) - 1u);
-    filter->vector_name[sizeof(filter->vector_name) - 1u] = '\0';
+    fviz_filter_copy_name(filter->vector_name, vector_name);
     filter->scale = scale;
     *out_filter = filter;
     return FVIZ_OK;
@@ -205,8 +214,7 @@ FVizResult fviz_threshold_filter_set_scalar_name(FVizFilter* filter, const char*
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "scalar_name must not be empty");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    (void)strncpy(filter->scalar_name, scalar_name, sizeof(filter->scalar_name) - 1u);
-    filter->scalar_name[sizeof(filter->scalar_name) - 1u] = '\0';
+    fviz_filter_copy_name(filter->scalar_name, scalar_name);
     filter->base.updated = FVIZ_FALSE;
     fviz_object_modified((FVizObject*)filter);
     return FVIZ_OK;
@@ -237,8 +245,7 @@ FVizResult fviz_warp_filter_set_vector_name(FVizFilter* filter, const char* vect
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "vector_name must not be empty");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    (void)strncpy(filter->vector_name, vector_name, sizeof(filter->vector_name) - 1u);
-    filter->vector_name[sizeof(filter->vector_name) - 1u] = '\0';
+    fviz_filter_copy_name(filter->vector_name, vector_name);
     filter->base.updated = FVIZ_FALSE;
     fviz_object_modified((FVizObject*)filter);
     return FVIZ_OK;

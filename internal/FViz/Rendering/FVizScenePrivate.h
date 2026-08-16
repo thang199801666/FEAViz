@@ -9,6 +9,7 @@ struct FVizScene
 {
     FVizObject base;
     FVizArray* actors;
+    FVizArray* actor_modified_tags;
 };
 
 #endif /* FVIZ_INTERNAL_RENDERING_SCENE_PRIVATE_H */
