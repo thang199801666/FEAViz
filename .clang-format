@@ -1,0 +1,66 @@
+# FEAViz C/C++ code style.
+#
+# Matches the conventions used across the codebase: 4-space indentation,
+# Allman braces, pointer-left declarations, and a 120-column limit.
+
+BasedOnStyle: LLVM
+Language: Cpp
+
+IndentWidth: 4
+UseTab: Never
+TabWidth: 4
+
+BreakBeforeBraces: Allman
+AllowShortFunctionsOnASingleLine: None
+# The codebase commonly writes `if (x) return;` as a single line; keep that.
+AllowShortIfStatementsOnASingleLine: OnlyFirstIf
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+
+ColumnLimit: 120
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+SpacesInParentheses: false
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+
+AlignAfterOpenBracket: Align
+AlignOperands: Align
+AlignTrailingComments: true
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: None
+
+BinPackArguments: true
+BinPackParameters: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllArgumentsOnNextLine: false
+IndentCaseLabels: true
+IndentCaseBlocks: true
+IndentGotoLabels: true
+IndentPPDirectives: None
+ContinuationIndentWidth: 4
+DeriveLineEnding: true
+
+BreakStringLiterals: true
+# Do not reorder #include lines; several headers depend on include order
+# (e.g. windows.h must precede gl/GL.h).
+SortIncludes: Never
+IncludeBlocks: Preserve
+
+CommentPragmas: '^ IWYU pragma:'
+
+ForEachMacros: []
+
+MaxEmptyLinesToKeep: 2
+KeepEmptyLinesAtTheStartOfBlocks: false
+NamespaceIndentation: None
+SeparateDefinitionBlocks: Always
+
+# C-specific handling: function return types on their own line (K&R-style
+# declarations are already the norm; keep them as-is).
+InsertBraces: false
+InsertNewlineAtEOF: true

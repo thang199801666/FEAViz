@@ -46,6 +46,20 @@ runtime. Solver bridges are adapters that populate the neutral FEA model.
 `FEAViz::FEAViz` is retained as a compatibility aggregate target. New code should link the
 explicit component it needs.
 
+## Screenshots
+
+Interactive FEA result viewer (`TestVisualization`, WinUIPP shell + FEAViz C++ binding),
+showing a cantilever HEX8 beam colored by the Abaqus-style 12-band Von Mises contour
+with mesh edges and the scalar legend:
+
+![FEAViz FEA contour viewer](docs/screenshots/testvisualization_contour.png)
+
+C++ feature-test GUI (`FVizExampleFeatureTestGUI`) exercising the newest rendering paths —
+GPU ray-cast volume rendering, dual depth peeling, multi-plane cutter / iso-surface, and
+FEA display groups — switchable with keys 1-4:
+
+![FEAViz C++ feature test GUI](docs/screenshots/feaviz_feature_gui.png)
+
 ### CMake usage
 
 Generic visualization application:
