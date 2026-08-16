@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Added four VTK-style geometry sources closing the "geometry sources" gap in
+  the feature matrix: `FVizConeSource`, `FVizCylinderSource`, `FVizDiskSource`,
+  and `FVizLineSource`. Each exposes center/direction/radius/height (or
+  endpoint pair), resolution, capping, an algorithm port, and updates through
+  the demand-driven pipeline. `FVizTestGeometrySources` covers point/triangle/
+  line counts for all four.
+- Implemented 15-node quadratic wedge (`FVIZ_CELL_QUADRATIC_WEDGE`) shape
+  functions in `fviz_cell_type_shape_weights`. The serendipity basis uses
+  triangle area coordinates with a vertical correction term so the partition
+  of unity holds at corners, edge midpoints, and vertical-edge midpoints;
+  `test_high_order.c` verifies corner interpolation and partition of unity.
 - Extended the C++ binding with the object hooks used by native viewers:
   `Mapper::getArraySelection`, `Renderer::setScalarLegend`/`scalarLegend` and
   text-actor 2D add/remove, `ScalarLegend::getViewportPadding`/`position`/

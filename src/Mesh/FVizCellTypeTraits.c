@@ -1057,6 +1057,9 @@ FVizResult fviz_cell_type_shape_weights(FVizCellType type, FVizVec3 parametric, 
         case FVIZ_CELL_QUADRATIC_HEXAHEDRON:
             count = 20u;
             break;
+        case FVIZ_CELL_QUADRATIC_WEDGE:
+            count = 15u;
+            break;
         case FVIZ_CELL_TRIQUADRATIC_HEXAHEDRON:
         case FVIZ_CELL_BIQUADRATIC_QUADRATIC_HEXAHEDRON:
             count = 27u;
@@ -1178,6 +1181,46 @@ FVizResult fviz_cell_type_shape_weights(FVizCellType type, FVizVec3 parametric, 
                 out_weights[19] = 0.25 * (1.0 - r) * (1.0 + s) * (1.0 - t * t);
                 break;
             }
+        case FVIZ_CELL_QUADRATIC_WEDGE:
+            {
+                /* 15-node quadratic wedge (vtkQuadraticWedge):
+                 *   0-2 bottom triangle corners, 3-5 top triangle corners,
+                 *   6-8 bottom edge midpoints, 9-11 top edge midpoints,
+                 *   12-14 vertical edge midpoints.
+                 * Parametric (r,s,t): (r,s) are triangle area coordinates of
+                 * the bottom face, t runs 0 (bottom) to 1 (top).
+                 * Shape functions (partition of unity verified at sample
+                 * points, including vertical-edge midpoints):
+                 *   bottom corner i:  L_i(2L_i-1)(1-t) - L_i t(1-t)
+                 *   top corner i:     L_i(2L_i-1)t     - L_i t(1-t)
+                 *   bottom edge ij:   4 L_i L_j (1-t)
+                 *   top edge ij:      4 L_i L_j t
+                 *   vertical edge i:  2 L_i t (1-t)
+                 */
+                const double r = (double)parametric.x;
+                const double s = (double)parametric.y;
+                const double t = (double)parametric.z;
+                const double l0 = 1.0 - r - s;
+                const double l1 = r;
+                const double l2 = s;
+                const double t_corr = t * (1.0 - t);
+                out_weights[0] = l0 * (2.0 * l0 - 1.0) * (1.0 - t) - l0 * t_corr;
+                out_weights[1] = l1 * (2.0 * l1 - 1.0) * (1.0 - t) - l1 * t_corr;
+                out_weights[2] = l2 * (2.0 * l2 - 1.0) * (1.0 - t) - l2 * t_corr;
+                out_weights[3] = l0 * (2.0 * l0 - 1.0) * t - l0 * t_corr;
+                out_weights[4] = l1 * (2.0 * l1 - 1.0) * t - l1 * t_corr;
+                out_weights[5] = l2 * (2.0 * l2 - 1.0) * t - l2 * t_corr;
+                out_weights[6] = 4.0 * l0 * l1 * (1.0 - t);
+                out_weights[7] = 4.0 * l1 * l2 * (1.0 - t);
+                out_weights[8] = 4.0 * l2 * l0 * (1.0 - t);
+                out_weights[9] = 4.0 * l0 * l1 * t;
+                out_weights[10] = 4.0 * l1 * l2 * t;
+                out_weights[11] = 4.0 * l2 * l0 * t;
+                out_weights[12] = 2.0 * l0 * t_corr;
+                out_weights[13] = 2.0 * l1 * t_corr;
+                out_weights[14] = 2.0 * l2 * t_corr;
+                break;
+            }
         case FVIZ_CELL_CUBIC_LINE:
             {
                 const double r = (double)parametric.x;
@@ -1284,12 +1327,6 @@ FVizResult fviz_cell_type_shape_weights(FVizCellType type, FVizVec3 parametric, 
                 out_weights[26] = L1r * L1s * L1t;
                 break;
             }
-        case FVIZ_CELL_QUADRATIC_WEDGE:
-        case FVIZ_CELL_BIQUADRATIC_QUADRATIC_WEDGE:
-            /* 15-node and 18-node wedges: topology is defined, but their
-             * serendipity shape functions are not yet implemented. */
-            fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED, "higher-order wedge shape weights are not yet available");
-            return FVIZ_ERROR_NOT_SUPPORTED;
         default:
             fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED, "shape weights are not available for this cell type");
             return FVIZ_ERROR_NOT_SUPPORTED;

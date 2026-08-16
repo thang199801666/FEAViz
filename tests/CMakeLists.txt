@@ -101,6 +101,7 @@ fviz_add_test(FVizTestProbeFilter Algorithms/test_probe_filter.c FViz.Algorithms
 fviz_add_test(FVizTestResampleWithDataSet Algorithms/test_resample_with_dataset.c FViz.Algorithms.ResampleWithDataSet)
 fviz_add_test(FVizTestImageDataGeometry Algorithms/test_image_data_geometry.c FViz.Algorithms.ImageDataGeometry)
 fviz_add_test(FVizTestArrowSource Algorithms/test_arrow_source.c FViz.Algorithms.ArrowSource)
+fviz_add_test(FVizTestGeometrySources Algorithms/test_geometry_sources.c FViz.Algorithms.GeometrySources)
 fviz_add_test(FVizTestArrayCalculator Algorithms/test_array_calculator.c FViz.Algorithms.ArrayCalculator)
 fviz_add_test(FVizTestFieldOperations Algorithms/test_field_operations.c FViz.Algorithms.FieldOperations)
 fviz_add_test(FVizTestExpression Algorithms/test_expression.c FViz.Algorithms.Expression)

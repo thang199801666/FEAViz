@@ -48,6 +48,10 @@
 #include <FViz/Algorithms/FVizCubeSource.h>
 #include <FViz/Algorithms/FVizSphereSource.h>
 #include <FViz/Algorithms/FVizArrowSource.h>
+#include <FViz/Algorithms/FVizConeSource.h>
+#include <FViz/Algorithms/FVizCylinderSource.h>
+#include <FViz/Algorithms/FVizDiskSource.h>
+#include <FViz/Algorithms/FVizLineSource.h>
 #include <FViz/Algorithms/FVizArrayCalculator.h>
 #include <FViz/Algorithms/FVizFieldOperations.h>
 #include <FViz/Algorithms/FVizExpression.h>

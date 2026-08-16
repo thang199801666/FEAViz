@@ -143,6 +143,10 @@ set(_fviz_core_sources
     src/Algorithms/FVizCubeSource.c
     src/Algorithms/FVizSphereSource.c
     src/Algorithms/FVizArrowSource.c
+    src/Algorithms/FVizConeSource.c
+    src/Algorithms/FVizCylinderSource.c
+    src/Algorithms/FVizDiskSource.c
+    src/Algorithms/FVizLineSource.c
     src/Algorithms/FVizArrayCalculator.c
     src/Algorithms/FVizFieldOperations.c
     src/Algorithms/FVizExpression.c

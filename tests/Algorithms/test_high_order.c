@@ -128,10 +128,43 @@ static int test_high_order_probe(void)
     return 0;
 }
 
+static int test_wedge15_weights(void)
+{
+    double w[15];
+    FVizSize n = 0u, i;
+    /* Corner (r=0,s=0,t=0): node 0 (bottom corner, l0=1) must be 1. */
+    CHECK(fviz_cell_type_shape_weights(FVIZ_CELL_QUADRATIC_WEDGE, fviz_vec3(0.0f, 0.0f, 0.0f), w, 15u, &n) == FVIZ_OK);
+    CHECK(n == 15u);
+    for (i = 0u; i < n; ++i) CHECK(fabs(w[i] - (i == 0u ? 1.0 : 0.0)) < 1.0e-12);
+    /* Top corner (r=0,s=0,t=1): node 3 (top corner, l0=1) must be 1. */
+    CHECK(fviz_cell_type_shape_weights(FVIZ_CELL_QUADRATIC_WEDGE, fviz_vec3(0.0f, 0.0f, 1.0f), w, 15u, &n) == FVIZ_OK);
+    for (i = 0u; i < n; ++i) CHECK(fabs(w[i] - (i == 3u ? 1.0 : 0.0)) < 1.0e-12);
+    /* Partition of unity at several interior / edge-mid / vertical-mid points. */
+    {
+        static const FVizVec3 points[] = {
+            {0.333333f, 0.333333f, 0.5f},
+            {0.5f, 0.0f, 0.0f},   /* bottom edge midpoint 0-1 */
+            {0.5f, 0.0f, 1.0f},   /* top edge midpoint 3-4 */
+            {1.0f, 0.0f, 0.5f},   /* vertical edge midpoint 0-3 */
+            {0.2f, 0.3f, 0.25f}
+        };
+        FVizSize p;
+        for (p = 0u; p < sizeof(points) / sizeof(points[0]); ++p)
+        {
+            double sum = 0.0;
+            CHECK(fviz_cell_type_shape_weights(FVIZ_CELL_QUADRATIC_WEDGE, points[p], w, 15u, &n) == FVIZ_OK);
+            for (i = 0u; i < n; ++i) sum += w[i];
+            CHECK(fabs(sum - 1.0) < 1.0e-10);
+        }
+    }
+    return 0;
+}
+
 int main(void)
 {
-    int r=test_shape_weights(); if (r!=0) return r;
-    r=test_tet10_surface(); if (r!=0) return r;
-    r=test_hex20_surface(); if (r!=0) return r;
+    int r = test_shape_weights(); if (r != 0) return r;
+    r = test_wedge15_weights(); if (r != 0) return r;
+    r = test_tet10_surface(); if (r != 0) return r;
+    r = test_hex20_surface(); if (r != 0) return r;
     return test_high_order_probe();
 }
