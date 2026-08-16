@@ -56,6 +56,7 @@ fviz_add_fea_test(FVizTestFEAPrimaryVariable FEA/test_primary_variable.c FViz.FE
 fviz_add_fea_test(FVizTestFEADeformedShape FEA/test_deformed_shape.c FViz.FEA.DeformedShape)
 fviz_add_fea_test(FVizTestFEAVisualization FEA/test_visualization.c FViz.FEA.Visualization)
 fviz_add_fea_test(FVizTestFEAScalarBarActor FEA/test_scalar_bar_actor.c FViz.FEA.ScalarBarActor)
+fviz_add_fea_test(FVizTestFEAVisualizationContours FEA/test_visualization_contours.c FViz.FEA.VisualizationContours)
 fviz_add_test(FVizTestThreshold Algorithms/test_threshold.c FViz.Algorithms.Threshold)
 fviz_add_test(FVizTestSlice Algorithms/test_slice.c FViz.Algorithms.Slice)
 fviz_add_test(FVizTestFilters Algorithms/test_unstructured_filters.c FViz.Algorithms.UnstructuredFilters)

@@ -381,6 +381,58 @@ inline PolyData extractElementEdges(PolyData& surface)
     return PolyData(edges);
 }
 
+// Builds a continuous (smooth) contour surface colored by the Abaqus rainbow.
+inline PolyData buildContourSurface(PolyData& input, const std::string& scalar_array_name,
+    uint32_t components, float range_minimum, float range_maximum,
+    const std::string& output_color_array_name)
+{
+    FVizPolyData* surface = nullptr;
+    detail::checkResult(fviz_fea_build_contour_surface(input.get(), scalar_array_name.c_str(),
+        components, range_minimum, range_maximum, output_color_array_name.c_str(), &surface));
+    return PolyData(surface);
+}
+
+// Extracts iso-value contour lines from a surface, tagged with level scalars.
+inline PolyData buildContourLines(PolyData& input, const std::string& scalar_array_name,
+    uint32_t components, float range_minimum, float range_maximum,
+    uint32_t interval_count, const std::string& output_scalar_array_name)
+{
+    FVizPolyData* lines = nullptr;
+    detail::checkResult(fviz_fea_build_contour_lines(input.get(), scalar_array_name.c_str(),
+        components, range_minimum, range_maximum, interval_count,
+        output_scalar_array_name.c_str(), &lines));
+    return PolyData(lines);
+}
+
+// Reports surface scalar extrema with original cell/face provenance.
+struct Extrema {
+    FVizSize min_point_id = 0;
+    FVizSize max_point_id = 0;
+    double min_value = 0.0;
+    double max_value = 0.0;
+    uint64_t min_cell_id = FVIZ_INVALID_ID;
+    uint64_t max_cell_id = FVIZ_INVALID_ID;
+    uint64_t min_face_id = FVIZ_INVALID_ID;
+    uint64_t max_face_id = FVIZ_INVALID_ID;
+
+    static Extrema find(PolyData& surface, const std::string& scalar_array_name, uint32_t components)
+    {
+        FVizFEAExtrema raw;
+        fviz_fea_extrema_initialize(&raw);
+        detail::checkResult(fviz_fea_find_extrema(surface.get(), scalar_array_name.c_str(), components, &raw));
+        Extrema extrema;
+        extrema.min_point_id = raw.min_point_id;
+        extrema.max_point_id = raw.max_point_id;
+        extrema.min_value = raw.min_value;
+        extrema.max_value = raw.max_value;
+        extrema.min_cell_id = raw.min_cell_id;
+        extrema.max_cell_id = raw.max_cell_id;
+        extrema.min_face_id = raw.min_face_id;
+        extrema.max_face_id = raw.max_face_id;
+        return extrema;
+    }
+};
+
 } // namespace fea
 
 // Frame methods that need the complete Field type.

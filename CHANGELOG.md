@@ -74,6 +74,19 @@
   (HistorySeries/Region, Frame, Field, Step, ResultDatabase, PrimaryVariable,
   DeformedShape, ScalarBarActor, `fea::*` helpers). Added `FVizTestCppFEABinding`
   (`FViz.Cpp.FEABinding`), built only when `FEAViz::FEA` is enabled.
+- Added FEA result-rendering helpers that close the highest-priority gaps vs
+  VTK for post-processing display (`docs/architecture/FEA_RENDERING_VTK_GAP_PLAN.md`):
+  - `fviz_fea_build_contour_surface()` — continuous (smooth) contour surface
+    mapping each vertex through the Abaqus rainbow, preserving provenance.
+  - `fviz_fea_build_contour_lines()` — iso-value contour-line overlay using the
+    same interval conventions as the banded surface, with per-vertex level
+    scalars and provenance. The core `FVizContourFilter` now tags every output
+    vertex with its contour level (`contour_level` point array).
+  - `fviz_fea_find_extrema()` — surface scalar extrema with original
+    cell/face provenance for min/max markers.
+- Added `FVizTestFEAVisualizationContours` (`FViz.FEA.VisualizationContours`)
+  covering the smooth contour surface, contour lines, and extrema, plus
+  matching C++ wrappers in the FEA binding.
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 

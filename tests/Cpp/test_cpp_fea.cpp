@@ -199,6 +199,60 @@ static int test_scalar_bar()
     return 0;
 }
 
+static int test_contour_helpers()
+{
+    // Quad surface with a linear scalar ramp + provenance.
+    PolyData surface = PolyData::create();
+    surface.addPoint(Vec3(0.0f, 0.0f, 0.0f));
+    surface.addPoint(Vec3(1.0f, 0.0f, 0.0f));
+    surface.addPoint(Vec3(1.0f, 1.0f, 0.0f));
+    surface.addPoint(Vec3(0.0f, 1.0f, 0.0f));
+    surface.addTriangle(0u, 1u, 2u);
+    surface.addTriangle(0u, 2u, 3u);
+
+    DataArray scalars = DataArray::createFloat64();
+    scalars.resize(4u);
+    const double values[4] = {0.0, 10.0, 20.0, 30.0};
+    for (FVizSize i = 0u; i < 4u; ++i)
+        scalars.setComponent(i, 0u, values[i]);
+    surface.pointData().add("stress", scalars.get());
+
+    DataArray cells = DataArray::createUint64();
+    cells.resize(2u);
+    cells.setComponent(0u, 0u, 7.0);
+    cells.setComponent(1u, 0u, 8.0);
+    DataArray faces = DataArray::createUint64();
+    faces.resize(2u);
+    faces.setComponent(0u, 0u, 3.0);
+    faces.setComponent(1u, 0u, 4.0);
+    surface.cellData().add("FVizOriginalCellIds", cells.get());
+    surface.cellData().add("FVizOriginalFaceIds", faces.get());
+
+    // Smooth contour surface.
+    PolyData contour = fea::buildContourSurface(surface, "stress", 1u, 0.0f, 30.0f, "contour_rgb");
+    CHECK(contour.pointCount() == 4u);
+    CHECK(contour.triangleCount() == 2u);
+    CHECK(contour.pointData().get("contour_rgb").get() != nullptr);
+
+    // Contour lines with level scalars.
+    PolyData lines = fea::buildContourLines(surface, "stress", 1u, 0.0f, 30.0f, 4u, "contour_level");
+    CHECK(lines.lineCount() > 0u);
+    DataArray levels = lines.pointData().get("contour_level");
+    CHECK(levels.get() != nullptr);
+    CHECK(levels.size() == lines.pointCount());
+
+    // Extrema with provenance.
+    fea::Extrema extrema = fea::Extrema::find(surface, "stress", 1u);
+    CHECK(extrema.min_value == 0.0);
+    CHECK(extrema.max_value == 30.0);
+    CHECK(extrema.min_point_id == 0u);
+    CHECK(extrema.max_point_id == 3u);
+    CHECK(extrema.min_cell_id != FVIZ_INVALID_ID);
+    CHECK(extrema.max_cell_id != FVIZ_INVALID_ID);
+
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -206,6 +260,7 @@ int main(void)
     if ((result = test_primary_variable()) != 0) { std::printf("test_primary_variable failed at line %d\n", result); return result; }
     if ((result = test_deformed_shape()) != 0) { std::printf("test_deformed_shape failed at line %d\n", result); return result; }
     if ((result = test_scalar_bar()) != 0) { std::printf("test_scalar_bar failed at line %d\n", result); return result; }
+    if ((result = test_contour_helpers()) != 0) { std::printf("test_contour_helpers failed at line %d\n", result); return result; }
     std::printf("FVizCpp FEA binding tests passed\n");
     return 0;
 }

@@ -3,6 +3,8 @@
 #include <FViz/Algorithms/FVizContourFilter.h>
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
+#include <FViz/Data/FVizAttributeSet.h>
+#include <FViz/Data/FVizDataArray.h>
 #include <FViz/Parallel/FVizParallel.h>
 
 #include <FViz/Core/FVizErrorInternal.h>
@@ -251,8 +253,11 @@ static FVizResult fviz_contour_execute(FVizContourFilter* filter)
         FVizSize valid_count = 0u;
         FVizVec3* output_points = NULL;
         uint32_t* output_lines = NULL;
+        float* output_levels = NULL;
+        FVizDataArray* level_array = NULL;
         FVizSize point_bytes = 0u;
         FVizSize line_bytes = 0u;
+        FVizSize level_bytes = 0u;
         FVizSize cursor = 0u;
         for (i = 0u; i < work_count; ++i)
             if (segments[i].valid != FVIZ_FALSE) ++valid_count;
@@ -264,12 +269,15 @@ static FVizResult fviz_contour_execute(FVizContourFilter* filter)
         if (valid_count != 0u)
         {
             if (fviz_size_multiply(valid_count * 2u, sizeof(*output_points), &point_bytes) != FVIZ_OK ||
-                fviz_size_multiply(valid_count * 2u, sizeof(*output_lines), &line_bytes) != FVIZ_OK)
+                fviz_size_multiply(valid_count * 2u, sizeof(*output_lines), &line_bytes) != FVIZ_OK ||
+                fviz_size_multiply(valid_count * 2u, sizeof(*output_levels), &level_bytes) != FVIZ_OK)
                 goto fail;
             output_points = (FVizVec3*)fviz_alloc(point_bytes);
             output_lines = (uint32_t*)fviz_alloc(line_bytes);
-            if (output_points == NULL || output_lines == NULL)
+            output_levels = (float*)fviz_alloc(level_bytes);
+            if (output_points == NULL || output_lines == NULL || output_levels == NULL)
             {
+                fviz_free(output_levels);
                 fviz_free(output_lines);
                 fviz_free(output_points);
                 goto fail;
@@ -283,16 +291,26 @@ static FVizResult fviz_contour_execute(FVizContourFilter* filter)
                     output_points[cursor * 2u + 1u] = segment->b;
                     output_lines[cursor * 2u + 0u] = (uint32_t)(cursor * 2u + 0u);
                     output_lines[cursor * 2u + 1u] = (uint32_t)(cursor * 2u + 1u);
+                    output_levels[cursor * 2u + 0u] = filter->levels[level_id];
+                    output_levels[cursor * 2u + 1u] = filter->levels[level_id];
                     ++cursor;
                 }
             if (fviz_poly_data_reserve(output, valid_count * 2u, 0u) != FVIZ_OK ||
                 fviz_poly_data_add_points(output, output_points, valid_count * 2u, NULL) != FVIZ_OK ||
-                fviz_poly_data_add_lines(output, output_lines, valid_count) != FVIZ_OK)
+                fviz_poly_data_add_lines(output, output_lines, valid_count) != FVIZ_OK ||
+                fviz_data_array_create(FVIZ_DATA_FLOAT32, 1u, &level_array) != FVIZ_OK ||
+                fviz_data_array_append_tuples(level_array, output_levels, valid_count * 2u) != FVIZ_OK ||
+                fviz_attribute_set_add(fviz_poly_data_point_data(output),
+                    "contour_level", level_array) != FVIZ_OK)
             {
+                fviz_release(level_array);
+                fviz_free(output_levels);
                 fviz_free(output_lines);
                 fviz_free(output_points);
                 goto fail;
             }
+            fviz_release(level_array);
+            fviz_free(output_levels);
             fviz_free(output_lines);
             fviz_free(output_points);
         }
