@@ -75,11 +75,15 @@ static FVizCellType fviz_vtu_cell_type(int type)
     switch (type)
     {
         case 5: return FVIZ_CELL_TRIANGLE;
+        case 8: return FVIZ_CELL_PIXEL;
         case 9: return FVIZ_CELL_QUAD;
         case 10: return FVIZ_CELL_TETRA;
+        case 11: return FVIZ_CELL_VOXEL;
         case 12: return FVIZ_CELL_HEXAHEDRON;
         case 13: return FVIZ_CELL_WEDGE;
         case 14: return FVIZ_CELL_PYRAMID;
+        case 15: return FVIZ_CELL_PENTAGONAL_PRISM;
+        case 16: return FVIZ_CELL_HEXAGONAL_PRISM;
         case 21: return FVIZ_CELL_QUADRATIC_EDGE;
         case 22: return FVIZ_CELL_QUADRATIC_TRIANGLE;
         case 23: return FVIZ_CELL_QUADRATIC_QUAD;
@@ -88,6 +92,16 @@ static FVizCellType fviz_vtu_cell_type(int type)
         case 26: return FVIZ_CELL_QUADRATIC_WEDGE;
         case 27: return FVIZ_CELL_QUADRATIC_PYRAMID;
         case 28: return FVIZ_CELL_BIQUADRATIC_QUAD;
+        case 29: return FVIZ_CELL_TRIQUADRATIC_HEXAHEDRON;
+        case 30: return FVIZ_CELL_QUADRATIC_LINEAR_QUAD;
+        case 31: return FVIZ_CELL_QUADRATIC_LINEAR_WEDGE;
+        case 32: return FVIZ_CELL_BIQUADRATIC_QUADRATIC_WEDGE;
+        case 33: return FVIZ_CELL_BIQUADRATIC_QUADRATIC_HEXAHEDRON;
+        case 34: return FVIZ_CELL_BIQUADRATIC_TRIANGLE;
+        case 36: return FVIZ_CELL_CUBIC_LINE;
+        case 37: return FVIZ_CELL_QUADRATIC_POLYGON;
+        case 41: return FVIZ_CELL_CONVEX_POINT_SET;
+        case 42: return FVIZ_CELL_POLYHEDRON;
         default: return (FVizCellType)0;
     }
 }

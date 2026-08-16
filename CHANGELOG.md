@@ -115,6 +115,20 @@
     from a `FVizFEADeformedShapeResult` into one scene (G7).
   - Extended `FViz.FEA.VisualizationContours` (facet case) and
     `FViz.Cpp.Features` (facet + superimposed cases).
+- Completed the VTK cell-type catalog in the mesh layer. `FVizCellType` now
+  carries every VTK cell type ID: PIXEL (8), VOXEL (11), PENTAGONAL/HEXAGONAL
+  prism (15/16), TRIQUADRATIC_HEXAHEDRON (29), QUADRATIC_LINEAR_QUAD (30),
+  QUADRATIC_LINEAR_WEDGE (31), BIQUADRATIC_QUADRATIC_WEDGE (32),
+  BIQUADRATIC_QUADRATIC_HEXAHEDRON (33), BIQUADRATIC_TRIANGLE (34), CUBIC_LINE
+  (36), QUADRATIC_POLYGON (37), CONVEX_POINT_SET (41), POLYHEDRON (42), and the
+  higher-order/Lagrange/Bézier IDs (60-66, 68-81). Topology tables
+  (dimension/points/edges/faces), `accepts_point_count`, and interpolation
+  weights are implemented for the fixed-order types (partition-of-unity
+  verified); VTU and legacy VTK readers now map the new IDs. Higher-order
+  wedge shape functions remain explicit NOT_SUPPORTED.
+- Added `FVizTestCellTypesVTK` (`FViz.Mesh.CellTypesVTK`) covering topology
+  tables, partition-of-unity and delta interpolation, cell-array append/validate,
+  and VTU round-trip, plus a matching C++ binding case in `FViz.Cpp.Binding`.
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 

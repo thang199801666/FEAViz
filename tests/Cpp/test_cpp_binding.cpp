@@ -6,6 +6,7 @@
 
 #include <FVizCpp/FVizCpp.hpp>
 
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -300,6 +301,36 @@ static int test_rendering_objects()
     return 0;
 }
 
+static int test_cell_types_vtk()
+{
+    // Append and validate the newly added VTK cell types through the binding.
+    CellArray cells = CellArray::create();
+    const uint32_t voxel[8] = {0, 1, 3, 2, 4, 5, 7, 6};
+    const uint32_t penta[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    cells.append(FVIZ_CELL_VOXEL, 8u, voxel);
+    cells.append(FVIZ_CELL_PENTAGONAL_PRISM, 10u, penta);
+    CHECK(cells.count() == 2u);
+    CHECK(cells.cellType(0u) == FVIZ_CELL_VOXEL);
+    CHECK(cells.cellType(1u) == FVIZ_CELL_PENTAGONAL_PRISM);
+
+    // Shape weights: partition of unity for the 27-node hex.
+    const FVizCellType interpolatable[] = {
+        FVIZ_CELL_VOXEL, FVIZ_CELL_PIXEL, FVIZ_CELL_QUADRATIC_LINEAR_QUAD,
+        FVIZ_CELL_BIQUADRATIC_TRIANGLE, FVIZ_CELL_CUBIC_LINE,
+        FVIZ_CELL_TRIQUADRATIC_HEXAHEDRON, FVIZ_CELL_BIQUADRATIC_QUADRATIC_HEXAHEDRON};
+    const FVizVec3 test_point = {0.2f, -0.1f, 0.15f};
+    for (size_t i = 0u; i < sizeof(interpolatable) / sizeof(interpolatable[0]); ++i)
+    {
+        double weights[32];
+        FVizSize count = 0u;
+        double sum = 0.0;
+        CHECK(fviz_cell_type_shape_weights(interpolatable[i], test_point, weights, 32u, &count) == FVIZ_OK);
+        for (FVizSize k = 0u; k < count; ++k) sum += weights[k];
+        CHECK(std::fabs(sum - 1.0) < 1.0e-9);
+    }
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -309,6 +340,7 @@ int main(void)
     if ((result = test_grid_build()) != 0) { std::printf("test_grid_build failed at line %d\n", result); return result; }
     if ((result = test_readers()) != 0) { std::printf("test_readers failed at line %d\n", result); return result; }
     if ((result = test_rendering_objects()) != 0) { std::printf("test_rendering_objects failed at line %d\n", result); return result; }
+    if ((result = test_cell_types_vtk()) != 0) { std::printf("test_cell_types_vtk failed at line %d\n", result); return result; }
     std::printf("FVizCpp binding tests passed\n");
     return 0;
 }
