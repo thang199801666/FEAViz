@@ -13,6 +13,7 @@
 #include <FViz/Rendering/FVizScene.h>
 #include <FViz/Rendering/FVizActor.h>
 #include <FViz/Rendering/FVizMapper.h>
+#include <FViz/Rendering/FVizVolumeMapper.h>
 #include <FViz/Rendering/FVizLookupTable.h>
 #include <FViz/Rendering/FVizRendererWidget.h>
 #include <FViz/Rendering/FVizScalarLegend.h>
@@ -205,6 +206,68 @@ public:
 };
 
 // ---------------------------------------------------------------------------
+// VolumeMapper
+// ---------------------------------------------------------------------------
+class VolumeMapper : public Object<FVizVolumeMapper> {
+public:
+    VolumeMapper() = default;
+    explicit VolumeMapper(FVizVolumeMapper* owned) : Object<FVizVolumeMapper>(owned) {}
+    explicit VolumeMapper(void* owned) : Object<FVizVolumeMapper>(owned) {}
+
+    static VolumeMapper create()
+    {
+        FVizVolumeMapper* mapper = nullptr;
+        detail::checkResult(fviz_volume_mapper_create(&mapper));
+        return VolumeMapper(mapper);
+    }
+
+    void setImageData(ImageData& image)
+    {
+        detail::checkResult(fviz_volume_mapper_set_image_data(ptr_, image.get()));
+    }
+    ImageData imageData() const
+    {
+        FVizImageData* image = ptr_ ? fviz_volume_mapper_image_data(ptr_) : nullptr;
+        return ImageData(image != nullptr ? static_cast<FVizImageData*>(fviz_retain(image)) : nullptr);
+    }
+
+    void addColorPoint(float scalar, float red, float green, float blue)
+    {
+        detail::checkResult(fviz_volume_mapper_add_color_point(ptr_, scalar, red, green, blue));
+    }
+    void clearColorPoints() noexcept { if (ptr_) fviz_volume_mapper_clear_color_points(ptr_); }
+
+    void addOpacityPoint(float scalar, float opacity)
+    {
+        detail::checkResult(fviz_volume_mapper_add_opacity_point(ptr_, scalar, opacity));
+    }
+    void clearOpacityPoints() noexcept { if (ptr_) fviz_volume_mapper_clear_opacity_points(ptr_); }
+
+    void setSamplingStep(float step) noexcept { if (ptr_) fviz_volume_mapper_set_sampling_step(ptr_, step); }
+    float samplingStep() const noexcept { return ptr_ ? fviz_volume_mapper_sampling_step(ptr_) : 0.0f; }
+
+    void setShading(bool enabled) noexcept
+    {
+        if (ptr_) fviz_volume_mapper_set_shading(ptr_, detail::fbool(enabled));
+    }
+    bool shading() const noexcept { return ptr_ ? fviz_volume_mapper_shading(ptr_) != FVIZ_FALSE : false; }
+
+    void setScalarRange(float minimum, float maximum) noexcept
+    {
+        if (ptr_) fviz_volume_mapper_set_scalar_range(ptr_, minimum, maximum);
+    }
+    void getScalarRange(float& minimum, float& maximum) const noexcept
+    {
+        if (ptr_) fviz_volume_mapper_get_scalar_range(ptr_, &minimum, &maximum);
+    }
+    void useAutomaticScalarRange() noexcept { if (ptr_) fviz_volume_mapper_use_automatic_scalar_range(ptr_); }
+    bool scalarRangeValid() const noexcept
+    {
+        return ptr_ ? fviz_volume_mapper_scalar_range_valid(ptr_) != FVIZ_FALSE : false;
+    }
+};
+
+// ---------------------------------------------------------------------------
 // Actor
 // ---------------------------------------------------------------------------
 class Actor : public Object<FVizActor> {
@@ -229,6 +292,16 @@ public:
     {
         FVizMapper* m = ptr_ ? fviz_actor_mapper(ptr_) : nullptr;
         return Mapper(m != nullptr ? static_cast<FVizMapper*>(fviz_retain(m)) : nullptr);
+    }
+
+    void setVolumeMapper(VolumeMapper& mapper)
+    {
+        detail::checkResult(fviz_actor_set_volume_mapper(ptr_, mapper.get()));
+    }
+    VolumeMapper volumeMapper() const
+    {
+        FVizVolumeMapper* m = ptr_ ? fviz_actor_volume_mapper(ptr_) : nullptr;
+        return VolumeMapper(m != nullptr ? static_cast<FVizVolumeMapper*>(fviz_retain(m)) : nullptr);
     }
 
     void setColor(float red, float green, float blue) noexcept

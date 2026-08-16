@@ -1701,3 +1701,116 @@ fail:
     fviz_release(output);
     return fviz_last_error_code();
 }
+
+/* Concatenates a point-data array from `other` onto `target` (same-name arrays
+ * only), returning a retained copy or NULL when absent. */
+static FVizResult fviz_poly_data_concat_point_array(
+    FVizAttributeSet* target_set,
+    const FVizAttributeSet* source_set,
+    const char* name)
+{
+    const FVizDataArray* source = fviz_attribute_set_const_get(source_set, name);
+    FVizDataArray* target = fviz_attribute_set_get(target_set, name);
+    FVizDataArray* copy = NULL;
+    if (source == NULL) return FVIZ_OK;
+    if (fviz_data_array_deep_copy(source, &copy) != FVIZ_OK) return fviz_last_error_code();
+    if (target == NULL)
+    {
+        if (fviz_attribute_set_add(target_set, name, copy) != FVIZ_OK)
+        { fviz_release(copy); return fviz_last_error_code(); }
+    }
+    else
+    {
+        const FVizSize first = fviz_data_array_tuple_count(target);
+        if (fviz_data_array_resize(target, first + fviz_data_array_tuple_count(copy)) != FVIZ_OK ||
+            fviz_data_array_set_tuples(target, first, fviz_data_array_const_data(copy),
+                fviz_data_array_tuple_count(copy)) != FVIZ_OK)
+        { fviz_release(copy); return fviz_last_error_code(); }
+    }
+    fviz_release(copy);
+    return FVIZ_OK;
+}
+
+FVizResult fviz_poly_data_append(
+    FVizPolyData* target,
+    const FVizPolyData* other)
+{
+    const FVizVec3* points;
+    FVizSize point_count;
+    FVizSize base_point_count;
+    FVizSize i;
+    if (target == NULL || other == NULL || target == other) return FVIZ_ERROR_INVALID_ARGUMENT;
+    base_point_count = fviz_poly_data_point_count(target);
+    points = fviz_poly_data_points(other);
+    point_count = fviz_poly_data_point_count(other);
+    /* Points. */
+    if (point_count > 0u)
+    {
+        uint32_t first = 0u;
+        if (fviz_poly_data_add_points(target, points, point_count, &first) != FVIZ_OK)
+            return fviz_last_error_code();
+    }
+    /* Triangles (legacy fast path) and full cells. */
+    {
+        const uint32_t* tris = fviz_poly_data_triangle_indices(other);
+        const FVizSize tri_count = fviz_poly_data_triangle_count(other);
+        FVizSize tri;
+        for (tri = 0u; tri < tri_count; ++tri)
+        {
+            const uint32_t a = (uint32_t)((FVizSize)tris[tri * 3u + 0u] + base_point_count);
+            const uint32_t b = (uint32_t)((FVizSize)tris[tri * 3u + 1u] + base_point_count);
+            const uint32_t c = (uint32_t)((FVizSize)tris[tri * 3u + 2u] + base_point_count);
+            if (fviz_poly_data_add_triangle(target, a, b, c) != FVIZ_OK) return fviz_last_error_code();
+        }
+    }
+    /* Lines. */
+    {
+        const uint32_t* lines = fviz_poly_data_line_indices(other);
+        const FVizSize line_count = fviz_poly_data_line_cell_count(other);
+        FVizSize li;
+        for (li = 0u; li < line_count; ++li)
+        {
+            const uint32_t a = (uint32_t)((FVizSize)lines[li * 2u + 0u] + base_point_count);
+            const uint32_t b = (uint32_t)((FVizSize)lines[li * 2u + 1u] + base_point_count);
+            if (fviz_poly_data_add_line(target, a, b) != FVIZ_OK) return fviz_last_error_code();
+        }
+    }
+    /* Generic cells from the logical cell arrays (polys/strips). */
+    for (i = 0u; i < fviz_cell_array_count(fviz_poly_data_polys(other)); ++i)
+    {
+        FVizCellView view;
+        uint32_t ids[64];
+        FVizSize j;
+        if (fviz_cell_array_cell_view(fviz_poly_data_polys(other), i, &view) != FVIZ_OK) continue;
+        if (view.point_count > 64u) continue;
+        for (j = 0u; j < view.point_count; ++j)
+            ids[j] = (uint32_t)((FVizSize)fviz_cell_view_point_id(&view, j) + base_point_count);
+        if (fviz_poly_data_add_polygon(target, view.point_count, ids) != FVIZ_OK) return fviz_last_error_code();
+    }
+    for (i = 0u; i < fviz_cell_array_count(fviz_poly_data_strips(other)); ++i)
+    {
+        FVizCellView view;
+        uint32_t ids[64];
+        FVizSize j;
+        if (fviz_cell_array_cell_view(fviz_poly_data_strips(other), i, &view) != FVIZ_OK) continue;
+        if (view.point_count > 64u) continue;
+        for (j = 0u; j < view.point_count; ++j)
+            ids[j] = (uint32_t)((FVizSize)fviz_cell_view_point_id(&view, j) + base_point_count);
+        if (fviz_poly_data_add_triangle_strip(target, view.point_count, ids) != FVIZ_OK) return fviz_last_error_code();
+    }
+    /* Concatenate point attributes. */
+    {
+        FVizAttributeSet* target_point = fviz_poly_data_point_data(target);
+        const FVizAttributeSet* source_point = fviz_poly_data_const_point_data(other);
+        FVizSize array_count = fviz_attribute_set_count(source_point);
+        for (i = 0u; i < array_count; ++i)
+        {
+            const char* name = fviz_attribute_set_name_at(source_point, i);
+            if (name == NULL) continue;
+            if (fviz_poly_data_concat_point_array(target_point, source_point, name) != FVIZ_OK)
+                return fviz_last_error_code();
+        }
+    }
+    if (fviz_poly_data_validate(target) != FVIZ_OK) return fviz_last_error_code();
+    return FVIZ_OK;
+}

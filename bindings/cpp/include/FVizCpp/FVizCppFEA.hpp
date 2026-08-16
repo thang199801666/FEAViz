@@ -17,6 +17,7 @@
 #include <FViz/FEA/FVizScalarBarActor.h>
 #include <FViz/FEA/FVizVisualization.h>
 #include <FViz/FEA/FVizIntegrationPointData.h>
+#include <FViz/FEA/FVizDisplayGroup.h>
 
 #include "FVizCppObject.hpp"
 #include "FVizCppData.hpp"
@@ -529,6 +530,61 @@ public:
             }
         }
         return true;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// DisplayGroup - named boolean-combined FEA entity set controlling visibility.
+// ---------------------------------------------------------------------------
+class DisplayGroup : public Object<FVizFEADisplayGroup> {
+public:
+    DisplayGroup() = default;
+    explicit DisplayGroup(FVizFEADisplayGroup* owned) : Object<FVizFEADisplayGroup>(owned) {}
+    explicit DisplayGroup(void* owned) : Object<FVizFEADisplayGroup>(owned) {}
+
+    static DisplayGroup create(const std::string& name)
+    {
+        FVizFEADisplayGroup* group = nullptr;
+        detail::checkResult(fviz_fea_display_group_create(name.c_str(), &group));
+        return DisplayGroup(group);
+    }
+
+    const char* name() const noexcept { return ptr_ ? fviz_fea_display_group_name(ptr_) : ""; }
+    void setVisible(bool visible) noexcept { if (ptr_) fviz_fea_display_group_set_visible(ptr_, detail::fbool(visible)); }
+    bool visible() const noexcept { return ptr_ ? fviz_fea_display_group_visible(ptr_) != FVIZ_FALSE : false; }
+
+    void setNodes(const std::vector<uint64_t>& labels)
+    {
+        detail::checkResult(fviz_fea_display_group_set_nodes(ptr_, labels.data(), labels.size()));
+    }
+    void setElements(const std::vector<uint64_t>& labels)
+    {
+        detail::checkResult(fviz_fea_display_group_set_elements(ptr_, labels.data(), labels.size()));
+    }
+    void setFaces(const std::vector<uint64_t>& labels)
+    {
+        detail::checkResult(fviz_fea_display_group_set_faces(ptr_, labels.data(), labels.size()));
+    }
+
+    void combine(const DisplayGroup& source, FVizFEADisplayGroupOperation operation)
+    {
+        detail::checkResult(fviz_fea_display_group_combine(ptr_, source.get(), operation));
+    }
+
+    void createMasks(UnstructuredGrid& grid, DataArray& out_point_mask, DataArray& out_cell_mask)
+    {
+        FVizDataArray* pm = nullptr;
+        FVizDataArray* cm = nullptr;
+        detail::checkResult(fviz_fea_display_group_create_masks(ptr_, grid.get(), &pm, &cm));
+        out_point_mask = DataArray(pm);
+        out_cell_mask = DataArray(cm);
+    }
+
+    FVizFEADisplayGroupStatistics statistics(UnstructuredGrid& grid) const noexcept
+    {
+        FVizFEADisplayGroupStatistics stats;
+        fviz_fea_display_group_get_statistics(ptr_, grid.get(), &stats);
+        return stats;
     }
 };
 

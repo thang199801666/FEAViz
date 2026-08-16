@@ -622,9 +622,7 @@ void fviz_render_window_get_capabilities(
     out_capabilities->text_rendering_supported = window->text_rendering_supported;
     out_capabilities->integer_selection_supported = window->integer_selection_supported;
     out_capabilities->gpu_timing_supported = window->gpu_timing_supported;
-    /* Dual-depth peeling is not part of the current OpenGL backend. Requests
-     * deterministically fall back to sorted alpha and report the applied mode. */
-    out_capabilities->depth_peeling_supported = FVIZ_FALSE;
+    out_capabilities->depth_peeling_supported = window->depth_peeling_supported;
 }
 
 FVizResult fviz_render_window_set_multisamples(FVizRenderWindow* window, uint32_t samples)

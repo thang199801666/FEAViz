@@ -44,6 +44,7 @@ struct FVizRenderWindow
     FVizBool srgb_enabled;
     FVizBool srgb_supported;
     FVizBool weighted_oit_supported;
+    FVizBool depth_peeling_supported;
     FVizBool shader_lines_supported;
     FVizBool text_rendering_supported;
     FVizBool integer_selection_supported;

@@ -3139,3 +3139,288 @@ fail:
     fviz_release(output);
     return fviz_last_error_code();
 }
+
+FVizResult fviz_unstructured_grid_cutter(
+    const FVizUnstructuredGrid* grid,
+    const FVizPlane* planes,
+    FVizSize plane_count,
+    FVizPolyData** out_cut)
+{
+    FVizPolyData* cut = NULL;
+    FVizSize i;
+    if (out_cut != NULL) *out_cut = NULL;
+    if (grid == NULL || (plane_count != 0u && planes == NULL) || out_cut == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "cutter requires a grid, planes, and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    if (fviz_poly_data_create(&cut) != FVIZ_OK) return fviz_last_error_code();
+    for (i = 0u; i < plane_count; ++i)
+    {
+        FVizPolyData* slice = NULL;
+        if (fviz_unstructured_grid_slice(grid, planes[i], &slice) != FVIZ_OK)
+        {
+            fviz_release(slice);
+            fviz_release(cut);
+            return fviz_last_error_code();
+        }
+        if (slice != NULL)
+        {
+            if (fviz_poly_data_append(cut, slice) != FVIZ_OK)
+            {
+                fviz_release(slice);
+                fviz_release(cut);
+                return fviz_last_error_code();
+            }
+            fviz_release(slice);
+        }
+    }
+    if (fviz_poly_data_validate(cut) != FVIZ_OK)
+    {
+        fviz_release(cut);
+        return fviz_last_error_code();
+    }
+    *out_cut = cut;
+    return FVIZ_OK;
+}
+
+/* Iso-surface extraction (marching tetra, VTK vtkContourFilter compatible).
+ * Tetra cells are marched directly; hexahedra are decomposed into 5 tetrahedra
+ * using the standard VTK convention. Each tetra produces one triangle when one
+ * vertex is above the iso value, or a quadrilateral (two triangles) when two
+ * are above. */
+FVizResult fviz_unstructured_grid_iso_surface(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    double iso_value,
+    FVizPolyData** out_surface)
+{
+    const FVizDataArray* scalars;
+    const FVizVec3* points;
+    FVizPolyData* output = NULL;
+    FVizDataArray* scalar_values = NULL;
+    FVizSize cell_count;
+    FVizSize i;
+    if (out_surface != NULL) *out_surface = NULL;
+    if (grid == NULL || scalar_array_name == NULL || scalar_array_name[0] == '\0' || out_surface == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "iso-surface requires a grid, scalar name, and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    scalars = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), scalar_array_name);
+    if (scalars == NULL || fviz_data_array_components(scalars) < 1u ||
+        fviz_data_array_tuple_count(scalars) != fviz_unstructured_grid_point_count(grid))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "iso-surface scalar must be a one-component point array");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if (fviz_poly_data_create(&output) != FVIZ_OK ||
+        fviz_data_array_create(FVIZ_DATA_FLOAT64, 1u, &scalar_values) != FVIZ_OK)
+        return fviz_last_error_code();
+    points = fviz_points_data(grid->points);
+    cell_count = fviz_unstructured_grid_cell_count(grid);
+
+    for (i = 0u; i < cell_count; ++i)
+    {
+        FVizCellView view;
+        if (fviz_cell_array_cell_view(grid->cells, i, &view) != FVIZ_OK) continue;
+        /* Only tetra and hexa cells are supported by the marching decomposition. */
+        if (view.point_count == 4u)
+        {
+            FVizId ids[4];
+            FVizSize e;
+            for (e = 0u; e < 4u; ++e) ids[e] = fviz_cell_view_point_id(&view, e);
+            {
+                double v[4];
+                FVizVec3 p[4];
+                uint32_t above[4];
+                FVizSize above_count = 0u;
+                uint32_t below[4];
+                FVizSize below_count = 0u;
+                for (e = 0u; e < 4u; ++e)
+                {
+                    (void)fviz_data_array_get_component(scalars, (FVizSize)ids[e], 0u, &v[e]);
+                    p[e] = points[(FVizSize)ids[e]];
+                    if (v[e] >= iso_value) above[above_count++] = (uint32_t)e;
+                    else below[below_count++] = (uint32_t)e;
+                }
+                if (above_count == 0u || above_count == 4u) continue; /* no crossing */
+                if (above_count == 1u || above_count == 3u)
+                {
+                    /* One triangle: one vertex on the single side, three on the
+                     * other. Edges from the isolated vertex to the other three. */
+                    uint32_t iso = above_count == 1u ? above[0u] : below[0u];
+                    uint32_t other[3];
+                    FVizSize o = 0u;
+                    for (e = 0u; e < 4u; ++e)
+                        if (e != iso) other[o++] = (uint32_t)e;
+                    {
+                        FVizSize edge_pair[3][2] = {{0,1},{0,2},{1,2}};
+                        FVizSize t;
+                        uint32_t out_ids[3];
+                        for (t = 0u; t < 3u; ++t)
+                        {
+                            const uint32_t a = other[edge_pair[t][0]];
+                            const uint32_t b = other[edge_pair[t][1]];
+                            double va = v[a], vb = v[b];
+                            double t_frac = (iso_value - va) / (vb - va);
+                            FVizVec3 interp = fviz_vec3_add(p[a],
+                                fviz_vec3_scale(fviz_vec3_sub(p[b], p[a]), (float)t_frac));
+                            uint32_t pid = 0u;
+                            if (fviz_poly_data_add_point(output, interp, &pid) != FVIZ_OK ||
+                                fviz_data_array_append_tuple(scalar_values, &iso_value) != FVIZ_OK)
+                                goto fail;
+                            out_ids[t] = pid;
+                        }
+                        if (fviz_poly_data_add_triangle(output, out_ids[0], out_ids[1], out_ids[2]) != FVIZ_OK)
+                            goto fail;
+                    }
+                }
+                else /* above_count == 2: quadrilateral = 2 triangles. */
+                {
+                    uint32_t a0 = above[0u], a1 = above[1u];
+                    uint32_t b0 = below[0u], b1 = below[1u];
+                    /* Edges: a0-a1 (crossing none), a0-b0, a0-b1, a1-b0, a1-b1,
+                     * b0-b1. The surface connects the two above vertices to the
+                     * two below vertices. */
+                    {
+                        FVizSize t;
+                        uint32_t out_ids[4];
+                        /* midpoint interpolation helper via local function. */
+                        for (t = 0u; t < 4u; ++t)
+                        {
+                            uint32_t a, b;
+                            double va, vb;
+                            double t_frac;
+                            FVizVec3 interp;
+                            uint32_t pid = 0u;
+                            switch (t)
+                            {
+                                case 0u: a = a0; b = b0; break;
+                                case 1u: a = a0; b = b1; break;
+                                case 2u: a = a1; b = b0; break;
+                                default: a = a1; b = b1; break;
+                            }
+                            va = v[a]; vb = v[b];
+                            t_frac = (iso_value - va) / (vb - va);
+                            interp = fviz_vec3_add(p[a], fviz_vec3_scale(fviz_vec3_sub(p[b], p[a]), (float)t_frac));
+                            if (fviz_poly_data_add_point(output, interp, &pid) != FVIZ_OK ||
+                                fviz_data_array_append_tuple(scalar_values, &iso_value) != FVIZ_OK)
+                                goto fail;
+                            out_ids[t] = pid;
+                        }
+                        /* Two triangles: (a0b0, a0b1, a1b1) and (a0b0, a1b1, a1b0). */
+                        if (fviz_poly_data_add_triangle(output, out_ids[0], out_ids[1], out_ids[3]) != FVIZ_OK ||
+                            fviz_poly_data_add_triangle(output, out_ids[0], out_ids[3], out_ids[2]) != FVIZ_OK)
+                            goto fail;
+                    }
+                }
+            }
+        }
+        else if (view.point_count == 8u)
+        {
+            /* Hexahedron: decompose into 5 tetrahedra (VTK convention) and
+             * march each. */
+            FVizId ids[8];
+            const uint32_t tetra_split[5][4] = {
+                {0,1,2,5},{0,2,3,7},{0,4,5,7},{2,5,6,7},{0,2,5,7}};
+            FVizSize t;
+            FVizSize e;
+            for (e = 0u; e < 8u; ++e) ids[e] = fviz_cell_view_point_id(&view, e);
+            for (t = 0u; t < 5u; ++t)
+            {
+                FVizId tet[4];
+                double v[4];
+                FVizVec3 p[4];
+                uint32_t above[4];
+                FVizSize above_count = 0u;
+                uint32_t below[4];
+                FVizSize below_count = 0u;
+                FVizSize k;
+                for (k = 0u; k < 4u; ++k)
+                {
+                    tet[k] = ids[tetra_split[t][k]];
+                    (void)fviz_data_array_get_component(scalars, (FVizSize)tet[k], 0u, &v[k]);
+                    p[k] = points[(FVizSize)tet[k]];
+                    if (v[k] >= iso_value) above[above_count++] = (uint32_t)k;
+                    else below[below_count++] = (uint32_t)k;
+                }
+                if (above_count == 0u || above_count == 4u) continue;
+                if (above_count == 1u || above_count == 3u)
+                {
+                    uint32_t iso = above_count == 1u ? above[0u] : below[0u];
+                    uint32_t other[3];
+                    FVizSize o = 0u;
+                    for (k = 0u; k < 4u; ++k)
+                        if (k != iso) other[o++] = (uint32_t)k;
+                    {
+                        FVizSize edge_pair[3][2] = {{0,1},{0,2},{1,2}};
+                        FVizSize tt;
+                        uint32_t out_ids[3];
+                        for (tt = 0u; tt < 3u; ++tt)
+                        {
+                            const uint32_t a = other[edge_pair[tt][0]];
+                            const uint32_t b = other[edge_pair[tt][1]];
+                            double va = v[a], vb = v[b];
+                            double t_frac = (iso_value - va) / (vb - va);
+                            FVizVec3 interp = fviz_vec3_add(p[a],
+                                fviz_vec3_scale(fviz_vec3_sub(p[b], p[a]), (float)t_frac));
+                            uint32_t pid = 0u;
+                            if (fviz_poly_data_add_point(output, interp, &pid) != FVIZ_OK ||
+                                fviz_data_array_append_tuple(scalar_values, &iso_value) != FVIZ_OK)
+                                goto fail;
+                            out_ids[tt] = pid;
+                        }
+                        if (fviz_poly_data_add_triangle(output, out_ids[0], out_ids[1], out_ids[2]) != FVIZ_OK)
+                            goto fail;
+                    }
+                }
+                else
+                {
+                    uint32_t a0 = above[0u], a1 = above[1u];
+                    uint32_t b0 = below[0u], b1 = below[1u];
+                    FVizSize tt;
+                    uint32_t out_ids[4];
+                    for (tt = 0u; tt < 4u; ++tt)
+                    {
+                        uint32_t a, b;
+                        double va, vb;
+                        double t_frac;
+                        FVizVec3 interp;
+                        uint32_t pid = 0u;
+                        switch (tt)
+                        {
+                            case 0u: a = a0; b = b0; break;
+                            case 1u: a = a0; b = b1; break;
+                            case 2u: a = a1; b = b0; break;
+                            default: a = a1; b = b1; break;
+                        }
+                        va = v[a]; vb = v[b];
+                        t_frac = (iso_value - va) / (vb - va);
+                        interp = fviz_vec3_add(p[a], fviz_vec3_scale(fviz_vec3_sub(p[b], p[a]), (float)t_frac));
+                        if (fviz_poly_data_add_point(output, interp, &pid) != FVIZ_OK ||
+                            fviz_data_array_append_tuple(scalar_values, &iso_value) != FVIZ_OK)
+                            goto fail;
+                        out_ids[tt] = pid;
+                    }
+                    if (fviz_poly_data_add_triangle(output, out_ids[0], out_ids[1], out_ids[3]) != FVIZ_OK ||
+                        fviz_poly_data_add_triangle(output, out_ids[0], out_ids[3], out_ids[2]) != FVIZ_OK)
+                        goto fail;
+                }
+            }
+        }
+    }
+    if (fviz_attribute_set_add(fviz_poly_data_point_data(output), scalar_array_name, scalar_values) != FVIZ_OK ||
+        fviz_poly_data_validate(output) != FVIZ_OK) goto fail;
+    fviz_release(scalar_values);
+    *out_surface = output;
+    return FVIZ_OK;
+fail:
+    fviz_release(scalar_values);
+    fviz_release(output);
+    return fviz_last_error_code();
+}

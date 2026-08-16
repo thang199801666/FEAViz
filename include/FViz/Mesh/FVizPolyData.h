@@ -129,6 +129,13 @@ FVIZ_API FVizResult fviz_poly_data_glyph_3d(
     double scale_factor,
     FVizPolyData** out_glyphs);
 
+/* Appends the points and cells of `other` onto `target`. Point attributes are
+ * concatenated when both sides carry the same array; otherwise only target
+ * arrays are retained. Cell attributes of `other` are copied when present. */
+FVIZ_API FVizResult fviz_poly_data_append(
+    FVizPolyData* target,
+    const FVizPolyData* other);
+
 FVIZ_EXTERN_C_END
 
 #endif /* FVIZ_MESH_POLY_DATA_H */

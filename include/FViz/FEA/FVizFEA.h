@@ -14,5 +14,6 @@
 #include <FViz/FEA/FVizDeformedShape.h>
 #include <FViz/FEA/FVizVisualization.h>
 #include <FViz/FEA/FVizScalarBarActor.h>
+#include <FViz/FEA/FVizDisplayGroup.h>
 
 #endif /* FVIZ_FEA_H */

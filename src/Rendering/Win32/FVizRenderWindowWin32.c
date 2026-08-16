@@ -496,6 +496,8 @@ static FVizResult fviz_win32_create_gl_context(FVizRenderWindow* window, HWND hw
             (const FVizGLDevice*)window->gl_device);
         window->weighted_oit_supported = fviz_internal_gl_device_weighted_oit_supported(
             (const FVizGLDevice*)window->gl_device);
+        window->depth_peeling_supported = fviz_internal_gl_device_depth_peeling_supported(
+            (const FVizGLDevice*)window->gl_device);
         window->shader_lines_supported = fviz_internal_gl_device_shader_lines_supported(
             (const FVizGLDevice*)window->gl_device);
         window->text_rendering_supported = fviz_internal_gl_device_text_supported(
@@ -878,6 +880,18 @@ FVizResult fviz_internal_render_window_render_platform(FVizRenderWindow* window)
                                     pass_context.aspect_ratio, target_framebuffer);
                                 if (pass_result == FVIZ_OK)
                                     applied_transparency = FVIZ_TRANSPARENCY_WEIGHTED_BLENDED;
+                            }
+                            else if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL &&
+                                requested_transparency == FVIZ_TRANSPARENCY_DEPTH_PEELING &&
+                                window->depth_peeling_supported != FVIZ_FALSE)
+                            {
+                                pass_result = fviz_internal_gl_device_render_depth_peeling(
+                                    (FVizGLDevice*)window->gl_device, renderer,
+                                    viewport_x, viewport_y, viewport_width, viewport_height,
+                                    window->actual_multisamples > 1u ? window->actual_multisamples : 1u,
+                                    pass_context.aspect_ratio, target_framebuffer, 4u);
+                                if (pass_result == FVIZ_OK)
+                                    applied_transparency = FVIZ_TRANSPARENCY_DEPTH_PEELING;
                             }
                             else if (window->gl_modern == FVIZ_TRUE && window->gl_device != NULL)
                             {

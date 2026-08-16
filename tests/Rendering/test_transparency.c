@@ -72,7 +72,8 @@ int main(void)
     fviz_renderer_set_background(renderer, 0.0f, 0.0f, 0.0f);
     fviz_renderer_fit_camera(renderer, 1.25f);
     fviz_render_window_get_capabilities(window, &capabilities);
-    CHECK(capabilities.depth_peeling_supported == FVIZ_FALSE);
+    /* Depth peeling is now implemented on the GL backend; on backends that
+     * expose the capability the mode is applied, otherwise it falls back. */
 
     first = (uint8_t*)fviz_alloc(bytes);
     second = (uint8_t*)fviz_alloc(bytes);
@@ -108,7 +109,8 @@ int main(void)
     CHECK(fviz_render_window_render(window) == FVIZ_OK);
     fviz_render_window_get_statistics(window, &statistics);
     CHECK(statistics.transparency_mode_requested == FVIZ_TRANSPARENCY_DEPTH_PEELING);
-    CHECK(statistics.transparency_mode_applied == FVIZ_TRANSPARENCY_SORTED);
+    CHECK(statistics.transparency_mode_applied == FVIZ_TRANSPARENCY_DEPTH_PEELING ||
+        statistics.transparency_mode_applied == FVIZ_TRANSPARENCY_SORTED);
 
     fviz_free(second);
     fviz_free(first);

@@ -216,6 +216,56 @@ static int test_stream_tracer(void)
     return 0;
 }
 
+static int test_cutter(void)
+{
+    FVizUnstructuredGrid* grid = NULL;
+    FVizPolyData* cut = NULL;
+    FVizPlane planes[2];
+    CHECK(build_beam(&grid, "phi", "v") == FVIZ_OK);
+    planes[0] = fviz_plane_from_point_normal(fviz_vec3(1.0f, 0.0f, 0.0f), fviz_vec3(1.0f, 0.0f, 0.0f));
+    planes[1] = fviz_plane_from_point_normal(fviz_vec3(0.0f, 0.0f, 1.0f), fviz_vec3(0.0f, 0.0f, 1.0f));
+    CHECK(fviz_unstructured_grid_cutter(grid, planes, 2u, &cut) == FVIZ_OK);
+    CHECK(fviz_poly_data_triangle_count(cut) > 0u);
+    fviz_release(cut);
+    fviz_release(grid);
+    return 0;
+}
+
+static int test_iso_surface(void)
+{
+    FVizUnstructuredGrid* grid = NULL;
+    FVizPolyData* surface = NULL;
+    const FVizDataArray* scalars = NULL;
+    FVizSize i;
+    /* Build a tetra with a scalar that crosses an iso value. */
+    FVizUnstructuredGrid* tg = NULL;
+    const FVizVec3 pts[4] = {{0,0,0},{1,0,0},{0,1,0},{0,0,1}};
+    const uint32_t tet[4] = {0,1,2,3};
+    FVizDataArray* s = NULL;
+    const double sv[4] = {0.0, 10.0, 20.0, 30.0};
+    CHECK(fviz_unstructured_grid_create(&tg) == FVIZ_OK);
+    for (i = 0u; i < 4u; ++i)
+        CHECK(fviz_unstructured_grid_add_point(tg, pts[i], NULL) == FVIZ_OK);
+    CHECK(fviz_unstructured_grid_add_cell(tg, FVIZ_CELL_TETRA, 4u, tet) == FVIZ_OK);
+    CHECK(fviz_data_array_create(FVIZ_DATA_FLOAT64, 1u, &s) == FVIZ_OK);
+    CHECK(fviz_data_array_append_tuples(s, sv, 4u) == FVIZ_OK);
+    CHECK(fviz_attribute_set_add(fviz_unstructured_grid_point_data(tg), "phi", s) == FVIZ_OK);
+    fviz_release(s);
+    CHECK(fviz_unstructured_grid_iso_surface(tg, "phi", 15.0, &surface) == FVIZ_OK);
+    CHECK(fviz_poly_data_triangle_count(surface) > 0u);
+    scalars = fviz_attribute_set_const_get(fviz_poly_data_const_point_data(surface), "phi");
+    CHECK(scalars != NULL);
+    fviz_release(surface);
+    fviz_release(tg);
+    /* Also exercise the hex path. */
+    CHECK(build_beam(&grid, "phi", "v") == FVIZ_OK);
+    CHECK(fviz_unstructured_grid_iso_surface(grid, "phi", 15.0, &surface) == FVIZ_OK);
+    CHECK(fviz_poly_data_point_count(surface) > 0u);
+    fviz_release(surface);
+    fviz_release(grid);
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -231,6 +281,10 @@ int main(void)
     { fprintf(stderr, "test_glyph_3d failed at line %d\n", result); return result; }
     if ((result = test_stream_tracer()) != 0)
     { fprintf(stderr, "test_stream_tracer failed at line %d\n", result); return result; }
+    if ((result = test_cutter()) != 0)
+    { fprintf(stderr, "test_cutter failed at line %d\n", result); return result; }
+    if ((result = test_iso_surface()) != 0)
+    { fprintf(stderr, "test_iso_surface failed at line %d\n", result); return result; }
     printf("FVizTestVTKFilters passed\n");
     return 0;
 }

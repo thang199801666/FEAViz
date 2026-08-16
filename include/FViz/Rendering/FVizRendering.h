@@ -6,6 +6,7 @@
 #include <FViz/Rendering/FVizLookupTable.h>
 #include <FViz/Rendering/FVizLight.h>
 #include <FViz/Rendering/FVizGlyphMapper.h>
+#include <FViz/Rendering/FVizVolumeMapper.h>
 #include <FViz/Rendering/FVizFontAtlas.h>
 #include <FViz/Rendering/FVizFont.h>
 #include <FViz/Rendering/FVizTextProperty.h>

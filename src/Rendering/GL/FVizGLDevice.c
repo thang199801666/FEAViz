@@ -8,6 +8,7 @@
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
 #include <FViz/Data/FVizDataArray.h>
+#include <FViz/Data/FVizDataType.h>
 #include <FViz/Math/FVizMat3.h>
 #include <FViz/Math/FVizMat4.h>
 #include <FViz/Math/FVizBounds.h>
@@ -16,6 +17,7 @@
 #include <FViz/Rendering/FVizLookupTable.h>
 #include <FViz/Rendering/FVizLight.h>
 #include <FViz/Rendering/FVizGlyphMapper.h>
+#include <FViz/Rendering/FVizVolumeMapper.h>
 #include <FViz/Rendering/FVizMapper.h>
 #include <FViz/Rendering/FVizOverlayLayout.h>
 #include <FViz/Rendering/FVizRenderer.h>
@@ -32,6 +34,12 @@
 #include <FViz/Rendering/FVizGlyphMapperPrivate.h>
 #include <FViz/Rendering/FVizTextLayoutPrivate.h>
 #include <FViz/Rendering/FVizLabelSetPrivate.h>
+
+static FVizResult fviz_gl_render_volume(
+    FVizGLDevice* device,
+    FVizRenderer* renderer,
+    const FVizActor* actor,
+    float aspect_ratio);
 
 #define FVIZ_GL_POSITION_ATTRIBUTE_INDEX 0u
 #define FVIZ_GL_NORMAL_ATTRIBUTE_INDEX 1u
@@ -114,11 +122,20 @@ static const char* const k_fviz_gl_fragment_shader_source =
     "uniform float uOITDepthWeight;\n"
     "uniform float uOITMinimumWeight;\n"
     "uniform float uOITAlphaCutoff;\n"
+    "uniform int uPeelEnabled;\n"
+    "uniform sampler2D uPeelDepthTexture;\n"
+    "uniform float uPeelScreenWidthInv;\n"
+    "uniform float uPeelScreenHeightInv;\n"
     "out vec4 outColor;\n"
     "void main()\n"
     "{\n"
     "    for (int i = 0; i < uClipPlaneCount; ++i)\n"
     "        if (dot(uClipPlanes[i].xyz, vWorldPos) + uClipPlanes[i].w < 0.0) discard;\n"
+    "    if (uPeelEnabled == 1) {\n"
+    "        vec2 uv = gl_FragCoord.xy * vec2(uPeelScreenWidthInv, uPeelScreenHeightInv);\n"
+    "        float peeledDepth = texture(uPeelDepthTexture, uv).r;\n"
+    "        if (gl_FragCoord.z <= peeledDepth + 1e-5) discard;\n"
+    "    }\n"
     "    vec3 baseColor = uScalarColorEnabled == 1 ? vColor.rgb : uDiffuse;\n"
     "    vec3 faceNormal = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));\n"
     "    vec3 n = uFlatShading == 1 ? faceNormal : normalize(vNormal);\n"
@@ -179,6 +196,126 @@ static const char* const k_fviz_gl_edge_vertex_shader_source =
     "    gl_Position = uMvp * p;\n"
     "    gl_Position.z -= uLineDepthBias * gl_Position.w;\n"
     "    vLineColor = uInstancingEnabled == 1 ? aInstanceColor : aColor;\n"
+    "}\n";
+
+/* Volume ray-casting: the vertex shader expands the volume's unit cube; the
+ * fragment shader computes entry/exit intersections and marches through the
+ * 3D scalar texture, compositing front-to-back through the transfer function.
+ * The scalar field is uploaded as GL_R32F (component 0) and the transfer
+ * function as a 256x1 RGBA8 texture. */
+static const char* const k_fviz_gl_volume_vertex_shader_source =
+    "#version 330 core\n"
+    "layout(location = 0) in vec3 aPosition;\n"
+    "uniform mat4 uMvp;\n"
+    "uniform mat4 uModel;\n"
+    "out vec3 vObjectPos;\n"
+    "out vec3 vWorldPos;\n"
+    "void main()\n"
+    "{\n"
+    "    vObjectPos = aPosition;\n"
+    "    vWorldPos = vec3(uModel * vec4(aPosition, 1.0));\n"
+    "    gl_Position = uMvp * vec4(aPosition, 1.0);\n"
+    "}\n";
+
+static const char* const k_fviz_gl_volume_fragment_shader_source =
+    "#version 330 core\n"
+    "in vec3 vObjectPos;\n"
+    "in vec3 vWorldPos;\n"
+    "uniform mat4 uInvModel;\n"
+    "uniform vec3 uCameraPosition;\n"
+    "uniform vec3 uBoundsMin;\n"
+    "uniform vec3 uBoundsMax;\n"
+    "uniform sampler3D uScalarTexture;\n"
+    "uniform sampler2D uTransferTexture;\n"
+    "uniform float uStepSize;\n"
+    "uniform float uScalarRangeMin;\n"
+    "uniform float uScalarRangeMax;\n"
+    "uniform int uShading;\n"
+    "uniform int uLightCount;\n"
+    "uniform vec4 uLightPositionIntensity[4];\n"
+    "uniform vec3 uLightColor[4];\n"
+    "uniform float uAmbientFactor;\n"
+    "uniform float uDiffuseFactor;\n"
+    "uniform float uSpecularFactor;\n"
+    "uniform float uSpecularPower;\n"
+    "out vec4 outColor;\n"
+    "vec2 intersect_box(vec3 origin, vec3 direction, vec3 box_min, vec3 box_max)\n"
+    "{\n"
+    "    vec3 inv_dir = 1.0 / direction;\n"
+    "    vec3 t0 = (box_min - origin) * inv_dir;\n"
+    "    vec3 t1 = (box_max - origin) * inv_dir;\n"
+    "    vec3 tmin = min(t0, t1);\n"
+    "    vec3 tmax = max(t0, t1);\n"
+    "    float t_near = max(max(tmin.x, tmin.y), tmin.z);\n"
+    "    float t_far = min(min(tmax.x, tmax.y), tmax.z);\n"
+    "    return vec2(t_near, t_far);\n"
+    "}\n"
+    "float scalar_at(vec3 object_pos)\n"
+    "{\n"
+    "    return texture(uScalarTexture, object_pos).r;\n"
+    "}\n"
+    "vec3 gradient_at(vec3 object_pos)\n"
+    "{\n"
+    "    vec3 tex_size = vec3(textureSize(uScalarTexture, 0));\n"
+    "    vec3 e = 0.5 / max(tex_size, vec3(1.0));\n"
+    "    float dx = scalar_at(object_pos + vec3(e.x, 0.0, 0.0)) - scalar_at(object_pos - vec3(e.x, 0.0, 0.0));\n"
+    "    float dy = scalar_at(object_pos + vec3(0.0, e.y, 0.0)) - scalar_at(object_pos - vec3(0.0, e.y, 0.0));\n"
+    "    float dz = scalar_at(object_pos + vec3(0.0, 0.0, e.z)) - scalar_at(object_pos - vec3(0.0, 0.0, e.z));\n"
+    "    vec3 g = vec3(dx, dy, dz);\n"
+    "    return length(g) > 1e-6 ? normalize(g) : vec3(0.0, 0.0, -1.0);\n"
+    "}\n"
+    "void main()\n"
+    "{\n"
+    "    vec3 ray_origin = uCameraPosition;\n"
+    "    vec3 ray_direction = normalize(vWorldPos - uCameraPosition);\n"
+    "    vec2 hits = intersect_box(ray_origin, ray_direction, uBoundsMin, uBoundsMax);\n"
+    "    if (hits.y < hits.x) discard;\n"
+    "    float t_start = max(hits.x, 0.0);\n"
+    "    float t_end = hits.y;\n"
+    "    float distance = t_end - t_start;\n"
+    "    int steps = max(2, int(ceil(distance / max(uStepSize, 1e-5))));\n"
+    "    float dt = distance / float(steps);\n"
+    "    vec4 accumulated = vec4(0.0);\n"
+    "    float transmittance = 1.0;\n"
+    "    vec3 forward = normalize(-ray_direction);\n"
+    "    for (int step = 0; step < steps; ++step)\n"
+    "    {\n"
+    "        float t = t_start + (float(step) + 0.5) * dt;\n"
+    "        vec3 world_pos = ray_origin + ray_direction * t;\n"
+    "        vec3 object_pos = vec3(uInvModel * vec4(world_pos, 1.0));\n"
+    "        if (any(lessThan(object_pos, vec3(0.0))) || any(greaterThan(object_pos, vec3(1.0)))) continue;\n"
+    "        float scalar = scalar_at(object_pos);\n"
+    "        float s = clamp((scalar - uScalarRangeMin) / max(uScalarRangeMax - uScalarRangeMin, 1e-6), 0.0, 1.0);\n"
+    "        vec4 tf = texture(uTransferTexture, vec2(s, 0.5));\n"
+    "        if (tf.a <= 0.003) continue;\n"
+    "        vec3 color = tf.rgb;\n"
+    "        if (uShading == 1)\n"
+    "        {\n"
+    "            vec3 n = gradient_at(object_pos);\n"
+    "            if (dot(n, forward) < 0.0) n = -n;\n"
+    "            vec3 shaded = color * uAmbientFactor;\n"
+    "            for (int i = 0; i < 4; ++i)\n"
+    "            {\n"
+    "                if (i >= uLightCount) break;\n"
+    "                vec3 light_pos = uLightPositionIntensity[i].xyz;\n"
+    "                vec3 l = normalize(light_pos - world_pos);\n"
+    "                vec3 h = normalize(l + forward);\n"
+    "                float ndotl = max(dot(n, l), 0.0);\n"
+    "                float spec = ndotl > 0.0 ? pow(max(dot(n, h), 0.0), uSpecularPower) : 0.0;\n"
+    "                float intensity = uLightPositionIntensity[i].w;\n"
+    "                vec3 light_color = uLightColor[i];\n"
+    "                shaded += color * light_color * (uDiffuseFactor * ndotl * intensity);\n"
+    "                shaded += light_color * (uSpecularFactor * spec * intensity);\n"
+    "            }\n"
+    "            color = min(shaded, vec3(1.0));\n"
+    "        }\n"
+    "        float alpha = 1.0 - pow(1.0 - tf.a, dt / max(uStepSize, 1e-5));\n"
+    "        accumulated.rgb += transmittance * alpha * color;\n"
+    "        accumulated.a += transmittance * alpha;\n"
+    "        transmittance *= (1.0 - alpha);\n"
+    "        if (transmittance < 0.01) break;\n"
+    "    }\n"
+    "    outColor = vec4(accumulated.rgb, accumulated.a);\n"
     "}\n";
 
 static const char* const k_fviz_gl_edge_geometry_shader_source =
@@ -593,6 +730,10 @@ struct FVizGLDevice
     GLint oit_depth_weight_location;
     GLint oit_minimum_weight_location;
     GLint oit_alpha_cutoff_location;
+    GLint peel_enabled_location;
+    GLint peel_depth_texture_location;
+    GLint peel_screen_width_inv_location;
+    GLint peel_screen_height_inv_location;
     GLuint program_2d;
     GLint mvp_location_2d;
     GLuint edge_program;
@@ -641,6 +782,53 @@ struct FVizGLDevice
     int oit_height;
     uint32_t oit_samples;
     int oit_pass;
+    /* Dual depth peeling state. */
+    GLuint peel_front_depth_texture;
+    GLuint peel_back_depth_texture;
+    GLuint peel_color_texture;
+    GLuint peel_framebuffer;
+    GLuint peel_depth_framebuffer;
+    GLuint peel_depth_renderbuffer;
+    GLint peel_depth_location;
+    GLint peel_color_attached;
+    int peel_pass;
+    int peel_width;
+    int peel_height;
+    FVizBool peel_supported;
+    /* Volume ray-casting state. */
+    GLuint volume_program;
+    GLint volume_model_location;
+    GLint volume_inv_model_location;
+    GLint volume_mvp_location;
+    GLint volume_camera_position_location;
+    GLint volume_scalar_texture_location;
+    GLint volume_transfer_texture_location;
+    GLint volume_step_size_location;
+    GLint volume_scalar_range_location;
+    GLint volume_scalar_range_max_location;
+    GLint volume_bounds_min_location;
+    GLint volume_bounds_max_location;
+    GLint volume_shading_location;
+    GLint volume_light_count_location;
+    GLint volume_light_position_intensity_location;
+    GLint volume_light_color_location;
+    GLint volume_ambient_location;
+    GLint volume_diffuse_location;
+    GLint volume_specular_location;
+    GLint volume_specular_power_location;
+    GLuint volume_vao;
+    GLuint volume_vbo;
+    GLuint volume_ibo;
+    GLuint volume_scalar_texture;
+    GLuint volume_transfer_texture;
+    int volume_scalar_width;
+    int volume_scalar_height;
+    int volume_scalar_depth;
+    const FVizVolumeMapper* volume_uploaded_mapper;
+    FVizMTime volume_texture_mtime;
+    FVizMTime volume_transfer_mtime;
+    FVizBool volume_program_ready;
+    FVizBool volume_texture_ready;
     GLuint fxaa_program;
     GLint fxaa_color_location;
     GLint fxaa_inv_screen_location;
@@ -729,6 +917,7 @@ static FVizBool fviz_gl_actor_is_translucent(const FVizActor* actor)
 {
     const FVizGlyphMapper* glyph_mapper;
     if (actor == NULL) return FVIZ_FALSE;
+    if (fviz_actor_const_volume_mapper(actor) != NULL) return FVIZ_TRUE;
     if (fviz_actor_opacity(actor) < 0.999999f) return FVIZ_TRUE;
     glyph_mapper = fviz_actor_const_glyph_mapper(actor);
     return glyph_mapper != NULL &&
@@ -1900,6 +2089,11 @@ static FVizResult fviz_gl_create_program(FVizGLDevice* device)
     device->oit_depth_weight_location = gl->glGetUniformLocation(device->program, "uOITDepthWeight");
     device->oit_minimum_weight_location = gl->glGetUniformLocation(device->program, "uOITMinimumWeight");
     device->oit_alpha_cutoff_location = gl->glGetUniformLocation(device->program, "uOITAlphaCutoff");
+    device->peel_enabled_location = gl->glGetUniformLocation(device->program, "uPeelEnabled");
+    device->peel_depth_texture_location = gl->glGetUniformLocation(device->program, "uPeelDepthTexture");
+    device->peel_screen_width_inv_location = gl->glGetUniformLocation(device->program, "uPeelScreenWidthInv");
+    device->peel_screen_height_inv_location = gl->glGetUniformLocation(device->program, "uPeelScreenHeightInv");
+    device->peel_supported = FVIZ_TRUE;
     return FVIZ_OK;
 }
 
@@ -1948,6 +2142,93 @@ static FVizResult fviz_gl_create_2d_program(FVizGLDevice* device)
         return FVIZ_ERROR_GRAPHICS;
     }
     device->mvp_location_2d = gl->glGetUniformLocation(device->program_2d, "uMvp");
+    return FVIZ_OK;
+}
+
+static FVizResult fviz_gl_create_volume_program(FVizGLDevice* device)
+{
+    const FVizGLFunctions* gl = &device->gl;
+    GLuint vertex_shader;
+    GLuint fragment_shader;
+    char info_log[2048];
+    GLint status = GL_FALSE;
+    if (gl->glTexImage3D == NULL || gl->glTexSubImage3D == NULL)
+    {
+        return FVIZ_ERROR_NOT_SUPPORTED;
+    }
+    vertex_shader = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
+        k_fviz_gl_volume_vertex_shader_source, info_log, sizeof(info_log));
+    if (vertex_shader == 0u)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz volume vertex shader failed to compile");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
+        k_fviz_gl_volume_fragment_shader_source, info_log, sizeof(info_log));
+    if (fragment_shader == 0u)
+    {
+        gl->glDeleteShader(vertex_shader);
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz volume fragment shader failed to compile");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    device->volume_program = gl->glCreateProgram();
+    if (device->volume_program == 0u)
+    {
+        gl->glDeleteShader(vertex_shader);
+        gl->glDeleteShader(fragment_shader);
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "failed to create FEAViz volume shader program");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    gl->glAttachShader(device->volume_program, vertex_shader);
+    gl->glAttachShader(device->volume_program, fragment_shader);
+    gl->glLinkProgram(device->volume_program);
+    gl->glGetProgramiv(device->volume_program, FVIZ_GL_LINK_STATUS, &status);
+    gl->glDeleteShader(vertex_shader);
+    gl->glDeleteShader(fragment_shader);
+    if (status != GL_TRUE)
+    {
+        gl->glGetProgramInfoLog(device->volume_program, (GLsizei)sizeof(info_log), NULL, info_log);
+        gl->glDeleteProgram(device->volume_program);
+        device->volume_program = 0u;
+        fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz volume shader program failed to link");
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    device->volume_model_location = gl->glGetUniformLocation(device->volume_program, "uModel");
+    device->volume_inv_model_location = gl->glGetUniformLocation(device->volume_program, "uInvModel");
+    device->volume_mvp_location = gl->glGetUniformLocation(device->volume_program, "uMvp");
+    device->volume_camera_position_location = gl->glGetUniformLocation(
+        device->volume_program, "uCameraPosition");
+    device->volume_scalar_texture_location = gl->glGetUniformLocation(
+        device->volume_program, "uScalarTexture");
+    device->volume_transfer_texture_location = gl->glGetUniformLocation(
+        device->volume_program, "uTransferTexture");
+    device->volume_step_size_location = gl->glGetUniformLocation(
+        device->volume_program, "uStepSize");
+    device->volume_scalar_range_location = gl->glGetUniformLocation(
+        device->volume_program, "uScalarRangeMin");
+    device->volume_scalar_range_max_location = gl->glGetUniformLocation(
+        device->volume_program, "uScalarRangeMax");
+    device->volume_bounds_min_location = gl->glGetUniformLocation(
+        device->volume_program, "uBoundsMin");
+    device->volume_bounds_max_location = gl->glGetUniformLocation(
+        device->volume_program, "uBoundsMax");
+    device->volume_shading_location = gl->glGetUniformLocation(
+        device->volume_program, "uShading");
+    device->volume_light_count_location = gl->glGetUniformLocation(
+        device->volume_program, "uLightCount");
+    device->volume_light_position_intensity_location = gl->glGetUniformLocation(
+        device->volume_program, "uLightPositionIntensity[0]");
+    device->volume_light_color_location = gl->glGetUniformLocation(
+        device->volume_program, "uLightColor[0]");
+    device->volume_ambient_location = gl->glGetUniformLocation(
+        device->volume_program, "uAmbientFactor");
+    device->volume_diffuse_location = gl->glGetUniformLocation(
+        device->volume_program, "uDiffuseFactor");
+    device->volume_specular_location = gl->glGetUniformLocation(
+        device->volume_program, "uSpecularFactor");
+    device->volume_specular_power_location = gl->glGetUniformLocation(
+        device->volume_program, "uSpecularPower");
+    device->volume_program_ready = FVIZ_TRUE;
     return FVIZ_OK;
 }
 
@@ -2313,6 +2594,12 @@ FVizGLDevice* fviz_internal_gl_device_create(const FVizGLFunctions* functions)
            even if a driver rejects this shader or framebuffer path. */
         fviz_clear_last_error();
     }
+    if (fviz_gl_create_volume_program(device) != FVIZ_OK)
+    {
+        /* GPU volume ray-casting is optional; the rest of the pipeline stays
+           available when a driver rejects the 3D-texture shader. */
+        fviz_clear_last_error();
+    }
     if (device->gl.glGenQueries != NULL && device->gl.glDeleteQueries != NULL &&
         device->gl.glBeginQuery != NULL && device->gl.glEndQuery != NULL &&
         device->gl.glGetQueryObjectiv != NULL && device->gl.glGetQueryObjectui64v != NULL)
@@ -2421,6 +2708,12 @@ FVizBool fviz_internal_gl_device_weighted_oit_supported(const FVizGLDevice* devi
         device->oit_color_renderbuffer != 0u && device->oit_depth_renderbuffer != 0u &&
         device->oit_accum_texture != 0u && device->oit_reveal_texture != 0u &&
         device->oit_vao != 0u ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+FVizBool fviz_internal_gl_device_depth_peeling_supported(const FVizGLDevice* device)
+{
+    return device != NULL && device->peel_supported != FVIZ_FALSE &&
+        device->peel_enabled_location >= 0 ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
 FVizBool fviz_internal_gl_device_text_supported(const FVizGLDevice* device)
@@ -2541,6 +2834,15 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device)
     }
     if (device->oit_accum_texture != 0u) glDeleteTextures(1, &device->oit_accum_texture);
     if (device->oit_reveal_texture != 0u) glDeleteTextures(1, &device->oit_reveal_texture);
+    if (device->peel_front_depth_texture != 0u) glDeleteTextures(1, &device->peel_front_depth_texture);
+    if (device->peel_back_depth_texture != 0u) glDeleteTextures(1, &device->peel_back_depth_texture);
+    if (device->peel_color_texture != 0u) glDeleteTextures(1, &device->peel_color_texture);
+    if (device->peel_depth_renderbuffer != 0u)
+        device->gl.glDeleteRenderbuffers(1, &device->peel_depth_renderbuffer);
+    if (device->peel_framebuffer != 0u)
+        device->gl.glDeleteFramebuffers(1, &device->peel_framebuffer);
+    if (device->peel_depth_framebuffer != 0u)
+        device->gl.glDeleteFramebuffers(1, &device->peel_depth_framebuffer);
     if (device->oit_color_renderbuffer != 0u)
         device->gl.glDeleteRenderbuffers(1, &device->oit_color_renderbuffer);
     if (device->oit_depth_renderbuffer != 0u)
@@ -2571,6 +2873,12 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device)
         device->gl.glDeleteProgram(device->fxaa_program);
         device->fxaa_program = 0u;
     }
+    if (device->volume_ibo != 0u) device->gl.glDeleteBuffers(1, &device->volume_ibo);
+    if (device->volume_vbo != 0u) device->gl.glDeleteBuffers(1, &device->volume_vbo);
+    if (device->volume_vao != 0u) device->gl.glDeleteVertexArrays(1, &device->volume_vao);
+    if (device->volume_transfer_texture != 0u) glDeleteTextures(1, &device->volume_transfer_texture);
+    if (device->volume_scalar_texture != 0u) glDeleteTextures(1, &device->volume_scalar_texture);
+    if (device->volume_program != 0u) device->gl.glDeleteProgram(device->volume_program);
     fviz_free(device->draw_items);
     device->draw_items = NULL;
     device->draw_item_capacity = 0u;
@@ -2816,9 +3124,14 @@ static FVizResult fviz_gl_render_shader_edges(
     glGetBooleanv(GL_DEPTH_WRITEMASK, &depth_write);
     glGetIntegerv(GL_DEPTH_FUNC, &depth_function);
     cull_enabled = glIsEnabled(GL_CULL_FACE);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        /* Depth peeling needs the depth writes so each layer advances the
+         * peeled depth; regular sorted-alpha rendering leaves writes off. */
+        if (device->peel_pass != 0)
+            glDepthMask(GL_TRUE);
+        else
+            glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);
     /* The expanded line quads generated by the geometry shader must not be
      * backface-culled; the surface pass leaves GL_CULL_FACE enabled. */
@@ -3128,6 +3441,15 @@ FVizResult fviz_internal_gl_device_render_stage(
         if (frustum_culled != FVIZ_FALSE || small_object_culled != FVIZ_FALSE) continue;
         if (stage == FVIZ_RENDER_PASS_OPAQUE && actor_translucent != FVIZ_FALSE) continue;
 
+        if (stage == FVIZ_RENDER_PASS_TRANSLUCENT &&
+            fviz_actor_const_volume_mapper(actor) != NULL &&
+            device->volume_program_ready != FVIZ_FALSE)
+        {
+            glDisable(GL_CULL_FACE);
+            if (fviz_gl_render_volume(device, renderer, actor, aspect_ratio) == FVIZ_OK)
+                ++device->frame_statistics.draw_calls;
+            continue;
+        }
         model = fviz_actor_transform_matrix(actor);
         opacity = fviz_actor_opacity(actor);
         if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
@@ -3702,6 +4024,648 @@ static FVizResult fviz_gl_resolve_oit_color(
     gl->glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
         GL_COLOR_BUFFER_BIT, GL_NEAREST);
     return FVIZ_OK;
+}
+
+static FVizResult fviz_gl_ensure_peel_buffers(
+    FVizGLDevice* device, int width, int height)
+{
+    const FVizGLFunctions* gl;
+    if (device == NULL || width <= 0 || height <= 0) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device->peel_width == width && device->peel_height == height && device->peel_framebuffer != 0u)
+        return FVIZ_OK;
+    gl = &device->gl;
+    if (device->peel_framebuffer == 0u)
+    {
+        gl->glGenFramebuffers(1, &device->peel_framebuffer);
+        gl->glGenFramebuffers(1, &device->peel_depth_framebuffer);
+        glGenTextures(1, &device->peel_front_depth_texture);
+        glGenTextures(1, &device->peel_back_depth_texture);
+        glGenTextures(1, &device->peel_color_texture);
+        gl->glGenRenderbuffers(1, &device->peel_depth_renderbuffer);
+        if (device->peel_framebuffer == 0u || device->peel_depth_framebuffer == 0u ||
+            device->peel_front_depth_texture == 0u || device->peel_back_depth_texture == 0u ||
+            device->peel_color_texture == 0u || device->peel_depth_renderbuffer == 0u)
+            return FVIZ_ERROR_GRAPHICS;
+    }
+    /* Depth textures store the current peeled depth (GL_DEPTH_COMPONENT24). */
+    glBindTexture(GL_TEXTURE_2D, device->peel_front_depth_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_S, FVIZ_GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_T, FVIZ_GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_COMPARE_MODE, FVIZ_GL_NONE);
+    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_DEPTH_COMPONENT24, width, height, 0,
+        FVIZ_GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glBindTexture(GL_TEXTURE_2D, device->peel_back_depth_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_S, FVIZ_GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_T, FVIZ_GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_COMPARE_MODE, FVIZ_GL_NONE);
+    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_DEPTH_COMPONENT24, width, height, 0,
+        FVIZ_GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glBindTexture(GL_TEXTURE_2D, 0u);
+    /* Color accumulation texture. */
+    glBindTexture(GL_TEXTURE_2D, device->peel_color_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glBindTexture(GL_TEXTURE_2D, 0u);
+    /* Depth-only framebuffer holds the peeled depth texture. */
+    gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->peel_depth_framebuffer);
+    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_ATTACHMENT,
+        GL_TEXTURE_2D, device->peel_front_depth_texture, 0);
+    glDrawBuffer(FVIZ_GL_NONE);
+    glReadBuffer(FVIZ_GL_NONE);
+    if (gl->glCheckFramebufferStatus(FVIZ_GL_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
+    {
+        gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, 0u);
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    /* Accumulation framebuffer: color + its own depth buffer for peeling. */
+    gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->peel_framebuffer);
+    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_2D, device->peel_color_texture, 0);
+    gl->glBindRenderbuffer(FVIZ_GL_RENDERBUFFER, device->peel_depth_renderbuffer);
+    gl->glRenderbufferStorage(FVIZ_GL_RENDERBUFFER, FVIZ_GL_DEPTH24_STENCIL8,
+        width, height);
+    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_ATTACHMENT,
+        FVIZ_GL_RENDERBUFFER, device->peel_depth_renderbuffer);
+    if (gl->glCheckFramebufferStatus(FVIZ_GL_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
+    {
+        gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, 0u);
+        return FVIZ_ERROR_GRAPHICS;
+    }
+    gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, 0u);
+    device->peel_width = width;
+    device->peel_height = height;
+    return FVIZ_OK;
+}
+
+/* Sets the main program's peel uniforms for the depth-compare path. */
+static void fviz_gl_set_peel_uniforms(
+    FVizGLDevice* device, FVizBool enabled, GLuint depth_texture, int width, int height)
+{
+    const FVizGLFunctions* gl = &device->gl;
+    gl->glUniform1i(device->peel_enabled_location, enabled != FVIZ_FALSE ? 1 : 0);
+    gl->glUniform1i(device->peel_depth_texture_location, 0);
+    gl->glActiveTexture(FVIZ_GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, depth_texture);
+    gl->glUniform1f(device->peel_screen_width_inv_location,
+        width > 0 ? 1.0f / (float)width : 0.0f);
+    gl->glUniform1f(device->peel_screen_height_inv_location,
+        height > 0 ? 1.0f / (float)height : 0.0f);
+}
+
+/* Lazily allocates the unit-cube vertex/index buffers used to bound the
+ * volume ray-cast. The cube spans [0,1]^3 in object (texture) space. */
+static FVizResult fviz_gl_ensure_volume_geometry(FVizGLDevice* device)
+{
+    const FVizGLFunctions* gl;
+    static const float k_fviz_volume_cube_positions[8][3] = {
+        {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}
+    };
+    static const uint32_t k_fviz_volume_cube_indices[36] = {
+        0u, 1u, 2u, 0u, 2u, 3u,
+        4u, 6u, 5u, 4u, 7u, 6u,
+        0u, 4u, 5u, 0u, 5u, 1u,
+        1u, 5u, 6u, 1u, 6u, 2u,
+        2u, 6u, 7u, 2u, 7u, 3u,
+        3u, 7u, 4u, 3u, 4u, 0u
+    };
+    if (device == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device->volume_vao != 0u) return FVIZ_OK;
+    gl = &device->gl;
+    gl->glGenVertexArrays(1, &device->volume_vao);
+    if (device->volume_vao == 0u) return FVIZ_ERROR_GRAPHICS;
+    gl->glBindVertexArray(device->volume_vao);
+    gl->glGenBuffers(1, &device->volume_vbo);
+    gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, device->volume_vbo);
+    gl->glBufferData(FVIZ_GL_ARRAY_BUFFER, (GLsizeiptr)sizeof(k_fviz_volume_cube_positions),
+        k_fviz_volume_cube_positions, FVIZ_GL_STATIC_DRAW);
+    gl->glEnableVertexAttribArray(0u);
+    gl->glVertexAttribPointer(0u, 3, GL_FLOAT, GL_FALSE, 0, (const void*)0);
+    gl->glGenBuffers(1, &device->volume_ibo);
+    gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, device->volume_ibo);
+    gl->glBufferData(FVIZ_GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)sizeof(k_fviz_volume_cube_indices),
+        k_fviz_volume_cube_indices, FVIZ_GL_STATIC_DRAW);
+    gl->glBindVertexArray(0u);
+    return FVIZ_OK;
+}
+
+/* Builds the transfer function LUT (256x1 RGBA8) from the mapper's color and
+ * opacity control points and uploads it once per transfer-function mtime. */
+static FVizResult fviz_gl_volume_upload_transfer(
+    FVizGLDevice* device, const FVizVolumeMapper* mapper)
+{
+    const FVizGLFunctions* gl;
+    uint8_t lut[256 * 4];
+    FVizSize count;
+    FVizSize i;
+    if (device == NULL || mapper == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device->volume_transfer_texture == 0u)
+    {
+        glGenTextures(1, &device->volume_transfer_texture);
+        if (device->volume_transfer_texture == 0u) return FVIZ_ERROR_GRAPHICS;
+        glBindTexture(GL_TEXTURE_2D, device->volume_transfer_texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F);
+        glBindTexture(GL_TEXTURE_2D, 0u);
+    }
+    count = fviz_volume_mapper_color_point_count(mapper);
+    for (i = 0u; i < 256u; ++i)
+    {
+        const float s = (float)i / 255.0f;
+        FVizVolumeColorPoint color_point;
+        FVizVolumeOpacityPoint opacity_point;
+        float scalar;
+        float red = 0.5f;
+        float green = 0.5f;
+        float blue = 0.5f;
+        float alpha = 0.0f;
+        float minimum;
+        float maximum;
+        FVizSize low;
+        FVizSize high;
+        if (count == 0u)
+        {
+            red = 0.5f + 0.5f * sinf(s * 3.14159265f);
+            green = 0.4f + 0.4f * cosf(s * 2.5f);
+            blue = 0.6f + 0.4f * sinf(s * 2.0f + 0.5f);
+            alpha = s;
+        }
+        else
+        {
+            fviz_volume_mapper_get_scalar_range(mapper, &minimum, &maximum);
+            scalar = minimum + s * (maximum - minimum);
+            low = 0u;
+            high = count;
+            while (low < high)
+            {
+                const FVizSize middle = low + (high - low) / 2u;
+                if (fviz_volume_mapper_color_point_at(mapper, middle, &color_point) == FVIZ_OK &&
+                    color_point.scalar < scalar)
+                    low = middle + 1u;
+                else
+                    high = middle;
+            }
+            if (low == 0u)
+            {
+                (void)fviz_volume_mapper_color_point_at(mapper, 0u, &color_point);
+                red = color_point.red;
+                green = color_point.green;
+                blue = color_point.blue;
+            }
+            else if (low >= count)
+            {
+                (void)fviz_volume_mapper_color_point_at(mapper, count - 1u, &color_point);
+                red = color_point.red;
+                green = color_point.green;
+                blue = color_point.blue;
+            }
+            else
+            {
+                FVizVolumeColorPoint low_point;
+                FVizVolumeColorPoint high_point;
+                float fraction;
+                (void)fviz_volume_mapper_color_point_at(mapper, low - 1u, &low_point);
+                (void)fviz_volume_mapper_color_point_at(mapper, low, &high_point);
+                fraction = high_point.scalar > low_point.scalar
+                    ? (scalar - low_point.scalar) / (high_point.scalar - low_point.scalar)
+                    : 0.0f;
+                red = low_point.red + (high_point.red - low_point.red) * fraction;
+                green = low_point.green + (high_point.green - low_point.green) * fraction;
+                blue = low_point.blue + (high_point.blue - low_point.blue) * fraction;
+            }
+            {
+                const FVizSize opacity_count = fviz_volume_mapper_opacity_point_count(mapper);
+                FVizSize opacity_low = 0u;
+                FVizSize opacity_high = opacity_count;
+                while (opacity_low < opacity_high)
+                {
+                    const FVizSize middle = opacity_low + (opacity_high - opacity_low) / 2u;
+                    if (fviz_volume_mapper_opacity_point_at(mapper, middle, &opacity_point) == FVIZ_OK &&
+                        opacity_point.scalar < scalar)
+                        opacity_low = middle + 1u;
+                    else
+                        opacity_high = middle;
+                }
+                if (opacity_count == 0u)
+                {
+                    alpha = s;
+                }
+                else if (opacity_low == 0u)
+                {
+                    (void)fviz_volume_mapper_opacity_point_at(mapper, 0u, &opacity_point);
+                    alpha = opacity_point.opacity;
+                }
+                else if (opacity_low >= opacity_count)
+                {
+                    (void)fviz_volume_mapper_opacity_point_at(mapper, opacity_count - 1u, &opacity_point);
+                    alpha = opacity_point.opacity;
+                }
+                else
+                {
+                    FVizVolumeOpacityPoint low_point;
+                    FVizVolumeOpacityPoint high_point;
+                    float fraction;
+                    (void)fviz_volume_mapper_opacity_point_at(mapper, opacity_low - 1u, &low_point);
+                    (void)fviz_volume_mapper_opacity_point_at(mapper, opacity_low, &high_point);
+                    fraction = high_point.scalar > low_point.scalar
+                        ? (scalar - low_point.scalar) / (high_point.scalar - low_point.scalar)
+                        : 0.0f;
+                    alpha = low_point.opacity + (high_point.opacity - low_point.opacity) * fraction;
+                }
+            }
+        }
+        {
+            float clamped_red = red < 0.0f ? 0.0f : (red > 1.0f ? 1.0f : red);
+            float clamped_green = green < 0.0f ? 0.0f : (green > 1.0f ? 1.0f : green);
+            float clamped_blue = blue < 0.0f ? 0.0f : (blue > 1.0f ? 1.0f : blue);
+            float clamped_alpha = alpha < 0.0f ? 0.0f : (alpha > 1.0f ? 1.0f : alpha);
+            lut[i * 4u + 0u] = (uint8_t)(clamped_red * 255.0f + 0.5f);
+            lut[i * 4u + 1u] = (uint8_t)(clamped_green * 255.0f + 0.5f);
+            lut[i * 4u + 2u] = (uint8_t)(clamped_blue * 255.0f + 0.5f);
+            lut[i * 4u + 3u] = (uint8_t)(clamped_alpha * 255.0f + 0.5f);
+        }
+    }
+    gl = &device->gl;
+    glBindTexture(GL_TEXTURE_2D, device->volume_transfer_texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_RGBA8, 256, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, lut);
+    glBindTexture(GL_TEXTURE_2D, 0u);
+    return FVIZ_OK;
+}
+
+/* Uploads the active scalar array of the image data as a GL_R32F 3D texture.
+ * Returns FVIZ_OK when the texture is current, FVIZ_ERROR_NOT_SUPPORTED when
+ * the array layout cannot be uploaded. */
+static FVizResult fviz_gl_volume_upload_scalar(
+    FVizGLDevice* device, const FVizVolumeMapper* mapper)
+{
+    const FVizImageData* image;
+    const FVizAttributeSet* point_data;
+    const FVizDataArray* array;
+    const FVizGLFunctions* gl;
+    FVizSize dimensions[3];
+    FVizSize point_count;
+    FVizSize i;
+    float* values;
+    FVizBool progress = FVIZ_FALSE;
+    if (device == NULL || mapper == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    image = fviz_volume_mapper_const_image_data(mapper);
+    if (image == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    point_data = fviz_image_data_const_point_data(image);
+    if (point_data == NULL) return FVIZ_ERROR_NOT_SUPPORTED;
+    array = fviz_attribute_set_const_active(point_data, FVIZ_ATTRIBUTE_SCALARS);
+    if (array == NULL) return FVIZ_ERROR_NOT_SUPPORTED;
+    if (fviz_data_array_type(array) != FVIZ_DATA_FLOAT32) return FVIZ_ERROR_NOT_SUPPORTED;
+    if (fviz_data_array_components(array) != 1u) return FVIZ_ERROR_NOT_SUPPORTED;
+    fviz_image_data_dimensions(image, dimensions);
+    point_count = fviz_data_array_tuple_count(array);
+    if (dimensions[0] == 0u || dimensions[1] == 0u || dimensions[2] == 0u ||
+        point_count != dimensions[0] * dimensions[1] * dimensions[2])
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    gl = &device->gl;
+    if (device->volume_scalar_texture == 0u)
+    {
+        glGenTextures(1, &device->volume_scalar_texture);
+        if (device->volume_scalar_texture == 0u) return FVIZ_ERROR_GRAPHICS;
+    }
+    values = (float*)fviz_alloc(point_count * (FVizSize)sizeof(float));
+    if (values == NULL) return fviz_last_error_code();
+    if (fviz_data_array_const_data(array) != NULL)
+    {
+        (void)memcpy(values, fviz_data_array_const_data(array),
+            point_count * (FVizSize)sizeof(float));
+        progress = FVIZ_TRUE;
+    }
+    else
+    {
+        for (i = 0u; i < point_count; ++i)
+        {
+            double component_value = 0.0;
+            if (fviz_data_array_get_component(array, i, 0u, &component_value) == FVIZ_OK)
+            {
+                values[i] = (float)component_value;
+                progress = FVIZ_TRUE;
+            }
+            else
+            {
+                values[i] = 0.0f;
+            }
+        }
+    }
+    if (progress == FVIZ_FALSE)
+    {
+        fviz_free(values);
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    glBindTexture(FVIZ_GL_TEXTURE_3D, device->volume_scalar_texture);
+    glTexParameteri(FVIZ_GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(FVIZ_GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(FVIZ_GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, 0x812F);
+    glTexParameteri(FVIZ_GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, 0x812F);
+    glTexParameteri(FVIZ_GL_TEXTURE_3D, FVIZ_GL_TEXTURE_WRAP_R, 0x812F);
+    gl->glTexImage3D(FVIZ_GL_TEXTURE_3D, 0, FVIZ_GL_R32F,
+        (GLsizei)dimensions[0], (GLsizei)dimensions[1], (GLsizei)dimensions[2],
+        0, FVIZ_GL_RED, GL_FLOAT, values);
+    glBindTexture(FVIZ_GL_TEXTURE_3D, 0u);
+    fviz_free(values);
+    device->volume_scalar_width = (int)dimensions[0];
+    device->volume_scalar_height = (int)dimensions[1];
+    device->volume_scalar_depth = (int)dimensions[2];
+    device->volume_texture_ready = FVIZ_TRUE;
+    return FVIZ_OK;
+}
+
+static FVizMat4 fviz_gl_invert_affine(const FVizMat4* matrix)
+{
+    FVizMat4 inverse;
+    FVizMat3 linear;
+    FVizVec3 translation;
+    FVizVec3 inverse_translation;
+    FVizMat3 inverse_linear;
+    linear.m[0] = matrix->m[0]; linear.m[1] = matrix->m[1]; linear.m[2] = matrix->m[2];
+    linear.m[3] = matrix->m[4]; linear.m[4] = matrix->m[5]; linear.m[5] = matrix->m[6];
+    linear.m[6] = matrix->m[8]; linear.m[7] = matrix->m[9]; linear.m[8] = matrix->m[10];
+    inverse_linear = fviz_mat3_inverse(linear);
+    translation = fviz_vec3(matrix->m[12], matrix->m[13], matrix->m[14]);
+    inverse_translation = fviz_vec3(
+        -(inverse_linear.m[0] * translation.x + inverse_linear.m[3] * translation.y +
+          inverse_linear.m[6] * translation.z),
+        -(inverse_linear.m[1] * translation.x + inverse_linear.m[4] * translation.y +
+          inverse_linear.m[7] * translation.z),
+        -(inverse_linear.m[2] * translation.x + inverse_linear.m[5] * translation.y +
+          inverse_linear.m[8] * translation.z));
+    inverse.m[0] = inverse_linear.m[0]; inverse.m[1] = inverse_linear.m[1]; inverse.m[2] = inverse_linear.m[2];
+    inverse.m[4] = inverse_linear.m[3]; inverse.m[5] = inverse_linear.m[4]; inverse.m[6] = inverse_linear.m[5];
+    inverse.m[8] = inverse_linear.m[6]; inverse.m[9] = inverse_linear.m[7]; inverse.m[10] = inverse_linear.m[8];
+    inverse.m[3] = 0.0f; inverse.m[7] = 0.0f; inverse.m[11] = 0.0f;
+    inverse.m[12] = inverse_translation.x;
+    inverse.m[13] = inverse_translation.y;
+    inverse.m[14] = inverse_translation.z;
+    inverse.m[15] = 1.0f;
+    return inverse;
+}
+
+/* Renders one volume actor through the ray-casting program. The unit cube is
+ * drawn with a box that bounds the volume in world space, so entry/exit slab
+ * intersection and object-space marching both work for any camera placement. */
+static FVizResult fviz_gl_render_volume(
+    FVizGLDevice* device,
+    FVizRenderer* renderer,
+    const FVizActor* actor,
+    float aspect_ratio)
+{
+    const FVizVolumeMapper* mapper;
+    const FVizImageData* image;
+    const FVizGLFunctions* gl;
+    FVizCamera* camera;
+    FVizMat4 model;
+    FVizMat4 inv_model;
+    FVizMat4 mvp;
+    FVizBounds bounds;
+    FVizVec3 bounds_min;
+    FVizVec3 bounds_max;
+    GLfloat light_position_intensity[16];
+    GLfloat light_colors[12];
+    GLint light_count = 0;
+    float scalar_minimum;
+    float scalar_maximum;
+    float step_size;
+    FVizSize i;
+    FVizMTime mapper_mtime;
+    FVizMTime transfer_mtime;
+    FVizResult result;
+    if (device == NULL || renderer == NULL || actor == NULL || device->volume_program_ready == FVIZ_FALSE)
+        return FVIZ_ERROR_NOT_SUPPORTED;
+    mapper = fviz_actor_const_volume_mapper(actor);
+    if (mapper == NULL || fviz_volume_mapper_is_empty(mapper) != FVIZ_FALSE)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    image = fviz_volume_mapper_const_image_data(mapper);
+    if (image == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    mapper_mtime = fviz_object_mtime((const FVizObject*)mapper);
+    transfer_mtime = mapper_mtime;
+    if (device->volume_uploaded_mapper != mapper)
+    {
+        result = fviz_gl_volume_upload_scalar(device, mapper);
+        if (result != FVIZ_OK) return result;
+        device->volume_uploaded_mapper = mapper;
+        device->volume_texture_mtime = mapper_mtime;
+        result = fviz_gl_volume_upload_transfer(device, mapper);
+        if (result != FVIZ_OK) return result;
+        device->volume_transfer_mtime = transfer_mtime;
+    }
+    else
+    {
+        if (device->volume_texture_mtime != mapper_mtime || device->volume_texture_ready == FVIZ_FALSE)
+        {
+            result = fviz_gl_volume_upload_scalar(device, mapper);
+            if (result != FVIZ_OK) return result;
+            device->volume_texture_mtime = mapper_mtime;
+        }
+        if (device->volume_transfer_mtime != transfer_mtime)
+        {
+            result = fviz_gl_volume_upload_transfer(device, mapper);
+            if (result != FVIZ_OK) return result;
+            device->volume_transfer_mtime = transfer_mtime;
+        }
+    }
+    result = fviz_gl_ensure_volume_geometry(device);
+    if (result != FVIZ_OK) return result;
+    gl = &device->gl;
+    camera = fviz_renderer_camera(renderer);
+    if (camera == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    bounds = fviz_volume_mapper_bounds(mapper);
+    if (bounds.valid == FVIZ_FALSE) return FVIZ_ERROR_INVALID_ARGUMENT;
+    bounds_min = fviz_vec3((float)bounds.min.x, (float)bounds.min.y, (float)bounds.min.z);
+    bounds_max = fviz_vec3((float)bounds.max.x, (float)bounds.max.y, (float)bounds.max.z);
+    /* Map the unit cube [0,1]^3 (texture space) onto the volume's physical
+     * extent, then apply the actor transform. The cube spans exactly the
+     * world-space bounds used by the slab intersection. */
+    {
+        FVizMat4 box_to_volume;
+        const FVizVec3 size = fviz_vec3(
+            (float)(bounds.max.x - bounds.min.x),
+            (float)(bounds.max.y - bounds.min.y),
+            (float)(bounds.max.z - bounds.min.z));
+        (void)memset(&box_to_volume, 0, sizeof(box_to_volume));
+        box_to_volume.m[0] = size.x;
+        box_to_volume.m[5] = size.y;
+        box_to_volume.m[10] = size.z;
+        box_to_volume.m[12] = bounds_min.x;
+        box_to_volume.m[13] = bounds_min.y;
+        box_to_volume.m[14] = bounds_min.z;
+        box_to_volume.m[15] = 1.0f;
+        model = fviz_mat4_multiply(fviz_actor_transform_matrix(actor), box_to_volume);
+    }
+    inv_model = fviz_gl_invert_affine(&model);
+    mvp = fviz_mat4_multiply(fviz_camera_projection_matrix(camera, aspect_ratio),
+        fviz_mat4_multiply(fviz_camera_view_matrix(camera), model));
+    fviz_volume_mapper_get_scalar_range(mapper, &scalar_minimum, &scalar_maximum);
+    step_size = fviz_volume_mapper_sampling_step(mapper);
+    if (step_size <= 0.0f)
+    {
+        const FVizVec3 size = fviz_vec3(
+            (float)(bounds.max.x - bounds.min.x),
+            (float)(bounds.max.y - bounds.min.y),
+            (float)(bounds.max.z - bounds.min.z));
+        const float diagonal = sqrtf(size.x * size.x + size.y * size.y + size.z * size.z);
+        step_size = diagonal / 128.0f;
+        if (step_size <= 1e-6f) step_size = 1.0f;
+    }
+    gl->glUseProgram(device->volume_program);
+    gl->glUniformMatrix4fv(device->volume_mvp_location, 1, GL_FALSE, mvp.m);
+    gl->glUniformMatrix4fv(device->volume_model_location, 1, GL_FALSE, model.m);
+    gl->glUniformMatrix4fv(device->volume_inv_model_location, 1, GL_FALSE, inv_model.m);
+    {
+        const FVizVec3 camera_position = fviz_camera_position(camera);
+        gl->glUniform3fv(device->volume_camera_position_location, 1, &camera_position.x);
+    }
+    gl->glUniform3fv(device->volume_bounds_min_location, 1, &bounds_min.x);
+    gl->glUniform3fv(device->volume_bounds_max_location, 1, &bounds_max.x);
+    gl->glUniform1f(device->volume_step_size_location, step_size);
+    gl->glUniform1f(device->volume_scalar_range_location, scalar_minimum);
+    gl->glUniform1f(device->volume_scalar_range_max_location, scalar_maximum);
+    gl->glUniform1i(device->volume_shading_location,
+        fviz_volume_mapper_shading(mapper) != FVIZ_FALSE ? 1 : 0);
+    for (i = 0u; i < fviz_renderer_light_count(renderer) && light_count < 4; ++i)
+    {
+        const FVizLight* light = fviz_renderer_light_at(renderer, i);
+        FVizVec3 position;
+        if (light == NULL || fviz_light_enabled(light) == FVIZ_FALSE ||
+            fviz_light_intensity(light) <= 0.0f)
+            continue;
+        position = fviz_light_type(light) == FVIZ_LIGHT_HEADLIGHT
+            ? fviz_camera_position(camera)
+            : fviz_light_position(light);
+        light_position_intensity[light_count * 4 + 0] = position.x;
+        light_position_intensity[light_count * 4 + 1] = position.y;
+        light_position_intensity[light_count * 4 + 2] = position.z;
+        light_position_intensity[light_count * 4 + 3] = fviz_light_intensity(light);
+        {
+            float red;
+            float green;
+            float blue;
+            fviz_light_get_color(light, &red, &green, &blue);
+            light_colors[light_count * 3 + 0] = red;
+            light_colors[light_count * 3 + 1] = green;
+            light_colors[light_count * 3 + 2] = blue;
+        }
+        ++light_count;
+    }
+    gl->glUniform1i(device->volume_light_count_location, light_count);
+    if (light_count > 0)
+    {
+        gl->glUniform4fv(device->volume_light_position_intensity_location, light_count,
+            light_position_intensity);
+        gl->glUniform3fv(device->volume_light_color_location, light_count, light_colors);
+    }
+    gl->glUniform1f(device->volume_ambient_location, 0.25f);
+    gl->glUniform1f(device->volume_diffuse_location, 0.80f);
+    gl->glUniform1f(device->volume_specular_location, 0.20f);
+    gl->glUniform1f(device->volume_specular_power_location, 40.0f);
+    gl->glActiveTexture(FVIZ_GL_TEXTURE0);
+    glBindTexture(FVIZ_GL_TEXTURE_3D, device->volume_scalar_texture);
+    gl->glUniform1i(device->volume_scalar_texture_location, 0);
+    gl->glActiveTexture(FVIZ_GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, device->volume_transfer_texture);
+    gl->glUniform1i(device->volume_transfer_texture_location, 1);
+    gl->glActiveTexture(FVIZ_GL_TEXTURE0);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    gl->glBindVertexArray(device->volume_vao);
+    gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, device->volume_ibo);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (const void*)0);
+    gl->glBindVertexArray(0u);
+    return FVIZ_OK;
+}
+
+
+FVizResult fviz_internal_gl_device_render_depth_peeling(
+    FVizGLDevice* device,
+    FVizRenderer* renderer,
+    int viewport_x,
+    int viewport_y,
+    int width,
+    int height,
+    uint32_t samples,
+    float aspect_ratio,
+    uint32_t target_framebuffer,
+    uint32_t max_layers)
+{
+    const FVizGLFunctions* gl;
+    GLboolean depth_enabled;
+    GLboolean blend_enabled;
+    GLboolean depth_write = GL_TRUE;
+    FVizResult result;
+    uint32_t layer;
+    if (device == NULL || renderer == NULL || width <= 0 || height <= 0 || aspect_ratio <= 0.0f)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (samples == 0u) samples = 1u;
+    if (device->peel_supported == FVIZ_FALSE) return FVIZ_ERROR_NOT_SUPPORTED;
+    if (max_layers == 0u) max_layers = 4u;
+    result = fviz_gl_ensure_peel_buffers(device, width, height);
+    if (result != FVIZ_OK) return result;
+    gl = &device->gl;
+    depth_enabled = glIsEnabled(GL_DEPTH_TEST);
+    blend_enabled = glIsEnabled(GL_BLEND);
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &depth_write);
+    glViewport(0, 0, width, height);
+
+    /* Seed the peel depth from the already-rendered opaque scene. */
+    gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, (GLuint)target_framebuffer);
+    gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, device->peel_depth_framebuffer);
+    gl->glBlitFramebuffer(viewport_x, viewport_y, viewport_x + width, viewport_y + height,
+        0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+    /* Accumulate layers front-to-back. Layer 0 passes everything; later layers
+     * discard fragments at or in front of the previously peeled depth. */
+    gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->peel_framebuffer);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearDepth(1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    for (layer = 0u; layer < max_layers; ++layer)
+    {
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(FVIZ_GL_LEQUAL);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        gl->glUseProgram(device->program);
+        if (layer == 0u)
+            fviz_gl_set_peel_uniforms(device, FVIZ_FALSE, 0u, width, height);
+        else
+            fviz_gl_set_peel_uniforms(device, FVIZ_TRUE, device->peel_front_depth_texture, width, height);
+        device->peel_pass = 1;
+        result = fviz_internal_gl_device_render_stage(device, renderer, aspect_ratio,
+            width, height, FVIZ_RENDER_PASS_TRANSLUCENT);
+        device->peel_pass = 0;
+        if (result != FVIZ_OK) goto cleanup;
+        /* Refresh the peeled depth from the layer just drawn. */
+        gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, device->peel_framebuffer);
+        gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, device->peel_depth_framebuffer);
+        gl->glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+            GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    }
+    /* Copy the accumulated color into the target framebuffer. */
+    gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, device->peel_framebuffer);
+    gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, (GLuint)target_framebuffer);
+    gl->glBlitFramebuffer(0, 0, width, height, viewport_x, viewport_y,
+        viewport_x + width, viewport_y + height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    result = FVIZ_OK;
+
+cleanup:
+    gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, (GLuint)target_framebuffer);
+    glViewport(viewport_x, viewport_y, width, height);
+    if (depth_enabled) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+    if (blend_enabled) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+    if (depth_write) glDepthMask(GL_TRUE); else glDepthMask(GL_FALSE);
+    return result;
 }
 
 FVizResult fviz_internal_gl_device_render_weighted_oit(

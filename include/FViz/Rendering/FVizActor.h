@@ -12,11 +12,13 @@
 #include <FViz/Math/FVizVec3.h>
 #include <FViz/Mesh/FVizPolyData.h>
 #include <FViz/Rendering/FVizMapper.h>
+#include <FViz/Rendering/FVizVolumeMapper.h>
 
 FVIZ_EXTERN_C_BEGIN
 
 typedef struct FVizActor FVizActor;
 typedef struct FVizGlyphMapper FVizGlyphMapper;
+typedef struct FVizVolumeMapper FVizVolumeMapper;
 
 typedef enum FVizShadingMode
 {
@@ -63,6 +65,9 @@ FVIZ_API FVizMapper* fviz_actor_mapper(FVizActor* actor);
 FVIZ_API FVizResult fviz_actor_set_glyph_mapper(FVizActor* actor, FVizGlyphMapper* mapper);
 FVIZ_API FVizGlyphMapper* fviz_actor_glyph_mapper(FVizActor* actor);
 FVIZ_API const FVizGlyphMapper* fviz_actor_const_glyph_mapper(const FVizActor* actor);
+FVIZ_API FVizResult fviz_actor_set_volume_mapper(FVizActor* actor, FVizVolumeMapper* mapper);
+FVIZ_API FVizVolumeMapper* fviz_actor_volume_mapper(FVizActor* actor);
+FVIZ_API const FVizVolumeMapper* fviz_actor_const_volume_mapper(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_color(FVizActor* actor, float red, float green, float blue);
 FVIZ_API void fviz_actor_get_color(const FVizActor* actor, float* red, float* green, float* blue);
 FVIZ_API void fviz_actor_set_visible(FVizActor* actor, FVizBool visible);

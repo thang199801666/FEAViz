@@ -69,6 +69,18 @@ FVizResult fviz_internal_gl_device_restore_state(
     FVizGLDevice* device, const FVizGLStateSnapshot* snapshot);
 FVizBool fviz_internal_gl_device_fxaa_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_weighted_oit_supported(const FVizGLDevice* device);
+FVizBool fviz_internal_gl_device_depth_peeling_supported(const FVizGLDevice* device);
+FVizResult fviz_internal_gl_device_render_depth_peeling(
+    FVizGLDevice* device,
+    FVizRenderer* renderer,
+    int viewport_x,
+    int viewport_y,
+    int width,
+    int height,
+    uint32_t samples,
+    float aspect_ratio,
+    uint32_t target_framebuffer,
+    uint32_t max_layers);
 FVizBool fviz_internal_gl_device_shader_lines_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_text_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_integer_selection_supported(const FVizGLDevice* device);

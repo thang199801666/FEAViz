@@ -11,8 +11,10 @@ struct FVizActor
     FVizObject base;
     FVizMapper* mapper;
     FVizGlyphMapper* glyph_mapper;
+    FVizVolumeMapper* volume_mapper;
     FVizObserverTag mapper_modified_tag;
     FVizObserverTag glyph_mapper_modified_tag;
+    FVizObserverTag volume_mapper_modified_tag;
     FVizObserverTag user_transform_modified_tag;
     float color[3];
     FVizBool visible;

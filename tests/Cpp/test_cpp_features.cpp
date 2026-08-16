@@ -6,6 +6,7 @@
 
 #include <FVizCpp/FVizCpp.hpp>
 
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -424,6 +425,102 @@ static int test_superimposed_cpp()
     return 0;
 }
 
+static int test_cutter_iso_cpp()
+{
+    // Hex beam with a linear scalar.
+    UnstructuredGrid grid = UnstructuredGrid::create();
+    const uint32_t nx = 2u, ny = 2u, nz = 2u;
+    for (uint32_t z = 0u; z <= nz; ++z)
+        for (uint32_t y = 0u; y <= ny; ++y)
+            for (uint32_t x = 0u; x <= nx; ++x)
+                grid.addPoint(Vec3((float)x, (float)y, (float)z));
+    const auto pid = [&](uint32_t x, uint32_t y, uint32_t z) { return x + (nx + 1u) * (y + (ny + 1u) * z); };
+    for (uint32_t z = 0u; z < nz; ++z)
+        for (uint32_t y = 0u; y < ny; ++y)
+            for (uint32_t x = 0u; x < nx; ++x)
+            {
+                const uint32_t ids[8] = {
+                    pid(x, y, z), pid(x + 1u, y, z), pid(x + 1u, y + 1u, z), pid(x, y + 1u, z),
+                    pid(x, y, z + 1u), pid(x + 1u, y, z + 1u), pid(x + 1u, y + 1u, z + 1u), pid(x, y + 1u, z + 1u)};
+                grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, ids);
+            }
+    DataArray phi = DataArray::createFloat64();
+    phi.resize(grid.pointCount());
+    {
+        const FVizVec3* p = fviz_points_data(fviz_unstructured_grid_points(grid.get()));
+        for (FVizSize i = 0u; i < grid.pointCount(); ++i)
+            phi.setComponent(i, 0u, (double)p[i].x + 2.0 * (double)p[i].y + (double)p[i].z);
+    }
+    grid.pointData().add("phi", phi.get());
+
+    // Multi-plane cutter.
+    std::vector<Plane> planes = {
+        Plane::fromPointNormal(Vec3(1.0f, 0.0f, 0.0f), Vec3(1.0f, 0.0f, 0.0f)),
+        Plane::fromPointNormal(Vec3(0.0f, 0.0f, 1.0f), Vec3(0.0f, 0.0f, 1.0f))};
+    PolyData cut = grid.cutter(planes);
+    CHECK(cut.get() != nullptr);
+    CHECK(cut.triangleCount() > 0u);
+
+    // Iso-surface.
+    PolyData iso = grid.isoSurface("phi", 3.0);
+    CHECK(iso.get() != nullptr);
+    CHECK(iso.pointCount() > 0u);
+    return 0;
+}
+
+static int test_volume_cpp()
+{
+    // Dense scalar field in a 16^3 volume.
+    ImageData image = ImageData::create();
+    const int64_t extent[6] = {0, 15, 0, 15, 0, 15};
+    image.setExtent(extent);
+    image.setOrigin(0.0, 0.0, 0.0);
+    image.setSpacing(0.25, 0.25, 0.25);
+    DataArray density = image.allocatePointScalars("Density", FVIZ_DATA_FLOAT32, 1u);
+    CHECK(density.get() != nullptr);
+    CHECK(density.tupleCount() == 16u * 16u * 16u);
+    {
+        float* values = static_cast<float*>(density.data());
+        for (FVizSize n = 0u; n < density.tupleCount(); ++n)
+        {
+            std::array<int64_t, 3> ijk{};
+            const auto result = fviz_image_data_point_ijk(image.get(), static_cast<FVizId>(n), ijk.data());
+            CHECK(result == FVIZ_OK);
+            const double dx = 4.0, dy = 4.0, dz = 4.0;
+            values[n] = static_cast<float>(1.0 -
+                (double)((ijk[0] - 8) * (ijk[0] - 8) / (dx * dx) +
+                         (ijk[1] - 8) * (ijk[1] - 8) / (dy * dy) +
+                         (ijk[2] - 8) * (ijk[2] - 8) / (dz * dz)));
+        }
+    }
+    image.validate();
+
+    VolumeMapper volume = VolumeMapper::create();
+    volume.setImageData(image);
+    volume.addColorPoint(-1.0f, 0.0f, 0.0f, 0.6f);
+    volume.addColorPoint(0.0f, 0.1f, 0.7f, 1.0f);
+    volume.addColorPoint(1.0f, 1.0f, 0.4f, 0.1f);
+    volume.addOpacityPoint(-1.0f, 0.0f);
+    volume.addOpacityPoint(0.4f, 0.25f);
+    volume.addOpacityPoint(1.0f, 0.95f);
+    volume.setScalarRange(-1.0f, 1.0f);
+    volume.setSamplingStep(0.1f);
+    volume.setShading(true);
+    CHECK(volume.scalarRangeValid());
+    CHECK(volume.samplingStep() > 0.0f);
+
+    Actor actor = Actor::create();
+    actor.setVolumeMapper(volume);
+    CHECK(actor.volumeMapper().get() != nullptr);
+    CHECK(actor.bounds().valid);
+
+    float minimum = 0.0f;
+    float maximum = 0.0f;
+    volume.getScalarRange(minimum, maximum);
+    CHECK(minimum == -1.0f && maximum == 1.0f);
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -432,6 +529,8 @@ int main(void)
     if ((result = test_animation()) != 0) { std::printf("test_animation failed at line %d\n", result); return result; }
     if ((result = test_element_facet_cpp()) != 0) { std::printf("test_element_facet_cpp failed at line %d\n", result); return result; }
     if ((result = test_superimposed_cpp()) != 0) { std::printf("test_superimposed_cpp failed at line %d\n", result); return result; }
+    if ((result = test_cutter_iso_cpp()) != 0) { std::printf("test_cutter_iso_cpp failed at line %d\n", result); return result; }
+    if ((result = test_volume_cpp()) != 0) { std::printf("test_volume_cpp failed at line %d\n", result); return result; }
     std::printf("FVizCpp features tests passed\n");
     return 0;
 }

@@ -40,6 +40,11 @@ typedef ptrdiff_t GLintptr;
 #define FVIZ_GL_SRGB8_ALPHA8 0x8C43
 #define FVIZ_GL_RGBA16F 0x881A
 #define FVIZ_GL_RGBA32UI 0x8D70
+#define FVIZ_GL_R8 0x8229
+#define FVIZ_GL_R32F 0x822E
+#define FVIZ_GL_RED 0x1903
+#define FVIZ_GL_TEXTURE_3D 0x806F
+#define FVIZ_GL_TEXTURE_WRAP_R 0x8072
 #define FVIZ_GL_RGBA_INTEGER 0x8D99
 #define FVIZ_GL_COLOR 0x1800
 #define FVIZ_GL_DEPTH24_STENCIL8 0x88F0
@@ -47,9 +52,18 @@ typedef ptrdiff_t GLintptr;
 #define FVIZ_GL_RENDERBUFFER 0x8D41
 #define FVIZ_GL_TEXTURE0 0x84C0
 #define FVIZ_GL_TEXTURE1 0x84C1
+#define FVIZ_GL_TEXTURE2 0x84C2
+#define FVIZ_GL_TEXTURE3 0x84C3
 #define FVIZ_GL_MAJOR_VERSION 0x821B
 #define FVIZ_GL_MINOR_VERSION 0x821C
-
+#define FVIZ_GL_DEPTH_COMPONENT 0x1902
+#define FVIZ_GL_DEPTH_COMPONENT24 0x81A6
+#define FVIZ_GL_DEPTH_ATTACHMENT 0x8D00
+#define FVIZ_GL_NONE 0
+#define FVIZ_GL_TEXTURE_COMPARE_MODE 0x884C
+#define FVIZ_GL_TEXTURE_WRAP_S 0x2802
+#define FVIZ_GL_TEXTURE_WRAP_T 0x2803
+#define FVIZ_GL_CLAMP_TO_EDGE 0x812F
 typedef void (APIENTRY* FVizGLGenVertexArraysFn)(GLsizei n, GLuint* arrays);
 typedef void (APIENTRY* FVizGLBindVertexArrayFn)(GLuint array);
 typedef void (APIENTRY* FVizGLDeleteVertexArraysFn)(GLsizei n, const GLuint* arrays);
@@ -108,6 +122,15 @@ typedef void (APIENTRY* FVizGLBeginQueryFn)(GLenum target, GLuint id);
 typedef void (APIENTRY* FVizGLEndQueryFn)(GLenum target);
 typedef void (APIENTRY* FVizGLGetQueryObjectivFn)(GLuint id, GLenum pname, GLint* params);
 typedef void (APIENTRY* FVizGLGetQueryObjectui64vFn)(GLuint id, GLenum pname, uint64_t* params);
+typedef void (APIENTRY* FVizGLTexImage3DFn)(
+    GLenum target, GLint level, GLint internalformat,
+    GLsizei width, GLsizei height, GLsizei depth, GLint border,
+    GLenum format, GLenum type, const void* pixels);
+typedef void (APIENTRY* FVizGLTexSubImage3DFn)(
+    GLenum target, GLint level,
+    GLint xoffset, GLint yoffset, GLint zoffset,
+    GLsizei width, GLsizei height, GLsizei depth,
+    GLenum format, GLenum type, const void* pixels);
 
 typedef struct FVizGLFunctions
 {
@@ -165,6 +188,8 @@ typedef struct FVizGLFunctions
     FVizGLEndQueryFn glEndQuery;
     FVizGLGetQueryObjectivFn glGetQueryObjectiv;
     FVizGLGetQueryObjectui64vFn glGetQueryObjectui64v;
+    FVizGLTexImage3DFn glTexImage3D;
+    FVizGLTexSubImage3DFn glTexSubImage3D;
 } FVizGLFunctions;
 
 FVizResult fviz_internal_gl_load(FVizGLFunctions* functions);

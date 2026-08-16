@@ -314,6 +314,12 @@ public:
     // of polylines. Defined after PolyData below.
     PolyData streamTracer(const std::string& vector_array_name,
         const std::vector<Vec3>& seed_points, double step_length, FVizSize max_steps) const;
+
+    // Cuts a grid with multiple planes (vtkCutter compatible).
+    PolyData cutter(const std::vector<Plane>& planes) const;
+
+    // Extracts a 3-D iso-surface (vtkContourFilter compatible, marching tetra).
+    PolyData isoSurface(const std::string& scalar_array_name, double iso_value) const;
 };
 
 // ---------------------------------------------------------------------------
@@ -628,6 +634,23 @@ inline PolyData UnstructuredGrid::streamTracer(const std::string& vector_array_n
     detail::checkResult(fviz_unstructured_grid_stream_tracer(ptr_, vector_array_name.c_str(),
         raw_seeds.data(), raw_seeds.size(), step_length, max_steps, &lines));
     return PolyData(lines);
+}
+
+inline PolyData UnstructuredGrid::cutter(const std::vector<Plane>& planes) const
+{
+    std::vector<FVizPlane> raw_planes;
+    raw_planes.reserve(planes.size());
+    for (const Plane& p : planes) raw_planes.push_back(p);
+    FVizPolyData* cut = nullptr;
+    detail::checkResult(fviz_unstructured_grid_cutter(ptr_, raw_planes.data(), raw_planes.size(), &cut));
+    return PolyData(cut);
+}
+
+inline PolyData UnstructuredGrid::isoSurface(const std::string& scalar_array_name, double iso_value) const
+{
+    FVizPolyData* surface = nullptr;
+    detail::checkResult(fviz_unstructured_grid_iso_surface(ptr_, scalar_array_name.c_str(), iso_value, &surface));
+    return PolyData(surface);
 }
 
 } // namespace fviz

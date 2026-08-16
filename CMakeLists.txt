@@ -189,6 +189,7 @@ set(_fviz_core_sources
     src/Rendering/FVizLookupTable.c
     src/Rendering/FVizLight.c
     src/Rendering/FVizGlyphMapper.c
+    src/Rendering/FVizVolumeMapper.c
     src/Rendering/FVizFontAtlas.c
     src/Rendering/FVizFont.c
     src/Rendering/FVizTextProperty.c
@@ -267,6 +268,7 @@ if(FVIZ_BUILD_FEA)
         src/FEA/FVizDeformedShape.c
         src/FEA/FVizVisualization.c
         src/FEA/FVizScalarBarActor.c
+        src/FEA/FVizDisplayGroup.c
     )
     add_library(FEAVizFEA ${_fviz_library_type} ${_fviz_fea_sources})
     add_library(FEAViz::FEA ALIAS FEAVizFEA)

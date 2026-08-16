@@ -101,6 +101,8 @@ FVizResult fviz_internal_gl_load(FVizGLFunctions* functions)
     FVIZ_GL_LOAD_PROC(glEndQuery, "glEndQuery");
     FVIZ_GL_LOAD_PROC(glGetQueryObjectiv, "glGetQueryObjectiv");
     FVIZ_GL_LOAD_PROC(glGetQueryObjectui64v, "glGetQueryObjectui64v");
+    FVIZ_GL_LOAD_PROC(glTexImage3D, "glTexImage3D");
+    FVIZ_GL_LOAD_PROC(glTexSubImage3D, "glTexSubImage3D");
 
     if (functions->glGenVertexArrays == NULL ||
         functions->glBindVertexArray == NULL ||

@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- Added FEA display groups (`FVizFEADisplayGroup`, `fea::DisplayGroup`) that
+  collect nodes/elements/faces into named, independently visible sets and combine
+  them with replace/add/remove/intersect semantics. `fviz_fea_display_group_create_masks`
+  builds node/element/face masks and `fviz_fea_display_group_apply_to_surface`
+  extracts a surface filtered to one group, closing gap F0.45 vs VTK.
+- Added multi-plane `vtkCutter`-equivalent slicing and 3D iso-surfaces on
+  `FVizUnstructuredGrid`: `fviz_unstructured_grid_cutter()` cuts a grid with an
+  array of planes (reusing `fviz_unstructured_grid_slice` and appending through
+  the new `fviz_poly_data_append()`), and `fviz_unstructured_grid_iso_surface()`
+  extracts iso-surfaces via marching-tetra decomposition (tetra cells directly,
+  hexahedra split into five tets per VTK convention), tagging the output with the
+  iso-value scalar. C++ wrappers `UnstructuredGrid::cutter` / `isoSurface` and
+  `PolyData::append` added with tests.
+- Implemented dual-depth-peeling transparency in the OpenGL backend:
+  `FVIZ_TRANSPARENCY_DEPTH_PEELING` now renders translucent actors layer by
+  layer into a color accumulation target, peeling by depth-comparing each layer
+  against the previous layer's depth texture (`uPeelEnabled` discard in the main
+  fragment shader). `FVizRenderCapabilities::depth_peeling_supported` reflects
+  the backend capability; sorted-alpha remains the fallback. Weighted OIT is
+  untouched.
+- Added GPU ray-cast volume rendering: new `FVizVolumeMapper` (input
+  `FVizImageData`, color/opacity transfer-function control points, sampling
+  step, shading toggle, scalar range) plus `fviz_actor_set_volume_mapper`. The
+  GL device uploads the active scalar field as a `GL_R32F` 3D texture and the
+  transfer function as a 256-entry RGBA8 LUT, then ray-marches the volume's
+  bounding cube front-to-back in the fragment shader with optional gradient
+  lighting (`fviz::VolumeMapper` wrapper and offscreen render test included).
 - Reworked `FVizExecutor` scheduling from a linear priority/dependency scan to a
   readiness-aware binary max-heap keyed on (priority, sequence). Dependency-blocked
   continuations are parked in a per-dependency waiter chain and promoted only when

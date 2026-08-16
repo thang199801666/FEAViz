@@ -60,13 +60,17 @@ static void fviz_actor_destroy(FVizObject* object)
         (void)fviz_object_remove_observer((FVizObject*)actor->mapper, actor->mapper_modified_tag);
     if (actor->glyph_mapper != NULL && actor->glyph_mapper_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
         (void)fviz_object_remove_observer((FVizObject*)actor->glyph_mapper, actor->glyph_mapper_modified_tag);
+    if (actor->volume_mapper != NULL && actor->volume_mapper_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
+        (void)fviz_object_remove_observer((FVizObject*)actor->volume_mapper, actor->volume_mapper_modified_tag);
     if (actor->user_transform != NULL && actor->user_transform_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
         (void)fviz_object_remove_observer((FVizObject*)actor->user_transform, actor->user_transform_modified_tag);
     fviz_release(actor->mapper);
     fviz_release(actor->glyph_mapper);
+    fviz_release(actor->volume_mapper);
     fviz_release(actor->user_transform);
     actor->mapper = NULL;
     actor->glyph_mapper = NULL;
+    actor->volume_mapper = NULL;
     actor->user_transform = NULL;
 }
 
@@ -197,6 +201,39 @@ const FVizGlyphMapper* fviz_actor_const_glyph_mapper(const FVizActor* actor)
     return actor != NULL ? actor->glyph_mapper : NULL;
 }
 
+FVizResult fviz_actor_set_volume_mapper(FVizActor* actor, FVizVolumeMapper* mapper)
+{
+    FVizObserverTag new_tag = FVIZ_OBSERVER_TAG_INVALID;
+    if (actor == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (mapper == actor->volume_mapper) return FVIZ_OK;
+    if (mapper != NULL)
+    {
+        if (fviz_retain(mapper) == NULL) return fviz_last_error_code();
+        if (fviz_actor_observe_dependency((FVizObject*)mapper, actor, &new_tag) != FVIZ_OK)
+        {
+            fviz_release(mapper);
+            return fviz_last_error_code();
+        }
+    }
+    if (actor->volume_mapper != NULL && actor->volume_mapper_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
+        (void)fviz_object_remove_observer((FVizObject*)actor->volume_mapper, actor->volume_mapper_modified_tag);
+    fviz_release(actor->volume_mapper);
+    actor->volume_mapper = mapper;
+    actor->volume_mapper_modified_tag = new_tag;
+    fviz_object_modified((FVizObject*)actor);
+    return FVIZ_OK;
+}
+
+FVizVolumeMapper* fviz_actor_volume_mapper(FVizActor* actor)
+{
+    return actor != NULL ? actor->volume_mapper : NULL;
+}
+
+const FVizVolumeMapper* fviz_actor_const_volume_mapper(const FVizActor* actor)
+{
+    return actor != NULL ? actor->volume_mapper : NULL;
+}
+
 FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data)
 {
     if (actor == NULL)
@@ -212,6 +249,15 @@ FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data)
         fviz_release(actor->glyph_mapper);
         actor->glyph_mapper = NULL;
         actor->glyph_mapper_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
+    }
+    if (actor->volume_mapper != NULL)
+    {
+        if (actor->volume_mapper_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
+            (void)fviz_object_remove_observer(
+                (FVizObject*)actor->volume_mapper, actor->volume_mapper_modified_tag);
+        fviz_release(actor->volume_mapper);
+        actor->volume_mapper = NULL;
+        actor->volume_mapper_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     }
     return fviz_mapper_set_poly_data(actor->mapper, poly_data);
 }
@@ -286,6 +332,11 @@ FVizBounds fviz_actor_bounds(const FVizActor* actor)
     {
         local = fviz_glyph_mapper_bounds(actor->glyph_mapper);
         geometry_mtime = fviz_object_mtime((const FVizObject*)actor->glyph_mapper);
+    }
+    else if (actor->volume_mapper != NULL)
+    {
+        local = fviz_volume_mapper_bounds(actor->volume_mapper);
+        geometry_mtime = fviz_object_mtime((const FVizObject*)actor->volume_mapper);
     }
     else if (fviz_actor_const_poly_data(actor) != NULL)
     {

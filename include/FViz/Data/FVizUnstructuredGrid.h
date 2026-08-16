@@ -129,6 +129,25 @@ FVIZ_API FVizResult fviz_unstructured_grid_stream_tracer(
     FVizSize max_steps,
     FVizPolyData** out_lines);
 
+/* Cuts a grid with multiple planes and merges the result into one PolyData
+ * (vtkCutter compatible). Each plane produces a slice with interpolated point
+ * scalars; the merged output shares point data arrays. */
+FVIZ_API FVizResult fviz_unstructured_grid_cutter(
+    const FVizUnstructuredGrid* grid,
+    const FVizPlane* planes,
+    FVizSize plane_count,
+    FVizPolyData** out_cut);
+
+/* Extracts a 3-D iso-surface from a volumetric unstructured grid
+ * (vtkContourFilter compatible, marching tetra). Produces a triangle PolyData
+ * whose point data carries the scalar value. Tetrahedral cells and arbitrary
+ * simplex decompositions are supported. */
+FVIZ_API FVizResult fviz_unstructured_grid_iso_surface(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    double iso_value,
+    FVizPolyData** out_surface);
+
 FVIZ_EXTERN_C_END
 
 #endif /* FVIZ_DATA_UNSTRUCTURED_GRID_H */

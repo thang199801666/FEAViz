@@ -309,6 +309,60 @@ static int test_result_contour_cpp()
     return 0;
 }
 
+static int test_display_group()
+{
+    // Small hex beam with identity provenance labels.
+    UnstructuredGrid grid = UnstructuredGrid::create();
+    const uint32_t nx = 2u, ny = 2u, nz = 2u;
+    for (uint32_t z = 0u; z <= nz; ++z)
+        for (uint32_t y = 0u; y <= ny; ++y)
+            for (uint32_t x = 0u; x <= nx; ++x)
+                grid.addPoint(Vec3((float)x, (float)y, (float)z));
+    const auto pid = [&](uint32_t x, uint32_t y, uint32_t z) { return x + (nx + 1u) * (y + (ny + 1u) * z); };
+    for (uint32_t z = 0u; z < nz; ++z)
+        for (uint32_t y = 0u; y < ny; ++y)
+            for (uint32_t x = 0u; x < nx; ++x)
+            {
+                const uint32_t ids[8] = {
+                    pid(x, y, z), pid(x + 1u, y, z), pid(x + 1u, y + 1u, z), pid(x, y + 1u, z),
+                    pid(x, y, z + 1u), pid(x + 1u, y, z + 1u), pid(x + 1u, y + 1u, z + 1u), pid(x, y + 1u, z + 1u)};
+                grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, ids);
+            }
+    DataArray pointIds = DataArray::createUint64();
+    pointIds.resize(grid.pointCount());
+    for (FVizSize i = 0u; i < grid.pointCount(); ++i)
+        pointIds.setComponent(i, 0u, (double)i);
+    DataArray cellIds = DataArray::createUint64();
+    cellIds.resize(grid.cellCount());
+    for (FVizSize i = 0u; i < grid.cellCount(); ++i)
+        cellIds.setComponent(i, 0u, (double)i);
+    grid.pointData().add(FVIZ_ORIGINAL_POINT_IDS_ARRAY_NAME, pointIds.get());
+    grid.cellData().add(FVIZ_ORIGINAL_CELL_IDS_ARRAY_NAME, cellIds.get());
+
+    fea::DisplayGroup group = fea::DisplayGroup::create("AllButFirst");
+    group.setElements(std::vector<uint64_t>{1u, 2u, 3u});
+    FVizFEADisplayGroupStatistics stats = group.statistics(grid);
+    CHECK(stats.element_count == 3u);
+    CHECK(stats.visible_cells == 3u);
+
+    DataArray pm, cm;
+    group.createMasks(grid, pm, cm);
+    CHECK(cm.component(0u) == 0.0);
+    CHECK(cm.component(1u) == 1.0);
+
+    // Union + intersection.
+    fea::DisplayGroup a = fea::DisplayGroup::create("A");
+    fea::DisplayGroup b = fea::DisplayGroup::create("B");
+    a.setElements(std::vector<uint64_t>{0u, 1u});
+    b.setElements(std::vector<uint64_t>{1u, 2u});
+    a.combine(b, FVIZ_FEA_DISPLAY_GROUP_ADD);
+    CHECK(a.statistics(grid).element_count == 3u);
+    a.combine(b, FVIZ_FEA_DISPLAY_GROUP_INTERSECT);
+    CHECK(a.statistics(grid).element_count == 2u);
+
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -318,6 +372,7 @@ int main(void)
     if ((result = test_scalar_bar()) != 0) { std::printf("test_scalar_bar failed at line %d\n", result); return result; }
     if ((result = test_contour_helpers()) != 0) { std::printf("test_contour_helpers failed at line %d\n", result); return result; }
     if ((result = test_result_contour_cpp()) != 0) { std::printf("test_result_contour_cpp failed at line %d\n", result); return result; }
+    if ((result = test_display_group()) != 0) { std::printf("test_display_group failed at line %d\n", result); return result; }
     std::printf("FVizCpp FEA binding tests passed\n");
     return 0;
 }
