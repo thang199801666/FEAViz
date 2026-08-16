@@ -17,6 +17,7 @@
 #include <FViz/Mesh/FVizCellArrayPrivate.h>
 #include <FViz/Mesh/FVizCellLinks.h>
 #include <FViz/Algorithms/FVizFieldOperations.h>
+#include <FViz/Spatial/FVizPointLocator.h>
 
 typedef struct FVizSurfaceDefinition
 {
@@ -2820,5 +2821,321 @@ fail:
     fviz_release(gradient);
     fviz_release(links);
     fviz_release(result);
+    return fviz_last_error_code();
+}
+
+FVizResult fviz_unstructured_grid_cell_derivatives(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    const char* output_name,
+    FVizUnstructuredGrid** out_grid)
+{
+    const FVizDataArray* scalars;
+    const FVizVec3* points;
+    FVizUnstructuredGrid* result = NULL;
+    FVizDataArray* derivatives = NULL;
+    FVizSize point_count;
+    FVizSize cell_count;
+    FVizSize components;
+    FVizSize i;
+    if (out_grid != NULL) *out_grid = NULL;
+    if (grid == NULL || scalar_array_name == NULL || scalar_array_name[0] == '\0' ||
+        output_name == NULL || output_name[0] == '\0' || out_grid == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "cell derivatives require a grid, input array name, and output name");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    scalars = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), scalar_array_name);
+    if (scalars == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND,
+            "cell derivatives input array was not found on point data");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    point_count = fviz_unstructured_grid_point_count(grid);
+    cell_count = fviz_unstructured_grid_cell_count(grid);
+    components = fviz_data_array_components(scalars);
+    if (components == 0u || components > 3u || fviz_data_array_tuple_count(scalars) != point_count)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "cell derivatives input must have one 1-3 component tuple per point");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if (fviz_data_array_create(FVIZ_DATA_FLOAT64, (uint32_t)(3u * components), &derivatives) != FVIZ_OK ||
+        fviz_data_array_resize(derivatives, cell_count) != FVIZ_OK)
+        goto fail;
+    points = fviz_points_data(grid->points);
+    for (i = 0u; i < cell_count; ++i)
+    {
+        FVizCellView view;
+        FVizSize point_count_in_cell;
+        FVizSize s;
+        FVizSize component;
+        double basis[64 * 4];
+        double values[64 * 3];
+        double normal[4 * 4];
+        double rhs[4 * 3];
+        double a[16];
+        double b[12];
+        double coefficients[4 * 3];
+        double grad_tuple[9];
+        FVizSize row, col, r, c, rr;
+        if (fviz_cell_array_cell_view(grid->cells, i, &view) != FVIZ_OK) continue;
+        point_count_in_cell = view.point_count;
+        if (point_count_in_cell == 0u || point_count_in_cell > 64u) continue;
+        for (s = 0u; s < point_count_in_cell; ++s)
+        {
+            const FVizId pid = fviz_cell_view_point_id(&view, s);
+            basis[s * 4u + 0u] = 1.0;
+            basis[s * 4u + 1u] = (double)points[(FVizSize)pid].x;
+            basis[s * 4u + 2u] = (double)points[(FVizSize)pid].y;
+            basis[s * 4u + 3u] = (double)points[(FVizSize)pid].z;
+            for (component = 0u; component < components; ++component)
+            {
+                double value = 0.0;
+                (void)fviz_data_array_get_component(scalars, (FVizSize)pid, (uint32_t)component, &value);
+                values[s * components + component] = value;
+            }
+        }
+        for (row = 0u; row < 4u; ++row)
+            for (col = 0u; col < 4u; ++col)
+            {
+                double sum = 0.0;
+                for (s = 0u; s < point_count_in_cell; ++s) sum += basis[s * 4u + row] * basis[s * 4u + col];
+                normal[row * 4u + col] = sum;
+            }
+        for (row = 0u; row < 4u; ++row)
+            for (component = 0u; component < components; ++component)
+            {
+                double sum = 0.0;
+                for (s = 0u; s < point_count_in_cell; ++s)
+                    sum += basis[s * 4u + row] * values[s * components + component];
+                rhs[row * components + component] = sum;
+            }
+        (void)memcpy(a, normal, sizeof(a));
+        (void)memset(b, 0, sizeof(b));
+        (void)memset(coefficients, 0, sizeof(coefficients));
+        for (r = 0u; r < 4u; ++r)
+            for (c = 0u; c < components; ++c)
+                b[r * components + c] = rhs[r * components + c];
+        for (r = 0u; r < 4u; ++r)
+        {
+            FVizSize pivot = r;
+            double pivot_value;
+            for (rr = r + 1u; rr < 4u; ++rr)
+                if (fabs(a[rr * 4u + r]) > fabs(a[pivot * 4u + r])) pivot = rr;
+            if (pivot != r)
+            {
+                for (c = 0u; c < 4u; ++c)
+                {
+                    const double t = a[r * 4u + c]; a[r * 4u + c] = a[pivot * 4u + c]; a[pivot * 4u + c] = t;
+                }
+                for (c = 0u; c < components; ++c)
+                {
+                    const double t = b[r * components + c]; b[r * components + c] = b[pivot * components + c]; b[pivot * components + c] = t;
+                }
+            }
+            pivot_value = a[r * 4u + r];
+            if (fabs(pivot_value) < 1.0e-12) continue;
+            for (c = r; c < 4u; ++c) a[r * 4u + c] /= pivot_value;
+            for (c = 0u; c < components; ++c) b[r * components + c] /= pivot_value;
+            for (rr = r + 1u; rr < 4u; ++rr)
+            {
+                const double factor = a[rr * 4u + r];
+                if (factor == 0.0) continue;
+                for (c = r; c < 4u; ++c) a[rr * 4u + c] -= factor * a[r * 4u + c];
+                for (c = 0u; c < components; ++c) b[rr * components + c] -= factor * b[r * components + c];
+            }
+        }
+        for (r = 4u; r-- > 0u;)
+            for (c = 0u; c < components; ++c)
+            {
+                double sum = b[r * components + c];
+                for (rr = r + 1u; rr < 4u; ++rr) sum -= a[r * 4u + rr] * coefficients[rr * components + c];
+                coefficients[r * components + c] = sum;
+            }
+        for (component = 0u; component < components; ++component)
+        {
+            grad_tuple[component * 3u + 0u] = coefficients[1 * components + component];
+            grad_tuple[component * 3u + 1u] = coefficients[2 * components + component];
+            grad_tuple[component * 3u + 2u] = coefficients[3 * components + component];
+        }
+        if (fviz_data_array_set_tuple(derivatives, i, grad_tuple) != FVIZ_OK) goto fail;
+    }
+    if (fviz_unstructured_grid_shallow_copy(grid, &result) != FVIZ_OK) goto fail;
+    if (fviz_attribute_set_add(fviz_unstructured_grid_cell_data(result), output_name, derivatives) != FVIZ_OK) goto fail;
+    fviz_release(derivatives);
+    *out_grid = result;
+    return FVIZ_OK;
+fail:
+    fviz_release(derivatives);
+    fviz_release(result);
+    return fviz_last_error_code();
+}
+
+FVizResult fviz_unstructured_grid_warp_scalar(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    double scale,
+    const char* normal_array_name,
+    FVizUnstructuredGrid** out_grid)
+{
+    const FVizDataArray* scalars;
+    const FVizDataArray* normals = NULL;
+    const FVizVec3* points;
+    FVizUnstructuredGrid* result = NULL;
+    FVizVec3* displaced = NULL;
+    FVizSize point_count;
+    FVizSize i;
+    if (out_grid != NULL) *out_grid = NULL;
+    if (grid == NULL || scalar_array_name == NULL || scalar_array_name[0] == '\0' || out_grid == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "warp scalar requires a grid, input array name, and output");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    scalars = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), scalar_array_name);
+    if (scalars == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND,
+            "warp scalar input array was not found on point data");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    if (fviz_data_array_tuple_count(scalars) != fviz_unstructured_grid_point_count(grid))
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "warp scalar input must have one tuple per point");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if (normal_array_name != NULL && normal_array_name[0] != '\0')
+        normals = fviz_attribute_set_const_get(
+            fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), normal_array_name);
+    point_count = fviz_unstructured_grid_point_count(grid);
+    points = fviz_points_data(grid->points);
+    displaced = (FVizVec3*)fviz_alloc(point_count * sizeof(*displaced));
+    if (displaced == NULL) return fviz_last_error_code();
+    for (i = 0u; i < point_count; ++i)
+    {
+        double value = 0.0;
+        (void)fviz_data_array_get_component(scalars, i, 0u, &value);
+        if (normals != NULL && i < fviz_data_array_tuple_count(normals) &&
+            fviz_data_array_components(normals) >= 3u)
+        {
+            double nx = 0.0, ny = 0.0, nz = 0.0;
+            (void)fviz_data_array_get_component(normals, i, 0u, &nx);
+            (void)fviz_data_array_get_component(normals, i, 1u, &ny);
+            (void)fviz_data_array_get_component(normals, i, 2u, &nz);
+            displaced[i] = fviz_vec3_add(points[i],
+                fviz_vec3_scale(fviz_vec3((float)nx, (float)ny, (float)nz), (float)(value * scale)));
+        }
+        else
+        {
+            displaced[i] = fviz_vec3_add(points[i],
+                fviz_vec3(0.0f, 0.0f, (float)(value * scale)));
+        }
+    }
+    /* Build a fresh grid so the source points are not mutated. */
+    if (fviz_unstructured_grid_create(&result) != FVIZ_OK ||
+        fviz_unstructured_grid_reserve(result, point_count,
+            fviz_cell_array_count(grid->cells), fviz_cell_array_connectivity_size(grid->cells)) != FVIZ_OK ||
+        fviz_unstructured_grid_add_points_ids(result, displaced, point_count, NULL) != FVIZ_OK)
+    {
+        fviz_free(displaced);
+        fviz_release(result);
+        return fviz_last_error_code();
+    }
+    fviz_free(displaced);
+    for (i = 0u; i < fviz_cell_array_count(grid->cells); ++i)
+        if (fviz_append_source_cell(result, grid->cells, i) != FVIZ_OK)
+        {
+            fviz_release(result);
+            return fviz_last_error_code();
+        }
+    if (fviz_copy_attribute_set(fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_point_data(result)) != FVIZ_OK ||
+        fviz_copy_attribute_set(fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_cell_data(result)) != FVIZ_OK ||
+        fviz_copy_attribute_set(fviz_unstructured_grid_field_data((FVizUnstructuredGrid*)grid),
+            fviz_unstructured_grid_field_data(result)) != FVIZ_OK)
+    {
+        fviz_release(result);
+        return fviz_last_error_code();
+    }
+    *out_grid = result;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_unstructured_grid_stream_tracer(
+    const FVizUnstructuredGrid* grid,
+    const char* vector_array_name,
+    const FVizVec3* seed_points,
+    FVizSize seed_count,
+    double step_length,
+    FVizSize max_steps,
+    FVizPolyData** out_lines)
+{
+    const FVizDataArray* vectors;
+    FVizPointLocator* locator = NULL;
+    FVizPolyData* output = NULL;
+    FVizSize i;
+    if (out_lines != NULL) *out_lines = NULL;
+    if (grid == NULL || vector_array_name == NULL || vector_array_name[0] == '\0' ||
+        (seed_count != 0u && seed_points == NULL) || out_lines == NULL || step_length <= 0.0)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "stream tracer requires a grid, vector array, seeds, and positive step");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    vectors = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), vector_array_name);
+    if (vectors == NULL || fviz_data_array_components(vectors) < 3u)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND,
+            "stream tracer vector array was not found on point data");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    if (fviz_point_locator_create(&locator) != FVIZ_OK ||
+        fviz_point_locator_set_grid(locator, grid) != FVIZ_OK ||
+        fviz_point_locator_build(locator) != FVIZ_OK)
+        goto fail;
+    if (fviz_poly_data_create(&output) != FVIZ_OK) goto fail;
+    for (i = 0u; i < seed_count; ++i)
+    {
+        FVizVec3 point = seed_points[i];
+        FVizSize step;
+        FVizSize first_point_index;
+        if (fviz_poly_data_add_point(output, point, NULL) != FVIZ_OK) goto fail;
+        first_point_index = fviz_poly_data_point_count(output) - 1u;
+        for (step = 0u; step < max_steps; ++step)
+        {
+            const FVizVec3 v = fviz_point_locator_interpolate_vector(locator, vector_array_name, point);
+            const float speed = fviz_vec3_length(v);
+            if (speed < 1.0e-9f) break;
+            {
+                FVizVec3 next = fviz_vec3_add(point, fviz_vec3_scale(v, (float)step_length));
+                /* RK2 midpoint refinement. */
+                {
+                    const FVizVec3 vm = fviz_point_locator_interpolate_vector(locator, vector_array_name, next);
+                    next = fviz_vec3_add(point, fviz_vec3_scale(fviz_vec3_scale(fviz_vec3_add(v, vm), 0.5f), (float)step_length));
+                }
+                {
+                    uint32_t index = 0u;
+                    if (fviz_poly_data_add_point(output, next, &index) != FVIZ_OK) goto fail;
+                    if (fviz_poly_data_add_line(output, (uint32_t)(first_point_index + step), index) != FVIZ_OK) goto fail;
+                }
+                point = next;
+            }
+        }
+    }
+    if (fviz_poly_data_validate(output) != FVIZ_OK) goto fail;
+    fviz_release(locator);
+    *out_lines = output;
+    return FVIZ_OK;
+fail:
+    fviz_release(locator);
+    fviz_release(output);
     return fviz_last_error_code();
 }

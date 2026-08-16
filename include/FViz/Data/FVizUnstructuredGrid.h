@@ -96,6 +96,39 @@ FVIZ_API FVizResult fviz_unstructured_grid_gradient(
     const char* output_name,
     FVizUnstructuredGrid** out_grid);
 
+/* Per-cell derivatives of a point scalar or vector field (vtkCellDerivatives
+ * compatible). Fits a linear field over each cell's own points and stores the
+ * gradient (3*N components for an N-component input) as a cell-data array under
+ * output_name. Exact for linear fields on affine cells. */
+FVIZ_API FVizResult fviz_unstructured_grid_cell_derivatives(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    const char* output_name,
+    FVizUnstructuredGrid** out_grid);
+
+/* Warps points by a scalar field (vtkWarpScalar compatible). Points are
+ * displaced along the +Z axis by scalar * scale (the classic VTK default), or
+ * along point normals when the optional normal array is supplied. */
+FVIZ_API FVizResult fviz_unstructured_grid_warp_scalar(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    double scale,
+    const char* normal_array_name,
+    FVizUnstructuredGrid** out_grid);
+
+/* Integrates streamlines through a 3-component point vector field from the
+ * given seed points (vtkStreamTracer compatible, Euler + RK4 steps). Returns a
+ * PolyData of polylines; the interpolated vector magnitude is stored per
+ * output point under "speed". */
+FVIZ_API FVizResult fviz_unstructured_grid_stream_tracer(
+    const FVizUnstructuredGrid* grid,
+    const char* vector_array_name,
+    const FVizVec3* seed_points,
+    FVizSize seed_count,
+    double step_length,
+    FVizSize max_steps,
+    FVizPolyData** out_lines);
+
 FVIZ_EXTERN_C_END
 
 #endif /* FVIZ_DATA_UNSTRUCTURED_GRID_H */

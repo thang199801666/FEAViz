@@ -1,4 +1,6 @@
 #include <limits.h>
+#include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <FViz/Core/FVizError.h>
@@ -1283,4 +1285,419 @@ FVizResult fviz_poly_data_compute_normals(FVizPolyData* poly_data)
     poly_data->normals_dirty = FVIZ_FALSE;
     fviz_poly_data_geometry_modified(poly_data);
     return FVIZ_OK;
+}
+
+typedef struct FVizEdgeKey
+{
+    uint32_t a;
+    uint32_t b;
+} FVizEdgeKey;
+
+static int fviz_edge_key_compare(const void* left, const void* right)
+{
+    const FVizEdgeKey* a = (const FVizEdgeKey*)left;
+    const FVizEdgeKey* b = (const FVizEdgeKey*)right;
+    if (a->a < b->a) return -1;
+    if (a->a > b->a) return 1;
+    if (a->b < b->b) return -1;
+    if (a->b > b->b) return 1;
+    return 0;
+}
+
+/* Iterates a cell array and appends each edge (with normalized orientation)
+ * to the key buffer. */
+static FVizResult fviz_poly_data_collect_cell_edges(
+    const FVizCellArray* cells,
+    const uint32_t* triangle_indices,
+    FVizSize triangle_count,
+    FVizSize poly_cell_count,
+    FVizEdgeKey* keys,
+    FVizSize* out_key_count,
+    FVizSize key_capacity)
+{
+    FVizSize key_count = 0u;
+    FVizSize i;
+    /* Triangle fast path. */
+    if (cells == NULL)
+    {
+        for (i = 0u; i < triangle_count; ++i)
+        {
+            const uint32_t a = triangle_indices[i * 3u + 0u];
+            const uint32_t b = triangle_indices[i * 3u + 1u];
+            const uint32_t c = triangle_indices[i * 3u + 2u];
+            uint32_t edges[3][2];
+            edges[0][0] = a; edges[0][1] = b;
+            edges[1][0] = b; edges[1][1] = c;
+            edges[2][0] = c; edges[2][1] = a;
+            {
+                FVizSize e;
+                for (e = 0u; e < 3u; ++e)
+                {
+                    uint32_t p = edges[e][0], q = edges[e][1];
+                    if (p > q) { const uint32_t t = p; p = q; q = t; }
+                    if (key_count >= key_capacity) return FVIZ_ERROR_OVERFLOW;
+                    keys[key_count].a = p;
+                    keys[key_count].b = q;
+                    ++key_count;
+                }
+            }
+        }
+        *out_key_count = key_count;
+        return FVIZ_OK;
+    }
+    for (i = 0u; i < poly_cell_count; ++i)
+    {
+        FVizCellView view;
+        FVizSize j;
+        if (fviz_cell_array_cell_view(cells, i, &view) != FVIZ_OK) continue;
+        for (j = 0u; j < view.point_count; ++j)
+        {
+            const FVizId pid_a = fviz_cell_view_point_id(&view, j);
+            const FVizId pid_b = fviz_cell_view_point_id(&view, (j + 1u) % view.point_count);
+            uint32_t p = (uint32_t)pid_a, q = (uint32_t)pid_b;
+            if (p > q) { const uint32_t t = p; p = q; q = t; }
+            if (key_count >= key_capacity) return FVIZ_ERROR_OVERFLOW;
+            keys[key_count].a = p;
+            keys[key_count].b = q;
+            ++key_count;
+        }
+    }
+    *out_key_count = key_count;
+    return FVIZ_OK;
+}
+
+FVizResult fviz_poly_data_extract_edges(
+    const FVizPolyData* input,
+    FVizPolyData** out_edges)
+{
+    FVizSize triangle_count = 0u;
+    FVizSize poly_cell_count = 0u;
+    FVizSize vert_count = 0u;
+    FVizSize line_cell_count = 0u;
+    FVizSize strip_count = 0u;
+    FVizSize key_count = 0u;
+    FVizSize unique_count = 0u;
+    FVizEdgeKey* keys = NULL;
+    FVizPolyData* output = NULL;
+    FVizSize i;
+    if (out_edges != NULL) *out_edges = NULL;
+    if (input == NULL || out_edges == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    triangle_count = fviz_poly_data_triangle_count(input);
+    poly_cell_count = fviz_poly_data_poly_cell_count(input);
+    vert_count = fviz_poly_data_vert_cell_count(input);
+    line_cell_count = fviz_poly_data_line_cell_count(input);
+    strip_count = fviz_poly_data_strip_cell_count(input);
+    {
+        FVizSize max_edges = 0u;
+        if (fviz_size_add(triangle_count * 3u, poly_cell_count * 4u, &max_edges) != FVIZ_OK) return fviz_last_error_code();
+        if (fviz_size_add(max_edges, strip_count * 4u, &max_edges) != FVIZ_OK) return fviz_last_error_code();
+        if (fviz_size_add(max_edges, line_cell_count * 2u, &max_edges) != FVIZ_OK) return fviz_last_error_code();
+        keys = (FVizEdgeKey*)fviz_alloc(max_edges * sizeof(*keys));
+        if (keys == NULL) return fviz_last_error_code();
+        if (fviz_poly_data_collect_cell_edges(NULL, fviz_poly_data_triangle_indices(input), triangle_count,
+                poly_cell_count, keys, &key_count, max_edges) != FVIZ_OK)
+            goto fail;
+        /* Polys (the cells array covers polygon + other cells). */
+        {
+            FVizEdgeKey* after_triangles = keys + key_count;
+            FVizSize extra = 0u;
+            FVizSize capacity = max_edges > key_count ? max_edges - key_count : 0u;
+            if (fviz_poly_data_collect_cell_edges(fviz_poly_data_polys(input), NULL, 0u,
+                    poly_cell_count, after_triangles, &extra, capacity) != FVIZ_OK)
+                goto fail;
+            key_count += extra;
+        }
+        (void)vert_count;
+    }
+    /* Sort and deduplicate. */
+    if (key_count > 1u) qsort(keys, (size_t)key_count, sizeof(*keys), fviz_edge_key_compare);
+    {
+        FVizSize out = 0u;
+        for (i = 0u; i < key_count; ++i)
+        {
+            if (i == 0u || keys[i].a != keys[i - 1u].a || keys[i].b != keys[i - 1u].b)
+            {
+                keys[out] = keys[i];
+                ++out;
+            }
+        }
+        unique_count = out;
+    }
+    if (fviz_poly_data_create(&output) != FVIZ_OK ||
+        fviz_poly_data_add_points(output, fviz_poly_data_points(input), fviz_poly_data_point_count(input), NULL) != FVIZ_OK) goto fail;
+    for (i = 0u; i < unique_count; ++i)
+        if (fviz_poly_data_add_line(output, keys[i].a, keys[i].b) != FVIZ_OK) goto fail;
+    if (fviz_poly_data_validate(output) != FVIZ_OK) goto fail;
+    fviz_free(keys);
+    *out_edges = output;
+    return FVIZ_OK;
+fail:
+    fviz_free(keys);
+    fviz_release(output);
+    return fviz_last_error_code();
+}
+
+FVizResult fviz_poly_data_delaunay_2d(
+    const FVizPolyData* input,
+    FVizPolyData** out_triangulation)
+{
+    const FVizVec3* points;
+    FVizSize point_count;
+    FVizSize i;
+    FVizPolyData* output = NULL;
+    double min_x = 0.0, min_y = 0.0, max_x = 0.0, max_y = 0.0;
+    double diameter;
+    FVizVec3 super[3];
+    if (out_triangulation != NULL) *out_triangulation = NULL;
+    if (input == NULL || out_triangulation == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    point_count = fviz_poly_data_point_count(input);
+    if (point_count < 3u) return FVIZ_ERROR_INVALID_ARGUMENT;
+    points = fviz_poly_data_points(input);
+    min_x = max_x = (double)points[0].x;
+    min_y = max_y = (double)points[0].y;
+    for (i = 1u; i < point_count; ++i)
+    {
+        if ((double)points[i].x < min_x) min_x = (double)points[i].x;
+        if ((double)points[i].x > max_x) max_x = (double)points[i].x;
+        if ((double)points[i].y < min_y) min_y = (double)points[i].y;
+        if ((double)points[i].y > max_y) max_y = (double)points[i].y;
+    }
+    diameter = (max_x - min_x) > (max_y - min_y) ? (max_x - min_x) : (max_y - min_y);
+    if (diameter < 1.0e-12) return FVIZ_ERROR_INVALID_ARGUMENT;
+    /* Super-triangle enclosing the whole point set. */
+    super[0] = fviz_vec3((float)(min_x - 10.0 * diameter), (float)(min_y - 10.0 * diameter), 0.0f);
+    super[1] = fviz_vec3((float)(min_x + 11.0 * diameter), (float)(min_y - 10.0 * diameter), 0.0f);
+    super[2] = fviz_vec3((float)(min_x + 0.5 * diameter), (float)(min_y + 11.0 * diameter), 0.0f);
+    {
+        /* Bowyer-Watson: maintain a triangle list as triples of point indices.
+         * Indices 0,1,2 are the super-triangle corners; real points follow. */
+        FVizSize* triangles = NULL;
+        FVizSize triangle_capacity = 64u;
+        FVizSize triangle_count = 0u;
+        triangles = (FVizSize*)fviz_alloc(triangle_capacity * 3u * sizeof(*triangles));
+        if (triangles == NULL) return fviz_last_error_code();
+        triangles[0] = 0u; triangles[1] = 1u; triangles[2] = 2u;
+        triangle_count = 1u;
+        for (i = 0u; i < point_count; ++i)
+        {
+            const double px = (double)points[i].x;
+            const double py = (double)points[i].y;
+            FVizSize* bad = NULL;
+            FVizSize bad_count = 0u;
+            FVizSize bad_capacity = 32u;
+            FVizSize t;
+            FVizSize* edge_seen = NULL;
+            FVizSize edge_count = 0u;
+            FVizSize edge_capacity = 64u;
+            FVizSize e;
+            bad = (FVizSize*)fviz_alloc(bad_capacity * 3u * sizeof(*bad));
+            edge_seen = (FVizSize*)fviz_alloc(edge_capacity * 2u * sizeof(*edge_seen));
+            if (bad == NULL || edge_seen == NULL) { fviz_free(bad); fviz_free(edge_seen); fviz_free(triangles); fviz_release(output); return fviz_last_error_code(); }
+            for (t = 0u; t < triangle_count; ++t)
+            {
+                const FVizSize a = triangles[t * 3u + 0u];
+                const FVizSize b = triangles[t * 3u + 1u];
+                const FVizSize c = triangles[t * 3u + 2u];
+                double ax, ay, bx, by, cx, cy;
+                double dax, day, dbx, dby, ddenom, du, dv;
+                if (a < 3u) { ax = (double)super[a].x; ay = (double)super[a].y; }
+                else { ax = (double)points[a - 3u].x; ay = (double)points[a - 3u].y; }
+                if (b < 3u) { bx = (double)super[b].x; by = (double)super[b].y; }
+                else { bx = (double)points[b - 3u].x; by = (double)points[b - 3u].y; }
+                if (c < 3u) { cx = (double)super[c].x; cy = (double)super[c].y; }
+                else { cx = (double)points[c - 3u].x; cy = (double)points[c - 3u].y; }
+                /* Circumcenter of (a,b,c) relative to p. */
+                dax = ax - px; day = ay - py;
+                dbx = bx - px; dby = by - py;
+                ddenom = 2.0 * (dax * dby - day * dbx);
+                if (fabs(ddenom) < 1.0e-14) continue;
+                du = (dax * dax + day * day) * dby - (dbx * dbx + dby * dby) * day;
+                dv = (dbx * dbx + dby * dby) * dax - (dax * dax + day * day) * dbx;
+                du /= ddenom;
+                dv /= ddenom;
+                /* Circumradius^2 from vertex a to the center (du,dv) relative to p. */
+                {
+                    double radius_squared = (dax - du) * (dax - du) + (day - dv) * (day - dv);
+                    const double dist_squared = du * du + dv * dv;
+                    if (dist_squared <= radius_squared + 1.0e-9) /* p inside or on circumcircle */
+                    {
+                        if (bad_count + 3u > bad_capacity)
+                        {
+                            bad_capacity *= 2u;
+                            {
+                                FVizSize* grown = (FVizSize*)fviz_realloc(bad, bad_capacity * 3u * sizeof(*grown));
+                                if (grown == NULL) { fviz_free(bad); fviz_free(edge_seen); fviz_free(triangles); fviz_release(output); return fviz_last_error_code(); }
+                                bad = grown;
+                            }
+                        }
+                        bad[bad_count * 3u + 0u] = a;
+                        bad[bad_count * 3u + 1u] = b;
+                        bad[bad_count * 3u + 2u] = c;
+                        ++bad_count;
+                    }
+                }
+            }
+            /* Collect boundary edges of the union of bad triangles. */
+            for (t = 0u; t < bad_count; ++t)
+            {
+                const FVizSize edges[3][2] = {
+                    {bad[t * 3u + 0u], bad[t * 3u + 1u]},
+                    {bad[t * 3u + 1u], bad[t * 3u + 2u]},
+                    {bad[t * 3u + 2u], bad[t * 3u + 0u]}};
+                FVizSize ed;
+                for (ed = 0u; ed < 3u; ++ed)
+                {
+                    FVizSize p = edges[ed][0], q = edges[ed][1];
+                    FVizBool shared = FVIZ_FALSE;
+                    FVizSize tt;
+                    if (p > q) { const FVizSize tmp = p; p = q; q = tmp; }
+                    for (tt = 0u; tt < bad_count && shared == FVIZ_FALSE; ++tt)
+                    {
+                        if (tt == t) continue;
+                        if ((bad[tt * 3u + 0u] == p && bad[tt * 3u + 1u] == q) ||
+                            (bad[tt * 3u + 1u] == p && bad[tt * 3u + 2u] == q) ||
+                            (bad[tt * 3u + 2u] == p && bad[tt * 3u + 0u] == q))
+                            shared = FVIZ_TRUE;
+                    }
+                    if (shared == FVIZ_FALSE)
+                    {
+                        if (edge_count + 2u > edge_capacity)
+                        {
+                            edge_capacity *= 2u;
+                            {
+                                FVizSize* grown = (FVizSize*)fviz_realloc(edge_seen, edge_capacity * 2u * sizeof(*grown));
+                                if (grown == NULL) { fviz_free(bad); fviz_free(edge_seen); fviz_free(triangles); fviz_release(output); return fviz_last_error_code(); }
+                                edge_seen = grown;
+                            }
+                        }
+                        edge_seen[edge_count * 2u + 0u] = p;
+                        edge_seen[edge_count * 2u + 1u] = q;
+                        ++edge_count;
+                    }
+                }
+            }
+            /* Remove bad triangles and add new ones. */
+            {
+                FVizSize write = 0u;
+                FVizSize read;
+                for (read = 0u; read < triangle_count; ++read)
+                {
+                    FVizBool is_bad = FVIZ_FALSE;
+                    FVizSize tt;
+                    for (tt = 0u; tt < bad_count; ++tt)
+                        if (triangles[read * 3u] == bad[tt * 3u] && triangles[read * 3u + 1u] == bad[tt * 3u + 1u] &&
+                            triangles[read * 3u + 2u] == bad[tt * 3u + 2u])
+                            is_bad = FVIZ_TRUE;
+                    if (is_bad == FVIZ_FALSE)
+                    {
+                        triangles[write * 3u] = triangles[read * 3u];
+                        triangles[write * 3u + 1u] = triangles[read * 3u + 1u];
+                        triangles[write * 3u + 2u] = triangles[read * 3u + 2u];
+                        ++write;
+                    }
+                }
+                triangle_count = write;
+            }
+            for (e = 0u; e < edge_count; ++e)
+            {
+                if (triangle_count + 1u > triangle_capacity)
+                {
+                    triangle_capacity *= 2u;
+                    {
+                        FVizSize* grown = (FVizSize*)fviz_realloc(triangles, triangle_capacity * 3u * sizeof(*grown));
+                        if (grown == NULL) { fviz_free(bad); fviz_free(edge_seen); fviz_free(triangles); fviz_release(output); return fviz_last_error_code(); }
+                        triangles = grown;
+                    }
+                }
+                triangles[triangle_count * 3u + 0u] = edge_seen[e * 2u + 0u];
+                triangles[triangle_count * 3u + 1u] = edge_seen[e * 2u + 1u];
+                triangles[triangle_count * 3u + 2u] = 3u + i;
+                ++triangle_count;
+            }
+            fviz_free(bad);
+            fviz_free(edge_seen);
+        }
+        /* Build output: copy input points (preserving z), emit triangles that
+         * do not touch a super-triangle corner. */
+        if (fviz_poly_data_create(&output) != FVIZ_OK ||
+            fviz_poly_data_add_points(output, points, point_count, NULL) != FVIZ_OK) goto fail;
+        {
+            FVizSize t;
+            for (t = 0u; t < triangle_count; ++t)
+            {
+                const FVizSize a = triangles[t * 3u + 0u];
+                const FVizSize b = triangles[t * 3u + 1u];
+                const FVizSize c = triangles[t * 3u + 2u];
+                if (a < 3u || b < 3u || c < 3u) continue;
+                if (a - 3u > UINT32_MAX || b - 3u > UINT32_MAX || c - 3u > UINT32_MAX) continue;
+                if (fviz_poly_data_add_triangle(output, (uint32_t)(a - 3u), (uint32_t)(b - 3u), (uint32_t)(c - 3u)) != FVIZ_OK) goto fail;
+            }
+        }
+        if (fviz_poly_data_validate(output) != FVIZ_OK) goto fail;
+        fviz_free(triangles);
+    }
+    *out_triangulation = output;
+    return FVIZ_OK;
+fail:
+    fviz_release(output);
+    return fviz_last_error_code();
+}
+
+FVizResult fviz_poly_data_glyph_3d(
+    const FVizPolyData* input,
+    const char* scale_array_name,
+    const char* orientation_array_name,
+    double scale_factor,
+    FVizPolyData** out_glyphs)
+{
+    const FVizVec3* points;
+    const FVizDataArray* scale_array = NULL;
+    const FVizDataArray* orientation_array = NULL;
+    FVizSize point_count;
+    FVizSize i;
+    FVizPolyData* output = NULL;
+    if (out_glyphs != NULL) *out_glyphs = NULL;
+    if (input == NULL || out_glyphs == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    point_count = fviz_poly_data_point_count(input);
+    points = fviz_poly_data_points(input);
+    if (scale_array_name != NULL && scale_array_name[0] != '\0')
+        scale_array = fviz_attribute_set_const_get(fviz_poly_data_const_point_data(input), scale_array_name);
+    if (orientation_array_name != NULL && orientation_array_name[0] != '\0')
+        orientation_array = fviz_attribute_set_const_get(fviz_poly_data_const_point_data(input), orientation_array_name);
+    if (fviz_poly_data_create(&output) != FVIZ_OK) return fviz_last_error_code();
+    for (i = 0u; i < point_count; ++i)
+    {
+        FVizVec3 direction = fviz_vec3(1.0f, 0.0f, 0.0f);
+        double scale = 1.0;
+        FVizVec3 tip;
+        FVizVec3 base;
+        uint32_t p0 = 0u, p1 = 0u;
+        if (scale_array != NULL && i < fviz_data_array_tuple_count(scale_array))
+        {
+            double s = 0.0;
+            (void)fviz_data_array_get_component(scale_array, i, 0u, &s);
+            scale = s;
+        }
+        scale *= scale_factor;
+        if (orientation_array != NULL && i < fviz_data_array_tuple_count(orientation_array))
+        {
+            double vx = 0.0, vy = 0.0, vz = 0.0;
+            (void)fviz_data_array_get_component(orientation_array, i, 0u, &vx);
+            (void)fviz_data_array_get_component(orientation_array, i, 1u, &vy);
+            (void)fviz_data_array_get_component(orientation_array, i, 2u, &vz);
+            direction = fviz_vec3_normalize(fviz_vec3((float)vx, (float)vy, (float)vz));
+        }
+        if (scale < 0.0) scale = 0.0;
+        base = points[i];
+        tip = fviz_vec3_add(base, fviz_vec3_scale(direction, (float)scale));
+        if (fviz_poly_data_add_point(output, base, &p0) != FVIZ_OK ||
+            fviz_poly_data_add_point(output, tip, &p1) != FVIZ_OK ||
+            fviz_poly_data_add_line(output, p0, p1) != FVIZ_OK) goto fail;
+    }
+    if (fviz_poly_data_validate(output) != FVIZ_OK) goto fail;
+    *out_glyphs = output;
+    return FVIZ_OK;
+fail:
+    fviz_release(output);
+    return fviz_last_error_code();
 }

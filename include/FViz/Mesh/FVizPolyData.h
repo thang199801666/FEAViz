@@ -102,6 +102,33 @@ FVIZ_API const FVizAttributeSet* fviz_poly_data_const_cell_data(const FVizPolyDa
 FVIZ_API FVizAttributeSet* fviz_poly_data_field_data(FVizPolyData* poly_data);
 FVIZ_API const FVizAttributeSet* fviz_poly_data_const_field_data(const FVizPolyData* poly_data);
 
+/* Extracts every cell edge of a PolyData as line cells (vtkExtractEdges
+ * compatible). Shared/manifold interior edges are emitted once. */
+FVIZ_API FVizResult fviz_poly_data_extract_edges(
+    const FVizPolyData* input,
+    FVizPolyData** out_edges);
+
+/* 2D Delaunay triangulation of the input points (vtkDelaunay2D compatible).
+ * Points are projected to the XY plane (z is carried through as elevation);
+ * the output is a triangulated PolyData. At least 3 non-collinear points are
+ * required. */
+FVIZ_API FVizResult fviz_poly_data_delaunay_2d(
+    const FVizPolyData* input,
+    FVizPolyData** out_triangulation);
+
+/* Materializes glyphs at the input points (vtkGlyph3D compatible). For each
+ * point the scalar/vector field drives scale and orientation. When a 3-D
+ * vector array is supplied each glyph is an arrow oriented along the vector
+ * and scaled by its magnitude * scale_factor; otherwise a fixed-direction
+ * arrow scaled by a scalar array (or uniformly) is emitted. Output geometry is
+ * a PolyData of lines (arrows) suitable for rendering or further processing. */
+FVIZ_API FVizResult fviz_poly_data_glyph_3d(
+    const FVizPolyData* input,
+    const char* scale_array_name,
+    const char* orientation_array_name,
+    double scale_factor,
+    FVizPolyData** out_glyphs);
+
 FVIZ_EXTERN_C_END
 
 #endif /* FVIZ_MESH_POLY_DATA_H */

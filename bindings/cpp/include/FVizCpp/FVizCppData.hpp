@@ -28,6 +28,10 @@
 
 namespace fviz {
 
+// PolyData is defined later in this header; UnstructuredGrid methods that
+// return it need the forward declaration.
+class PolyData;
+
 // ---------------------------------------------------------------------------
 // DataArray
 // ---------------------------------------------------------------------------
@@ -286,6 +290,30 @@ public:
         detail::checkResult(fviz_unstructured_grid_gradient(ptr_, scalar_array_name.c_str(), output_name.c_str(), &result));
         return UnstructuredGrid(result);
     }
+
+    // Per-cell derivatives (vtkCellDerivatives compatible): stores a 3*N
+    // gradient per cell in cell data.
+    UnstructuredGrid cellDerivatives(const std::string& scalar_array_name, const std::string& output_name) const
+    {
+        FVizUnstructuredGrid* result = nullptr;
+        detail::checkResult(fviz_unstructured_grid_cell_derivatives(ptr_, scalar_array_name.c_str(), output_name.c_str(), &result));
+        return UnstructuredGrid(result);
+    }
+
+    // Warps points by a scalar field (vtkWarpScalar compatible).
+    UnstructuredGrid warpScalar(const std::string& scalar_array_name, double scale,
+        const std::string& normal_array_name = "") const
+    {
+        FVizUnstructuredGrid* result = nullptr;
+        detail::checkResult(fviz_unstructured_grid_warp_scalar(ptr_, scalar_array_name.c_str(), scale,
+            normal_array_name.empty() ? nullptr : normal_array_name.c_str(), &result));
+        return UnstructuredGrid(result);
+    }
+
+    // Integrates streamlines (vtkStreamTracer compatible). Returns a PolyData
+    // of polylines. Defined after PolyData below.
+    PolyData streamTracer(const std::string& vector_array_name,
+        const std::vector<Vec3>& seed_points, double step_length, FVizSize max_steps) const;
 };
 
 // ---------------------------------------------------------------------------
@@ -354,6 +382,34 @@ public:
     {
         FVizAttributeSet* set = ptr_ != nullptr ? fviz_poly_data_cell_data(ptr_) : nullptr;
         return AttributeSet(set != nullptr ? static_cast<FVizAttributeSet*>(fviz_retain(set)) : nullptr);
+    }
+
+    // Extracts all cell edges as line cells (vtkExtractEdges compatible).
+    PolyData extractEdges() const
+    {
+        FVizPolyData* edges = nullptr;
+        detail::checkResult(fviz_poly_data_extract_edges(ptr_, &edges));
+        return PolyData(edges);
+    }
+
+    // 2D Delaunay triangulation of the points (vtkDelaunay2D compatible).
+    PolyData delaunay2D() const
+    {
+        FVizPolyData* tris = nullptr;
+        detail::checkResult(fviz_poly_data_delaunay_2d(ptr_, &tris));
+        return PolyData(tris);
+    }
+
+    // Materializes glyphs at the points (vtkGlyph3D compatible).
+    PolyData glyph3D(const std::string& scale_array_name = "",
+        const std::string& orientation_array_name = "", double scale_factor = 1.0) const
+    {
+        FVizPolyData* glyphs = nullptr;
+        detail::checkResult(fviz_poly_data_glyph_3d(ptr_,
+            scale_array_name.empty() ? nullptr : scale_array_name.c_str(),
+            orientation_array_name.empty() ? nullptr : orientation_array_name.c_str(),
+            scale_factor, &glyphs));
+        return PolyData(glyphs);
     }
 
     void clear() noexcept
@@ -560,6 +616,19 @@ public:
     void validate() { detail::checkResult(fviz_rectilinear_grid_validate(ptr_)); }
     void clear() noexcept { if (ptr_) fviz_rectilinear_grid_clear(ptr_); }
 };
+
+// Defined here so PolyData is complete.
+inline PolyData UnstructuredGrid::streamTracer(const std::string& vector_array_name,
+    const std::vector<Vec3>& seed_points, double step_length, FVizSize max_steps) const
+{
+    FVizPolyData* lines = nullptr;
+    std::vector<FVizVec3> raw_seeds;
+    raw_seeds.reserve(seed_points.size());
+    for (const Vec3& p : seed_points) raw_seeds.push_back(p);
+    detail::checkResult(fviz_unstructured_grid_stream_tracer(ptr_, vector_array_name.c_str(),
+        raw_seeds.data(), raw_seeds.size(), step_length, max_steps, &lines));
+    return PolyData(lines);
+}
 
 } // namespace fviz
 

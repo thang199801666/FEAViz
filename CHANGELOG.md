@@ -139,6 +139,28 @@
 - Added `FVizTestUnstructuredGridGradient` (`FViz.Data.UnstructuredGridGradient`)
   covering exact gradients of linear scalar and vector fields plus error cases,
   and a matching case in `FViz.Cpp.Binding`.
+- Added six VTK-class filters with C++ wrappers:
+  - `fviz_unstructured_grid_cell_derivatives()` — per-cell gradient via a
+    least-squares fit over each cell's own points (vtkCellDerivatives
+    compatible); exact for linear fields on affine cells.
+  - `fviz_unstructured_grid_warp_scalar()` — warps points along +Z or point
+    normals by a scalar field (vtkWarpScalar compatible); builds a fresh grid
+    so the source is never mutated.
+  - `fviz_unstructured_grid_stream_tracer()` — integrates streamlines from seed
+    points through a 3-component vector field using RK2 steps and the point
+    locator for interpolation (vtkStreamTracer compatible).
+  - `fviz_poly_data_extract_edges()` — extracts every cell edge as deduplicated
+    line cells (vtkExtractEdges compatible).
+  - `fviz_poly_data_delaunay_2d()` — 2D Bowyer-Watson Delaunay triangulation
+    (vtkDelaunay2D compatible).
+  - `fviz_poly_data_glyph_3d()` — materializes arrow glyphs oriented by a
+    vector field and scaled by magnitude * factor (vtkGlyph3D compatible).
+  - C++ wrappers `UnstructuredGrid::cellDerivatives / warpScalar /
+    streamTracer` and `PolyData::extractEdges / delaunay2D / glyph3D`.
+- Added `FVizTestVTKFilters` (`FViz.Algorithms.VTKFilters`) covering all six
+  filters (exact cell derivatives, warp geometry, edge dedup, Delaunay
+  validity, glyph line counts, streamline output), plus a matching case in
+  `FViz.Cpp.Binding`.
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 

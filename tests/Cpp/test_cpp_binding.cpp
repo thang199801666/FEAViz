@@ -373,6 +373,95 @@ static int test_gradient_cpp()
     return 0;
 }
 
+static int test_vtk_filters_cpp()
+{
+    // Hex beam grid with a linear scalar + a vector field.
+    UnstructuredGrid grid = UnstructuredGrid::create();
+    const uint32_t nx = 2u, ny = 2u, nz = 2u;
+    for (uint32_t z = 0u; z <= nz; ++z)
+        for (uint32_t y = 0u; y <= ny; ++y)
+            for (uint32_t x = 0u; x <= nx; ++x)
+                grid.addPoint(Vec3((float)x, (float)y, (float)z));
+    const auto pid = [&](uint32_t x, uint32_t y, uint32_t z) { return x + (nx + 1u) * (y + (ny + 1u) * z); };
+    for (uint32_t z = 0u; z < nz; ++z)
+        for (uint32_t y = 0u; y < ny; ++y)
+            for (uint32_t x = 0u; x < nx; ++x)
+            {
+                const uint32_t ids[8] = {
+                    pid(x, y, z), pid(x + 1u, y, z), pid(x + 1u, y + 1u, z), pid(x, y + 1u, z),
+                    pid(x, y, z + 1u), pid(x + 1u, y, z + 1u), pid(x + 1u, y + 1u, z + 1u), pid(x, y + 1u, z + 1u)};
+                grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, ids);
+            }
+    DataArray phi = DataArray::createFloat64();
+    phi.resize(grid.pointCount());
+    DataArray v = DataArray::createFloat64(3u);
+    v.resize(grid.pointCount());
+    {
+        const FVizVec3* p = fviz_points_data(fviz_unstructured_grid_points(grid.get()));
+        for (FVizSize i = 0u; i < grid.pointCount(); ++i)
+        {
+            phi.setComponent(i, 0u, 2.0 * p[i].x + 3.0 * p[i].y - (double)p[i].z + 5.0);
+            const double tuple[3] = {p[i].y, p[i].z, p[i].x};
+            v.setTuple(i, tuple);
+        }
+    }
+    grid.pointData().add("phi", phi.get());
+    grid.pointData().add("v", v.get());
+
+    // Cell derivatives exact for the linear field.
+    UnstructuredGrid derivs = grid.cellDerivatives("phi", "dphi");
+    CHECK(derivs.get() != nullptr);
+    DataArray dphi = derivs.cellData().get("dphi");
+    CHECK(dphi.get() != nullptr);
+    CHECK(std::fabs(dphi.component(0u, 0u) - 2.0) < 1.0e-6);
+    CHECK(std::fabs(dphi.component(0u, 1u) - 3.0) < 1.0e-6);
+
+    // Warp scalar along +Z.
+    UnstructuredGrid warped = grid.warpScalar("phi", 0.1);
+    CHECK(warped.get() != nullptr);
+    {
+        const FVizVec3* pw = fviz_points_data(fviz_unstructured_grid_points(warped.get()));
+        CHECK(std::fabs((double)pw[0].z - 0.5) < 1.0e-6);
+    }
+
+    // Stream tracer.
+    std::vector<Vec3> seeds = {Vec3(1.0f, 0.0f, 0.0f)};
+    PolyData streamlines = grid.streamTracer("v", seeds, 0.1, 20);
+    CHECK(streamlines.lineCount() > 0u);
+
+    // PolyData filters: edges, delaunay, glyphs.
+    PolyData quad = PolyData::create();
+    quad.addPoint(Vec3(0, 0, 0));
+    quad.addPoint(Vec3(1, 0, 0));
+    quad.addPoint(Vec3(1, 1, 0));
+    quad.addPoint(Vec3(0, 1, 0));
+    quad.addTriangle(0u, 1u, 2u);
+    quad.addTriangle(0u, 2u, 3u);
+    PolyData edges = quad.extractEdges();
+    CHECK(edges.lineCount() == 5u);
+
+    PolyData pts = PolyData::create();
+    for (int i = 0; i < 6; ++i)
+        pts.addPoint(Vec3((float)(i % 3), (float)(i / 3), 0.0f));
+    PolyData tris = pts.delaunay2D();
+    CHECK(tris.triangleCount() >= 4u);
+
+    PolyData glyphInput = PolyData::create();
+    glyphInput.addPoint(Vec3(0, 0, 0));
+    glyphInput.addPoint(Vec3(1, 0, 0));
+    DataArray gv = DataArray::createFloat64(3u);
+    gv.resize(2u);
+    const double g0[3] = {1, 0, 0};
+    const double g1[3] = {0, 1, 0};
+    gv.setTuple(0u, g0);
+    gv.setTuple(1u, g1);
+    glyphInput.pointData().add("gv", gv.get());
+    PolyData glyphs = glyphInput.glyph3D("", "gv", 1.0);
+    CHECK(glyphs.lineCount() == 2u);
+
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -384,6 +473,7 @@ int main(void)
     if ((result = test_rendering_objects()) != 0) { std::printf("test_rendering_objects failed at line %d\n", result); return result; }
     if ((result = test_cell_types_vtk()) != 0) { std::printf("test_cell_types_vtk failed at line %d\n", result); return result; }
     if ((result = test_gradient_cpp()) != 0) { std::printf("test_gradient_cpp failed at line %d\n", result); return result; }
+    if ((result = test_vtk_filters_cpp()) != 0) { std::printf("test_vtk_filters_cpp failed at line %d\n", result); return result; }
     std::printf("FVizCpp binding tests passed\n");
     return 0;
 }
