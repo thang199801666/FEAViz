@@ -142,6 +142,15 @@ public:
         return DataArray(array != nullptr ? static_cast<FVizDataArray*>(fviz_retain(array)) : nullptr);
     }
 
+    // Retained const lookup by name.
+    DataArray constGet(const char* name) const
+    {
+        FVizDataArray* array = ptr_ != nullptr
+            ? const_cast<FVizDataArray*>(fviz_attribute_set_const_get(ptr_, name))
+            : nullptr;
+        return DataArray(array != nullptr ? static_cast<FVizDataArray*>(fviz_retain(array)) : nullptr);
+    }
+
     bool has(const char* name) const noexcept { return get(name).get() != nullptr; }
 
     void add(const char* name, FVizDataArray* array)
@@ -284,6 +293,33 @@ public:
         FVizAttributeSet* set = ptr_ != nullptr ? fviz_unstructured_grid_field_data(ptr_) : nullptr;
         return AttributeSet(set != nullptr ? static_cast<FVizAttributeSet*>(fviz_retain(set)) : nullptr);
     }
+
+    // Retained view of the grid points.
+    Points points() const
+    {
+        FVizPoints* pts = ptr_ != nullptr ? fviz_unstructured_grid_points(ptr_) : nullptr;
+        return Points(pts != nullptr ? static_cast<FVizPoints*>(fviz_retain(pts)) : nullptr);
+    }
+
+    // Smoothes cell data onto points (vtkCellDataToPointData compatible).
+    UnstructuredGrid cellDataToPointData() const
+    {
+        FVizUnstructuredGrid* result = nullptr;
+        detail::checkResult(fviz_unstructured_grid_cell_data_to_point_data(ptr_, &result));
+        return UnstructuredGrid(result);
+    }
+
+    // Warps points by a vector field (vtkWarpVector compatible).
+    UnstructuredGrid warpByVector(const std::string& vector_array_name, double scale_factor) const
+    {
+        FVizUnstructuredGrid* result = nullptr;
+        detail::checkResult(fviz_unstructured_grid_warp_by_vector(ptr_, vector_array_name.c_str(),
+            scale_factor, &result));
+        return UnstructuredGrid(result);
+    }
+
+    // Extracts the boundary geometry (vtkDataSetSurfaceFilter compatible).
+    PolyData extractGeometry() const;
 
     Bounds bounds() const noexcept { return ptr_ != nullptr ? Bounds(fviz_unstructured_grid_bounds(ptr_)) : Bounds(); }
 
@@ -673,6 +709,13 @@ inline PolyData UnstructuredGrid::extractSurface() const
     FVizPolyData* surface = nullptr;
     detail::checkResult(fviz_unstructured_grid_extract_surface(ptr_, &surface));
     return PolyData(surface);
+}
+
+inline PolyData UnstructuredGrid::extractGeometry() const
+{
+    FVizPolyData* geometry = nullptr;
+    detail::checkResult(fviz_unstructured_grid_extract_geometry(ptr_, &geometry));
+    return PolyData(geometry);
 }
 
 } // namespace fviz

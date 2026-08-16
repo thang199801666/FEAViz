@@ -30,7 +30,9 @@
 namespace fviz {
 
 class RenderWindowInteractor;
+class RenderWindow;
 class TextActor2D;
+class ScalarLegend;
 
 // ---------------------------------------------------------------------------
 // Camera
@@ -206,6 +208,15 @@ public:
         selection.component = component;
         detail::checkResult(fviz_mapper_set_array_selection(ptr_, &selection));
     }
+
+    // Reads back the current array selection. Returns false when the mapper has
+    // no live selection.
+    bool getArraySelection(FVizArraySelection& selection) const noexcept
+    {
+        if (!ptr_) return false;
+        fviz_array_selection_initialize(&selection);
+        return fviz_mapper_get_array_selection(ptr_, &selection) == FVIZ_OK;
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -350,6 +361,19 @@ public:
     Quat orientation() const noexcept { return ptr_ ? Quat(fviz_actor_orientation(ptr_)) : Quat(); }
     void setScale(Vec3 scale) noexcept { if (ptr_) fviz_actor_set_scale(ptr_, scale); }
     Vec3 scale() const noexcept { return ptr_ ? Vec3(fviz_actor_scale(ptr_)) : Vec3(); }
+
+    void setUserTransform(Transform& transform) { detail::checkResult(fviz_actor_set_user_transform(ptr_, transform.get())); }
+    Transform userTransform() const
+    {
+        FVizTransform* transform = ptr_ ? fviz_actor_user_transform(ptr_) : nullptr;
+        return Transform(transform != nullptr ? static_cast<FVizTransform*>(fviz_retain(transform)) : nullptr);
+    }
+    PolyData constPolyData() const
+    {
+        FVizPolyData* data = ptr_ ? const_cast<FVizPolyData*>(fviz_actor_const_poly_data(ptr_)) : nullptr;
+        return PolyData(data != nullptr ? static_cast<FVizPolyData*>(fviz_retain(data)) : nullptr);
+    }
+    float lineDepthBias() const noexcept { return ptr_ ? fviz_actor_line_depth_bias(ptr_) : 0.0f; }
 };
 
 // ---------------------------------------------------------------------------
@@ -443,6 +467,10 @@ public:
     // Defined after TextActor2D below.
     void addTextActor2D(TextActor2D& actor);
     void removeTextActor2D(TextActor2D& actor);
+
+    // Defined after ScalarLegend below.
+    void setScalarLegend(ScalarLegend& legend) noexcept;
+    ScalarLegend scalarLegend() const;
     void removeAllTextActors2D() noexcept { if (ptr_) fviz_renderer_remove_all_text_actors_2d(ptr_); }
 };
 
@@ -466,6 +494,12 @@ public:
     void setRange(float minimum, float maximum) noexcept { if (ptr_) fviz_scalar_legend_set_range(ptr_, minimum, maximum); }
     void getRange(float& minimum, float& maximum) const noexcept { if (ptr_) fviz_scalar_legend_get_range(ptr_, &minimum, &maximum); }
     void setPosition(FVizLegendPosition position) noexcept { if (ptr_) fviz_scalar_legend_set_position(ptr_, position); }
+    FVizLegendPosition position() const noexcept { return ptr_ ? fviz_scalar_legend_position(ptr_) : FVIZ_LEGEND_BOTTOM_LEFT; }
+    void setViewportPadding(float x, float y) noexcept { if (ptr_) fviz_scalar_legend_set_viewport_padding(ptr_, x, y); }
+    void getViewportPadding(float& x, float& y) const noexcept
+    {
+        if (ptr_) fviz_scalar_legend_get_viewport_padding(ptr_, &x, &y);
+    }
     void setVisible(bool visible) noexcept { if (ptr_) fviz_scalar_legend_set_visible(ptr_, visible ? detail::fbool(true) : detail::fbool(false)); }
     bool isVisible() const noexcept { return ptr_ ? fviz_scalar_legend_is_visible(ptr_) != FVIZ_FALSE : false; }
     void setTitle(const char* title) noexcept { if (ptr_) fviz_scalar_legend_set_title(ptr_, title); }
@@ -479,6 +513,17 @@ public:
     }
     void setDiscrete(bool discrete) noexcept { if (ptr_) fviz_scalar_legend_set_discrete(ptr_, discrete ? detail::fbool(true) : detail::fbool(false)); }
 };
+
+// Defined here so ScalarLegend is complete.
+inline void Renderer::setScalarLegend(ScalarLegend& legend) noexcept
+{
+    if (ptr_) fviz_renderer_set_scalar_legend(ptr_, legend.get());
+}
+inline ScalarLegend Renderer::scalarLegend() const
+{
+    FVizScalarLegend* legend = ptr_ ? fviz_renderer_scalar_legend(ptr_) : nullptr;
+    return ScalarLegend(legend != nullptr ? static_cast<FVizScalarLegend*>(fviz_retain(legend)) : nullptr);
+}
 
 // ---------------------------------------------------------------------------
 // RendererWidget - native window hosting a renderer.
@@ -514,6 +559,21 @@ public:
     void resize(int width, int height) { detail::checkResult(fviz_renderer_widget_resize(ptr_, width, height)); }
     void syncHostSize() { detail::checkResult(fviz_renderer_widget_sync_host_size(ptr_)); }
     void addActor(Actor& actor) { detail::checkResult(fviz_renderer_widget_add_actor(ptr_, actor.get())); }
+
+    // Returns a retained RenderWindow; defined after the RenderWindow class.
+    RenderWindow window() const;
+    RenderWindowInteractor interactor() const;
+
+    void addObserver(FVizInteractionEventType event_type, int priority,
+        FVizInteractorEventCallbackFn callback, void* user_data, FVizObserverId& out_id)
+    {
+        detail::checkResult(fviz_renderer_widget_add_observer(ptr_, event_type, priority,
+            callback, user_data, &out_id));
+    }
+    void removeObserver(FVizObserverId observer_id) noexcept
+    {
+        if (ptr_) (void)fviz_renderer_widget_remove_observer(ptr_, observer_id);
+    }
 
     void* nativeHandle() const noexcept { return ptr_ ? fviz_renderer_widget_native_handle(ptr_) : nullptr; }
     void* hostNativeHandle() const noexcept { return ptr_ ? fviz_renderer_widget_host_native_handle(ptr_) : nullptr; }
@@ -688,6 +748,11 @@ public:
     void requestClose() noexcept { if (ptr_) fviz_render_window_request_close(ptr_); }
     void run() { detail::checkResult(fviz_render_window_run(ptr_)); }
     void setFxaa(bool enabled) noexcept { if (ptr_) fviz_render_window_set_fxaa(ptr_, detail::fbool(enabled)); }
+    bool fxaa() const noexcept { return ptr_ ? fviz_render_window_fxaa(ptr_) != FVIZ_FALSE : false; }
+    void getStatistics(FVizRenderStatistics& out_statistics) const noexcept
+    {
+        if (ptr_) fviz_render_window_get_statistics(ptr_, &out_statistics);
+    }
     void readRgba8(uint8_t* rgba, FVizSize byte_count) { detail::checkResult(fviz_render_window_read_rgba8(ptr_, rgba, byte_count)); }
     FVizRenderWindowState state() const noexcept { return ptr_ ? fviz_render_window_state(ptr_) : FVIZ_RENDER_WINDOW_CREATED; }
     uint32_t dpi() const noexcept { return ptr_ ? fviz_render_window_dpi(ptr_) : 96u; }
@@ -697,6 +762,15 @@ public:
     // type there). Returns a retained interactor wrapper.
     RenderWindowInteractor interactor() const;
 };
+
+// Defined here so RenderWindow is complete. Returns a retained view of the
+// widget's native render window.
+inline RenderWindow RendererWidget::window() const
+{
+    FVizRenderWindow* raw = ptr_ != nullptr ? fviz_renderer_widget_window(ptr_) : nullptr;
+    if (raw == nullptr) return RenderWindow();
+    return RenderWindow(static_cast<FVizRenderWindow*>(fviz_retain(raw)));
+}
 
 } // namespace fviz
 

@@ -349,6 +349,12 @@ public:
         FVizScalarLegend* legend = ptr_ ? fviz_fea_scalar_bar_actor_legend(ptr_) : nullptr;
         return ScalarLegend(legend != nullptr ? static_cast<FVizScalarLegend*>(fviz_retain(legend)) : nullptr);
     }
+
+    // Reapplies full presentation options (label format, padding, fonts, etc.).
+    void apply(const FVizFEAScalarBarOptions& options)
+    {
+        detail::checkResult(fviz_fea_scalar_bar_actor_apply(ptr_, &options));
+    }
 };
 
 // ---------------------------------------------------------------------------

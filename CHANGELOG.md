@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Extended the C++ binding with the object hooks used by native viewers:
+  `Mapper::getArraySelection`, `Renderer::setScalarLegend`/`scalarLegend` and
+  text-actor 2D add/remove, `ScalarLegend::getViewportPadding`/`position`/
+  `setViewportPadding`, `RendererWidget::window`/`interactor`/`addObserver`/
+  `removeObserver`, `RenderWindow::getStatistics`/`fxaa`, `UnstructuredGrid`
+  `points`/`cellDataToPointData`/`warpByVector`/`extractGeometry`,
+  `DataArray::range`/`setTuple`, `AttributeSet::constGet`/`setActive`/`active`,
+  `Actor::setUserTransform`/`userTransform`/`constPolyData`/`lineDepthBias`,
+  and `fea::ScalarBarActor::apply`.
 - Added an interactive C++ feature-test GUI (`examples/35_FeatureTestGUI`,
   `FVizExampleFeatureTestGUI`) driven entirely through the header-only C++
   binding. It hosts four switchable modes (keys 1-4): GPU ray-cast volume

@@ -205,6 +205,15 @@ inline RenderWindowInteractor RenderWindow::interactor() const
     return RenderWindowInteractor(static_cast<FVizRenderWindowInteractor*>(fviz_retain(raw)));
 }
 
+// Defined here so RenderWindowInteractor is complete. Returns a retained view
+// of the widget's interactor.
+inline RenderWindowInteractor RendererWidget::interactor() const
+{
+    FVizRenderWindowInteractor* raw = ptr_ != nullptr ? fviz_renderer_widget_interactor(ptr_) : nullptr;
+    if (raw == nullptr) return RenderWindowInteractor();
+    return RenderWindowInteractor(static_cast<FVizRenderWindowInteractor*>(fviz_retain(raw)));
+}
+
 } // namespace fviz
 
 #endif // FVIZ_CPP_INTERACTION_HPP
