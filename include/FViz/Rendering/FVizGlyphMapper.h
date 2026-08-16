@@ -34,31 +34,31 @@ typedef struct FVizVectorGlyphOptions
     float opacity;
 } FVizVectorGlyphOptions;
 
-FVIZ_API void fviz_glyph_instance_initialize(FVizGlyphInstance* instance);
-FVIZ_API void fviz_vector_glyph_options_initialize(FVizVectorGlyphOptions* options);
-FVIZ_API FVizResult fviz_glyph_mapper_create(FVizGlyphMapper** out_mapper);
-FVIZ_API FVizResult fviz_glyph_mapper_set_source_poly_data(FVizGlyphMapper* mapper, FVizPolyData* source);
-FVIZ_API FVizPolyData* fviz_glyph_mapper_source_poly_data(FVizGlyphMapper* mapper);
-FVIZ_API const FVizPolyData* fviz_glyph_mapper_const_source_poly_data(const FVizGlyphMapper* mapper);
-FVIZ_API FVizResult fviz_glyph_mapper_reserve_instances(FVizGlyphMapper* mapper, FVizSize capacity);
-FVIZ_API FVizResult fviz_glyph_mapper_add_instance(FVizGlyphMapper* mapper, const FVizGlyphInstance* instance);
-FVIZ_API FVizResult fviz_glyph_mapper_add_instances(FVizGlyphMapper* mapper, const FVizGlyphInstance* instances,
+FVIZ_RENDERING_API void fviz_glyph_instance_initialize(FVizGlyphInstance* instance);
+FVIZ_RENDERING_API void fviz_vector_glyph_options_initialize(FVizVectorGlyphOptions* options);
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_create(FVizGlyphMapper** out_mapper);
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_set_source_poly_data(FVizGlyphMapper* mapper, FVizPolyData* source);
+FVIZ_RENDERING_API FVizPolyData* fviz_glyph_mapper_source_poly_data(FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API const FVizPolyData* fviz_glyph_mapper_const_source_poly_data(const FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_reserve_instances(FVizGlyphMapper* mapper, FVizSize capacity);
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_add_instance(FVizGlyphMapper* mapper, const FVizGlyphInstance* instance);
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_add_instances(FVizGlyphMapper* mapper, const FVizGlyphInstance* instances,
                                                     FVizSize count);
-FVIZ_API FVizResult fviz_glyph_mapper_set_instance(FVizGlyphMapper* mapper, FVizSize index,
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_set_instance(FVizGlyphMapper* mapper, FVizSize index,
                                                    const FVizGlyphInstance* instance);
-FVIZ_API FVizResult fviz_glyph_mapper_set_instances(FVizGlyphMapper* mapper, FVizSize first,
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_set_instances(FVizGlyphMapper* mapper, FVizSize first,
                                                     const FVizGlyphInstance* instances, FVizSize count);
-FVIZ_API void fviz_glyph_mapper_clear_instances(FVizGlyphMapper* mapper);
-FVIZ_API FVizSize fviz_glyph_mapper_instance_count(const FVizGlyphMapper* mapper);
-FVIZ_API FVizBool fviz_glyph_mapper_has_translucent_instances(const FVizGlyphMapper* mapper);
-FVIZ_API const FVizGlyphInstance* fviz_glyph_mapper_instances(const FVizGlyphMapper* mapper);
-FVIZ_API FVizResult fviz_glyph_mapper_get_instance(const FVizGlyphMapper* mapper, FVizSize index,
+FVIZ_RENDERING_API void fviz_glyph_mapper_clear_instances(FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API FVizSize fviz_glyph_mapper_instance_count(const FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API FVizBool fviz_glyph_mapper_has_translucent_instances(const FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API const FVizGlyphInstance* fviz_glyph_mapper_instances(const FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_get_instance(const FVizGlyphMapper* mapper, FVizSize index,
                                                    FVizGlyphInstance* out_instance);
-FVIZ_API FVizBounds fviz_glyph_mapper_bounds(const FVizGlyphMapper* mapper);
-FVIZ_API void fviz_glyph_mapper_set_gpu_residency_pinned(FVizGlyphMapper* mapper, FVizBool pinned);
-FVIZ_API FVizBool fviz_glyph_mapper_gpu_residency_pinned(const FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API FVizBounds fviz_glyph_mapper_bounds(const FVizGlyphMapper* mapper);
+FVIZ_RENDERING_API void fviz_glyph_mapper_set_gpu_residency_pinned(FVizGlyphMapper* mapper, FVizBool pinned);
+FVIZ_RENDERING_API FVizBool fviz_glyph_mapper_gpu_residency_pinned(const FVizGlyphMapper* mapper);
 /* Builds one glyph per non-zero point vector. vector_array_name==NULL uses active vectors. */
-FVIZ_API FVizResult fviz_glyph_mapper_build_from_point_vectors(FVizGlyphMapper* mapper, const FVizPolyData* input,
+FVIZ_RENDERING_API FVizResult fviz_glyph_mapper_build_from_point_vectors(FVizGlyphMapper* mapper, const FVizPolyData* input,
                                                                const char* vector_array_name,
                                                                const FVizVectorGlyphOptions* options);
 

@@ -57,21 +57,21 @@ typedef struct FVizDataProviderStatistics
     FVizSize resident_bytes;
 } FVizDataProviderStatistics;
 
-FVIZ_API void fviz_data_provider_request_initialize(FVizDataProviderRequest* request);
-FVIZ_API void fviz_data_provider_callbacks_initialize(FVizDataProviderCallbacks* callbacks);
-FVIZ_API void fviz_data_provider_options_initialize(FVizDataProviderOptions* options);
-FVIZ_API FVizResult fviz_data_provider_create(const FVizDataProviderCallbacks* callbacks, void* user_data,
+FVIZ_FILTERS_API void fviz_data_provider_request_initialize(FVizDataProviderRequest* request);
+FVIZ_FILTERS_API void fviz_data_provider_callbacks_initialize(FVizDataProviderCallbacks* callbacks);
+FVIZ_FILTERS_API void fviz_data_provider_options_initialize(FVizDataProviderOptions* options);
+FVIZ_FILTERS_API FVizResult fviz_data_provider_create(const FVizDataProviderCallbacks* callbacks, void* user_data,
                                               const FVizDataProviderOptions* options, FVizDataProvider** out_provider);
-FVIZ_API void fviz_data_provider_destroy(FVizDataProvider* provider);
+FVIZ_FILTERS_API void fviz_data_provider_destroy(FVizDataProvider* provider);
 /* Returns an owned data reference. Provider mutation/fetch is externally synchronized. */
-FVIZ_API FVizResult fviz_data_provider_fetch(FVizDataProvider* provider, const FVizDataProviderRequest* request,
+FVIZ_FILTERS_API FVizResult fviz_data_provider_fetch(FVizDataProvider* provider, const FVizDataProviderRequest* request,
                                              FVizDataObject** out_data);
 /* The provider and request are retained/copied through completion. The future
  * value is an owned FVizDataObject reference transferable with take_value(). */
-FVIZ_API FVizResult fviz_data_provider_fetch_async(FVizDataProvider* provider, const FVizDataProviderRequest* request,
+FVIZ_FILTERS_API FVizResult fviz_data_provider_fetch_async(FVizDataProvider* provider, const FVizDataProviderRequest* request,
                                                    FVizExecutor* executor, int priority, FVizFuture** out_future);
-FVIZ_API void fviz_data_provider_clear_cache(FVizDataProvider* provider);
-FVIZ_API void fviz_data_provider_get_statistics(const FVizDataProvider* provider,
+FVIZ_FILTERS_API void fviz_data_provider_clear_cache(FVizDataProvider* provider);
+FVIZ_FILTERS_API void fviz_data_provider_get_statistics(const FVizDataProvider* provider,
                                                 FVizDataProviderStatistics* out_statistics);
 
 FVIZ_EXTERN_C_END

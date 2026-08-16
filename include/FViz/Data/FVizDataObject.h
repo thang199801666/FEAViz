@@ -9,7 +9,7 @@ FVIZ_EXTERN_C_BEGIN
 typedef struct FVizDataObject FVizDataObject;
 #define FVIZ_TYPE_DATA_OBJECT UINT64_C(0x7D10B5A9E4C263F1)
 
-FVIZ_API FVizBool fviz_data_object_is_data_object(const FVizDataObject* data_object);
+FVIZ_DATA_API FVizBool fviz_data_object_is_data_object(const FVizDataObject* data_object);
 
 /* Logical resident-memory estimate for data payloads and composite trees.
  * Shared child objects are counted once, so MultiBlock/Partitioned structures
@@ -26,8 +26,8 @@ typedef struct FVizDataObjectMemoryInfo
     FVizSize unique_object_count;
 } FVizDataObjectMemoryInfo;
 
-FVIZ_API FVizResult fviz_data_object_memory_info(const FVizDataObject* data_object, FVizDataObjectMemoryInfo* out_info);
-FVIZ_API FVizSize fviz_data_object_memory_size(const FVizDataObject* data_object);
+FVIZ_DATA_API FVizResult fviz_data_object_memory_info(const FVizDataObject* data_object, FVizDataObjectMemoryInfo* out_info);
+FVIZ_DATA_API FVizSize fviz_data_object_memory_size(const FVizDataObject* data_object);
 
 FVIZ_EXTERN_C_END
 

@@ -13,7 +13,7 @@ typedef enum FVizPLYOutputMode
     FVIZ_PLY_OUTPUT_BINARY_LITTLE_ENDIAN = 1
 } FVizPLYOutputMode;
 
-FVIZ_API FVizResult fviz_ply_write(const char* file_path, const FVizPolyData* poly_data, FVizPLYOutputMode output_mode);
+FVIZ_IO_API FVizResult fviz_ply_write(const char* file_path, const FVizPolyData* poly_data, FVizPLYOutputMode output_mode);
 
 FVIZ_EXTERN_C_END
 

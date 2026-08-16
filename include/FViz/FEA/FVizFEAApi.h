@@ -3,9 +3,11 @@
 
 #include <FViz/Core/FVizApi.h>
 
+/* In the legacy monolithic shared build the single FEAViz library exports
+ * everything, so the FEA module macro must also export there. */
 #if defined(_WIN32) || defined(__CYGWIN__)
 #if defined(FVIZ_SHARED)
-#if defined(FVIZ_FEA_BUILDING_LIBRARY)
+#if defined(FVIZ_FEA_BUILDING_LIBRARY) || defined(FVIZ_BUILDING_LIBRARY)
 #define FVIZ_FEA_API __declspec(dllexport)
 #else
 #define FVIZ_FEA_API __declspec(dllimport)

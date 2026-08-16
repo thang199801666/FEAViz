@@ -19,15 +19,15 @@ typedef struct FVizProbeFilter FVizProbeFilter;
  * Samples point-data arrays from an UnstructuredGrid onto PolyData points.
  * Invalid samples are zero-filled and marked by the uint8 "FVizValidPointMask" array.
  */
-FVIZ_API FVizResult fviz_probe_filter_create(FVizProbeFilter** out_filter);
-FVIZ_API FVizResult fviz_probe_filter_set_input_data(FVizProbeFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_probe_filter_set_input_connection(FVizProbeFilter* filter, FVizAlgorithmOutput* input);
-FVIZ_API FVizResult fviz_probe_filter_set_source_data(FVizProbeFilter* filter, FVizUnstructuredGrid* source);
-FVIZ_API FVizResult fviz_probe_filter_set_source_connection(FVizProbeFilter* filter, FVizAlgorithmOutput* source);
-FVIZ_API FVizAlgorithm* fviz_probe_filter_algorithm(FVizProbeFilter* filter);
-FVIZ_API FVizAlgorithmOutput* fviz_probe_filter_output_port(FVizProbeFilter* filter);
-FVIZ_API FVizPolyData* fviz_probe_filter_output(FVizProbeFilter* filter);
-FVIZ_API FVizResult fviz_probe_filter_update(FVizProbeFilter* filter);
+FVIZ_FILTERS_API FVizResult fviz_probe_filter_create(FVizProbeFilter** out_filter);
+FVIZ_FILTERS_API FVizResult fviz_probe_filter_set_input_data(FVizProbeFilter* filter, FVizPolyData* input);
+FVIZ_FILTERS_API FVizResult fviz_probe_filter_set_input_connection(FVizProbeFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_FILTERS_API FVizResult fviz_probe_filter_set_source_data(FVizProbeFilter* filter, FVizUnstructuredGrid* source);
+FVIZ_FILTERS_API FVizResult fviz_probe_filter_set_source_connection(FVizProbeFilter* filter, FVizAlgorithmOutput* source);
+FVIZ_FILTERS_API FVizAlgorithm* fviz_probe_filter_algorithm(FVizProbeFilter* filter);
+FVIZ_FILTERS_API FVizAlgorithmOutput* fviz_probe_filter_output_port(FVizProbeFilter* filter);
+FVIZ_FILTERS_API FVizPolyData* fviz_probe_filter_output(FVizProbeFilter* filter);
+FVIZ_FILTERS_API FVizResult fviz_probe_filter_update(FVizProbeFilter* filter);
 
 FVIZ_EXTERN_C_END
 

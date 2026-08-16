@@ -21,17 +21,17 @@ typedef struct FVizArenaStatistics
 
 /* A transient monotonic allocator intended for filter/pipeline scratch data.
  * The arena is not internally synchronized; use one arena per worker/context. */
-FVIZ_API FVizResult fviz_arena_create(FVizSize block_size, FVizArena** out_arena);
-FVIZ_API void fviz_arena_destroy(FVizArena* arena);
-FVIZ_API void* fviz_arena_allocate(FVizArena* arena, FVizSize size, FVizSize alignment);
+FVIZ_CORE_API FVizResult fviz_arena_create(FVizSize block_size, FVizArena** out_arena);
+FVIZ_CORE_API void fviz_arena_destroy(FVizArena* arena);
+FVIZ_CORE_API void* fviz_arena_allocate(FVizArena* arena, FVizSize size, FVizSize alignment);
 /* Rewinds every retained block. Existing pointers become invalid for subsequent use. */
-FVIZ_API void fviz_arena_reset(FVizArena* arena);
+FVIZ_CORE_API void fviz_arena_reset(FVizArena* arena);
 /* Releases spare blocks while retaining at most the first reusable block. */
-FVIZ_API void fviz_arena_trim(FVizArena* arena);
-FVIZ_API FVizArenaStatistics fviz_arena_statistics(const FVizArena* arena);
+FVIZ_CORE_API void fviz_arena_trim(FVizArena* arena);
+FVIZ_CORE_API FVizArenaStatistics fviz_arena_statistics(const FVizArena* arena);
 /* Adapter for APIs accepting FVizAllocator. deallocate() is intentionally a no-op;
  * reallocate() performs allocate+copy. The adapter is valid only while arena lives. */
-FVIZ_API FVizAllocator fviz_arena_allocator(FVizArena* arena);
+FVIZ_CORE_API FVizAllocator fviz_arena_allocator(FVizArena* arena);
 
 FVIZ_EXTERN_C_END
 

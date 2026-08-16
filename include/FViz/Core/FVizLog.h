@@ -19,12 +19,12 @@ typedef enum FVizLogLevel
 
 typedef void (*FVizLogCallback)(FVizLogLevel level, const char* category, const char* message, void* user_data);
 
-FVIZ_API const char* fviz_log_level_string(FVizLogLevel level);
-FVIZ_API FVizResult fviz_log_set_level(FVizLogLevel level);
-FVIZ_API FVizLogLevel fviz_log_get_level(void);
-FVIZ_API void fviz_log_set_callback(FVizLogCallback callback, void* user_data);
-FVIZ_API void fviz_log_reset_callback(void);
-FVIZ_API void fviz_log_message(FVizLogLevel level, const char* category, const char* message);
+FVIZ_CORE_API const char* fviz_log_level_string(FVizLogLevel level);
+FVIZ_CORE_API FVizResult fviz_log_set_level(FVizLogLevel level);
+FVIZ_CORE_API FVizLogLevel fviz_log_get_level(void);
+FVIZ_CORE_API void fviz_log_set_callback(FVizLogCallback callback, void* user_data);
+FVIZ_CORE_API void fviz_log_reset_callback(void);
+FVIZ_CORE_API void fviz_log_message(FVizLogLevel level, const char* category, const char* message);
 
 FVIZ_EXTERN_C_END
 

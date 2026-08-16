@@ -26,9 +26,9 @@ typedef struct FVizFrustum
     FVizBool valid;
 } FVizFrustum;
 
-FVIZ_API FVizFrustum fviz_frustum_from_view_projection(FVizMat4 view_projection);
-FVIZ_API FVizBool fviz_frustum_contains_point(const FVizFrustum* frustum, FVizVec3 point);
-FVIZ_API FVizBool fviz_frustum_intersects_bounds(const FVizFrustum* frustum, FVizBounds bounds);
+FVIZ_CORE_API FVizFrustum fviz_frustum_from_view_projection(FVizMat4 view_projection);
+FVIZ_CORE_API FVizBool fviz_frustum_contains_point(const FVizFrustum* frustum, FVizVec3 point);
+FVIZ_CORE_API FVizBool fviz_frustum_intersects_bounds(const FVizFrustum* frustum, FVizBounds bounds);
 
 FVIZ_EXTERN_C_END
 

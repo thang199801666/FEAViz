@@ -26,35 +26,35 @@ typedef struct FVizCompositeGeometryCacheStatistics
     uint64_t parallel_leaf_conversions;
 } FVizCompositeGeometryCacheStatistics;
 
-FVIZ_API FVizResult fviz_composite_geometry_filter_create(FVizCompositeGeometryFilter** out_filter);
-FVIZ_API FVizResult fviz_composite_geometry_filter_set_input_data(FVizCompositeGeometryFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_composite_geometry_filter_create(FVizCompositeGeometryFilter** out_filter);
+FVIZ_FILTERS_API FVizResult fviz_composite_geometry_filter_set_input_data(FVizCompositeGeometryFilter* filter,
                                                                   FVizMultiBlockDataSet* input);
-FVIZ_API FVizResult fviz_composite_geometry_filter_set_input_connection(FVizCompositeGeometryFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_composite_geometry_filter_set_input_connection(FVizCompositeGeometryFilter* filter,
                                                                         FVizAlgorithmOutput* input);
-FVIZ_API FVizAlgorithm* fviz_composite_geometry_filter_algorithm(FVizCompositeGeometryFilter* filter);
-FVIZ_API FVizAlgorithmOutput* fviz_composite_geometry_filter_output_port(FVizCompositeGeometryFilter* filter);
-FVIZ_API FVizMultiBlockDataSet* fviz_composite_geometry_filter_output(FVizCompositeGeometryFilter* filter);
-FVIZ_API FVizResult fviz_composite_geometry_filter_update(FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API FVizAlgorithm* fviz_composite_geometry_filter_algorithm(FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API FVizAlgorithmOutput* fviz_composite_geometry_filter_output_port(FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API FVizMultiBlockDataSet* fviz_composite_geometry_filter_output(FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API FVizResult fviz_composite_geometry_filter_update(FVizCompositeGeometryFilter* filter);
 /* Leaf conversion cache. Unchanged PolyData/structured/unstructured leaves are
  * reused across composite updates; entries removed from the hierarchy are
  * pruned after a successful execution. */
-FVIZ_API void fviz_composite_geometry_filter_clear_cache(FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API void fviz_composite_geometry_filter_clear_cache(FVizCompositeGeometryFilter* filter);
 /* Unlimited by default. A non-zero byte capacity applies LRU eviction to leaf
  * conversion cache entries while the current output tree continues to retain
  * its assigned geometry. Oversize single leaves are returned but not cached. */
-FVIZ_API FVizResult fviz_composite_geometry_filter_set_cache_byte_capacity(FVizCompositeGeometryFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_composite_geometry_filter_set_cache_byte_capacity(FVizCompositeGeometryFilter* filter,
                                                                            FVizSize byte_capacity);
-FVIZ_API FVizSize fviz_composite_geometry_filter_cache_byte_capacity(const FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API FVizSize fviz_composite_geometry_filter_cache_byte_capacity(const FVizCompositeGeometryFilter* filter);
 /* Dirty/new leaf conversion is parallel by default once at least four leaves
  * need work. Hierarchy construction, cache mutation, and output assignment are
  * serialized to preserve deterministic object/observer semantics. */
-FVIZ_API FVizResult fviz_composite_geometry_filter_set_parallel_enabled(FVizCompositeGeometryFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_composite_geometry_filter_set_parallel_enabled(FVizCompositeGeometryFilter* filter,
                                                                         FVizBool enabled);
-FVIZ_API FVizBool fviz_composite_geometry_filter_parallel_enabled(const FVizCompositeGeometryFilter* filter);
-FVIZ_API FVizResult fviz_composite_geometry_filter_set_parallel_threshold(FVizCompositeGeometryFilter* filter,
+FVIZ_FILTERS_API FVizBool fviz_composite_geometry_filter_parallel_enabled(const FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API FVizResult fviz_composite_geometry_filter_set_parallel_threshold(FVizCompositeGeometryFilter* filter,
                                                                           FVizSize leaf_count);
-FVIZ_API FVizSize fviz_composite_geometry_filter_parallel_threshold(const FVizCompositeGeometryFilter* filter);
-FVIZ_API FVizCompositeGeometryCacheStatistics
+FVIZ_FILTERS_API FVizSize fviz_composite_geometry_filter_parallel_threshold(const FVizCompositeGeometryFilter* filter);
+FVIZ_FILTERS_API FVizCompositeGeometryCacheStatistics
 fviz_composite_geometry_filter_cache_statistics(const FVizCompositeGeometryFilter* filter);
 
 FVIZ_EXTERN_C_END

@@ -101,9 +101,9 @@ typedef struct FVizOverlayLayoutResult
     FVizBool visible;
 } FVizOverlayLayoutResult;
 
-FVIZ_API void fviz_overlay_layout_context_initialize(FVizOverlayLayoutContext* context);
-FVIZ_API void fviz_overlay_layout_item_initialize(FVizOverlayLayoutItem* item);
-FVIZ_API FVizResult fviz_overlay_layout_resolve(const FVizOverlayLayoutContext* context,
+FVIZ_RENDERING_API void fviz_overlay_layout_context_initialize(FVizOverlayLayoutContext* context);
+FVIZ_RENDERING_API void fviz_overlay_layout_item_initialize(FVizOverlayLayoutItem* item);
+FVIZ_RENDERING_API FVizResult fviz_overlay_layout_resolve(const FVizOverlayLayoutContext* context,
                                                 const FVizOverlayLayoutItem* items, FVizSize item_count,
                                                 FVizOverlayLayoutResult* results);
 

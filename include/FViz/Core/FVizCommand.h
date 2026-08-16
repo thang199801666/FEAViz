@@ -81,17 +81,17 @@ typedef FVizBool (*FVizObserverCallbackFn)(FVizObject* caller, FVizEventId event
 typedef FVizBool (*FVizCommandExecuteFn)(FVizCommand* command, FVizObject* caller, FVizEventId event_id,
                                          void* call_data, void* client_data);
 
-FVIZ_API FVizResult fviz_command_create(FVizCommandExecuteFn execute, void* client_data, FVizCommand** out_command);
-FVIZ_API void fviz_command_set_execute(FVizCommand* command, FVizCommandExecuteFn execute);
-FVIZ_API FVizCommandExecuteFn fviz_command_execute_function(const FVizCommand* command);
-FVIZ_API void fviz_command_set_client_data(FVizCommand* command, void* client_data);
-FVIZ_API void* fviz_command_client_data(FVizCommand* command);
-FVIZ_API const void* fviz_command_const_client_data(const FVizCommand* command);
-FVIZ_API void fviz_command_set_abort_flag(FVizCommand* command, FVizBool abort_flag);
-FVIZ_API FVizBool fviz_command_abort_flag(const FVizCommand* command);
-FVIZ_API FVizBool fviz_command_execute(FVizCommand* command, FVizObject* caller, FVizEventId event_id, void* call_data);
+FVIZ_CORE_API FVizResult fviz_command_create(FVizCommandExecuteFn execute, void* client_data, FVizCommand** out_command);
+FVIZ_CORE_API void fviz_command_set_execute(FVizCommand* command, FVizCommandExecuteFn execute);
+FVIZ_CORE_API FVizCommandExecuteFn fviz_command_execute_function(const FVizCommand* command);
+FVIZ_CORE_API void fviz_command_set_client_data(FVizCommand* command, void* client_data);
+FVIZ_CORE_API void* fviz_command_client_data(FVizCommand* command);
+FVIZ_CORE_API const void* fviz_command_const_client_data(const FVizCommand* command);
+FVIZ_CORE_API void fviz_command_set_abort_flag(FVizCommand* command, FVizBool abort_flag);
+FVIZ_CORE_API FVizBool fviz_command_abort_flag(const FVizCommand* command);
+FVIZ_CORE_API FVizBool fviz_command_execute(FVizCommand* command, FVizObject* caller, FVizEventId event_id, void* call_data);
 
-FVIZ_API const char* fviz_event_name(FVizEventId event_id);
+FVIZ_CORE_API const char* fviz_event_name(FVizEventId event_id);
 
 FVIZ_EXTERN_C_END
 

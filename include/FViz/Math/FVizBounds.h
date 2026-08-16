@@ -14,13 +14,13 @@ typedef struct FVizBounds
     FVizBool valid;
 } FVizBounds;
 
-FVIZ_API FVizBounds fviz_bounds_empty(void);
-FVIZ_API void fviz_bounds_reset(FVizBounds* bounds);
-FVIZ_API void fviz_bounds_include_point(FVizBounds* bounds, FVizVec3 point);
-FVIZ_API void fviz_bounds_include_bounds(FVizBounds* bounds, const FVizBounds* other);
-FVIZ_API FVizVec3 fviz_bounds_center(const FVizBounds* bounds);
-FVIZ_API FVizVec3 fviz_bounds_size(const FVizBounds* bounds);
-FVIZ_API float fviz_bounds_radius(const FVizBounds* bounds);
+FVIZ_CORE_API FVizBounds fviz_bounds_empty(void);
+FVIZ_CORE_API void fviz_bounds_reset(FVizBounds* bounds);
+FVIZ_CORE_API void fviz_bounds_include_point(FVizBounds* bounds, FVizVec3 point);
+FVIZ_CORE_API void fviz_bounds_include_bounds(FVizBounds* bounds, const FVizBounds* other);
+FVIZ_CORE_API FVizVec3 fviz_bounds_center(const FVizBounds* bounds);
+FVIZ_CORE_API FVizVec3 fviz_bounds_size(const FVizBounds* bounds);
+FVIZ_CORE_API float fviz_bounds_radius(const FVizBounds* bounds);
 
 FVIZ_EXTERN_C_END
 

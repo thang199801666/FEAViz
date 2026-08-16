@@ -46,35 +46,35 @@ typedef struct FVizExpressionOptions
     double non_finite_replacement;
 } FVizExpressionOptions;
 
-FVIZ_API void fviz_expression_options_initialize(FVizExpressionOptions* options);
-FVIZ_API void fviz_expression_binding_initialize(FVizExpressionBinding* binding);
+FVIZ_FILTERS_API void fviz_expression_options_initialize(FVizExpressionOptions* options);
+FVIZ_FILTERS_API void fviz_expression_binding_initialize(FVizExpressionBinding* binding);
 /* Compiles an immutable expression that can be evaluated repeatedly with new
  * bindings. Supported operators are +, -, *, /, ^, comparisons and ?: . Functions include
  * abs, sqrt, exp, log, log10, sin, cos, tan, floor, ceil, round, min, max,
  * pow, clamp, mag, dot, cross, normalize, vec2/vec3/vec4 and where.
  * Vector components can be selected with .x/.y/.z/.w or [constant-index]. */
-FVIZ_API FVizResult fviz_expression_compile(const char* source, FVizExpression** out_expression);
-FVIZ_API FVizResult fviz_expression_compile_with_diagnostic(const char* source, FVizExpression** out_expression,
+FVIZ_FILTERS_API FVizResult fviz_expression_compile(const char* source, FVizExpression** out_expression);
+FVIZ_FILTERS_API FVizResult fviz_expression_compile_with_diagnostic(const char* source, FVizExpression** out_expression,
                                                             FVizSize* out_error_offset);
-FVIZ_API const char* fviz_expression_source(const FVizExpression* expression);
-FVIZ_API FVizSize fviz_expression_error_offset(const FVizExpression* expression);
-FVIZ_API FVizSize fviz_expression_variable_count(const FVizExpression* expression);
-FVIZ_API const char* fviz_expression_variable_name(const FVizExpression* expression, FVizSize index);
+FVIZ_FILTERS_API const char* fviz_expression_source(const FVizExpression* expression);
+FVIZ_FILTERS_API FVizSize fviz_expression_error_offset(const FVizExpression* expression);
+FVIZ_FILTERS_API FVizSize fviz_expression_variable_count(const FVizExpression* expression);
+FVIZ_FILTERS_API const char* fviz_expression_variable_name(const FVizExpression* expression, FVizSize index);
 /* All bound arrays must have the same tuple count and all specified
  * associations must match. Scalar values broadcast over vectors; otherwise
  * vector operands must have equal component counts.
  * The result is a Float64 array. */
-FVIZ_API FVizResult fviz_expression_evaluate(const FVizExpression* expression, const FVizExpressionBinding* bindings,
+FVIZ_FILTERS_API FVizResult fviz_expression_evaluate(const FVizExpression* expression, const FVizExpressionBinding* bindings,
                                              FVizSize binding_count, const FVizExpressionOptions* options,
                                              FVizDataArray** out_array);
 
-FVIZ_API FVizResult fviz_expression_cache_create(FVizSize capacity, FVizExpressionCache** out_cache);
+FVIZ_FILTERS_API FVizResult fviz_expression_cache_create(FVizSize capacity, FVizExpressionCache** out_cache);
 /* Returns a retained immutable expression, compiling and caching on a miss. */
-FVIZ_API FVizResult fviz_expression_cache_get(FVizExpressionCache* cache, const char* source,
+FVIZ_FILTERS_API FVizResult fviz_expression_cache_get(FVizExpressionCache* cache, const char* source,
                                               FVizExpression** out_expression);
-FVIZ_API void fviz_expression_cache_clear(FVizExpressionCache* cache);
-FVIZ_API FVizSize fviz_expression_cache_count(const FVizExpressionCache* cache);
-FVIZ_API FVizSize fviz_expression_cache_capacity(const FVizExpressionCache* cache);
+FVIZ_FILTERS_API void fviz_expression_cache_clear(FVizExpressionCache* cache);
+FVIZ_FILTERS_API FVizSize fviz_expression_cache_count(const FVizExpressionCache* cache);
+FVIZ_FILTERS_API FVizSize fviz_expression_cache_capacity(const FVizExpressionCache* cache);
 
 FVIZ_EXTERN_C_END
 

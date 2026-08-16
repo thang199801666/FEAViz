@@ -37,29 +37,29 @@ typedef FVizBool (*FVizWidgetEventHandlerFn)(FVizWidget* widget, const FVizInter
 
 typedef void (*FVizWidgetCallbackFn)(FVizWidget* widget, FVizWidgetNotification notification, void* user_data);
 
-FVIZ_API FVizResult fviz_widget_create(FVizRenderWindowInteractor* interactor, FVizRenderer* renderer,
+FVIZ_INTERACTION_API FVizResult fviz_widget_create(FVizRenderWindowInteractor* interactor, FVizRenderer* renderer,
                                        FVizWidgetRepresentation* representation, FVizWidget** out_widget);
-FVIZ_API FVizRenderWindowInteractor* fviz_widget_interactor(FVizWidget* widget);
-FVIZ_API FVizResult fviz_widget_set_interactor(FVizWidget* widget, FVizRenderWindowInteractor* interactor);
-FVIZ_API FVizRenderer* fviz_widget_renderer(FVizWidget* widget);
-FVIZ_API FVizWidgetRepresentation* fviz_widget_representation(FVizWidget* widget);
-FVIZ_API FVizResult fviz_widget_set_representation(FVizWidget* widget, FVizWidgetRepresentation* representation);
-FVIZ_API FVizResult fviz_widget_set_enabled(FVizWidget* widget, FVizBool enabled);
-FVIZ_API FVizBool fviz_widget_enabled(const FVizWidget* widget);
-FVIZ_API void fviz_widget_set_process_events(FVizWidget* widget, FVizBool process_events);
-FVIZ_API FVizBool fviz_widget_process_events(const FVizWidget* widget);
-FVIZ_API FVizResult fviz_widget_set_priority(FVizWidget* widget, int priority);
-FVIZ_API int fviz_widget_priority(const FVizWidget* widget);
-FVIZ_API FVizWidgetState fviz_widget_state(const FVizWidget* widget);
-FVIZ_API void fviz_widget_set_event_handler(FVizWidget* widget, FVizWidgetEventHandlerFn handler, void* user_data);
-FVIZ_API void fviz_widget_set_callback(FVizWidget* widget, FVizWidgetCallbackFn callback, void* user_data);
-FVIZ_API FVizBool fviz_widget_process_event(FVizWidget* widget, const FVizInteractionEvent* event);
-FVIZ_API void fviz_widget_begin_interaction(FVizWidget* widget);
-FVIZ_API void fviz_widget_interaction(FVizWidget* widget);
-FVIZ_API void fviz_widget_value_changed(FVizWidget* widget);
-FVIZ_API void fviz_widget_end_interaction(FVizWidget* widget);
-FVIZ_API void fviz_widget_cancel_interaction(FVizWidget* widget);
-FVIZ_API FVizResult fviz_widget_request_render(FVizWidget* widget);
+FVIZ_INTERACTION_API FVizRenderWindowInteractor* fviz_widget_interactor(FVizWidget* widget);
+FVIZ_INTERACTION_API FVizResult fviz_widget_set_interactor(FVizWidget* widget, FVizRenderWindowInteractor* interactor);
+FVIZ_INTERACTION_API FVizRenderer* fviz_widget_renderer(FVizWidget* widget);
+FVIZ_INTERACTION_API FVizWidgetRepresentation* fviz_widget_representation(FVizWidget* widget);
+FVIZ_INTERACTION_API FVizResult fviz_widget_set_representation(FVizWidget* widget, FVizWidgetRepresentation* representation);
+FVIZ_INTERACTION_API FVizResult fviz_widget_set_enabled(FVizWidget* widget, FVizBool enabled);
+FVIZ_INTERACTION_API FVizBool fviz_widget_enabled(const FVizWidget* widget);
+FVIZ_INTERACTION_API void fviz_widget_set_process_events(FVizWidget* widget, FVizBool process_events);
+FVIZ_INTERACTION_API FVizBool fviz_widget_process_events(const FVizWidget* widget);
+FVIZ_INTERACTION_API FVizResult fviz_widget_set_priority(FVizWidget* widget, int priority);
+FVIZ_INTERACTION_API int fviz_widget_priority(const FVizWidget* widget);
+FVIZ_INTERACTION_API FVizWidgetState fviz_widget_state(const FVizWidget* widget);
+FVIZ_INTERACTION_API void fviz_widget_set_event_handler(FVizWidget* widget, FVizWidgetEventHandlerFn handler, void* user_data);
+FVIZ_INTERACTION_API void fviz_widget_set_callback(FVizWidget* widget, FVizWidgetCallbackFn callback, void* user_data);
+FVIZ_INTERACTION_API FVizBool fviz_widget_process_event(FVizWidget* widget, const FVizInteractionEvent* event);
+FVIZ_INTERACTION_API void fviz_widget_begin_interaction(FVizWidget* widget);
+FVIZ_INTERACTION_API void fviz_widget_interaction(FVizWidget* widget);
+FVIZ_INTERACTION_API void fviz_widget_value_changed(FVizWidget* widget);
+FVIZ_INTERACTION_API void fviz_widget_end_interaction(FVizWidget* widget);
+FVIZ_INTERACTION_API void fviz_widget_cancel_interaction(FVizWidget* widget);
+FVIZ_INTERACTION_API FVizResult fviz_widget_request_render(FVizWidget* widget);
 
 FVIZ_EXTERN_C_END
 

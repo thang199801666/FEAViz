@@ -66,7 +66,7 @@ typedef struct FVizInteractionEvent
 
 /* Maps native interaction kinds to the corresponding FVIZ_EVENT_* identifier
  * used by the generic FVizObject observer system. */
-FVIZ_API FVizEventId fviz_interaction_event_id(FVizInteractionEventType type);
+FVIZ_INTERACTION_API FVizEventId fviz_interaction_event_id(FVizInteractionEventType type);
 
 FVIZ_EXTERN_C_END
 

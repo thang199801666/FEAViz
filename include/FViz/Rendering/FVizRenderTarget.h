@@ -54,15 +54,15 @@ typedef struct FVizRenderTargetDesc
     FVizRenderAttachmentDesc attachments[FVIZ_RENDER_TARGET_MAX_ATTACHMENTS];
 } FVizRenderTargetDesc;
 
-FVIZ_API void fviz_render_attachment_desc_initialize(FVizRenderAttachmentDesc* desc);
-FVIZ_API void fviz_render_target_desc_initialize(FVizRenderTargetDesc* desc);
-FVIZ_API FVizResult fviz_render_target_desc_add_attachment(FVizRenderTargetDesc* desc, FVizRenderAttachmentPoint point,
+FVIZ_RENDERING_API void fviz_render_attachment_desc_initialize(FVizRenderAttachmentDesc* desc);
+FVIZ_RENDERING_API void fviz_render_target_desc_initialize(FVizRenderTargetDesc* desc);
+FVIZ_RENDERING_API FVizResult fviz_render_target_desc_add_attachment(FVizRenderTargetDesc* desc, FVizRenderAttachmentPoint point,
                                                            FVizRenderFormat format, FVizBool sampled);
-FVIZ_API FVizResult fviz_render_target_desc_validate(const FVizRenderTargetDesc* desc);
-FVIZ_API FVizResult fviz_render_target_create(const FVizRenderTargetDesc* desc, FVizRenderTarget** out_target);
-FVIZ_API FVizResult fviz_render_target_resize(FVizRenderTarget* target, uint32_t width, uint32_t height);
-FVIZ_API void fviz_render_target_get_desc(const FVizRenderTarget* target, FVizRenderTargetDesc* out_desc);
-FVIZ_API uint64_t fviz_render_target_estimated_bytes(const FVizRenderTarget* target);
+FVIZ_RENDERING_API FVizResult fviz_render_target_desc_validate(const FVizRenderTargetDesc* desc);
+FVIZ_RENDERING_API FVizResult fviz_render_target_create(const FVizRenderTargetDesc* desc, FVizRenderTarget** out_target);
+FVIZ_RENDERING_API FVizResult fviz_render_target_resize(FVizRenderTarget* target, uint32_t width, uint32_t height);
+FVIZ_RENDERING_API void fviz_render_target_get_desc(const FVizRenderTarget* target, FVizRenderTargetDesc* out_desc);
+FVIZ_RENDERING_API uint64_t fviz_render_target_estimated_bytes(const FVizRenderTarget* target);
 
 FVIZ_EXTERN_C_END
 

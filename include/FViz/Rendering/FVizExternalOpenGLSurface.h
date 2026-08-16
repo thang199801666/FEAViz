@@ -39,8 +39,8 @@ typedef struct FVizExternalOpenGLSurface
     FVizBool srgb_capable;
 } FVizExternalOpenGLSurface;
 
-FVIZ_API void fviz_external_opengl_surface_initialize(FVizExternalOpenGLSurface* surface);
-FVIZ_API FVizResult fviz_external_opengl_surface_validate(const FVizExternalOpenGLSurface* surface);
+FVIZ_RENDERING_API void fviz_external_opengl_surface_initialize(FVizExternalOpenGLSurface* surface);
+FVIZ_RENDERING_API FVizResult fviz_external_opengl_surface_validate(const FVizExternalOpenGLSurface* surface);
 
 FVIZ_EXTERN_C_END
 

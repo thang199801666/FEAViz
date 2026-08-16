@@ -12,12 +12,12 @@ typedef struct FVizMat3
     float m[9];
 } FVizMat3;
 
-FVIZ_API FVizMat3 fviz_mat3_identity(void);
-FVIZ_API FVizMat3 fviz_mat3_multiply(FVizMat3 a, FVizMat3 b);
-FVIZ_API FVizMat3 fviz_mat3_transpose(FVizMat3 m);
-FVIZ_API FVizMat3 fviz_mat3_from_quaternion(FVizQuat q);
-FVIZ_API FVizVec3 fviz_mat3_transform_vec3(FVizMat3 m, FVizVec3 v);
-FVIZ_API FVizMat3 fviz_mat3_inverse(FVizMat3 m);
+FVIZ_CORE_API FVizMat3 fviz_mat3_identity(void);
+FVIZ_CORE_API FVizMat3 fviz_mat3_multiply(FVizMat3 a, FVizMat3 b);
+FVIZ_CORE_API FVizMat3 fviz_mat3_transpose(FVizMat3 m);
+FVIZ_CORE_API FVizMat3 fviz_mat3_from_quaternion(FVizQuat q);
+FVIZ_CORE_API FVizVec3 fviz_mat3_transform_vec3(FVizMat3 m, FVizVec3 v);
+FVIZ_CORE_API FVizMat3 fviz_mat3_inverse(FVizMat3 m);
 
 FVIZ_EXTERN_C_END
 

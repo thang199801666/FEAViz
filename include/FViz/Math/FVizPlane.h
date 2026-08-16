@@ -12,9 +12,9 @@ typedef struct FVizPlane
     float distance;
 } FVizPlane;
 
-FVIZ_API FVizPlane fviz_plane_from_point_normal(FVizVec3 point, FVizVec3 normal);
-FVIZ_API float fviz_plane_distance_to_point(FVizPlane plane, FVizVec3 point);
-FVIZ_API FVizVec3 fviz_plane_project_point(FVizPlane plane, FVizVec3 point);
+FVIZ_CORE_API FVizPlane fviz_plane_from_point_normal(FVizVec3 point, FVizVec3 normal);
+FVIZ_CORE_API float fviz_plane_distance_to_point(FVizPlane plane, FVizVec3 point);
+FVIZ_CORE_API FVizVec3 fviz_plane_project_point(FVizPlane plane, FVizVec3 point);
 
 FVIZ_EXTERN_C_END
 

@@ -18,8 +18,8 @@ typedef struct FVizVTPWriterOptions
     FVizVTPOutputMode output_mode;
 } FVizVTPWriterOptions;
 
-FVIZ_API void fviz_vtp_writer_options_initialize(FVizVTPWriterOptions* options);
-FVIZ_API FVizResult fviz_vtp_write(const char* file_path, const FVizPolyData* poly_data,
+FVIZ_IO_API void fviz_vtp_writer_options_initialize(FVizVTPWriterOptions* options);
+FVIZ_IO_API FVizResult fviz_vtp_write(const char* file_path, const FVizPolyData* poly_data,
                                    const FVizVTPWriterOptions* options);
 
 FVIZ_EXTERN_C_END

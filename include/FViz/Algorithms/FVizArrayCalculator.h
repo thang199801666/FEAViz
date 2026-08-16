@@ -45,14 +45,14 @@ typedef struct FVizArrayCalculatorOptions
     FVizSize parallel_threshold;
 } FVizArrayCalculatorOptions;
 
-FVIZ_API void fviz_array_calculator_options_initialize(FVizArrayCalculatorOptions* options);
+FVIZ_FILTERS_API void fviz_array_calculator_options_initialize(FVizArrayCalculatorOptions* options);
 /* Derived results are emitted as Float64. Tensor operations accept 6-component
  * symmetric tensors [xx,yy,zz,xy,yz,xz] or 9-component row-major tensors.
  * PRINCIPAL_VALUES emits [max,mid,min], PRINCIPAL_DIRECTIONS emits three row-major
  * direction vectors corresponding to those values, and DEVIATORIC_TENSOR emits
  * [xx,yy,zz,xy,yz,xz]. HALF_PRINCIPAL_SPAN is (max-min)/2 and
  * PRINCIPAL_SPAN is max-min. */
-FVIZ_API FVizResult fviz_array_calculator_compute(const FVizDataArray* source,
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_compute(const FVizDataArray* source,
                                                   const FVizArrayCalculatorOptions* options, FVizDataArray** out_array);
 
 typedef enum FVizArrayCalculatorAssociation
@@ -67,23 +67,23 @@ typedef struct FVizArrayCalculatorFilter FVizArrayCalculatorFilter;
 /* Pipeline form of the calculator for PolyData. The input dataset is deep-copied,
  * the named point/cell array is transformed, and the result is appended under
  * result_name. Single-input temporal metadata is inherited by the executive. */
-FVIZ_API FVizResult fviz_array_calculator_filter_create(FVizArrayCalculatorFilter** out_filter);
-FVIZ_API FVizResult fviz_array_calculator_filter_set_input_data(FVizArrayCalculatorFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_array_calculator_filter_set_input_connection(FVizArrayCalculatorFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_filter_create(FVizArrayCalculatorFilter** out_filter);
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_filter_set_input_data(FVizArrayCalculatorFilter* filter, FVizPolyData* input);
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_filter_set_input_connection(FVizArrayCalculatorFilter* filter,
                                                                       FVizAlgorithmOutput* input);
-FVIZ_API FVizResult fviz_array_calculator_filter_set_array(FVizArrayCalculatorFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_filter_set_array(FVizArrayCalculatorFilter* filter,
                                                            FVizArrayCalculatorAssociation association,
                                                            const char* array_name);
-FVIZ_API FVizResult fviz_array_calculator_filter_set_result_name(FVizArrayCalculatorFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_filter_set_result_name(FVizArrayCalculatorFilter* filter,
                                                                  const char* result_name);
-FVIZ_API FVizResult fviz_array_calculator_filter_set_options(FVizArrayCalculatorFilter* filter,
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_filter_set_options(FVizArrayCalculatorFilter* filter,
                                                              const FVizArrayCalculatorOptions* options);
-FVIZ_API void fviz_array_calculator_filter_set_result_as_active_scalars(FVizArrayCalculatorFilter* filter,
+FVIZ_FILTERS_API void fviz_array_calculator_filter_set_result_as_active_scalars(FVizArrayCalculatorFilter* filter,
                                                                         FVizBool enabled);
-FVIZ_API FVizAlgorithm* fviz_array_calculator_filter_algorithm(FVizArrayCalculatorFilter* filter);
-FVIZ_API FVizAlgorithmOutput* fviz_array_calculator_filter_output_port(FVizArrayCalculatorFilter* filter);
-FVIZ_API FVizPolyData* fviz_array_calculator_filter_output(FVizArrayCalculatorFilter* filter);
-FVIZ_API FVizResult fviz_array_calculator_filter_update(FVizArrayCalculatorFilter* filter);
+FVIZ_FILTERS_API FVizAlgorithm* fviz_array_calculator_filter_algorithm(FVizArrayCalculatorFilter* filter);
+FVIZ_FILTERS_API FVizAlgorithmOutput* fviz_array_calculator_filter_output_port(FVizArrayCalculatorFilter* filter);
+FVIZ_FILTERS_API FVizPolyData* fviz_array_calculator_filter_output(FVizArrayCalculatorFilter* filter);
+FVIZ_FILTERS_API FVizResult fviz_array_calculator_filter_update(FVizArrayCalculatorFilter* filter);
 
 FVIZ_EXTERN_C_END
 

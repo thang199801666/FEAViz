@@ -14,13 +14,13 @@ typedef struct FVizPVTUWriterOptions
     FVizVTUWriterOptions piece_options;
 } FVizPVTUWriterOptions;
 
-FVIZ_API void fviz_pvtu_writer_options_initialize(FVizPVTUWriterOptions* options);
+FVIZ_IO_API void fviz_pvtu_writer_options_initialize(FVizPVTUWriterOptions* options);
 
 /* Writes one .pvtu manifest plus one sibling .vtu file per partition. Piece
  * file names are derived from the manifest basename as
  * <stem>_pieceNNNNN.vtu and referenced relatively from the manifest. Every
  * partition must be an UnstructuredGrid. */
-FVIZ_API FVizResult fviz_pvtu_write(const char* file_path, const FVizPartitionedDataSet* data_set,
+FVIZ_IO_API FVizResult fviz_pvtu_write(const char* file_path, const FVizPartitionedDataSet* data_set,
                                     const FVizPVTUWriterOptions* options);
 
 FVIZ_EXTERN_C_END

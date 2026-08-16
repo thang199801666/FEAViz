@@ -7,7 +7,7 @@
 
 FVIZ_EXTERN_C_BEGIN
 
-FVIZ_API FVizResult fviz_obj_read(const char* path, FVizPolyData** out_poly_data);
+FVIZ_IO_API FVizResult fviz_obj_read(const char* path, FVizPolyData** out_poly_data);
 
 FVIZ_EXTERN_C_END
 

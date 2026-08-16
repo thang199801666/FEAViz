@@ -22,22 +22,22 @@ typedef enum FVizAttributeRole
     FVIZ_ATTRIBUTE_ROLE_COUNT = 5
 } FVizAttributeRole;
 
-FVIZ_API FVizResult fviz_attribute_set_create(FVizAttributeSet** out_set);
-FVIZ_API void fviz_attribute_set_clear(FVizAttributeSet* set);
-FVIZ_API FVizSize fviz_attribute_set_count(const FVizAttributeSet* set);
-FVIZ_API const char* fviz_attribute_set_name_at(const FVizAttributeSet* set, FVizSize index);
-FVIZ_API FVizDataArray* fviz_attribute_set_array_at(FVizAttributeSet* set, FVizSize index);
-FVIZ_API const FVizDataArray* fviz_attribute_set_const_array_at(const FVizAttributeSet* set, FVizSize index);
-FVIZ_API FVizDataArray* fviz_attribute_set_get(FVizAttributeSet* set, const char* name);
-FVIZ_API const FVizDataArray* fviz_attribute_set_const_get(const FVizAttributeSet* set, const char* name);
-FVIZ_API FVizResult fviz_attribute_set_add(FVizAttributeSet* set, const char* name, FVizDataArray* array);
-FVIZ_API FVizResult fviz_attribute_set_remove(FVizAttributeSet* set, const char* name);
-FVIZ_API FVizResult fviz_attribute_set_set_active(FVizAttributeSet* set, FVizAttributeRole role, const char* name);
-FVIZ_API const char* fviz_attribute_set_active_name(const FVizAttributeSet* set, FVizAttributeRole role);
-FVIZ_API FVizDataArray* fviz_attribute_set_active(FVizAttributeSet* set, FVizAttributeRole role);
-FVIZ_API const FVizDataArray* fviz_attribute_set_const_active(const FVizAttributeSet* set, FVizAttributeRole role);
-FVIZ_API FVizResult fviz_attribute_set_shallow_copy(const FVizAttributeSet* source, FVizAttributeSet** out_copy);
-FVIZ_API FVizResult fviz_attribute_set_deep_copy(const FVizAttributeSet* source, FVizAttributeSet** out_copy);
+FVIZ_DATA_API FVizResult fviz_attribute_set_create(FVizAttributeSet** out_set);
+FVIZ_DATA_API void fviz_attribute_set_clear(FVizAttributeSet* set);
+FVIZ_DATA_API FVizSize fviz_attribute_set_count(const FVizAttributeSet* set);
+FVIZ_DATA_API const char* fviz_attribute_set_name_at(const FVizAttributeSet* set, FVizSize index);
+FVIZ_DATA_API FVizDataArray* fviz_attribute_set_array_at(FVizAttributeSet* set, FVizSize index);
+FVIZ_DATA_API const FVizDataArray* fviz_attribute_set_const_array_at(const FVizAttributeSet* set, FVizSize index);
+FVIZ_DATA_API FVizDataArray* fviz_attribute_set_get(FVizAttributeSet* set, const char* name);
+FVIZ_DATA_API const FVizDataArray* fviz_attribute_set_const_get(const FVizAttributeSet* set, const char* name);
+FVIZ_DATA_API FVizResult fviz_attribute_set_add(FVizAttributeSet* set, const char* name, FVizDataArray* array);
+FVIZ_DATA_API FVizResult fviz_attribute_set_remove(FVizAttributeSet* set, const char* name);
+FVIZ_DATA_API FVizResult fviz_attribute_set_set_active(FVizAttributeSet* set, FVizAttributeRole role, const char* name);
+FVIZ_DATA_API const char* fviz_attribute_set_active_name(const FVizAttributeSet* set, FVizAttributeRole role);
+FVIZ_DATA_API FVizDataArray* fviz_attribute_set_active(FVizAttributeSet* set, FVizAttributeRole role);
+FVIZ_DATA_API const FVizDataArray* fviz_attribute_set_const_active(const FVizAttributeSet* set, FVizAttributeRole role);
+FVIZ_DATA_API FVizResult fviz_attribute_set_shallow_copy(const FVizAttributeSet* source, FVizAttributeSet** out_copy);
+FVIZ_DATA_API FVizResult fviz_attribute_set_deep_copy(const FVizAttributeSet* source, FVizAttributeSet** out_copy);
 
 FVIZ_EXTERN_C_END
 

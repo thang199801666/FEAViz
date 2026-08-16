@@ -20,8 +20,8 @@ typedef enum FVizDataType
     FVIZ_DATA_FLOAT64 = 10
 } FVizDataType;
 
-FVIZ_API FVizSize fviz_data_type_size(FVizDataType type);
-FVIZ_API const char* fviz_data_type_name(FVizDataType type);
+FVIZ_DATA_API FVizSize fviz_data_type_size(FVizDataType type);
+FVIZ_DATA_API const char* fviz_data_type_name(FVizDataType type);
 
 FVIZ_EXTERN_C_END
 

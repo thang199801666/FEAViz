@@ -7,7 +7,7 @@
 
 FVIZ_EXTERN_C_BEGIN
 
-FVIZ_API FVizResult fviz_vtk_legacy_read(const char* file_path, FVizUnstructuredGrid** out_grid);
+FVIZ_IO_API FVizResult fviz_vtk_legacy_read(const char* file_path, FVizUnstructuredGrid** out_grid);
 
 FVIZ_EXTERN_C_END
 

@@ -90,72 +90,72 @@ typedef struct FVizSelectionRecord
     double scalar_tuple[4];
 } FVizSelectionRecord;
 
-FVIZ_API FVizResult fviz_selection_create(FVizSelection** out_selection);
-FVIZ_API void fviz_selection_record_initialize(FVizSelectionRecord* record);
-FVIZ_API void fviz_selection_clear(FVizSelection* selection);
-FVIZ_API FVizResult fviz_selection_add(FVizSelection* selection, FVizActor* actor, FVizSelectionAssociation association,
+FVIZ_INTERACTION_API FVizResult fviz_selection_create(FVizSelection** out_selection);
+FVIZ_INTERACTION_API void fviz_selection_record_initialize(FVizSelectionRecord* record);
+FVIZ_INTERACTION_API void fviz_selection_clear(FVizSelection* selection);
+FVIZ_INTERACTION_API FVizResult fviz_selection_add(FVizSelection* selection, FVizActor* actor, FVizSelectionAssociation association,
                                        FVizSize id);
-FVIZ_API FVizResult fviz_selection_add_record(FVizSelection* selection, const FVizSelectionRecord* record);
-FVIZ_API FVizResult fviz_selection_get_record(const FVizSelection* selection, FVizSize index,
+FVIZ_INTERACTION_API FVizResult fviz_selection_add_record(FVizSelection* selection, const FVizSelectionRecord* record);
+FVIZ_INTERACTION_API FVizResult fviz_selection_get_record(const FVizSelection* selection, FVizSize index,
                                               FVizSelectionRecord* out_record);
-FVIZ_API FVizResult fviz_selection_refresh(FVizSelection* selection);
-FVIZ_API FVizBool fviz_selection_contains(const FVizSelection* selection, const FVizActor* actor,
+FVIZ_INTERACTION_API FVizResult fviz_selection_refresh(FVizSelection* selection);
+FVIZ_INTERACTION_API FVizBool fviz_selection_contains(const FVizSelection* selection, const FVizActor* actor,
                                           FVizSelectionAssociation association, FVizSize id);
-FVIZ_API FVizResult fviz_selection_remove(FVizSelection* selection, const FVizActor* actor,
+FVIZ_INTERACTION_API FVizResult fviz_selection_remove(FVizSelection* selection, const FVizActor* actor,
                                           FVizSelectionAssociation association, FVizSize id);
-FVIZ_API FVizResult fviz_selection_copy(const FVizSelection* source, FVizSelection** out_selection);
-FVIZ_API FVizResult fviz_selection_apply(FVizSelection* selection, const FVizSelection* incoming,
+FVIZ_INTERACTION_API FVizResult fviz_selection_copy(const FVizSelection* source, FVizSelection** out_selection);
+FVIZ_INTERACTION_API FVizResult fviz_selection_apply(FVizSelection* selection, const FVizSelection* incoming,
                                          FVizSelectionModifier modifier);
 
 /* CPU region selection utilities. Coordinates use the render-window display convention. */
-FVIZ_API FVizResult fviz_selection_select_frustum(FVizRenderer* renderer, const FVizFrustum* frustum,
+FVIZ_INTERACTION_API FVizResult fviz_selection_select_frustum(FVizRenderer* renderer, const FVizFrustum* frustum,
                                                   FVizSelectionAssociation association, FVizSelection** out_selection);
-FVIZ_API FVizResult fviz_selection_select_polygon(FVizRenderer* renderer, int display_width, int display_height,
+FVIZ_INTERACTION_API FVizResult fviz_selection_select_polygon(FVizRenderer* renderer, int display_width, int display_height,
                                                   const int* xy_points, FVizSize point_count,
                                                   FVizSelectionAssociation association, FVizSelection** out_selection);
-FVIZ_API void fviz_selection_region_options_initialize(FVizSelectionRegionOptions* options);
-FVIZ_API void fviz_selection_region_statistics_initialize(FVizSelectionRegionStatistics* statistics);
-FVIZ_API FVizResult fviz_selection_select_polygon_with_options(
+FVIZ_INTERACTION_API void fviz_selection_region_options_initialize(FVizSelectionRegionOptions* options);
+FVIZ_INTERACTION_API void fviz_selection_region_statistics_initialize(FVizSelectionRegionStatistics* statistics);
+FVIZ_INTERACTION_API FVizResult fviz_selection_select_polygon_with_options(
     FVizRenderer* renderer, int display_width, int display_height, const int* xy_points, FVizSize point_count,
     FVizSelectionAssociation association, const FVizSelectionRegionOptions* options,
     FVizSelectionRegionStatistics* statistics, FVizSelection** out_selection);
-FVIZ_API FVizResult fviz_selection_select_rectangle(FVizRenderer* renderer, int display_width, int display_height,
+FVIZ_INTERACTION_API FVizResult fviz_selection_select_rectangle(FVizRenderer* renderer, int display_width, int display_height,
                                                     int start_x, int start_y, int end_x, int end_y,
                                                     FVizSelectionAssociation association,
                                                     FVizSelection** out_selection);
-FVIZ_API FVizResult fviz_selection_probe(FVizSelection* selection, FVizSize index, const char* array_name);
-FVIZ_API FVizSelectionState fviz_selection_state(const FVizSelection* selection, FVizSize index);
-FVIZ_API FVizSize fviz_selection_count(const FVizSelection* selection);
-FVIZ_API FVizActor* fviz_selection_actor(FVizSelection* selection, FVizSize index);
-FVIZ_API FVizSelectionAssociation fviz_selection_association(const FVizSelection* selection, FVizSize index);
-FVIZ_API FVizSize fviz_selection_id(const FVizSelection* selection, FVizSize index);
+FVIZ_INTERACTION_API FVizResult fviz_selection_probe(FVizSelection* selection, FVizSize index, const char* array_name);
+FVIZ_INTERACTION_API FVizSelectionState fviz_selection_state(const FVizSelection* selection, FVizSize index);
+FVIZ_INTERACTION_API FVizSize fviz_selection_count(const FVizSelection* selection);
+FVIZ_INTERACTION_API FVizActor* fviz_selection_actor(FVizSelection* selection, FVizSize index);
+FVIZ_INTERACTION_API FVizSelectionAssociation fviz_selection_association(const FVizSelection* selection, FVizSize index);
+FVIZ_INTERACTION_API FVizSize fviz_selection_id(const FVizSelection* selection, FVizSize index);
 /* Builds a UInt8/1-component mask for records matching actor and association.
  * When inverse is true, selected entries are zero and all others are one. */
-FVIZ_API FVizResult fviz_selection_create_mask(const FVizSelection* selection, const FVizActor* actor,
+FVIZ_INTERACTION_API FVizResult fviz_selection_create_mask(const FVizSelection* selection, const FVizActor* actor,
                                                FVizSelectionAssociation association, FVizSize value_count,
                                                FVizBool inverse, FVizDataArray** out_mask);
 /* Converts point selections to incident render triangles, or triangle selections
  * to their points. Other association pairs return UNSUPPORTED. */
-FVIZ_API FVizResult fviz_selection_convert_association(const FVizSelection* selection, FVizActor* actor,
+FVIZ_INTERACTION_API FVizResult fviz_selection_convert_association(const FVizSelection* selection, FVizActor* actor,
                                                        FVizSelectionAssociation target_association,
                                                        FVizSelection** out_selection);
 /* Extracts selected points as vertex cells, or selected render triangles as a
  * compact PolyData while gathering compatible point/cell/field attributes. */
-FVIZ_API FVizResult fviz_selection_extract_poly_data(const FVizSelection* selection, const FVizActor* actor,
+FVIZ_INTERACTION_API FVizResult fviz_selection_extract_poly_data(const FVizSelection* selection, const FVizActor* actor,
                                                      FVizSelectionAssociation association,
                                                      FVizPolyData** out_poly_data);
 
-FVIZ_API FVizResult fviz_named_selection_collection_create(FVizNamedSelectionCollection** out_collection);
+FVIZ_INTERACTION_API FVizResult fviz_named_selection_collection_create(FVizNamedSelectionCollection** out_collection);
 /* Adds or atomically replaces a named retained selection. */
-FVIZ_API FVizResult fviz_named_selection_collection_set(FVizNamedSelectionCollection* collection, const char* name,
+FVIZ_INTERACTION_API FVizResult fviz_named_selection_collection_set(FVizNamedSelectionCollection* collection, const char* name,
                                                         FVizSelection* selection);
-FVIZ_API FVizResult fviz_named_selection_collection_remove(FVizNamedSelectionCollection* collection, const char* name);
-FVIZ_API void fviz_named_selection_collection_clear(FVizNamedSelectionCollection* collection);
-FVIZ_API FVizSize fviz_named_selection_collection_count(const FVizNamedSelectionCollection* collection);
-FVIZ_API const char* fviz_named_selection_collection_name(const FVizNamedSelectionCollection* collection,
+FVIZ_INTERACTION_API FVizResult fviz_named_selection_collection_remove(FVizNamedSelectionCollection* collection, const char* name);
+FVIZ_INTERACTION_API void fviz_named_selection_collection_clear(FVizNamedSelectionCollection* collection);
+FVIZ_INTERACTION_API FVizSize fviz_named_selection_collection_count(const FVizNamedSelectionCollection* collection);
+FVIZ_INTERACTION_API const char* fviz_named_selection_collection_name(const FVizNamedSelectionCollection* collection,
                                                           FVizSize index);
 /* Borrowed pointer, valid while the collection entry remains present. */
-FVIZ_API FVizSelection* fviz_named_selection_collection_get(FVizNamedSelectionCollection* collection, const char* name);
+FVIZ_INTERACTION_API FVizSelection* fviz_named_selection_collection_get(FVizNamedSelectionCollection* collection, const char* name);
 
 FVIZ_EXTERN_C_END
 
