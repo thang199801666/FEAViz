@@ -23,19 +23,15 @@ typedef struct FVizCleanPolyDataFilter FVizCleanPolyDataFilter;
 #define FVIZ_TYPE_APPEND_POLY_DATA_FILTER UINT64_C(0xB38F20C64E9A175D)
 #define FVIZ_TYPE_CLEAN_POLY_DATA_FILTER UINT64_C(0x6D42F8B31A90CE57)
 
-FVIZ_API FVizResult fviz_transform_poly_data_filter_create(
-    FVizTransform* transform,
-    FVizTransformPolyDataFilter** out_filter);
-FVIZ_API FVizResult fviz_transform_poly_data_filter_set_transform(
-    FVizTransformPolyDataFilter* filter,
-    FVizTransform* transform);
+FVIZ_API FVizResult fviz_transform_poly_data_filter_create(FVizTransform* transform,
+                                                           FVizTransformPolyDataFilter** out_filter);
+FVIZ_API FVizResult fviz_transform_poly_data_filter_set_transform(FVizTransformPolyDataFilter* filter,
+                                                                  FVizTransform* transform);
 FVIZ_API FVizTransform* fviz_transform_poly_data_filter_transform(FVizTransformPolyDataFilter* filter);
-FVIZ_API FVizResult fviz_transform_poly_data_filter_set_input_data(
-    FVizTransformPolyDataFilter* filter,
-    FVizPolyData* input);
-FVIZ_API FVizResult fviz_transform_poly_data_filter_set_input_connection(
-    FVizTransformPolyDataFilter* filter,
-    FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_transform_poly_data_filter_set_input_data(FVizTransformPolyDataFilter* filter,
+                                                                   FVizPolyData* input);
+FVIZ_API FVizResult fviz_transform_poly_data_filter_set_input_connection(FVizTransformPolyDataFilter* filter,
+                                                                         FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_transform_poly_data_filter_algorithm(FVizTransformPolyDataFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_transform_poly_data_filter_output_port(FVizTransformPolyDataFilter* filter);
 FVIZ_API FVizPolyData* fviz_transform_poly_data_filter_output(FVizTransformPolyDataFilter* filter);
@@ -54,15 +50,11 @@ FVIZ_API FVizPolyData* fviz_elevation_filter_output(FVizElevationFilter* filter)
 FVIZ_API FVizResult fviz_elevation_filter_update(FVizElevationFilter* filter);
 
 FVIZ_API FVizResult fviz_append_poly_data_filter_create(FVizAppendPolyDataFilter** out_filter);
-FVIZ_API FVizResult fviz_append_poly_data_filter_set_input_data(
-    FVizAppendPolyDataFilter* filter,
-    FVizPolyData* input);
-FVIZ_API FVizResult fviz_append_poly_data_filter_set_input_connection(
-    FVizAppendPolyDataFilter* filter,
-    FVizAlgorithmOutput* input);
-FVIZ_API FVizResult fviz_append_poly_data_filter_add_input_connection(
-    FVizAppendPolyDataFilter* filter,
-    FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_append_poly_data_filter_set_input_data(FVizAppendPolyDataFilter* filter, FVizPolyData* input);
+FVIZ_API FVizResult fviz_append_poly_data_filter_set_input_connection(FVizAppendPolyDataFilter* filter,
+                                                                      FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_append_poly_data_filter_add_input_connection(FVizAppendPolyDataFilter* filter,
+                                                                      FVizAlgorithmOutput* input);
 FVIZ_API void fviz_append_poly_data_filter_remove_all_inputs(FVizAppendPolyDataFilter* filter);
 FVIZ_API uint32_t fviz_append_poly_data_filter_input_count(const FVizAppendPolyDataFilter* filter);
 FVIZ_API FVizAlgorithm* fviz_append_poly_data_filter_algorithm(FVizAppendPolyDataFilter* filter);
@@ -71,20 +63,14 @@ FVIZ_API FVizPolyData* fviz_append_poly_data_filter_output(FVizAppendPolyDataFil
 FVIZ_API FVizResult fviz_append_poly_data_filter_update(FVizAppendPolyDataFilter* filter);
 
 FVIZ_API FVizResult fviz_clean_poly_data_filter_create(FVizCleanPolyDataFilter** out_filter);
-FVIZ_API FVizResult fviz_clean_poly_data_filter_set_tolerance(
-    FVizCleanPolyDataFilter* filter,
-    double tolerance);
+FVIZ_API FVizResult fviz_clean_poly_data_filter_set_tolerance(FVizCleanPolyDataFilter* filter, double tolerance);
 FVIZ_API double fviz_clean_poly_data_filter_tolerance(const FVizCleanPolyDataFilter* filter);
-FVIZ_API void fviz_clean_poly_data_filter_set_remove_degenerate(
-    FVizCleanPolyDataFilter* filter,
-    FVizBool remove_degenerate);
+FVIZ_API void fviz_clean_poly_data_filter_set_remove_degenerate(FVizCleanPolyDataFilter* filter,
+                                                                FVizBool remove_degenerate);
 FVIZ_API FVizBool fviz_clean_poly_data_filter_remove_degenerate(const FVizCleanPolyDataFilter* filter);
-FVIZ_API FVizResult fviz_clean_poly_data_filter_set_input_data(
-    FVizCleanPolyDataFilter* filter,
-    FVizPolyData* input);
-FVIZ_API FVizResult fviz_clean_poly_data_filter_set_input_connection(
-    FVizCleanPolyDataFilter* filter,
-    FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_clean_poly_data_filter_set_input_data(FVizCleanPolyDataFilter* filter, FVizPolyData* input);
+FVIZ_API FVizResult fviz_clean_poly_data_filter_set_input_connection(FVizCleanPolyDataFilter* filter,
+                                                                     FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_clean_poly_data_filter_algorithm(FVizCleanPolyDataFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_clean_poly_data_filter_output_port(FVizCleanPolyDataFilter* filter);
 FVIZ_API FVizPolyData* fviz_clean_poly_data_filter_output(FVizCleanPolyDataFilter* filter);

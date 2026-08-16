@@ -35,11 +35,8 @@
 #include <FViz/Rendering/FVizTextLayoutPrivate.h>
 #include <FViz/Rendering/FVizLabelSetPrivate.h>
 
-static FVizResult fviz_gl_render_volume(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    const FVizActor* actor,
-    float aspect_ratio);
+static FVizResult fviz_gl_render_volume(FVizGLDevice* device, FVizRenderer* renderer, const FVizActor* actor,
+                                        float aspect_ratio);
 
 #define FVIZ_GL_POSITION_ATTRIBUTE_INDEX 0u
 #define FVIZ_GL_NORMAL_ATTRIBUTE_INDEX 1u
@@ -165,17 +162,16 @@ static const char* const k_fviz_gl_fragment_shader_source =
     "    outColor = vec4(color, alpha);\n"
     "}\n";
 
-static const char* const k_fviz_gl2d_vertex_shader_source =
-    "#version 330 core\n"
-    "layout(location = 0) in vec2 aPosition;\n"
-    "layout(location = 1) in vec3 aColor;\n"
-    "uniform mat4 uMvp;\n"
-    "out vec3 vColor;\n"
-    "void main()\n"
-    "{\n"
-    "    gl_Position = uMvp * vec4(aPosition, 0.0, 1.0);\n"
-    "    vColor = aColor;\n"
-    "}\n";
+static const char* const k_fviz_gl2d_vertex_shader_source = "#version 330 core\n"
+                                                            "layout(location = 0) in vec2 aPosition;\n"
+                                                            "layout(location = 1) in vec3 aColor;\n"
+                                                            "uniform mat4 uMvp;\n"
+                                                            "out vec3 vColor;\n"
+                                                            "void main()\n"
+                                                            "{\n"
+                                                            "    gl_Position = uMvp * vec4(aPosition, 0.0, 1.0);\n"
+                                                            "    vColor = aColor;\n"
+                                                            "}\n";
 
 static const char* const k_fviz_gl_edge_vertex_shader_source =
     "#version 330 core\n"
@@ -494,14 +490,13 @@ static const char* const k_fviz_gl_selection_fragment_shader_source =
     "    outPick = uvec4(uActorId + 1u, uAssociation, item + 1u, 0u);\n"
     "}\n";
 
-static const char* const k_fviz_gl2d_fragment_shader_source =
-    "#version 330 core\n"
-    "in vec3 vColor;\n"
-    "out vec4 outColor;\n"
-    "void main()\n"
-    "{\n"
-    "    outColor = vec4(vColor, 1.0);\n"
-    "}\n";
+static const char* const k_fviz_gl2d_fragment_shader_source = "#version 330 core\n"
+                                                              "in vec3 vColor;\n"
+                                                              "out vec4 outColor;\n"
+                                                              "void main()\n"
+                                                              "{\n"
+                                                              "    outColor = vec4(vColor, 1.0);\n"
+                                                              "}\n";
 
 static const char* const k_fviz_gl_text_vertex_shader_source =
     "#version 330 core\n"
@@ -635,16 +630,22 @@ static uint64_t fviz_gl_actor_resource_resident_bytes(const FVizGLActorResource*
 {
     uint64_t bytes = 0u;
     if (resource == NULL) return 0u;
-#define FVIZ_ADD_RESIDENT_BUFFER(Buffer, Count, Stride) \
-    do { if ((Buffer) != 0u && (Count) > 0) bytes += (uint64_t)(Count) * (uint64_t)(Stride); } while (0)
+#define FVIZ_ADD_RESIDENT_BUFFER(Buffer, Count, Stride)                                                                \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        if ((Buffer) != 0u && (Count) > 0) bytes += (uint64_t)(Count) * (uint64_t)(Stride);                            \
+    } while (0)
     FVIZ_ADD_RESIDENT_BUFFER(resource->position_buffer, resource->point_count, sizeof(FVizVec3));
     FVIZ_ADD_RESIDENT_BUFFER(resource->normal_buffer, resource->point_count, sizeof(FVizVec3));
     FVIZ_ADD_RESIDENT_BUFFER(resource->index_buffer, resource->index_count, sizeof(uint32_t));
     FVIZ_ADD_RESIDENT_BUFFER(resource->color_buffer, resource->point_count, sizeof(float) * 4u);
     FVIZ_ADD_RESIDENT_BUFFER(resource->line_index_buffer, resource->line_index_count, sizeof(uint32_t));
-    FVIZ_ADD_RESIDENT_BUFFER(resource->line_adjacency_index_buffer, resource->line_adjacency_index_count, sizeof(uint32_t));
-    FVIZ_ADD_RESIDENT_BUFFER(resource->triangle_edge_index_buffer, resource->triangle_edge_index_count, sizeof(uint32_t));
-    FVIZ_ADD_RESIDENT_BUFFER(resource->triangle_edge_adjacency_index_buffer, resource->triangle_edge_adjacency_index_count, sizeof(uint32_t));
+    FVIZ_ADD_RESIDENT_BUFFER(resource->line_adjacency_index_buffer, resource->line_adjacency_index_count,
+                             sizeof(uint32_t));
+    FVIZ_ADD_RESIDENT_BUFFER(resource->triangle_edge_index_buffer, resource->triangle_edge_index_count,
+                             sizeof(uint32_t));
+    FVIZ_ADD_RESIDENT_BUFFER(resource->triangle_edge_adjacency_index_buffer,
+                             resource->triangle_edge_adjacency_index_count, sizeof(uint32_t));
     FVIZ_ADD_RESIDENT_BUFFER(resource->point_index_buffer, resource->point_index_count, sizeof(uint32_t));
 #undef FVIZ_ADD_RESIDENT_BUFFER
     if (resource->instance_buffer != 0u) bytes += (uint64_t)resource->instance_buffer_bytes;
@@ -654,32 +655,23 @@ static uint64_t fviz_gl_actor_resource_resident_bytes(const FVizGLActorResource*
 static FVizBool fviz_gl_actor_resource_pinned(const FVizGLActorResource* resource)
 {
     if (resource == NULL) return FVIZ_FALSE;
-    if (resource->mapper != NULL)
-        return fviz_mapper_gpu_residency_pinned(resource->mapper);
-    return resource->glyph_mapper != NULL
-        ? fviz_glyph_mapper_gpu_residency_pinned(resource->glyph_mapper)
-        : FVIZ_FALSE;
+    if (resource->mapper != NULL) return fviz_mapper_gpu_residency_pinned(resource->mapper);
+    return resource->glyph_mapper != NULL ? fviz_glyph_mapper_gpu_residency_pinned(resource->glyph_mapper) : FVIZ_FALSE;
 }
 
-static void fviz_gl_actor_resource_resident_classes(
-    const FVizGLActorResource* resource,
-    uint64_t* geometry,
-    uint64_t* attributes,
-    uint64_t* instances)
+static void fviz_gl_actor_resource_resident_classes(const FVizGLActorResource* resource, uint64_t* geometry,
+                                                    uint64_t* attributes, uint64_t* instances)
 {
     uint64_t total;
     uint64_t attribute_bytes = 0u;
     uint64_t instance_bytes = 0u;
     if (resource == NULL) return;
     total = fviz_gl_actor_resource_resident_bytes(resource);
-    if (resource->color_buffer != 0u)
-        attribute_bytes = (uint64_t)resource->point_count * sizeof(float) * 4u;
-    if (resource->instance_buffer != 0u)
-        instance_bytes = (uint64_t)resource->instance_buffer_bytes;
+    if (resource->color_buffer != 0u) attribute_bytes = (uint64_t)resource->point_count * sizeof(float) * 4u;
+    if (resource->instance_buffer != 0u) instance_bytes = (uint64_t)resource->instance_buffer_bytes;
     *attributes += attribute_bytes;
     *instances += instance_bytes;
-    *geometry += total >= attribute_bytes + instance_bytes
-        ? total - attribute_bytes - instance_bytes : 0u;
+    *geometry += total >= attribute_bytes + instance_bytes ? total - attribute_bytes - instance_bytes : 0u;
 }
 
 typedef struct FVizGLColor
@@ -874,13 +866,11 @@ static const FVizPolyData* fviz_gl_actor_render_poly_data(const FVizActor* actor
     const FVizGlyphMapper* glyph_mapper;
     if (actor == NULL) return NULL;
     glyph_mapper = fviz_actor_const_glyph_mapper(actor);
-    return glyph_mapper != NULL
-        ? fviz_glyph_mapper_const_source_poly_data(glyph_mapper)
-        : fviz_actor_const_poly_data(actor);
+    return glyph_mapper != NULL ? fviz_glyph_mapper_const_source_poly_data(glyph_mapper)
+                                : fviz_actor_const_poly_data(actor);
 }
 
-static void fviz_gl_glyph_instance_to_gpu(
-    const FVizGlyphInstance* source, FVizGLGlyphInstance* destination)
+static void fviz_gl_glyph_instance_to_gpu(const FVizGlyphInstance* source, FVizGLGlyphInstance* destination)
 {
     FVizMat3 rotation;
     if (source == NULL || destination == NULL) return;
@@ -907,10 +897,9 @@ static void fviz_gl_glyph_instance_to_gpu(
 
 static FVizVec3 fviz_gl_transform_point(FVizMat4 matrix, FVizVec3 point)
 {
-    return fviz_vec3(
-        matrix.m[0] * point.x + matrix.m[4] * point.y + matrix.m[8] * point.z + matrix.m[12],
-        matrix.m[1] * point.x + matrix.m[5] * point.y + matrix.m[9] * point.z + matrix.m[13],
-        matrix.m[2] * point.x + matrix.m[6] * point.y + matrix.m[10] * point.z + matrix.m[14]);
+    return fviz_vec3(matrix.m[0] * point.x + matrix.m[4] * point.y + matrix.m[8] * point.z + matrix.m[12],
+                     matrix.m[1] * point.x + matrix.m[5] * point.y + matrix.m[9] * point.z + matrix.m[13],
+                     matrix.m[2] * point.x + matrix.m[6] * point.y + matrix.m[10] * point.z + matrix.m[14]);
 }
 
 static FVizBool fviz_gl_actor_is_translucent(const FVizActor* actor)
@@ -920,9 +909,8 @@ static FVizBool fviz_gl_actor_is_translucent(const FVizActor* actor)
     if (fviz_actor_const_volume_mapper(actor) != NULL) return FVIZ_TRUE;
     if (fviz_actor_opacity(actor) < 0.999999f) return FVIZ_TRUE;
     glyph_mapper = fviz_actor_const_glyph_mapper(actor);
-    return glyph_mapper != NULL &&
-        fviz_glyph_mapper_has_translucent_instances(glyph_mapper) != FVIZ_FALSE
-        ? FVIZ_TRUE : FVIZ_FALSE;
+    return glyph_mapper != NULL && fviz_glyph_mapper_has_translucent_instances(glyph_mapper) != FVIZ_FALSE ? FVIZ_TRUE
+                                                                                                           : FVIZ_FALSE;
 }
 
 static int fviz_gl_draw_item_compare_back_to_front(const void* lhs, const void* rhs)
@@ -936,11 +924,8 @@ static int fviz_gl_draw_item_compare_back_to_front(const void* lhs, const void* 
     return 0;
 }
 
-static FVizResult fviz_gl_prepare_translucent_order(
-    FVizGLDevice* device,
-    FVizScene* scene,
-    FVizCamera* camera,
-    FVizSize* out_count)
+static FVizResult fviz_gl_prepare_translucent_order(FVizGLDevice* device, FVizScene* scene, FVizCamera* camera,
+                                                    FVizSize* out_count)
 {
     const FVizSize scene_count = fviz_scene_actor_count(scene);
     const FVizVec3 camera_position = fviz_camera_position(camera);
@@ -993,8 +978,7 @@ static FVizResult fviz_gl_prepare_translucent_order(
         ++count;
     }
     if (count > 1u)
-        qsort(device->draw_items, count, sizeof(*device->draw_items),
-            fviz_gl_draw_item_compare_back_to_front);
+        qsort(device->draw_items, count, sizeof(*device->draw_items), fviz_gl_draw_item_compare_back_to_front);
     *out_count = count;
     return FVIZ_OK;
 }
@@ -1105,12 +1089,8 @@ static void fviz_gl_actor_resource_destroy(FVizGLDevice* device, FVizGLActorReso
     resource->point_count = 0u;
 }
 
-static void fviz_gl_upload_buffer(
-    FVizGLDevice* device,
-    GLuint* buffer,
-    GLenum target,
-    const void* data,
-    GLsizeiptr size)
+static void fviz_gl_upload_buffer(FVizGLDevice* device, GLuint* buffer, GLenum target, const void* data,
+                                  GLsizeiptr size)
 {
     const FVizGLFunctions* gl = &device->gl;
     if (*buffer == 0u) gl->glGenBuffers(1, buffer);
@@ -1120,12 +1100,7 @@ static void fviz_gl_upload_buffer(
     if (size > 0) device->frame_statistics.gpu_upload_bytes += (uint64_t)size;
 }
 
-static void fviz_gl_update_buffer(
-    FVizGLDevice* device,
-    GLuint buffer,
-    GLenum target,
-    const void* data,
-    GLsizeiptr size)
+static void fviz_gl_update_buffer(FVizGLDevice* device, GLuint buffer, GLenum target, const void* data, GLsizeiptr size)
 {
     const FVizGLFunctions* gl = &device->gl;
     if (buffer == 0u || data == NULL || size <= 0) return;
@@ -1135,13 +1110,8 @@ static void fviz_gl_update_buffer(
     device->frame_statistics.gpu_upload_bytes += (uint64_t)size;
 }
 
-static void fviz_gl_update_buffer_range(
-    FVizGLDevice* device,
-    GLuint buffer,
-    GLenum target,
-    const void* data,
-    GLsizeiptr offset,
-    GLsizeiptr size)
+static void fviz_gl_update_buffer_range(FVizGLDevice* device, GLuint buffer, GLenum target, const void* data,
+                                        GLsizeiptr offset, GLsizeiptr size)
 {
     const FVizGLFunctions* gl = &device->gl;
     if (buffer == 0u || data == NULL || size <= 0) return;
@@ -1151,10 +1121,8 @@ static void fviz_gl_update_buffer_range(
     device->frame_statistics.gpu_upload_bytes += (uint64_t)size;
 }
 
-static FVizResult fviz_gl_upload_glyph_instances(
-    FVizGLDevice* device,
-    FVizGLActorResource* resource,
-    const FVizGlyphMapper* glyph_mapper)
+static FVizResult fviz_gl_upload_glyph_instances(FVizGLDevice* device, FVizGLActorResource* resource,
+                                                 const FVizGlyphMapper* glyph_mapper)
 {
     const FVizGLFunctions* gl = &device->gl;
     const FVizGlyphInstance* source_instances;
@@ -1164,8 +1132,7 @@ static FVizResult fviz_gl_upload_glyph_instances(
     FVizSize i;
     FVizDirtyRange dirty = {0u, 0u, FVIZ_FALSE};
     FVizBool partial = FVIZ_FALSE;
-    if (device == NULL || resource == NULL || glyph_mapper == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device == NULL || resource == NULL || glyph_mapper == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     count = fviz_glyph_mapper_instance_count(glyph_mapper);
     source_instances = fviz_glyph_mapper_instances(glyph_mapper);
     if (count == 0u)
@@ -1174,43 +1141,34 @@ static FVizResult fviz_gl_upload_glyph_instances(
         resource->glyph_mtime = fviz_internal_glyph_mapper_instances_mtime(glyph_mapper);
         return FVIZ_OK;
     }
-    if (count > (FVizSize)INT_MAX || source_instances == NULL)
-        return FVIZ_ERROR_OVERFLOW;
+    if (count > (FVizSize)INT_MAX || source_instances == NULL) return FVIZ_ERROR_OVERFLOW;
     if (resource->instance_buffer != 0u && resource->glyph_mtime != 0u &&
-        fviz_internal_glyph_mapper_dirty_range_since(
-            glyph_mapper, resource->glyph_mtime, &dirty) == FVIZ_OK &&
-        dirty.full == FVIZ_FALSE && dirty.count != 0u &&
-        dirty.first <= count && dirty.count <= count - dirty.first &&
+        fviz_internal_glyph_mapper_dirty_range_since(glyph_mapper, resource->glyph_mtime, &dirty) == FVIZ_OK &&
+        dirty.full == FVIZ_FALSE && dirty.count != 0u && dirty.first <= count && dirty.count <= count - dirty.first &&
         resource->instance_buffer_bytes >= count * sizeof(*gpu_instances))
         partial = FVIZ_TRUE;
     if (partial != FVIZ_FALSE)
     {
         FVizSize dirty_bytes;
-        if (fviz_size_multiply(dirty.count,
-                (FVizSize)sizeof(*gpu_instances), &dirty_bytes) != FVIZ_OK)
+        if (fviz_size_multiply(dirty.count, (FVizSize)sizeof(*gpu_instances), &dirty_bytes) != FVIZ_OK)
             return fviz_last_error_code();
         gpu_instances = (FVizGLGlyphInstance*)fviz_alloc(dirty_bytes);
         if (gpu_instances == NULL) return fviz_last_error_code();
         for (i = 0u; i < dirty.count; ++i)
-            fviz_gl_glyph_instance_to_gpu(
-                &source_instances[dirty.first + i], &gpu_instances[i]);
-        fviz_gl_update_buffer_range(device, resource->instance_buffer,
-            FVIZ_GL_ARRAY_BUFFER, gpu_instances,
-            (GLsizeiptr)(dirty.first * sizeof(*gpu_instances)),
-            (GLsizeiptr)dirty_bytes);
+            fviz_gl_glyph_instance_to_gpu(&source_instances[dirty.first + i], &gpu_instances[i]);
+        fviz_gl_update_buffer_range(device, resource->instance_buffer, FVIZ_GL_ARRAY_BUFFER, gpu_instances,
+                                    (GLsizeiptr)(dirty.first * sizeof(*gpu_instances)), (GLsizeiptr)dirty_bytes);
         fviz_free(gpu_instances);
         resource->instance_count = (GLsizei)count;
         resource->glyph_mtime = fviz_internal_glyph_mapper_instances_mtime(glyph_mapper);
         return FVIZ_OK;
     }
-    if (fviz_size_multiply(count, (FVizSize)sizeof(*gpu_instances), &bytes) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_size_multiply(count, (FVizSize)sizeof(*gpu_instances), &bytes) != FVIZ_OK) return fviz_last_error_code();
     gpu_instances = (FVizGLGlyphInstance*)fviz_alloc(bytes);
     if (gpu_instances == NULL) return fviz_last_error_code();
     for (i = 0u; i < count; ++i)
         fviz_gl_glyph_instance_to_gpu(&source_instances[i], &gpu_instances[i]);
-    if (resource->instance_buffer == 0u)
-        gl->glGenBuffers(1, &resource->instance_buffer);
+    if (resource->instance_buffer == 0u) gl->glGenBuffers(1, &resource->instance_buffer);
     gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, resource->instance_buffer);
     if (resource->instance_buffer_bytes >= bytes && resource->instance_buffer_bytes != 0u)
         gl->glBufferSubData(FVIZ_GL_ARRAY_BUFFER, 0, (GLsizeiptr)bytes, gpu_instances);
@@ -1226,15 +1184,18 @@ static FVizResult fviz_gl_upload_glyph_instances(
     gl->glBindVertexArray(resource->vao);
     gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, resource->instance_buffer);
     gl->glVertexAttribPointer(FVIZ_GL_INSTANCE_MATRIX0_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizGLGlyphInstance), (const void*)offsetof(FVizGLGlyphInstance, matrix));
+                              (GLsizei)sizeof(FVizGLGlyphInstance), (const void*)offsetof(FVizGLGlyphInstance, matrix));
     gl->glVertexAttribPointer(FVIZ_GL_INSTANCE_MATRIX1_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizGLGlyphInstance), (const void*)(offsetof(FVizGLGlyphInstance, matrix) + 4u * sizeof(float)));
+                              (GLsizei)sizeof(FVizGLGlyphInstance),
+                              (const void*)(offsetof(FVizGLGlyphInstance, matrix) + 4u * sizeof(float)));
     gl->glVertexAttribPointer(FVIZ_GL_INSTANCE_MATRIX2_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizGLGlyphInstance), (const void*)(offsetof(FVizGLGlyphInstance, matrix) + 8u * sizeof(float)));
+                              (GLsizei)sizeof(FVizGLGlyphInstance),
+                              (const void*)(offsetof(FVizGLGlyphInstance, matrix) + 8u * sizeof(float)));
     gl->glVertexAttribPointer(FVIZ_GL_INSTANCE_MATRIX3_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizGLGlyphInstance), (const void*)(offsetof(FVizGLGlyphInstance, matrix) + 12u * sizeof(float)));
+                              (GLsizei)sizeof(FVizGLGlyphInstance),
+                              (const void*)(offsetof(FVizGLGlyphInstance, matrix) + 12u * sizeof(float)));
     gl->glVertexAttribPointer(FVIZ_GL_INSTANCE_COLOR_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizGLGlyphInstance), (const void*)offsetof(FVizGLGlyphInstance, color));
+                              (GLsizei)sizeof(FVizGLGlyphInstance), (const void*)offsetof(FVizGLGlyphInstance, color));
     gl->glEnableVertexAttribArray(FVIZ_GL_INSTANCE_MATRIX0_ATTRIBUTE_INDEX);
     gl->glEnableVertexAttribArray(FVIZ_GL_INSTANCE_MATRIX1_ATTRIBUTE_INDEX);
     gl->glEnableVertexAttribArray(FVIZ_GL_INSTANCE_MATRIX2_ATTRIBUTE_INDEX);
@@ -1251,34 +1212,39 @@ static FVizResult fviz_gl_upload_glyph_instances(
     return FVIZ_OK;
 }
 
-static double fviz_gl_array_component(
-    const FVizDataArray* array,
-    FVizSize tuple_index,
-    uint32_t component)
+static double fviz_gl_array_component(const FVizDataArray* array, FVizSize tuple_index, uint32_t component)
 {
     const unsigned char* tuple = (const unsigned char*)fviz_data_array_const_tuple(array, tuple_index);
     if (tuple == NULL || component >= fviz_data_array_components(array)) return 0.0;
     switch (fviz_data_array_type(array))
     {
-        case FVIZ_DATA_INT8: return ((const int8_t*)tuple)[component];
-        case FVIZ_DATA_UINT8: return ((const uint8_t*)tuple)[component];
-        case FVIZ_DATA_INT16: return ((const int16_t*)tuple)[component];
-        case FVIZ_DATA_UINT16: return ((const uint16_t*)tuple)[component];
-        case FVIZ_DATA_INT32: return ((const int32_t*)tuple)[component];
-        case FVIZ_DATA_UINT32: return ((const uint32_t*)tuple)[component];
-        case FVIZ_DATA_INT64: return (double)((const int64_t*)tuple)[component];
-        case FVIZ_DATA_UINT64: return (double)((const uint64_t*)tuple)[component];
-        case FVIZ_DATA_FLOAT32: return ((const float*)tuple)[component];
-        case FVIZ_DATA_FLOAT64: return ((const double*)tuple)[component];
-        default: return 0.0;
+        case FVIZ_DATA_INT8:
+            return ((const int8_t*)tuple)[component];
+        case FVIZ_DATA_UINT8:
+            return ((const uint8_t*)tuple)[component];
+        case FVIZ_DATA_INT16:
+            return ((const int16_t*)tuple)[component];
+        case FVIZ_DATA_UINT16:
+            return ((const uint16_t*)tuple)[component];
+        case FVIZ_DATA_INT32:
+            return ((const int32_t*)tuple)[component];
+        case FVIZ_DATA_UINT32:
+            return ((const uint32_t*)tuple)[component];
+        case FVIZ_DATA_INT64:
+            return (double)((const int64_t*)tuple)[component];
+        case FVIZ_DATA_UINT64:
+            return (double)((const uint64_t*)tuple)[component];
+        case FVIZ_DATA_FLOAT32:
+            return ((const float*)tuple)[component];
+        case FVIZ_DATA_FLOAT64:
+            return ((const double*)tuple)[component];
+        default:
+            return 0.0;
     }
 }
 
-static double fviz_gl_array_scalar(
-    const FVizDataArray* array,
-    FVizSize tuple_index,
-    FVizComponentMode mode,
-    uint32_t component)
+static double fviz_gl_array_scalar(const FVizDataArray* array, FVizSize tuple_index, FVizComponentMode mode,
+                                   uint32_t component)
 {
     if (mode == FVIZ_COMPONENT_MAGNITUDE)
     {
@@ -1294,25 +1260,19 @@ static double fviz_gl_array_scalar(
     return fviz_gl_array_component(array, tuple_index, component);
 }
 
-static float fviz_gl_direct_color_component(
-    const FVizDataArray* array,
-    FVizSize tuple_index,
-    uint32_t component)
+static float fviz_gl_direct_color_component(const FVizDataArray* array, FVizSize tuple_index, uint32_t component)
 {
     double value = fviz_gl_array_component(array, tuple_index, component);
     if (fviz_data_array_type(array) == FVIZ_DATA_UINT8) value /= 255.0;
-    else if (fviz_data_array_type(array) == FVIZ_DATA_UINT16) value /= 65535.0;
+    else if (fviz_data_array_type(array) == FVIZ_DATA_UINT16)
+        value /= 65535.0;
     if (value < 0.0) value = 0.0;
     if (value > 1.0) value = 1.0;
     return (float)value;
 }
 
-static FVizGLColor fviz_gl_map_tuple_color(
-    FVizMapper* mapper,
-    const FVizDataArray* array,
-    FVizSize tuple_index,
-    FVizComponentMode mode,
-    uint32_t component)
+static FVizGLColor fviz_gl_map_tuple_color(FVizMapper* mapper, const FVizDataArray* array, FVizSize tuple_index,
+                                           FVizComponentMode mode, uint32_t component)
 {
     FVizGLColor color = {1.0f, 1.0f, 1.0f, 1.0f};
     if (mode == FVIZ_COMPONENT_COLOR && fviz_data_array_components(array) >= 3u)
@@ -1320,24 +1280,19 @@ static FVizGLColor fviz_gl_map_tuple_color(
         color.r = fviz_gl_direct_color_component(array, tuple_index, 0u);
         color.g = fviz_gl_direct_color_component(array, tuple_index, 1u);
         color.b = fviz_gl_direct_color_component(array, tuple_index, 2u);
-        if (fviz_data_array_components(array) >= 4u)
-            color.a = fviz_gl_direct_color_component(array, tuple_index, 3u);
+        if (fviz_data_array_components(array) >= 4u) color.a = fviz_gl_direct_color_component(array, tuple_index, 3u);
     }
     else
     {
         const double value = fviz_gl_array_scalar(array, tuple_index, mode, component);
-        fviz_lookup_table_map_scalar(
-            fviz_mapper_lookup_table(mapper), (float)value, &color.r, &color.g, &color.b);
+        fviz_lookup_table_map_scalar(fviz_mapper_lookup_table(mapper), (float)value, &color.r, &color.g, &color.b);
     }
     return color;
 }
 
-static FVizResult fviz_gl_build_color_buffer(
-    FVizGLDevice* device,
-    FVizGLActorResource* resource,
-    const FVizActor* actor,
-    const FVizPolyData* poly_data,
-    FVizSize point_count)
+static FVizResult fviz_gl_build_color_buffer(FVizGLDevice* device, FVizGLActorResource* resource,
+                                             const FVizActor* actor, const FVizPolyData* poly_data,
+                                             FVizSize point_count)
 {
     const FVizGLFunctions* gl = &device->gl;
     FVizMapper* mapper = fviz_actor_mapper((FVizActor*)actor);
@@ -1363,22 +1318,18 @@ static FVizResult fviz_gl_build_color_buffer(
     }
     if (scalars == NULL || point_count == 0u) return FVIZ_OK;
     tuple_count = fviz_data_array_tuple_count(scalars);
-    if (selection.component_mode != FVIZ_COMPONENT_COLOR && fviz_mapper_lookup_table(mapper) == NULL)
-        return FVIZ_OK;
-    if (selection.component_mode == FVIZ_COMPONENT_DIRECT &&
-        selection.component >= fviz_data_array_components(scalars))
+    if (selection.component_mode != FVIZ_COMPONENT_COLOR && fviz_mapper_lookup_table(mapper) == NULL) return FVIZ_OK;
+    if (selection.component_mode == FVIZ_COMPONENT_DIRECT && selection.component >= fviz_data_array_components(scalars))
         return FVIZ_ERROR_INVALID_ARGUMENT;
 
-    if (selection.component_mode != FVIZ_COMPONENT_COLOR &&
-        fviz_mapper_scalar_range_valid(mapper) == FVIZ_FALSE && tuple_count > 0u)
+    if (selection.component_mode != FVIZ_COMPONENT_COLOR && fviz_mapper_scalar_range_valid(mapper) == FVIZ_FALSE &&
+        tuple_count > 0u)
     {
-        double minimum = fviz_gl_array_scalar(
-            scalars, 0u, selection.component_mode, selection.component);
+        double minimum = fviz_gl_array_scalar(scalars, 0u, selection.component_mode, selection.component);
         double maximum = minimum;
         for (i = 1u; i < tuple_count; ++i)
         {
-            const double value = fviz_gl_array_scalar(
-                scalars, i, selection.component_mode, selection.component);
+            const double value = fviz_gl_array_scalar(scalars, i, selection.component_mode, selection.component);
             if (value < minimum) minimum = value;
             if (value > maximum) maximum = value;
         }
@@ -1391,11 +1342,9 @@ static FVizResult fviz_gl_build_color_buffer(
     if (selection.association == FVIZ_ASSOCIATION_POINTS && tuple_count == point_count)
     {
         for (i = 0u; i < point_count; ++i)
-            colors[i] = fviz_gl_map_tuple_color(
-                mapper, scalars, i, selection.component_mode, selection.component);
+            colors[i] = fviz_gl_map_tuple_color(mapper, scalars, i, selection.component_mode, selection.component);
     }
-    else if (selection.association == FVIZ_ASSOCIATION_CELLS &&
-             tuple_count == fviz_poly_data_triangle_count(poly_data))
+    else if (selection.association == FVIZ_ASSOCIATION_CELLS && tuple_count == fviz_poly_data_triangle_count(poly_data))
     {
         const uint32_t* indices = fviz_poly_data_triangle_indices(poly_data);
         contributions = (uint32_t*)fviz_alloc(point_count * sizeof(*contributions));
@@ -1408,8 +1357,8 @@ static FVizResult fviz_gl_build_color_buffer(
         (void)memset(contributions, 0, point_count * sizeof(*contributions));
         for (i = 0u; i < tuple_count; ++i)
         {
-            FVizGLColor cell = fviz_gl_map_tuple_color(
-                mapper, scalars, i, selection.component_mode, selection.component);
+            FVizGLColor cell =
+                fviz_gl_map_tuple_color(mapper, scalars, i, selection.component_mode, selection.component);
             uint32_t corner;
             for (corner = 0u; corner < 3u; ++corner)
             {
@@ -1435,9 +1384,10 @@ static FVizResult fviz_gl_build_color_buffer(
     }
     else if (selection.association == FVIZ_ASSOCIATION_FIELD && tuple_count > 0u)
     {
-        const FVizGLColor field = fviz_gl_map_tuple_color(
-            mapper, scalars, 0u, selection.component_mode, selection.component);
-        for (i = 0u; i < point_count; ++i) colors[i] = field;
+        const FVizGLColor field =
+            fviz_gl_map_tuple_color(mapper, scalars, 0u, selection.component_mode, selection.component);
+        for (i = 0u; i < point_count; ++i)
+            colors[i] = field;
     }
     else
     {
@@ -1446,8 +1396,8 @@ static FVizResult fviz_gl_build_color_buffer(
     }
     if (fviz_mapper_opacity_array(mapper) != NULL)
     {
-        opacity_array = fviz_attribute_set_const_get(
-            fviz_poly_data_const_point_data(poly_data), fviz_mapper_opacity_array(mapper));
+        opacity_array =
+            fviz_attribute_set_const_get(fviz_poly_data_const_point_data(poly_data), fviz_mapper_opacity_array(mapper));
         if (opacity_array != NULL && fviz_data_array_tuple_count(opacity_array) == point_count)
         {
             for (i = 0u; i < point_count; ++i)
@@ -1460,11 +1410,11 @@ static FVizResult fviz_gl_build_color_buffer(
         }
     }
     fviz_gl_upload_buffer(device, &resource->color_buffer, FVIZ_GL_ARRAY_BUFFER, colors,
-        (GLsizeiptr)(point_count * sizeof(*colors)));
+                          (GLsizeiptr)(point_count * sizeof(*colors)));
     fviz_free(contributions);
     fviz_free(colors);
-    gl->glVertexAttribPointer(FVIZ_GL_COLOR_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizGLColor), (const void*)0);
+    gl->glVertexAttribPointer(FVIZ_GL_COLOR_ATTRIBUTE_INDEX, 4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGLColor),
+                              (const void*)0);
     gl->glEnableVertexAttribArray(FVIZ_GL_COLOR_ATTRIBUTE_INDEX);
     resource->has_color = FVIZ_TRUE;
     resource->color_array = scalars;
@@ -1472,13 +1422,9 @@ static FVizResult fviz_gl_build_color_buffer(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_gl_update_point_color_range(
-    FVizGLDevice* device,
-    FVizGLActorResource* resource,
-    FVizMapper* mapper,
-    const FVizDataArray* scalars,
-    const FVizArraySelection* selection,
-    const FVizDirtyRange* range)
+static FVizResult fviz_gl_update_point_color_range(FVizGLDevice* device, FVizGLActorResource* resource,
+                                                   FVizMapper* mapper, const FVizDataArray* scalars,
+                                                   const FVizArraySelection* selection, const FVizDirtyRange* range)
 {
     const FVizGLFunctions* gl = &device->gl;
     FVizGLColor* colors;
@@ -1492,8 +1438,8 @@ static FVizResult fviz_gl_update_point_color_range(
     colors = (FVizGLColor*)fviz_alloc(bytes);
     if (colors == NULL) return fviz_last_error_code();
     for (i = 0u; i < range->count; ++i)
-        colors[i] = fviz_gl_map_tuple_color(mapper, scalars, range->first + i,
-            selection->component_mode, selection->component);
+        colors[i] =
+            fviz_gl_map_tuple_color(mapper, scalars, range->first + i, selection->component_mode, selection->component);
     gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, resource->color_buffer);
     gl->glBufferSubData(FVIZ_GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)bytes, colors);
     ++device->frame_statistics.gpu_uploads;
@@ -1515,8 +1461,7 @@ static FVizResult fviz_gl_polyline_index_count(const FVizPolyData* poly_data, FV
         const FVizSize point_count = fviz_cell_array_point_count(lines, cell);
         FVizSize added;
         if (point_count < 2u) continue;
-        if (fviz_size_multiply(point_count - 1u, 2u, &added) != FVIZ_OK ||
-            added > (FVizSize)-1 - count)
+        if (fviz_size_multiply(point_count - 1u, 2u, &added) != FVIZ_OK || added > (FVizSize)-1 - count)
             return FVIZ_ERROR_OVERFLOW;
         count += added;
     }
@@ -1524,8 +1469,8 @@ static FVizResult fviz_gl_polyline_index_count(const FVizPolyData* poly_data, FV
     return FVIZ_OK;
 }
 
-static FVizSize fviz_gl_append_polyline_indices(
-    const FVizPolyData* poly_data, uint32_t* destination, FVizSize destination_index)
+static FVizSize fviz_gl_append_polyline_indices(const FVizPolyData* poly_data, uint32_t* destination,
+                                                FVizSize destination_index)
 {
     const FVizCellArray* lines = fviz_poly_data_lines(poly_data);
     FVizSize cell;
@@ -1544,8 +1489,8 @@ static FVizSize fviz_gl_append_polyline_indices(
     return destination_index;
 }
 
-static FVizSize fviz_gl_append_polyline_adjacency_indices(
-    const FVizPolyData* poly_data, uint32_t* destination, FVizSize destination_index)
+static FVizSize fviz_gl_append_polyline_adjacency_indices(const FVizPolyData* poly_data, uint32_t* destination,
+                                                          FVizSize destination_index)
 {
     const FVizCellArray* lines = fviz_poly_data_lines(poly_data);
     FVizSize cell;
@@ -1566,10 +1511,8 @@ static FVizSize fviz_gl_append_polyline_adjacency_indices(
     return destination_index;
 }
 
-static FVizResult fviz_gl_upload_triangle_edges(
-    FVizGLDevice* device,
-    FVizGLActorResource* resource,
-    const FVizPolyData* poly_data)
+static FVizResult fviz_gl_upload_triangle_edges(FVizGLDevice* device, FVizGLActorResource* resource,
+                                                const FVizPolyData* poly_data)
 {
     const uint32_t* indices;
     FVizSize triangle_count;
@@ -1580,10 +1523,9 @@ static FVizResult fviz_gl_upload_triangle_edges(
     FVizSize triangle;
     FVizSize out = 0u;
     FVizSize adjacency_out = 0u;
-    if (device == NULL || resource == NULL || poly_data == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
-    if (resource->triangle_edge_index_buffer != 0u &&
-        resource->triangle_edge_adjacency_index_buffer != 0u) return FVIZ_OK;
+    if (device == NULL || resource == NULL || poly_data == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (resource->triangle_edge_index_buffer != 0u && resource->triangle_edge_adjacency_index_buffer != 0u)
+        return FVIZ_OK;
     triangle_count = fviz_poly_data_triangle_count(poly_data);
     if (triangle_count == 0u) return FVIZ_OK;
     if (fviz_size_multiply(triangle_count, 6u, &edge_index_count) != FVIZ_OK ||
@@ -1596,7 +1538,8 @@ static FVizResult fviz_gl_upload_triangle_edges(
     adjacency = (uint32_t*)fviz_alloc(adjacency_index_count * sizeof(*adjacency));
     if (edges == NULL || adjacency == NULL)
     {
-        fviz_free(edges); fviz_free(adjacency);
+        fviz_free(edges);
+        fviz_free(adjacency);
         return fviz_last_error_code();
     }
     for (triangle = 0u; triangle < triangle_count; ++triangle)
@@ -1604,18 +1547,31 @@ static FVizResult fviz_gl_upload_triangle_edges(
         const uint32_t a = indices[triangle * 3u + 0u];
         const uint32_t b = indices[triangle * 3u + 1u];
         const uint32_t c = indices[triangle * 3u + 2u];
-        edges[out++] = a; edges[out++] = b;
-        edges[out++] = b; edges[out++] = c;
-        edges[out++] = c; edges[out++] = a;
-        adjacency[adjacency_out++] = a; adjacency[adjacency_out++] = a; adjacency[adjacency_out++] = b; adjacency[adjacency_out++] = b;
-        adjacency[adjacency_out++] = b; adjacency[adjacency_out++] = b; adjacency[adjacency_out++] = c; adjacency[adjacency_out++] = c;
-        adjacency[adjacency_out++] = c; adjacency[adjacency_out++] = c; adjacency[adjacency_out++] = a; adjacency[adjacency_out++] = a;
+        edges[out++] = a;
+        edges[out++] = b;
+        edges[out++] = b;
+        edges[out++] = c;
+        edges[out++] = c;
+        edges[out++] = a;
+        adjacency[adjacency_out++] = a;
+        adjacency[adjacency_out++] = a;
+        adjacency[adjacency_out++] = b;
+        adjacency[adjacency_out++] = b;
+        adjacency[adjacency_out++] = b;
+        adjacency[adjacency_out++] = b;
+        adjacency[adjacency_out++] = c;
+        adjacency[adjacency_out++] = c;
+        adjacency[adjacency_out++] = c;
+        adjacency[adjacency_out++] = c;
+        adjacency[adjacency_out++] = a;
+        adjacency[adjacency_out++] = a;
     }
-    fviz_gl_upload_buffer(device, &resource->triangle_edge_index_buffer,
-        FVIZ_GL_ELEMENT_ARRAY_BUFFER, edges, (GLsizeiptr)(edge_index_count * sizeof(*edges)));
-    fviz_gl_upload_buffer(device, &resource->triangle_edge_adjacency_index_buffer,
-        FVIZ_GL_ELEMENT_ARRAY_BUFFER, adjacency, (GLsizeiptr)(adjacency_index_count * sizeof(*adjacency)));
-    fviz_free(edges); fviz_free(adjacency);
+    fviz_gl_upload_buffer(device, &resource->triangle_edge_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, edges,
+                          (GLsizeiptr)(edge_index_count * sizeof(*edges)));
+    fviz_gl_upload_buffer(device, &resource->triangle_edge_adjacency_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER,
+                          adjacency, (GLsizeiptr)(adjacency_index_count * sizeof(*adjacency)));
+    fviz_free(edges);
+    fviz_free(adjacency);
     resource->triangle_edge_index_count = (GLsizei)edge_index_count;
     resource->triangle_edge_adjacency_index_count = (GLsizei)adjacency_index_count;
     return FVIZ_OK;
@@ -1660,8 +1616,7 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     point_count = fviz_poly_data_point_count(poly_data);
     if (fviz_size_multiply(fviz_poly_data_triangle_count(poly_data), 3u, &index_count) != FVIZ_OK)
         return FVIZ_ERROR_OVERFLOW;
-    if (fviz_gl_polyline_index_count(poly_data, &source_line_index_count) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_gl_polyline_index_count(poly_data, &source_line_index_count) != FVIZ_OK) return fviz_last_error_code();
     if (fviz_size_multiply(fviz_poly_data_triangle_count(poly_data), 6u, &triangle_edge_index_count) != FVIZ_OK)
         return FVIZ_ERROR_OVERFLOW;
     line_index_count = source_line_index_count;
@@ -1677,9 +1632,7 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     geometry_mtime = fviz_poly_data_geometry_mtime(poly_data);
     topology_mtime = fviz_poly_data_topology_mtime(poly_data);
     attribute_mtime = fviz_poly_data_attribute_mtime(poly_data);
-    color_data_mtime = glyph_mapper == NULL
-        ? fviz_internal_mapper_color_data_mtime(mapper)
-        : 0u;
+    color_data_mtime = glyph_mapper == NULL ? fviz_internal_mapper_color_data_mtime(mapper) : 0u;
     /* Non-glyph rendering uses fine-grained PolyData revisions below and does
        not need to walk every child object to compute aggregate MTime. */
     if (glyph_mapper == NULL)
@@ -1692,70 +1645,60 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     {
         poly_data_mtime = fviz_object_mtime((const FVizObject*)poly_data);
     }
-    render_data_mtime = glyph_mapper == NULL
-        ? fviz_internal_mapper_render_data_mtime(mapper)
-        : 0u;
-    if (point_count == 0u ||
-        (index_count == 0u && line_index_count == 0u && point_index_count == 0u))
-        return FVIZ_OK;
-    if (point_count > (FVizSize)INT_MAX || index_count > (FVizSize)INT_MAX ||
-        line_index_count > (FVizSize)INT_MAX || triangle_edge_index_count > (FVizSize)INT_MAX ||
-        point_index_count > (FVizSize)INT_MAX || glyph_instance_count > (FVizSize)INT_MAX)
+    render_data_mtime = glyph_mapper == NULL ? fviz_internal_mapper_render_data_mtime(mapper) : 0u;
+    if (point_count == 0u || (index_count == 0u && line_index_count == 0u && point_index_count == 0u)) return FVIZ_OK;
+    if (point_count > (FVizSize)INT_MAX || index_count > (FVizSize)INT_MAX || line_index_count > (FVizSize)INT_MAX ||
+        triangle_edge_index_count > (FVizSize)INT_MAX || point_index_count > (FVizSize)INT_MAX ||
+        glyph_instance_count > (FVizSize)INT_MAX)
     {
         fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "poly_data draw count exceeds OpenGL limits");
         return FVIZ_ERROR_OVERFLOW;
     }
 
     resource = fviz_gl_find_actor_resource(device, actor);
-    if (resource != NULL && resource->poly_data == poly_data &&
-        resource->glyph_mapper == glyph_mapper &&
+    if (resource != NULL && resource->poly_data == poly_data && resource->glyph_mapper == glyph_mapper &&
         (glyph_mapper != NULL || resource->mapper == mapper))
     {
-        if (glyph_mapper == NULL &&
-            resource->topology_mtime == topology_mtime &&
-            resource->point_count == point_count &&
-            resource->index_count == (GLsizei)index_count &&
+        if (glyph_mapper == NULL && resource->topology_mtime == topology_mtime &&
+            resource->point_count == point_count && resource->index_count == (GLsizei)index_count &&
             resource->line_index_count == (GLsizei)line_index_count &&
             resource->point_index_count == (GLsizei)point_index_count)
         {
-            const FVizBool geometry_changed = resource->geometry_mtime != geometry_mtime
-                ? FVIZ_TRUE : FVIZ_FALSE;
+            const FVizBool geometry_changed = resource->geometry_mtime != geometry_mtime ? FVIZ_TRUE : FVIZ_FALSE;
             const FVizBool color_changed =
-                (resource->attribute_mtime != attribute_mtime ||
-                 resource->color_data_mtime != color_data_mtime)
-                ? FVIZ_TRUE : FVIZ_FALSE;
+                (resource->attribute_mtime != attribute_mtime || resource->color_data_mtime != color_data_mtime)
+                    ? FVIZ_TRUE
+                    : FVIZ_FALSE;
             if (geometry_changed != FVIZ_FALSE)
             {
                 FVizDirtyRange dirty;
                 const FVizBool has_partial_range =
-                    fviz_poly_data_geometry_dirty_range_since(
-                        poly_data, resource->geometry_mtime, &dirty) == FVIZ_OK &&
-                    dirty.full == FVIZ_FALSE && dirty.first <= point_count &&
-                    dirty.count <= point_count - dirty.first
-                        ? FVIZ_TRUE : FVIZ_FALSE;
+                    fviz_poly_data_geometry_dirty_range_since(poly_data, resource->geometry_mtime, &dirty) == FVIZ_OK &&
+                            dirty.full == FVIZ_FALSE && dirty.first <= point_count &&
+                            dirty.count <= point_count - dirty.first
+                        ? FVIZ_TRUE
+                        : FVIZ_FALSE;
                 points = fviz_poly_data_points(poly_data);
                 normals = fviz_poly_data_normals(poly_data);
                 if (points != NULL)
                 {
                     if (has_partial_range != FVIZ_FALSE)
-                        fviz_gl_update_buffer_range(device, resource->position_buffer,
-                            FVIZ_GL_ARRAY_BUFFER, points + dirty.first,
-                            (GLsizeiptr)(dirty.first * sizeof(FVizVec3)),
-                            (GLsizeiptr)(dirty.count * sizeof(FVizVec3)));
+                        fviz_gl_update_buffer_range(device, resource->position_buffer, FVIZ_GL_ARRAY_BUFFER,
+                                                    points + dirty.first, (GLsizeiptr)(dirty.first * sizeof(FVizVec3)),
+                                                    (GLsizeiptr)(dirty.count * sizeof(FVizVec3)));
                     else
-                        fviz_gl_update_buffer(device, resource->position_buffer, FVIZ_GL_ARRAY_BUFFER,
-                            points, (GLsizeiptr)(point_count * sizeof(FVizVec3)));
+                        fviz_gl_update_buffer(device, resource->position_buffer, FVIZ_GL_ARRAY_BUFFER, points,
+                                              (GLsizeiptr)(point_count * sizeof(FVizVec3)));
                 }
                 if (normals != NULL)
                 {
                     if (has_partial_range != FVIZ_FALSE)
-                        fviz_gl_update_buffer_range(device, resource->normal_buffer,
-                            FVIZ_GL_ARRAY_BUFFER, normals + dirty.first,
-                            (GLsizeiptr)(dirty.first * sizeof(FVizVec3)),
-                            (GLsizeiptr)(dirty.count * sizeof(FVizVec3)));
+                        fviz_gl_update_buffer_range(device, resource->normal_buffer, FVIZ_GL_ARRAY_BUFFER,
+                                                    normals + dirty.first, (GLsizeiptr)(dirty.first * sizeof(FVizVec3)),
+                                                    (GLsizeiptr)(dirty.count * sizeof(FVizVec3)));
                     else
-                        fviz_gl_update_buffer(device, resource->normal_buffer, FVIZ_GL_ARRAY_BUFFER,
-                            normals, (GLsizeiptr)(point_count * sizeof(FVizVec3)));
+                        fviz_gl_update_buffer(device, resource->normal_buffer, FVIZ_GL_ARRAY_BUFFER, normals,
+                                              (GLsizeiptr)(point_count * sizeof(FVizVec3)));
                 }
             }
             if (color_changed != FVIZ_FALSE)
@@ -1775,20 +1718,19 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
                     selection.component = 0u;
                 }
                 if (resource->color_buffer != 0u && resource->has_color != FVIZ_FALSE &&
-                    resource->color_data_mtime == color_data_mtime &&
-                    resource->color_array == selected_array && selected_array != NULL &&
-                    selection.association == FVIZ_ASSOCIATION_POINTS &&
+                    resource->color_data_mtime == color_data_mtime && resource->color_array == selected_array &&
+                    selected_array != NULL && selection.association == FVIZ_ASSOCIATION_POINTS &&
                     fviz_data_array_tuple_count(selected_array) == point_count &&
                     fviz_mapper_opacity_array(mapper) == NULL)
                 {
                     FVizDirtyRange dirty;
-                    if (fviz_data_array_dirty_range_since(
-                            selected_array, resource->color_array_mtime, &dirty) == FVIZ_OK &&
+                    if (fviz_data_array_dirty_range_since(selected_array, resource->color_array_mtime, &dirty) ==
+                            FVIZ_OK &&
                         dirty.full == FVIZ_FALSE && dirty.first <= point_count &&
                         dirty.count <= point_count - dirty.first)
                     {
-                        color_result = fviz_gl_update_point_color_range(
-                            device, resource, mapper, selected_array, &selection, &dirty);
+                        color_result = fviz_gl_update_point_color_range(device, resource, mapper, selected_array,
+                                                                        &selection, &dirty);
                         if (color_result != FVIZ_OK) return color_result;
                         partial_update = FVIZ_TRUE;
                     }
@@ -1798,8 +1740,7 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
                     gl->glBindVertexArray(resource->vao);
                     gl->glDisableVertexAttribArray(FVIZ_GL_COLOR_ATTRIBUTE_INDEX);
                     resource->has_color = FVIZ_FALSE;
-                    color_result = fviz_gl_build_color_buffer(
-                        device, resource, actor, poly_data, point_count);
+                    color_result = fviz_gl_build_color_buffer(device, resource, actor, poly_data, point_count);
                     gl->glBindVertexArray(0u);
                 }
                 if (color_result != FVIZ_OK) return color_result;
@@ -1808,8 +1749,7 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
                 color_data_mtime = fviz_internal_mapper_color_data_mtime(mapper);
                 render_data_mtime = fviz_internal_mapper_render_data_mtime(mapper);
             }
-            if ((fviz_actor_edge_visibility(actor) != FVIZ_FALSE ||
-                 fviz_actor_wireframe(actor) != FVIZ_FALSE) &&
+            if ((fviz_actor_edge_visibility(actor) != FVIZ_FALSE || fviz_actor_wireframe(actor) != FVIZ_FALSE) &&
                 resource->triangle_edge_index_buffer == 0u)
             {
                 FVizResult edge_result = fviz_gl_upload_triangle_edges(device, resource, poly_data);
@@ -1824,19 +1764,15 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
             resource->last_seen_frame = device->frame_serial;
             return FVIZ_OK;
         }
-        if (glyph_mapper != NULL &&
-            resource->poly_data_mtime == poly_data_mtime &&
+        if (glyph_mapper != NULL && resource->poly_data_mtime == poly_data_mtime &&
             resource->render_data_mtime == render_data_mtime)
         {
-            if (resource->glyph_mtime != glyph_mtime ||
-                resource->instance_count != (GLsizei)glyph_instance_count)
+            if (resource->glyph_mtime != glyph_mtime || resource->instance_count != (GLsizei)glyph_instance_count)
             {
-                FVizResult instance_result = fviz_gl_upload_glyph_instances(
-                    device, resource, glyph_mapper);
+                FVizResult instance_result = fviz_gl_upload_glyph_instances(device, resource, glyph_mapper);
                 if (instance_result != FVIZ_OK) return instance_result;
             }
-            if ((fviz_actor_edge_visibility(actor) != FVIZ_FALSE ||
-                 fviz_actor_wireframe(actor) != FVIZ_FALSE) &&
+            if ((fviz_actor_edge_visibility(actor) != FVIZ_FALSE || fviz_actor_wireframe(actor) != FVIZ_FALSE) &&
                 resource->triangle_edge_index_buffer == 0u)
             {
                 FVizResult edge_result = fviz_gl_upload_triangle_edges(device, resource, poly_data);
@@ -1864,8 +1800,7 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
                 if (device->actor_capacity > SIZE_MAX / 2u) return FVIZ_ERROR_OVERFLOW;
                 new_capacity = device->actor_capacity * 2u;
             }
-            new_actors = (FVizGLActorResource*)fviz_realloc(
-                device->actors, new_capacity * sizeof(FVizGLActorResource));
+            new_actors = (FVizGLActorResource*)fviz_realloc(device->actors, new_capacity * sizeof(FVizGLActorResource));
             if (new_actors == NULL) return fviz_last_error_code();
             device->actors = new_actors;
             device->actor_capacity = new_capacity;
@@ -1877,46 +1812,44 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     {
         fviz_gl_actor_resource_destroy(device, resource);
     }
-    resource->mapper = glyph_mapper == NULL
-        ? (const FVizMapper*)fviz_retain(mapper) : NULL;
-    resource->glyph_mapper = glyph_mapper != NULL
-        ? (const FVizGlyphMapper*)fviz_retain((FVizGlyphMapper*)glyph_mapper) : NULL;
+    resource->mapper = glyph_mapper == NULL ? (const FVizMapper*)fviz_retain(mapper) : NULL;
+    resource->glyph_mapper =
+        glyph_mapper != NULL ? (const FVizGlyphMapper*)fviz_retain((FVizGlyphMapper*)glyph_mapper) : NULL;
 
     gl->glGenVertexArrays(1, &resource->vao);
     gl->glBindVertexArray(resource->vao);
 
     fviz_gl_upload_buffer(device, &resource->position_buffer, FVIZ_GL_ARRAY_BUFFER, points,
-        (GLsizeiptr)(point_count * sizeof(FVizVec3)));
-    gl->glVertexAttribPointer(FVIZ_GL_POSITION_ATTRIBUTE_INDEX, 3, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizVec3), (const void*)0);
+                          (GLsizeiptr)(point_count * sizeof(FVizVec3)));
+    gl->glVertexAttribPointer(FVIZ_GL_POSITION_ATTRIBUTE_INDEX, 3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizVec3),
+                              (const void*)0);
     gl->glEnableVertexAttribArray(FVIZ_GL_POSITION_ATTRIBUTE_INDEX);
 
     if (normals != NULL)
     {
         fviz_gl_upload_buffer(device, &resource->normal_buffer, FVIZ_GL_ARRAY_BUFFER, normals,
-            (GLsizeiptr)(point_count * sizeof(FVizVec3)));
+                              (GLsizeiptr)(point_count * sizeof(FVizVec3)));
     }
     else
     {
         fviz_gl_upload_buffer(device, &resource->normal_buffer, FVIZ_GL_ARRAY_BUFFER, NULL,
-            (GLsizeiptr)(point_count * sizeof(FVizVec3)));
+                              (GLsizeiptr)(point_count * sizeof(FVizVec3)));
     }
-    gl->glVertexAttribPointer(FVIZ_GL_NORMAL_ATTRIBUTE_INDEX, 3, GL_FLOAT, GL_FALSE,
-        (GLsizei)sizeof(FVizVec3), (const void*)0);
+    gl->glVertexAttribPointer(FVIZ_GL_NORMAL_ATTRIBUTE_INDEX, 3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizVec3),
+                              (const void*)0);
     gl->glEnableVertexAttribArray(FVIZ_GL_NORMAL_ATTRIBUTE_INDEX);
 
-    if (glyph_mapper == NULL)
-        (void)fviz_gl_build_color_buffer(device, resource, actor, poly_data, point_count);
+    if (glyph_mapper == NULL) (void)fviz_gl_build_color_buffer(device, resource, actor, poly_data, point_count);
 
     if (indices != NULL && index_count > 0u)
     {
         fviz_gl_upload_buffer(device, &resource->index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, indices,
-            (GLsizeiptr)(index_count * sizeof(uint32_t)));
+                              (GLsizeiptr)(index_count * sizeof(uint32_t)));
     }
     if (point_index_count > 0u && point_indices != NULL)
     {
-        fviz_gl_upload_buffer(device, &resource->point_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER,
-            point_indices, (GLsizeiptr)(point_index_count * sizeof(uint32_t)));
+        fviz_gl_upload_buffer(device, &resource->point_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, point_indices,
+                              (GLsizeiptr)(point_index_count * sizeof(uint32_t)));
     }
     if (line_index_count > 0u)
     {
@@ -1935,23 +1868,26 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
         adjacency_lines = (uint32_t*)fviz_alloc(adjacency_bytes);
         if (render_lines == NULL || adjacency_lines == NULL)
         {
-            fviz_free(render_lines); fviz_free(adjacency_lines);
+            fviz_free(render_lines);
+            fviz_free(adjacency_lines);
             return fviz_last_error_code();
         }
         render_index = fviz_gl_append_polyline_indices(poly_data, render_lines, render_index);
         adjacency_index = fviz_gl_append_polyline_adjacency_indices(poly_data, adjacency_lines, adjacency_index);
         if (render_index != line_index_count || adjacency_index != adjacency_count)
         {
-            fviz_free(render_lines); fviz_free(adjacency_lines);
+            fviz_free(render_lines);
+            fviz_free(adjacency_lines);
             fviz_internal_set_error(FVIZ_ERROR_INTERNAL, "line topology expansion count mismatch");
             return FVIZ_ERROR_INTERNAL;
         }
-        fviz_gl_upload_buffer(device, &resource->line_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER,
-            render_lines, (GLsizeiptr)line_bytes);
+        fviz_gl_upload_buffer(device, &resource->line_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER, render_lines,
+                              (GLsizeiptr)line_bytes);
         fviz_gl_upload_buffer(device, &resource->line_adjacency_index_buffer, FVIZ_GL_ELEMENT_ARRAY_BUFFER,
-            adjacency_lines, (GLsizeiptr)adjacency_bytes);
+                              adjacency_lines, (GLsizeiptr)adjacency_bytes);
         resource->line_adjacency_index_count = (GLsizei)adjacency_count;
-        fviz_free(render_lines); fviz_free(adjacency_lines);
+        fviz_free(render_lines);
+        fviz_free(adjacency_lines);
     }
     gl->glBindVertexArray(0u);
 
@@ -1992,12 +1928,8 @@ static FVizResult fviz_gl_ensure_actor_resource(FVizGLDevice* device, const FViz
     return FVIZ_OK;
 }
 
-static GLuint fviz_gl_compile_shader(
-    const FVizGLFunctions* gl,
-    GLenum shader_type,
-    const char* source,
-    char* info_log,
-    FVizSize info_log_size)
+static GLuint fviz_gl_compile_shader(const FVizGLFunctions* gl, GLenum shader_type, const char* source, char* info_log,
+                                     FVizSize info_log_size)
 {
     GLuint shader;
     GLint status = GL_FALSE;
@@ -2026,15 +1958,15 @@ static FVizResult fviz_gl_create_program(FVizGLDevice* device)
     char info_log[2048];
     GLint status = GL_FALSE;
 
-    vertex_shader = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl_vertex_shader_source, info_log, sizeof(info_log));
+    vertex_shader =
+        fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_vertex_shader_source, info_log, sizeof(info_log));
     if (vertex_shader == 0u)
     {
         fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz vertex shader failed to compile");
         return FVIZ_ERROR_GRAPHICS;
     }
-    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl_fragment_shader_source, info_log, sizeof(info_log));
+    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_fragment_shader_source, info_log,
+                                             sizeof(info_log));
     if (fragment_shader == 0u)
     {
         gl->glDeleteShader(vertex_shader);
@@ -2071,8 +2003,7 @@ static FVizResult fviz_gl_create_program(FVizGLDevice* device)
     device->instancing_location = gl->glGetUniformLocation(device->program, "uInstancingEnabled");
     device->diffuse_location = gl->glGetUniformLocation(device->program, "uDiffuse");
     device->light_count_location = gl->glGetUniformLocation(device->program, "uLightCount");
-    device->light_position_intensity_location = gl->glGetUniformLocation(
-        device->program, "uLightPositionIntensity[0]");
+    device->light_position_intensity_location = gl->glGetUniformLocation(device->program, "uLightPositionIntensity[0]");
     device->light_color_location = gl->glGetUniformLocation(device->program, "uLightColor[0]");
     device->camera_position_location = gl->glGetUniformLocation(device->program, "uCameraPosition");
     device->ambient_factor_location = gl->glGetUniformLocation(device->program, "uAmbientFactor");
@@ -2104,15 +2035,15 @@ static FVizResult fviz_gl_create_2d_program(FVizGLDevice* device)
     GLuint fragment_shader;
     char info_log[2048];
     GLint status = GL_FALSE;
-    vertex_shader = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl2d_vertex_shader_source, info_log, sizeof(info_log));
+    vertex_shader =
+        fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl2d_vertex_shader_source, info_log, sizeof(info_log));
     if (vertex_shader == 0u)
     {
         fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz 2D vertex shader failed to compile");
         return FVIZ_ERROR_GRAPHICS;
     }
-    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl2d_fragment_shader_source, info_log, sizeof(info_log));
+    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl2d_fragment_shader_source, info_log,
+                                             sizeof(info_log));
     if (fragment_shader == 0u)
     {
         gl->glDeleteShader(vertex_shader);
@@ -2156,15 +2087,15 @@ static FVizResult fviz_gl_create_volume_program(FVizGLDevice* device)
     {
         return FVIZ_ERROR_NOT_SUPPORTED;
     }
-    vertex_shader = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl_volume_vertex_shader_source, info_log, sizeof(info_log));
+    vertex_shader = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_volume_vertex_shader_source, info_log,
+                                           sizeof(info_log));
     if (vertex_shader == 0u)
     {
         fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "FEAViz volume vertex shader failed to compile");
         return FVIZ_ERROR_GRAPHICS;
     }
-    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl_volume_fragment_shader_source, info_log, sizeof(info_log));
+    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_volume_fragment_shader_source,
+                                             info_log, sizeof(info_log));
     if (fragment_shader == 0u)
     {
         gl->glDeleteShader(vertex_shader);
@@ -2196,38 +2127,23 @@ static FVizResult fviz_gl_create_volume_program(FVizGLDevice* device)
     device->volume_model_location = gl->glGetUniformLocation(device->volume_program, "uModel");
     device->volume_inv_model_location = gl->glGetUniformLocation(device->volume_program, "uInvModel");
     device->volume_mvp_location = gl->glGetUniformLocation(device->volume_program, "uMvp");
-    device->volume_camera_position_location = gl->glGetUniformLocation(
-        device->volume_program, "uCameraPosition");
-    device->volume_scalar_texture_location = gl->glGetUniformLocation(
-        device->volume_program, "uScalarTexture");
-    device->volume_transfer_texture_location = gl->glGetUniformLocation(
-        device->volume_program, "uTransferTexture");
-    device->volume_step_size_location = gl->glGetUniformLocation(
-        device->volume_program, "uStepSize");
-    device->volume_scalar_range_location = gl->glGetUniformLocation(
-        device->volume_program, "uScalarRangeMin");
-    device->volume_scalar_range_max_location = gl->glGetUniformLocation(
-        device->volume_program, "uScalarRangeMax");
-    device->volume_bounds_min_location = gl->glGetUniformLocation(
-        device->volume_program, "uBoundsMin");
-    device->volume_bounds_max_location = gl->glGetUniformLocation(
-        device->volume_program, "uBoundsMax");
-    device->volume_shading_location = gl->glGetUniformLocation(
-        device->volume_program, "uShading");
-    device->volume_light_count_location = gl->glGetUniformLocation(
-        device->volume_program, "uLightCount");
-    device->volume_light_position_intensity_location = gl->glGetUniformLocation(
-        device->volume_program, "uLightPositionIntensity[0]");
-    device->volume_light_color_location = gl->glGetUniformLocation(
-        device->volume_program, "uLightColor[0]");
-    device->volume_ambient_location = gl->glGetUniformLocation(
-        device->volume_program, "uAmbientFactor");
-    device->volume_diffuse_location = gl->glGetUniformLocation(
-        device->volume_program, "uDiffuseFactor");
-    device->volume_specular_location = gl->glGetUniformLocation(
-        device->volume_program, "uSpecularFactor");
-    device->volume_specular_power_location = gl->glGetUniformLocation(
-        device->volume_program, "uSpecularPower");
+    device->volume_camera_position_location = gl->glGetUniformLocation(device->volume_program, "uCameraPosition");
+    device->volume_scalar_texture_location = gl->glGetUniformLocation(device->volume_program, "uScalarTexture");
+    device->volume_transfer_texture_location = gl->glGetUniformLocation(device->volume_program, "uTransferTexture");
+    device->volume_step_size_location = gl->glGetUniformLocation(device->volume_program, "uStepSize");
+    device->volume_scalar_range_location = gl->glGetUniformLocation(device->volume_program, "uScalarRangeMin");
+    device->volume_scalar_range_max_location = gl->glGetUniformLocation(device->volume_program, "uScalarRangeMax");
+    device->volume_bounds_min_location = gl->glGetUniformLocation(device->volume_program, "uBoundsMin");
+    device->volume_bounds_max_location = gl->glGetUniformLocation(device->volume_program, "uBoundsMax");
+    device->volume_shading_location = gl->glGetUniformLocation(device->volume_program, "uShading");
+    device->volume_light_count_location = gl->glGetUniformLocation(device->volume_program, "uLightCount");
+    device->volume_light_position_intensity_location =
+        gl->glGetUniformLocation(device->volume_program, "uLightPositionIntensity[0]");
+    device->volume_light_color_location = gl->glGetUniformLocation(device->volume_program, "uLightColor[0]");
+    device->volume_ambient_location = gl->glGetUniformLocation(device->volume_program, "uAmbientFactor");
+    device->volume_diffuse_location = gl->glGetUniformLocation(device->volume_program, "uDiffuseFactor");
+    device->volume_specular_location = gl->glGetUniformLocation(device->volume_program, "uSpecularFactor");
+    device->volume_specular_power_location = gl->glGetUniformLocation(device->volume_program, "uSpecularPower");
     device->volume_program_ready = FVIZ_TRUE;
     return FVIZ_OK;
 }
@@ -2239,10 +2155,10 @@ static FVizResult fviz_gl_create_text_program(FVizGLDevice* device)
     GLuint fs;
     GLint status = GL_FALSE;
     char info_log[2048];
-    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl_text_vertex_shader_source, info_log, sizeof(info_log));
-    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl_text_fragment_shader_source, info_log, sizeof(info_log));
+    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_text_vertex_shader_source, info_log,
+                                sizeof(info_log));
+    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_text_fragment_shader_source, info_log,
+                                sizeof(info_log));
     if (vs == 0u || fs == 0u)
     {
         if (vs != 0u) gl->glDeleteShader(vs);
@@ -2252,14 +2168,16 @@ static FVizResult fviz_gl_create_text_program(FVizGLDevice* device)
     device->text_program = gl->glCreateProgram();
     if (device->text_program == 0u)
     {
-        gl->glDeleteShader(vs); gl->glDeleteShader(fs);
+        gl->glDeleteShader(vs);
+        gl->glDeleteShader(fs);
         return FVIZ_ERROR_GRAPHICS;
     }
     gl->glAttachShader(device->text_program, vs);
     gl->glAttachShader(device->text_program, fs);
     gl->glLinkProgram(device->text_program);
     gl->glGetProgramiv(device->text_program, FVIZ_GL_LINK_STATUS, &status);
-    gl->glDeleteShader(vs); gl->glDeleteShader(fs);
+    gl->glDeleteShader(vs);
+    gl->glDeleteShader(fs);
     if (status != GL_TRUE)
     {
         gl->glDeleteProgram(device->text_program);
@@ -2271,8 +2189,7 @@ static FVizResult fviz_gl_create_text_program(FVizGLDevice* device)
     gl->glGenVertexArrays(1, &device->text_vao);
     gl->glGenBuffers(1, &device->text_vbo);
     glGenTextures(1, &device->text_texture);
-    if (device->text_vao == 0u || device->text_vbo == 0u || device->text_texture == 0u)
-        return FVIZ_ERROR_GRAPHICS;
+    if (device->text_vao == 0u || device->text_vbo == 0u || device->text_texture == 0u) return FVIZ_ERROR_GRAPHICS;
     glBindTexture(GL_TEXTURE_2D, device->text_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -2290,12 +2207,12 @@ static FVizResult fviz_gl_create_edge_program(FVizGLDevice* device)
     GLuint fs;
     GLint status = GL_FALSE;
     char info_log[2048];
-    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl_edge_vertex_shader_source, info_log, sizeof(info_log));
-    gs = fviz_gl_compile_shader(gl, FVIZ_GL_GEOMETRY_SHADER,
-        k_fviz_gl_edge_geometry_shader_source, info_log, sizeof(info_log));
-    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl_edge_fragment_shader_source, info_log, sizeof(info_log));
+    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_edge_vertex_shader_source, info_log,
+                                sizeof(info_log));
+    gs = fviz_gl_compile_shader(gl, FVIZ_GL_GEOMETRY_SHADER, k_fviz_gl_edge_geometry_shader_source, info_log,
+                                sizeof(info_log));
+    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_edge_fragment_shader_source, info_log,
+                                sizeof(info_log));
     if (vs == 0u || gs == 0u || fs == 0u)
     {
         if (vs != 0u) gl->glDeleteShader(vs);
@@ -2306,7 +2223,9 @@ static FVizResult fviz_gl_create_edge_program(FVizGLDevice* device)
     device->edge_program = gl->glCreateProgram();
     if (device->edge_program == 0u)
     {
-        gl->glDeleteShader(vs); gl->glDeleteShader(gs); gl->glDeleteShader(fs);
+        gl->glDeleteShader(vs);
+        gl->glDeleteShader(gs);
+        gl->glDeleteShader(fs);
         return FVIZ_ERROR_GRAPHICS;
     }
     gl->glAttachShader(device->edge_program, vs);
@@ -2314,7 +2233,9 @@ static FVizResult fviz_gl_create_edge_program(FVizGLDevice* device)
     gl->glAttachShader(device->edge_program, fs);
     gl->glLinkProgram(device->edge_program);
     gl->glGetProgramiv(device->edge_program, FVIZ_GL_LINK_STATUS, &status);
-    gl->glDeleteShader(vs); gl->glDeleteShader(gs); gl->glDeleteShader(fs);
+    gl->glDeleteShader(vs);
+    gl->glDeleteShader(gs);
+    gl->glDeleteShader(fs);
     if (status != GL_TRUE)
     {
         gl->glDeleteProgram(device->edge_program);
@@ -2342,10 +2263,10 @@ static FVizResult fviz_gl_create_point_program(FVizGLDevice* device)
     GLuint fs;
     GLint status = GL_FALSE;
     char info_log[2048];
-    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl_point_vertex_shader_source, info_log, sizeof(info_log));
-    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl_point_fragment_shader_source, info_log, sizeof(info_log));
+    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_point_vertex_shader_source, info_log,
+                                sizeof(info_log));
+    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_point_fragment_shader_source, info_log,
+                                sizeof(info_log));
     if (vs == 0u || fs == 0u)
     {
         if (vs != 0u) gl->glDeleteShader(vs);
@@ -2387,12 +2308,10 @@ static FVizResult fviz_gl_create_selection_program(FVizGLDevice* device)
     GLuint fragment_shader;
     GLint status = GL_FALSE;
     char info_log[2048];
-    vertex_shader = fviz_gl_compile_shader(
-        gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_selection_vertex_shader_source,
-        info_log, sizeof(info_log));
-    fragment_shader = fviz_gl_compile_shader(
-        gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_selection_fragment_shader_source,
-        info_log, sizeof(info_log));
+    vertex_shader = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_selection_vertex_shader_source,
+                                           info_log, sizeof(info_log));
+    fragment_shader = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_selection_fragment_shader_source,
+                                             info_log, sizeof(info_log));
     if (vertex_shader == 0u || fragment_shader == 0u)
     {
         if (vertex_shader != 0u) gl->glDeleteShader(vertex_shader);
@@ -2418,10 +2337,9 @@ static FVizResult fviz_gl_create_selection_program(FVizGLDevice* device)
     device->selection_actor_id_location = gl->glGetUniformLocation(device->selection_program, "uActorId");
     device->selection_association_location = gl->glGetUniformLocation(device->selection_program, "uAssociation");
     device->selection_instancing_location = gl->glGetUniformLocation(device->selection_program, "uInstancingEnabled");
-    device->selection_clip_plane_count_location = gl->glGetUniformLocation(
-        device->selection_program, "uClipPlaneCount");
-    device->selection_clip_planes_location = gl->glGetUniformLocation(
-        device->selection_program, "uClipPlanes");
+    device->selection_clip_plane_count_location =
+        gl->glGetUniformLocation(device->selection_program, "uClipPlaneCount");
+    device->selection_clip_planes_location = gl->glGetUniformLocation(device->selection_program, "uClipPlanes");
     return FVIZ_OK;
 }
 
@@ -2432,10 +2350,10 @@ static FVizResult fviz_gl_create_oit_program(FVizGLDevice* device)
     GLuint fs;
     GLint status = GL_FALSE;
     char info_log[2048];
-    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl_fxaa_vertex_shader_source, info_log, sizeof(info_log));
-    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl_oit_composite_fragment_shader_source, info_log, sizeof(info_log));
+    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_fxaa_vertex_shader_source, info_log,
+                                sizeof(info_log));
+    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_oit_composite_fragment_shader_source, info_log,
+                                sizeof(info_log));
     if (vs == 0u || fs == 0u)
     {
         if (vs != 0u) gl->glDeleteShader(vs);
@@ -2485,10 +2403,10 @@ static FVizResult fviz_gl_create_fxaa_program(FVizGLDevice* device)
     GLuint fs;
     GLint status = GL_FALSE;
     char info_log[2048];
-    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER,
-        k_fviz_gl_fxaa_vertex_shader_source, info_log, sizeof(info_log));
-    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER,
-        k_fviz_gl_fxaa_fragment_shader_source, info_log, sizeof(info_log));
+    vs = fviz_gl_compile_shader(gl, FVIZ_GL_VERTEX_SHADER, k_fviz_gl_fxaa_vertex_shader_source, info_log,
+                                sizeof(info_log));
+    fs = fviz_gl_compile_shader(gl, FVIZ_GL_FRAGMENT_SHADER, k_fviz_gl_fxaa_fragment_shader_source, info_log,
+                                sizeof(info_log));
     if (vs == 0u || fs == 0u)
     {
         if (vs != 0u) gl->glDeleteShader(vs);
@@ -2518,10 +2436,8 @@ static FVizResult fviz_gl_create_fxaa_program(FVizGLDevice* device)
     }
     device->fxaa_color_location = gl->glGetUniformLocation(device->fxaa_program, "uColor");
     device->fxaa_inv_screen_location = gl->glGetUniformLocation(device->fxaa_program, "uInvScreen");
-    device->fxaa_edge_threshold_location = gl->glGetUniformLocation(
-        device->fxaa_program, "uEdgeThreshold");
-    device->fxaa_edge_threshold_min_location = gl->glGetUniformLocation(
-        device->fxaa_program, "uEdgeThresholdMin");
+    device->fxaa_edge_threshold_location = gl->glGetUniformLocation(device->fxaa_program, "uEdgeThreshold");
+    device->fxaa_edge_threshold_min_location = gl->glGetUniformLocation(device->fxaa_program, "uEdgeThresholdMin");
     device->fxaa_span_max_location = gl->glGetUniformLocation(device->fxaa_program, "uSpanMax");
     gl->glGenVertexArrays(1, &device->fxaa_vao);
     if (device->fxaa_vao == 0u) return FVIZ_ERROR_GRAPHICS;
@@ -2553,8 +2469,7 @@ FVizGLDevice* fviz_internal_gl_device_create(const FVizGLFunctions* functions)
     }
     (void)memset(device, 0, sizeof(*device));
     device->gl = *functions;
-    if (fviz_gl_create_program(device) != FVIZ_OK ||
-        fviz_gl_create_2d_program(device) != FVIZ_OK ||
+    if (fviz_gl_create_program(device) != FVIZ_OK || fviz_gl_create_2d_program(device) != FVIZ_OK ||
         fviz_gl_create_selection_program(device) != FVIZ_OK)
     {
         fviz_internal_gl_device_destroy(device);
@@ -2600,9 +2515,9 @@ FVizGLDevice* fviz_internal_gl_device_create(const FVizGLFunctions* functions)
            available when a driver rejects the 3D-texture shader. */
         fviz_clear_last_error();
     }
-    if (device->gl.glGenQueries != NULL && device->gl.glDeleteQueries != NULL &&
-        device->gl.glBeginQuery != NULL && device->gl.glEndQuery != NULL &&
-        device->gl.glGetQueryObjectiv != NULL && device->gl.glGetQueryObjectui64v != NULL)
+    if (device->gl.glGenQueries != NULL && device->gl.glDeleteQueries != NULL && device->gl.glBeginQuery != NULL &&
+        device->gl.glEndQuery != NULL && device->gl.glGetQueryObjectiv != NULL &&
+        device->gl.glGetQueryObjectui64v != NULL)
     {
         device->gl.glGenQueries(2, device->gpu_time_queries);
         if (device->gpu_time_queries[0] == 0u || device->gpu_time_queries[1] == 0u)
@@ -2622,8 +2537,7 @@ void fviz_internal_gl_device_bind_framebuffer(FVizGLDevice* device, uint32_t fra
         device->gl.glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, (GLuint)framebuffer);
 }
 
-void fviz_internal_gl_device_capture_state(
-    FVizGLDevice* device, FVizGLStateSnapshot* out_snapshot)
+void fviz_internal_gl_device_capture_state(FVizGLDevice* device, FVizGLStateSnapshot* out_snapshot)
 {
     GLboolean depth_write = GL_TRUE;
     GLboolean color_write[4] = {GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE};
@@ -2658,31 +2572,28 @@ void fviz_internal_gl_device_capture_state(
 static void fviz_gl_restore_enable(GLenum capability, FVizBool enabled)
 {
     if (enabled != FVIZ_FALSE) glEnable(capability);
-    else glDisable(capability);
+    else
+        glDisable(capability);
 }
 
-FVizResult fviz_internal_gl_device_restore_state(
-    FVizGLDevice* device, const FVizGLStateSnapshot* snapshot)
+FVizResult fviz_internal_gl_device_restore_state(FVizGLDevice* device, const FVizGLStateSnapshot* snapshot)
 {
     if (device == NULL || snapshot == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     device->gl.glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, (GLuint)snapshot->framebuffer);
     device->gl.glBindVertexArray((GLuint)snapshot->vertex_array);
     device->gl.glUseProgram((GLuint)snapshot->program);
-    glViewport(snapshot->viewport[0], snapshot->viewport[1],
-        snapshot->viewport[2], snapshot->viewport[3]);
-    glScissor(snapshot->scissor_box[0], snapshot->scissor_box[1],
-        snapshot->scissor_box[2], snapshot->scissor_box[3]);
+    glViewport(snapshot->viewport[0], snapshot->viewport[1], snapshot->viewport[2], snapshot->viewport[3]);
+    glScissor(snapshot->scissor_box[0], snapshot->scissor_box[1], snapshot->scissor_box[2], snapshot->scissor_box[3]);
     glDepthFunc((GLenum)snapshot->depth_function);
     glCullFace((GLenum)snapshot->cull_face_mode);
     glPolygonMode(GL_FRONT_AND_BACK, (GLenum)snapshot->polygon_mode[0]);
     glLineWidth(snapshot->line_width);
     glPointSize(snapshot->point_size);
     glDepthMask(snapshot->depth_write != FVIZ_FALSE ? GL_TRUE : GL_FALSE);
-    glColorMask(
-        snapshot->color_write[0] != FVIZ_FALSE ? GL_TRUE : GL_FALSE,
-        snapshot->color_write[1] != FVIZ_FALSE ? GL_TRUE : GL_FALSE,
-        snapshot->color_write[2] != FVIZ_FALSE ? GL_TRUE : GL_FALSE,
-        snapshot->color_write[3] != FVIZ_FALSE ? GL_TRUE : GL_FALSE);
+    glColorMask(snapshot->color_write[0] != FVIZ_FALSE ? GL_TRUE : GL_FALSE,
+                snapshot->color_write[1] != FVIZ_FALSE ? GL_TRUE : GL_FALSE,
+                snapshot->color_write[2] != FVIZ_FALSE ? GL_TRUE : GL_FALSE,
+                snapshot->color_write[3] != FVIZ_FALSE ? GL_TRUE : GL_FALSE);
     fviz_gl_restore_enable(GL_BLEND, snapshot->blend_enabled);
     fviz_gl_restore_enable(GL_DEPTH_TEST, snapshot->depth_test_enabled);
     fviz_gl_restore_enable(GL_CULL_FACE, snapshot->cull_face_enabled);
@@ -2696,42 +2607,46 @@ FVizResult fviz_internal_gl_device_restore_state(
 
 FVizBool fviz_internal_gl_device_fxaa_supported(const FVizGLDevice* device)
 {
-    return device != NULL && device->fxaa_program != 0u && device->fxaa_texture != 0u &&
-        device->fxaa_vao != 0u && device->fxaa_framebuffer != 0u
-        ? FVIZ_TRUE : FVIZ_FALSE;
+    return device != NULL && device->fxaa_program != 0u && device->fxaa_texture != 0u && device->fxaa_vao != 0u &&
+                   device->fxaa_framebuffer != 0u
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 FVizBool fviz_internal_gl_device_weighted_oit_supported(const FVizGLDevice* device)
 {
-    return device != NULL && device->oit_composite_program != 0u &&
-        device->oit_framebuffer != 0u && device->oit_resolve_framebuffer != 0u &&
-        device->oit_color_renderbuffer != 0u && device->oit_depth_renderbuffer != 0u &&
-        device->oit_accum_texture != 0u && device->oit_reveal_texture != 0u &&
-        device->oit_vao != 0u ? FVIZ_TRUE : FVIZ_FALSE;
+    return device != NULL && device->oit_composite_program != 0u && device->oit_framebuffer != 0u &&
+                   device->oit_resolve_framebuffer != 0u && device->oit_color_renderbuffer != 0u &&
+                   device->oit_depth_renderbuffer != 0u && device->oit_accum_texture != 0u &&
+                   device->oit_reveal_texture != 0u && device->oit_vao != 0u
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 FVizBool fviz_internal_gl_device_depth_peeling_supported(const FVizGLDevice* device)
 {
-    return device != NULL && device->peel_supported != FVIZ_FALSE &&
-        device->peel_enabled_location >= 0 ? FVIZ_TRUE : FVIZ_FALSE;
+    return device != NULL && device->peel_supported != FVIZ_FALSE && device->peel_enabled_location >= 0 ? FVIZ_TRUE
+                                                                                                        : FVIZ_FALSE;
 }
 
 FVizBool fviz_internal_gl_device_text_supported(const FVizGLDevice* device)
 {
-    return device != NULL && device->text_program != 0u && device->text_vao != 0u &&
-        device->text_vbo != 0u && device->text_texture != 0u ? FVIZ_TRUE : FVIZ_FALSE;
+    return device != NULL && device->text_program != 0u && device->text_vao != 0u && device->text_vbo != 0u &&
+                   device->text_texture != 0u
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 FVizBool fviz_internal_gl_device_integer_selection_supported(const FVizGLDevice* device)
 {
-    return device != NULL && device->selection_program != 0u &&
-        device->gl.glClearBufferuiv != NULL ? FVIZ_TRUE : FVIZ_FALSE;
+    return device != NULL && device->selection_program != 0u && device->gl.glClearBufferuiv != NULL ? FVIZ_TRUE
+                                                                                                    : FVIZ_FALSE;
 }
 
 FVizBool fviz_internal_gl_device_gpu_timing_supported(const FVizGLDevice* device)
 {
-    return device != NULL && device->gpu_time_queries[0] != 0u &&
-        device->gpu_time_queries[1] != 0u ? FVIZ_TRUE : FVIZ_FALSE;
+    return device != NULL && device->gpu_time_queries[0] != 0u && device->gpu_time_queries[1] != 0u ? FVIZ_TRUE
+                                                                                                    : FVIZ_FALSE;
 }
 
 FVizBool fviz_internal_gl_device_shader_lines_supported(const FVizGLDevice* device)
@@ -2745,8 +2660,7 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device)
     if (device == NULL) return;
     if (device->gpu_time_queries[0] != 0u || device->gpu_time_queries[1] != 0u)
     {
-        if (device->gl.glDeleteQueries != NULL)
-            device->gl.glDeleteQueries(2, device->gpu_time_queries);
+        if (device->gl.glDeleteQueries != NULL) device->gl.glDeleteQueries(2, device->gpu_time_queries);
         device->gpu_time_queries[0] = 0u;
         device->gpu_time_queries[1] = 0u;
     }
@@ -2837,20 +2751,13 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device)
     if (device->peel_front_depth_texture != 0u) glDeleteTextures(1, &device->peel_front_depth_texture);
     if (device->peel_back_depth_texture != 0u) glDeleteTextures(1, &device->peel_back_depth_texture);
     if (device->peel_color_texture != 0u) glDeleteTextures(1, &device->peel_color_texture);
-    if (device->peel_depth_renderbuffer != 0u)
-        device->gl.glDeleteRenderbuffers(1, &device->peel_depth_renderbuffer);
-    if (device->peel_framebuffer != 0u)
-        device->gl.glDeleteFramebuffers(1, &device->peel_framebuffer);
-    if (device->peel_depth_framebuffer != 0u)
-        device->gl.glDeleteFramebuffers(1, &device->peel_depth_framebuffer);
-    if (device->oit_color_renderbuffer != 0u)
-        device->gl.glDeleteRenderbuffers(1, &device->oit_color_renderbuffer);
-    if (device->oit_depth_renderbuffer != 0u)
-        device->gl.glDeleteRenderbuffers(1, &device->oit_depth_renderbuffer);
-    if (device->oit_framebuffer != 0u)
-        device->gl.glDeleteFramebuffers(1, &device->oit_framebuffer);
-    if (device->oit_resolve_framebuffer != 0u)
-        device->gl.glDeleteFramebuffers(1, &device->oit_resolve_framebuffer);
+    if (device->peel_depth_renderbuffer != 0u) device->gl.glDeleteRenderbuffers(1, &device->peel_depth_renderbuffer);
+    if (device->peel_framebuffer != 0u) device->gl.glDeleteFramebuffers(1, &device->peel_framebuffer);
+    if (device->peel_depth_framebuffer != 0u) device->gl.glDeleteFramebuffers(1, &device->peel_depth_framebuffer);
+    if (device->oit_color_renderbuffer != 0u) device->gl.glDeleteRenderbuffers(1, &device->oit_color_renderbuffer);
+    if (device->oit_depth_renderbuffer != 0u) device->gl.glDeleteRenderbuffers(1, &device->oit_depth_renderbuffer);
+    if (device->oit_framebuffer != 0u) device->gl.glDeleteFramebuffers(1, &device->oit_framebuffer);
+    if (device->oit_resolve_framebuffer != 0u) device->gl.glDeleteFramebuffers(1, &device->oit_resolve_framebuffer);
     if (device->oit_vao != 0u) device->gl.glDeleteVertexArrays(1, &device->oit_vao);
     if (device->oit_composite_program != 0u) device->gl.glDeleteProgram(device->oit_composite_program);
     if (device->fxaa_framebuffer != 0u)
@@ -2910,13 +2817,13 @@ void fviz_internal_gl_device_begin_frame(FVizGLDevice* device)
             if (device->gpu_time_query_issued[candidate] != FVIZ_FALSE)
             {
                 GLint available = GL_FALSE;
-                device->gl.glGetQueryObjectiv(
-                    device->gpu_time_queries[candidate], FVIZ_GL_QUERY_RESULT_AVAILABLE, &available);
+                device->gl.glGetQueryObjectiv(device->gpu_time_queries[candidate], FVIZ_GL_QUERY_RESULT_AVAILABLE,
+                                              &available);
                 if (available != GL_FALSE)
                 {
                     uint64_t nanoseconds = 0u;
-                    device->gl.glGetQueryObjectui64v(
-                        device->gpu_time_queries[candidate], FVIZ_GL_QUERY_RESULT, &nanoseconds);
+                    device->gl.glGetQueryObjectui64v(device->gpu_time_queries[candidate], FVIZ_GL_QUERY_RESULT,
+                                                     &nanoseconds);
                     device->gpu_time_query_issued[candidate] = FVIZ_FALSE;
                     device->frame_statistics.gpu_frame_nanoseconds = nanoseconds;
                     device->frame_statistics.gpu_timing_valid = FVIZ_TRUE;
@@ -2925,8 +2832,7 @@ void fviz_internal_gl_device_begin_frame(FVizGLDevice* device)
         }
         if (device->gpu_time_query_issued[device->gpu_time_write_index] == FVIZ_FALSE)
         {
-            device->gl.glBeginQuery(
-                FVIZ_GL_TIME_ELAPSED, device->gpu_time_queries[device->gpu_time_write_index]);
+            device->gl.glBeginQuery(FVIZ_GL_TIME_ELAPSED, device->gpu_time_queries[device->gpu_time_write_index]);
             device->gpu_time_query_active = FVIZ_TRUE;
         }
     }
@@ -2950,8 +2856,7 @@ void fviz_internal_gl_device_end_frame(FVizGLDevice* device)
         FVizGLActorResource* resource = &device->actors[read_index];
         if (fviz_gl_actor_resource_pinned(resource) == FVIZ_FALSE &&
             resource->last_seen_frame != device->frame_serial &&
-            device->frame_serial - resource->last_seen_frame >
-                (uint64_t)device->unused_resource_retention_frames)
+            device->frame_serial - resource->last_seen_frame > (uint64_t)device->unused_resource_retention_frames)
         {
             fviz_gl_actor_resource_destroy(device, resource);
             if (device->frame_statistics.gpu_resource_evictions != UINT64_MAX)
@@ -2959,13 +2864,11 @@ void fviz_internal_gl_device_end_frame(FVizGLDevice* device)
             continue;
         }
         resident_mesh_gpu_bytes += fviz_gl_actor_resource_resident_bytes(resource);
-        if (write_index != read_index)
-            device->actors[write_index] = device->actors[read_index];
+        if (write_index != read_index) device->actors[write_index] = device->actors[read_index];
         ++write_index;
     }
     device->actor_count = write_index;
-    if (device->mesh_byte_budget != 0u &&
-        resident_mesh_gpu_bytes > device->mesh_byte_budget)
+    if (device->mesh_byte_budget != 0u && resident_mesh_gpu_bytes > device->mesh_byte_budget)
     {
         for (;;)
         {
@@ -2975,29 +2878,21 @@ void fviz_internal_gl_device_end_frame(FVizGLDevice* device)
             {
                 const FVizGLActorResource* resource = &device->actors[read_index];
                 if (fviz_gl_actor_resource_pinned(resource) == FVIZ_FALSE &&
-                    resource->last_seen_frame != device->frame_serial &&
-                    resource->last_seen_frame < oldest_frame)
+                    resource->last_seen_frame != device->frame_serial && resource->last_seen_frame < oldest_frame)
                 {
                     oldest_frame = resource->last_seen_frame;
                     oldest_index = read_index;
                 }
             }
-            if (oldest_index == SIZE_MAX ||
-                resident_mesh_gpu_bytes <= device->mesh_byte_budget)
-                break;
+            if (oldest_index == SIZE_MAX || resident_mesh_gpu_bytes <= device->mesh_byte_budget) break;
             {
-                const uint64_t bytes = fviz_gl_actor_resource_resident_bytes(
-                    &device->actors[oldest_index]);
+                const uint64_t bytes = fviz_gl_actor_resource_resident_bytes(&device->actors[oldest_index]);
                 fviz_gl_actor_resource_destroy(device, &device->actors[oldest_index]);
                 if (oldest_index + 1u < device->actor_count)
-                    (void)memmove(
-                        &device->actors[oldest_index],
-                        &device->actors[oldest_index + 1u],
-                        (size_t)(device->actor_count - oldest_index - 1u) *
-                            sizeof(*device->actors));
+                    (void)memmove(&device->actors[oldest_index], &device->actors[oldest_index + 1u],
+                                  (size_t)(device->actor_count - oldest_index - 1u) * sizeof(*device->actors));
                 --device->actor_count;
-                resident_mesh_gpu_bytes = bytes <= resident_mesh_gpu_bytes
-                    ? resident_mesh_gpu_bytes - bytes : 0u;
+                resident_mesh_gpu_bytes = bytes <= resident_mesh_gpu_bytes ? resident_mesh_gpu_bytes - bytes : 0u;
                 if (device->frame_statistics.gpu_resource_evictions != UINT64_MAX)
                     ++device->frame_statistics.gpu_resource_evictions;
             }
@@ -3012,15 +2907,14 @@ void fviz_internal_gl_device_end_frame(FVizGLDevice* device)
     for (read_index = 0u; read_index < device->actor_count; ++read_index)
     {
         fviz_gl_actor_resource_resident_classes(&device->actors[read_index],
-            &device->frame_statistics.resident_geometry_gpu_bytes,
-            &device->frame_statistics.resident_attribute_gpu_bytes,
-            &device->frame_statistics.resident_instance_gpu_bytes);
+                                                &device->frame_statistics.resident_geometry_gpu_bytes,
+                                                &device->frame_statistics.resident_attribute_gpu_bytes,
+                                                &device->frame_statistics.resident_instance_gpu_bytes);
         if (fviz_gl_actor_resource_pinned(&device->actors[read_index]) != FVIZ_FALSE)
             ++device->frame_statistics.pinned_gpu_resources;
     }
     device->frame_statistics.resident_render_target_gpu_bytes = 0u;
-    if (device->selection_texture != 0u && device->selection_width > 0 &&
-        device->selection_height > 0)
+    if (device->selection_texture != 0u && device->selection_width > 0 && device->selection_height > 0)
         device->frame_statistics.resident_render_target_gpu_bytes +=
             (uint64_t)device->selection_width * (uint64_t)device->selection_height * 20u;
     if (device->oit_accum_texture != 0u && device->oit_width > 0 && device->oit_height > 0)
@@ -3031,14 +2925,10 @@ void fviz_internal_gl_device_end_frame(FVizGLDevice* device)
             (uint64_t)device->fxaa_width * (uint64_t)device->fxaa_height * 4u;
     device->frame_statistics.gpu_mesh_byte_budget = device->mesh_byte_budget;
     device->frame_statistics.gpu_mesh_budget_exceeded =
-        device->mesh_byte_budget != 0u &&
-        resident_mesh_gpu_bytes > device->mesh_byte_budget
-        ? FVIZ_TRUE : FVIZ_FALSE;
+        device->mesh_byte_budget != 0u && resident_mesh_gpu_bytes > device->mesh_byte_budget ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-void fviz_internal_gl_device_get_frame_statistics(
-    const FVizGLDevice* device,
-    FVizGLFrameStatistics* out_statistics)
+void fviz_internal_gl_device_get_frame_statistics(const FVizGLDevice* device, FVizGLFrameStatistics* out_statistics)
 {
     if (out_statistics == NULL) return;
     if (device == NULL)
@@ -3057,19 +2947,16 @@ void fviz_internal_gl_device_get_frame_statistics(
     }
     out_statistics->gpu_mesh_byte_budget = device->mesh_byte_budget;
     out_statistics->gpu_mesh_budget_exceeded =
-        device->mesh_byte_budget != 0u &&
-        out_statistics->resident_mesh_gpu_bytes > device->mesh_byte_budget
-        ? FVIZ_TRUE : FVIZ_FALSE;
+        device->mesh_byte_budget != 0u && out_statistics->resident_mesh_gpu_bytes > device->mesh_byte_budget
+            ? FVIZ_TRUE
+            : FVIZ_FALSE;
 }
 
-void fviz_internal_gl_device_set_memory_options(
-    FVizGLDevice* device,
-    const FVizGPUMemoryOptions* options)
+void fviz_internal_gl_device_set_memory_options(FVizGLDevice* device, const FVizGPUMemoryOptions* options)
 {
     if (device == NULL || options == NULL) return;
     device->mesh_byte_budget = options->mesh_byte_budget;
-    device->unused_resource_retention_frames =
-        options->unused_resource_retention_frames;
+    device->unused_resource_retention_frames = options->unused_resource_retention_frames;
 }
 
 void fviz_internal_gl_device_release_mesh_resources(FVizGLDevice* device)
@@ -3084,12 +2971,8 @@ void fviz_internal_gl_device_release_mesh_resources(FVizGLDevice* device)
     device->frame_statistics.gpu_mesh_budget_exceeded = FVIZ_FALSE;
 }
 
-static FVizResult fviz_gl_render_shader_edges(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    float aspect_ratio,
-    int viewport_width,
-    int viewport_height)
+static FVizResult fviz_gl_render_shader_edges(FVizGLDevice* device, FVizRenderer* renderer, float aspect_ratio,
+                                              int viewport_width, int viewport_height)
 {
     const FVizGLFunctions* gl = &device->gl;
     FVizScene* scene = fviz_renderer_scene(renderer);
@@ -3107,8 +2990,7 @@ static FVizResult fviz_gl_render_shader_edges(
     float small_object_threshold;
     FVizSize actor_count;
     FVizSize i;
-    if (scene == NULL || camera == NULL ||
-        (device->edge_program == 0u && device->point_program == 0u) ||
+    if (scene == NULL || camera == NULL || (device->edge_program == 0u && device->point_program == 0u) ||
         viewport_width <= 0 || viewport_height <= 0)
         return FVIZ_ERROR_NOT_SUPPORTED;
     projection = fviz_camera_projection_matrix(camera, aspect_ratio);
@@ -3124,14 +3006,13 @@ static FVizResult fviz_gl_render_shader_edges(
     glGetBooleanv(GL_DEPTH_WRITEMASK, &depth_write);
     glGetIntegerv(GL_DEPTH_FUNC, &depth_function);
     cull_enabled = glIsEnabled(GL_CULL_FACE);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        /* Depth peeling needs the depth writes so each layer advances the
-         * peeled depth; regular sorted-alpha rendering leaves writes off. */
-        if (device->peel_pass != 0)
-            glDepthMask(GL_TRUE);
-        else
-            glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    /* Depth peeling needs the depth writes so each layer advances the
+     * peeled depth; regular sorted-alpha rendering leaves writes off. */
+    if (device->peel_pass != 0) glDepthMask(GL_TRUE);
+    else
+        glDepthMask(GL_FALSE);
     glDepthFunc(GL_LEQUAL);
     /* The expanded line quads generated by the geometry shader must not be
      * backface-culled; the surface pass leaves GL_CULL_FACE enabled. */
@@ -3161,8 +3042,8 @@ static FVizResult fviz_gl_render_shader_edges(
                 fviz_frustum_intersects_bounds(&culling_frustum, fviz_actor_bounds(actor)) == FVIZ_FALSE)
                 continue;
             if (use_small_object_culling != FVIZ_FALSE && small_object_threshold > 0.0f &&
-                fviz_renderer_actor_projected_diameter_pixels(
-                    renderer, actor, aspect_ratio, viewport_height) < small_object_threshold)
+                fviz_renderer_actor_projected_diameter_pixels(renderer, actor, aspect_ratio, viewport_height) <
+                    small_object_threshold)
                 continue;
             if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
             resource = fviz_gl_find_actor_resource(device, actor);
@@ -3185,37 +3066,43 @@ static FVizResult fviz_gl_render_shader_edges(
             /* In wireframe mode use the per-vertex (scalar-mapped) colors so the
              * mesh stays clearly visible instead of a thin dark outline. */
             scalar_coloring = (resource->has_color != FVIZ_FALSE || resource->instance_count > 0) &&
-                (fviz_actor_wireframe(actor) != FVIZ_FALSE ||
-                 fviz_actor_line_scalar_coloring(actor) != FVIZ_FALSE) ? 1 : 0;
+                                      (fviz_actor_wireframe(actor) != FVIZ_FALSE ||
+                                       fviz_actor_line_scalar_coloring(actor) != FVIZ_FALSE)
+                                  ? 1
+                                  : 0;
             gl->glUniform1i(device->edge_scalar_color_location, scalar_coloring);
             gl->glUniform1i(device->edge_instancing_location, resource->instance_count > 0 ? 1 : 0);
             fviz_actor_get_edge_color(actor, &r, &g, &b);
-            gl->glUniform4fv(device->edge_color_location, 1,
-                (const GLfloat[]){r, g, b, fviz_actor_opacity(actor)});
+            gl->glUniform4fv(device->edge_color_location, 1, (const GLfloat[]){r, g, b, fviz_actor_opacity(actor)});
             gl->glBindVertexArray(resource->vao);
             if (resource->line_adjacency_index_count > 0 && resource->line_adjacency_index_buffer != 0u)
             {
                 gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->line_adjacency_index_buffer);
                 if (resource->instance_count > 0)
-                    gl->glDrawElementsInstanced(FVIZ_GL_LINES_ADJACENCY, resource->line_adjacency_index_count, GL_UNSIGNED_INT,
-                        (const void*)0, resource->instance_count);
+                    gl->glDrawElementsInstanced(FVIZ_GL_LINES_ADJACENCY, resource->line_adjacency_index_count,
+                                                GL_UNSIGNED_INT, (const void*)0, resource->instance_count);
                 else
-                    glDrawElements(FVIZ_GL_LINES_ADJACENCY, resource->line_adjacency_index_count, GL_UNSIGNED_INT, (const void*)0);
+                    glDrawElements(FVIZ_GL_LINES_ADJACENCY, resource->line_adjacency_index_count, GL_UNSIGNED_INT,
+                                   (const void*)0);
                 ++device->frame_statistics.draw_calls;
-                device->frame_statistics.lines += ((uint64_t)resource->line_adjacency_index_count / 4u) *
+                device->frame_statistics.lines +=
+                    ((uint64_t)resource->line_adjacency_index_count / 4u) *
                     (uint64_t)(resource->instance_count > 0 ? resource->instance_count : 1);
             }
             if ((fviz_actor_edge_visibility(actor) != FVIZ_FALSE || fviz_actor_wireframe(actor) != FVIZ_FALSE) &&
-                resource->triangle_edge_adjacency_index_count > 0 && resource->triangle_edge_adjacency_index_buffer != 0u)
+                resource->triangle_edge_adjacency_index_count > 0 &&
+                resource->triangle_edge_adjacency_index_buffer != 0u)
             {
                 gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->triangle_edge_adjacency_index_buffer);
                 if (resource->instance_count > 0)
-                    gl->glDrawElementsInstanced(FVIZ_GL_LINES_ADJACENCY, resource->triangle_edge_adjacency_index_count, GL_UNSIGNED_INT,
-                        (const void*)0, resource->instance_count);
+                    gl->glDrawElementsInstanced(FVIZ_GL_LINES_ADJACENCY, resource->triangle_edge_adjacency_index_count,
+                                                GL_UNSIGNED_INT, (const void*)0, resource->instance_count);
                 else
-                    glDrawElements(FVIZ_GL_LINES_ADJACENCY, resource->triangle_edge_adjacency_index_count, GL_UNSIGNED_INT, (const void*)0);
+                    glDrawElements(FVIZ_GL_LINES_ADJACENCY, resource->triangle_edge_adjacency_index_count,
+                                   GL_UNSIGNED_INT, (const void*)0);
                 ++device->frame_statistics.draw_calls;
-                device->frame_statistics.lines += ((uint64_t)resource->triangle_edge_adjacency_index_count / 4u) *
+                device->frame_statistics.lines +=
+                    ((uint64_t)resource->triangle_edge_adjacency_index_count / 4u) *
                     (uint64_t)(resource->instance_count > 0 ? resource->instance_count : 1);
             }
         }
@@ -3243,8 +3130,8 @@ static FVizResult fviz_gl_render_shader_edges(
                 fviz_frustum_intersects_bounds(&culling_frustum, fviz_actor_bounds(actor)) == FVIZ_FALSE)
                 continue;
             if (use_small_object_culling != FVIZ_FALSE && small_object_threshold > 0.0f &&
-                fviz_renderer_actor_projected_diameter_pixels(
-                    renderer, actor, aspect_ratio, viewport_height) < small_object_threshold)
+                fviz_renderer_actor_projected_diameter_pixels(renderer, actor, aspect_ratio, viewport_height) <
+                    small_object_threshold)
                 continue;
             if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
             resource = fviz_gl_find_actor_resource(device, actor);
@@ -3254,18 +3141,19 @@ static FVizResult fviz_gl_render_shader_edges(
             gl->glUniform1f(device->point_size_location, fviz_actor_point_size(actor));
             gl->glUniform1i(device->point_shape_location, (GLint)fviz_actor_point_shape(actor));
             scalar_coloring = (resource->has_color != FVIZ_FALSE || resource->instance_count > 0) &&
-                fviz_actor_point_scalar_coloring(actor) != FVIZ_FALSE ? 1 : 0;
+                                      fviz_actor_point_scalar_coloring(actor) != FVIZ_FALSE
+                                  ? 1
+                                  : 0;
             gl->glUniform1i(device->point_scalar_color_location, scalar_coloring);
             gl->glUniform1i(device->point_instancing_location, resource->instance_count > 0 ? 1 : 0);
             fviz_actor_get_point_color(actor, &r, &g, &b);
-            gl->glUniform4fv(device->point_color_location, 1,
-                (const GLfloat[]){r, g, b, fviz_actor_opacity(actor)});
+            gl->glUniform4fv(device->point_color_location, 1, (const GLfloat[]){r, g, b, fviz_actor_opacity(actor)});
             glDepthMask(fviz_gl_actor_is_translucent(actor) == FVIZ_FALSE ? GL_TRUE : GL_FALSE);
             gl->glBindVertexArray(resource->vao);
             gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->point_index_buffer);
             if (resource->instance_count > 0)
                 gl->glDrawElementsInstanced(FVIZ_GL_POINTS, resource->point_index_count, GL_UNSIGNED_INT,
-                    (const void*)0, resource->instance_count);
+                                            (const void*)0, resource->instance_count);
             else
                 glDrawElements(FVIZ_GL_POINTS, resource->point_index_count, GL_UNSIGNED_INT, (const void*)0);
             ++device->frame_statistics.draw_calls;
@@ -3277,18 +3165,17 @@ static FVizResult fviz_gl_render_shader_edges(
 
     glDepthMask(depth_write);
     glDepthFunc((GLenum)depth_function);
-    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
+    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
     return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
 }
 
-FVizResult fviz_internal_gl_device_render_stage(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    float aspect_ratio,
-    int viewport_width,
-    int viewport_height,
-    FVizRenderPassStage stage)
+FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRenderer* renderer, float aspect_ratio,
+                                                int viewport_width, int viewport_height, FVizRenderPassStage stage)
 {
     const FVizGLFunctions* gl;
     FVizCamera* camera;
@@ -3342,12 +3229,9 @@ FVizResult fviz_internal_gl_device_render_stage(
         float red;
         float green;
         float blue;
-        if (light == NULL || fviz_light_enabled(light) == FVIZ_FALSE ||
-            fviz_light_intensity(light) <= 0.0f)
-            continue;
-        position = fviz_light_type(light) == FVIZ_LIGHT_HEADLIGHT
-            ? fviz_camera_position(camera)
-            : fviz_light_position(light);
+        if (light == NULL || fviz_light_enabled(light) == FVIZ_FALSE || fviz_light_intensity(light) <= 0.0f) continue;
+        position =
+            fviz_light_type(light) == FVIZ_LIGHT_HEADLIGHT ? fviz_camera_position(camera) : fviz_light_position(light);
         fviz_light_get_color(light, &red, &green, &blue);
         light_position_intensity[light_count * 4 + 0] = position.x;
         light_position_intensity[light_count * 4 + 1] = position.y;
@@ -3372,8 +3256,7 @@ FVizResult fviz_internal_gl_device_render_stage(
     actor_iteration_count = fviz_scene_actor_count(scene);
     if (stage == FVIZ_RENDER_PASS_TRANSLUCENT && device->oit_pass == 0)
     {
-        FVizResult order_result = fviz_gl_prepare_translucent_order(
-            device, scene, camera, &actor_iteration_count);
+        FVizResult order_result = fviz_gl_prepare_translucent_order(device, scene, camera, &actor_iteration_count);
         if (order_result != FVIZ_OK)
         {
             gl->glUseProgram(0u);
@@ -3386,8 +3269,8 @@ FVizResult fviz_internal_gl_device_render_stage(
     for (i = 0u; i < actor_iteration_count; ++i)
     {
         const FVizActor* actor = stage == FVIZ_RENDER_PASS_TRANSLUCENT && device->oit_pass == 0
-            ? device->draw_items[i].actor
-            : fviz_scene_const_actor(scene, i);
+                                     ? device->draw_items[i].actor
+                                     : fviz_scene_const_actor(scene, i);
         FVizGLActorResource* resource;
         FVizMat4 model;
         FVizMat3 normal_matrix;
@@ -3408,31 +3291,25 @@ FVizResult fviz_internal_gl_device_render_stage(
         FVizSize clip_count;
         FVizSize clip_index;
 
-        if (stage == FVIZ_RENDER_PASS_OPAQUE)
-            ++device->frame_statistics.actors_considered;
+        if (stage == FVIZ_RENDER_PASS_OPAQUE) ++device->frame_statistics.actors_considered;
         if (fviz_actor_is_visible(actor) == FVIZ_FALSE) continue;
 
         actor_translucent = fviz_gl_actor_is_translucent(actor);
         if (stage == FVIZ_RENDER_PASS_TRANSLUCENT && actor_translucent == FVIZ_FALSE) continue;
-        if (stage != FVIZ_RENDER_PASS_OPAQUE &&
-            stage != FVIZ_RENDER_PASS_TRANSLUCENT &&
-            stage != FVIZ_RENDER_PASS_EDGE)
+        if (stage != FVIZ_RENDER_PASS_OPAQUE && stage != FVIZ_RENDER_PASS_TRANSLUCENT && stage != FVIZ_RENDER_PASS_EDGE)
             continue;
 
         if (use_frustum != FVIZ_FALSE &&
             fviz_frustum_intersects_bounds(&culling_frustum, fviz_actor_bounds(actor)) == FVIZ_FALSE)
             frustum_culled = FVIZ_TRUE;
-        if (frustum_culled == FVIZ_FALSE &&
-            fviz_renderer_small_object_culling(renderer) != FVIZ_FALSE &&
-            fviz_renderer_actor_projected_diameter_pixels(
-                renderer, actor, aspect_ratio, viewport_height) <
+        if (frustum_culled == FVIZ_FALSE && fviz_renderer_small_object_culling(renderer) != FVIZ_FALSE &&
+            fviz_renderer_actor_projected_diameter_pixels(renderer, actor, aspect_ratio, viewport_height) <
                 fviz_renderer_small_object_threshold_pixels(renderer))
             small_object_culled = FVIZ_TRUE;
 
         if (stage == FVIZ_RENDER_PASS_OPAQUE)
         {
-            if (frustum_culled != FVIZ_FALSE)
-                ++device->frame_statistics.actors_frustum_culled;
+            if (frustum_culled != FVIZ_FALSE) ++device->frame_statistics.actors_frustum_culled;
             else if (small_object_culled != FVIZ_FALSE)
                 ++device->frame_statistics.actors_small_object_culled;
             else
@@ -3441,8 +3318,7 @@ FVizResult fviz_internal_gl_device_render_stage(
         if (frustum_culled != FVIZ_FALSE || small_object_culled != FVIZ_FALSE) continue;
         if (stage == FVIZ_RENDER_PASS_OPAQUE && actor_translucent != FVIZ_FALSE) continue;
 
-        if (stage == FVIZ_RENDER_PASS_TRANSLUCENT &&
-            fviz_actor_const_volume_mapper(actor) != NULL &&
+        if (stage == FVIZ_RENDER_PASS_TRANSLUCENT && fviz_actor_const_volume_mapper(actor) != NULL &&
             device->volume_program_ready != FVIZ_FALSE)
         {
             glDisable(GL_CULL_FACE);
@@ -3476,10 +3352,10 @@ FVizResult fviz_internal_gl_device_render_stage(
         gl->glUniformMatrix3fv(device->normal_matrix_location, 1, GL_FALSE, normal_matrix.m);
 
         fviz_actor_get_color(actor, &red, &green, &blue);
-        gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]) {red, green, blue});
+        gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]){red, green, blue});
         gl->glUniform1i(device->instancing_location, resource->instance_count > 0 ? 1 : 0);
         gl->glUniform1i(device->scalar_color_location,
-            resource->instance_count > 0 || resource->has_color == FVIZ_TRUE ? 1 : 0);
+                        resource->instance_count > 0 || resource->has_color == FVIZ_TRUE ? 1 : 0);
         gl->glUniform1f(device->opacity_location, opacity);
         mapper = fviz_actor_mapper((FVizActor*)actor);
         clip_count = mapper != NULL ? fviz_mapper_clipping_plane_count(mapper) : 0u;
@@ -3492,8 +3368,7 @@ FVizResult fviz_internal_gl_device_render_stage(
             clip_values[clip_index * 4u + 3u] = clip_planes[clip_index].distance;
         }
         gl->glUniform1i(device->clip_plane_count_location, (GLint)clip_count);
-        if (clip_count > 0u)
-            gl->glUniform4fv(device->clip_planes_location, (GLsizei)clip_count, clip_values);
+        if (clip_count > 0u) gl->glUniform4fv(device->clip_planes_location, (GLsizei)clip_count, clip_values);
         {
             float ambient;
             float diffuse_factor;
@@ -3504,8 +3379,7 @@ FVizResult fviz_internal_gl_device_render_stage(
             gl->glUniform1f(device->diffuse_factor_location, diffuse_factor);
             gl->glUniform1f(device->specular_factor_location, specular);
             gl->glUniform1f(device->specular_power_location, specular_power);
-            gl->glUniform1i(device->flat_shading_location,
-                fviz_actor_shading_mode(actor) == FVIZ_SHADING_FLAT ? 1 : 0);
+            gl->glUniform1i(device->flat_shading_location, fviz_actor_shading_mode(actor) == FVIZ_SHADING_FLAT ? 1 : 0);
         }
         switch (fviz_actor_cull_mode(actor))
         {
@@ -3524,8 +3398,7 @@ FVizResult fviz_internal_gl_device_render_stage(
         }
 
         gl->glBindVertexArray(resource->vao);
-        if (stage != FVIZ_RENDER_PASS_EDGE && resource->index_count > 0 &&
-            fviz_actor_wireframe(actor) == FVIZ_FALSE)
+        if (stage != FVIZ_RENDER_PASS_EDGE && resource->index_count > 0 && fviz_actor_wireframe(actor) == FVIZ_FALSE)
         {
             gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->index_buffer);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -3535,12 +3408,13 @@ FVizResult fviz_internal_gl_device_render_stage(
                 glPolygonOffset(1.0f, 1.0f);
             }
             if (resource->instance_count > 0)
-                gl->glDrawElementsInstanced(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT,
-                    (const void*)0, resource->instance_count);
+                gl->glDrawElementsInstanced(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0,
+                                            resource->instance_count);
             else
                 glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
             ++device->frame_statistics.draw_calls;
-            device->frame_statistics.triangles += ((uint64_t)resource->index_count / 3u) *
+            device->frame_statistics.triangles +=
+                ((uint64_t)resource->index_count / 3u) *
                 (uint64_t)(resource->instance_count > 0 ? resource->instance_count : 1);
             if (fviz_actor_edge_visibility(actor) != FVIZ_FALSE)
             {
@@ -3552,27 +3426,28 @@ FVizResult fviz_internal_gl_device_render_stage(
             /* Wireframe mode uses per-vertex scalar colors so the mesh is
              * clearly visible; plain edges keep the actor edge color. */
             const GLint edge_scalar_coloring =
-                resource->has_color != FVIZ_FALSE &&
-                (fviz_actor_wireframe(actor) != FVIZ_FALSE ||
-                 fviz_actor_line_scalar_coloring(actor) != FVIZ_FALSE) ? 1 : 0;
+                resource->has_color != FVIZ_FALSE && (fviz_actor_wireframe(actor) != FVIZ_FALSE ||
+                                                      fviz_actor_line_scalar_coloring(actor) != FVIZ_FALSE)
+                    ? 1
+                    : 0;
             gl->glUniform1i(device->scalar_color_location, edge_scalar_coloring);
             if (edge_scalar_coloring == 0)
             {
                 fviz_actor_get_edge_color(actor, &edge_red, &edge_green, &edge_blue);
-                gl->glUniform3fv(device->diffuse_location, 1,
-                    (const GLfloat[]) {edge_red, edge_green, edge_blue});
+                gl->glUniform3fv(device->diffuse_location, 1, (const GLfloat[]){edge_red, edge_green, edge_blue});
             }
             glLineWidth(fviz_actor_line_width(actor));
             if (resource->line_index_count > 0 && resource->line_index_buffer != 0u)
             {
                 gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->line_index_buffer);
                 if (resource->instance_count > 0)
-                    gl->glDrawElementsInstanced(GL_LINES, resource->line_index_count, GL_UNSIGNED_INT,
-                        (const void*)0, resource->instance_count);
+                    gl->glDrawElementsInstanced(GL_LINES, resource->line_index_count, GL_UNSIGNED_INT, (const void*)0,
+                                                resource->instance_count);
                 else
                     glDrawElements(GL_LINES, resource->line_index_count, GL_UNSIGNED_INT, (const void*)0);
                 ++device->frame_statistics.draw_calls;
-                device->frame_statistics.lines += ((uint64_t)resource->line_index_count / 2u) *
+                device->frame_statistics.lines +=
+                    ((uint64_t)resource->line_index_count / 2u) *
                     (uint64_t)(resource->instance_count > 0 ? resource->instance_count : 1);
             }
             if ((fviz_actor_edge_visibility(actor) != FVIZ_FALSE || fviz_actor_wireframe(actor) != FVIZ_FALSE) &&
@@ -3581,11 +3456,12 @@ FVizResult fviz_internal_gl_device_render_stage(
                 gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->triangle_edge_index_buffer);
                 if (resource->instance_count > 0)
                     gl->glDrawElementsInstanced(GL_LINES, resource->triangle_edge_index_count, GL_UNSIGNED_INT,
-                        (const void*)0, resource->instance_count);
+                                                (const void*)0, resource->instance_count);
                 else
                     glDrawElements(GL_LINES, resource->triangle_edge_index_count, GL_UNSIGNED_INT, (const void*)0);
                 ++device->frame_statistics.draw_calls;
-                device->frame_statistics.lines += ((uint64_t)resource->triangle_edge_index_count / 2u) *
+                device->frame_statistics.lines +=
+                    ((uint64_t)resource->triangle_edge_index_count / 2u) *
                     (uint64_t)(resource->instance_count > 0 ? resource->instance_count : 1);
             }
         }
@@ -3604,13 +3480,11 @@ FVizResult fviz_internal_gl_device_render_stage(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_gl_ensure_selection_target(
-    FVizGLDevice* device, int width, int height)
+static FVizResult fviz_gl_ensure_selection_target(FVizGLDevice* device, int width, int height)
 {
     const FVizGLFunctions* gl;
     if (device == NULL || width <= 0 || height <= 0) return FVIZ_ERROR_INVALID_ARGUMENT;
-    if (fviz_internal_gl_device_integer_selection_supported(device) == FVIZ_FALSE)
-        return FVIZ_ERROR_NOT_SUPPORTED;
+    if (fviz_internal_gl_device_integer_selection_supported(device) == FVIZ_FALSE) return FVIZ_ERROR_NOT_SUPPORTED;
     if (device->selection_framebuffer == 0u)
     {
         gl = &device->gl;
@@ -3618,7 +3492,8 @@ static FVizResult fviz_gl_ensure_selection_target(
         glGenTextures(1, &device->selection_texture);
         gl->glGenRenderbuffers(1, &device->selection_depth_renderbuffer);
         if (device->selection_framebuffer == 0u || device->selection_texture == 0u ||
-            device->selection_depth_renderbuffer == 0u) return FVIZ_ERROR_GRAPHICS;
+            device->selection_depth_renderbuffer == 0u)
+            return FVIZ_ERROR_GRAPHICS;
         glBindTexture(GL_TEXTURE_2D, device->selection_texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -3627,17 +3502,16 @@ static FVizResult fviz_gl_ensure_selection_target(
     if (device->selection_width == width && device->selection_height == height) return FVIZ_OK;
     gl = &device->gl;
     glBindTexture(GL_TEXTURE_2D, device->selection_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_RGBA32UI, width, height, 0,
-        FVIZ_GL_RGBA_INTEGER, GL_UNSIGNED_INT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_RGBA32UI, width, height, 0, FVIZ_GL_RGBA_INTEGER, GL_UNSIGNED_INT, NULL);
     glBindTexture(GL_TEXTURE_2D, 0u);
     gl->glBindRenderbuffer(FVIZ_GL_RENDERBUFFER, device->selection_depth_renderbuffer);
     gl->glRenderbufferStorage(FVIZ_GL_RENDERBUFFER, FVIZ_GL_DEPTH24_STENCIL8, width, height);
     gl->glBindRenderbuffer(FVIZ_GL_RENDERBUFFER, 0u);
     gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->selection_framebuffer);
-    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0,
-        GL_TEXTURE_2D, device->selection_texture, 0);
-    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_STENCIL_ATTACHMENT,
-        FVIZ_GL_RENDERBUFFER, device->selection_depth_renderbuffer);
+    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, device->selection_texture,
+                               0);
+    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_STENCIL_ATTACHMENT, FVIZ_GL_RENDERBUFFER,
+                                  device->selection_depth_renderbuffer);
     if (gl->glCheckFramebufferStatus(FVIZ_GL_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
     {
         gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, 0u);
@@ -3649,21 +3523,15 @@ static FVizResult fviz_gl_ensure_selection_target(
     return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
 }
 
-static FVizGLActorResource* fviz_gl_selection_prepare_actor(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    const FVizActor* actor,
-    FVizSize actor_index,
-    FVizSelectionAssociation association,
-    FVizBool depth_prepass,
-    float aspect_ratio,
-    int viewport_height,
-    FVizMat4 view_projection)
+static FVizGLActorResource* fviz_gl_selection_prepare_actor(FVizGLDevice* device, FVizRenderer* renderer,
+                                                            const FVizActor* actor, FVizSize actor_index,
+                                                            FVizSelectionAssociation association,
+                                                            FVizBool depth_prepass, float aspect_ratio,
+                                                            int viewport_height, FVizMat4 view_projection)
 {
     const FVizGLFunctions* gl = &device->gl;
     const FVizGlyphMapper* glyph_mapper;
-    const FVizBool has_glyphs = actor != NULL &&
-        fviz_actor_const_glyph_mapper(actor) != NULL ? FVIZ_TRUE : FVIZ_FALSE;
+    const FVizBool has_glyphs = actor != NULL && fviz_actor_const_glyph_mapper(actor) != NULL ? FVIZ_TRUE : FVIZ_FALSE;
     FVizGLActorResource* resource;
     FVizMat4 model;
     FVizMat4 mvp;
@@ -3672,15 +3540,17 @@ static FVizGLActorResource* fviz_gl_selection_prepare_actor(
     FVizSize clip_count;
     FVizSize clip_index;
 
-    if (actor == NULL || fviz_actor_is_visible(actor) == FVIZ_FALSE ||
-        fviz_actor_pickable(actor) == FVIZ_FALSE || fviz_actor_opacity(actor) <= 0.0f ||
+    if (actor == NULL || fviz_actor_is_visible(actor) == FVIZ_FALSE || fviz_actor_pickable(actor) == FVIZ_FALSE ||
+        fviz_actor_opacity(actor) <= 0.0f ||
         fviz_renderer_actor_is_renderable(renderer, actor, aspect_ratio, viewport_height) == FVIZ_FALSE)
         return NULL;
     if (depth_prepass == FVIZ_FALSE)
     {
         if (association == FVIZ_SELECTION_GLYPH_INSTANCE && has_glyphs == FVIZ_FALSE) return NULL;
         if ((association == FVIZ_SELECTION_POINT || association == FVIZ_SELECTION_CELL ||
-             association == FVIZ_SELECTION_EDGE) && has_glyphs != FVIZ_FALSE) return NULL;
+             association == FVIZ_SELECTION_EDGE) &&
+            has_glyphs != FVIZ_FALSE)
+            return NULL;
     }
     if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) return NULL;
     resource = fviz_gl_find_actor_resource(device, actor);
@@ -3698,9 +3568,11 @@ static FVizGLActorResource* fviz_gl_selection_prepare_actor(
             if (resource->triangle_edge_index_count <= 0) return NULL;
         }
         if (association == FVIZ_SELECTION_GLYPH_INSTANCE &&
-            (resource->index_count <= 0 || resource->instance_count <= 0)) return NULL;
-        if (association == FVIZ_SELECTION_ACTOR && resource->index_count <= 0 &&
-            resource->line_index_count <= 0 && resource->point_count == 0u) return NULL;
+            (resource->index_count <= 0 || resource->instance_count <= 0))
+            return NULL;
+        if (association == FVIZ_SELECTION_ACTOR && resource->index_count <= 0 && resource->line_index_count <= 0 &&
+            resource->point_count == 0u)
+            return NULL;
     }
 
     model = fviz_actor_transform_matrix(actor);
@@ -3710,7 +3582,7 @@ static FVizGLActorResource* fviz_gl_selection_prepare_actor(
     gl->glUniform1ui(device->selection_actor_id_location, (GLuint)actor_index);
     glyph_mapper = fviz_actor_const_glyph_mapper(actor);
     gl->glUniform1i(device->selection_instancing_location,
-        glyph_mapper != NULL && resource->instance_count > 0 ? 1 : 0);
+                    glyph_mapper != NULL && resource->instance_count > 0 ? 1 : 0);
     mapper = fviz_actor_mapper((FVizActor*)actor);
     clip_count = mapper != NULL ? fviz_mapper_clipping_plane_count(mapper) : 0u;
     if (clip_count > 6u) clip_count = 6u;
@@ -3724,10 +3596,8 @@ static FVizGLActorResource* fviz_gl_selection_prepare_actor(
         clip_values[clip_index * 4u + 3u] = plane.distance;
     }
     gl->glUniform1i(device->selection_clip_plane_count_location, (GLint)clip_count);
-    if (clip_count > 0u)
-        gl->glUniform4fv(device->selection_clip_planes_location, (GLsizei)clip_count, clip_values);
-    if (fviz_actor_cull_mode(actor) == FVIZ_CULL_NONE)
-        glDisable(GL_CULL_FACE);
+    if (clip_count > 0u) gl->glUniform4fv(device->selection_clip_planes_location, (GLsizei)clip_count, clip_values);
+    if (fviz_actor_cull_mode(actor) == FVIZ_CULL_NONE) glDisable(GL_CULL_FACE);
     else
     {
         glEnable(GL_CULL_FACE);
@@ -3736,12 +3606,8 @@ static FVizGLActorResource* fviz_gl_selection_prepare_actor(
     return resource;
 }
 
-static void fviz_gl_selection_draw_actor(
-    FVizGLDevice* device,
-    const FVizActor* actor,
-    FVizGLActorResource* resource,
-    FVizSelectionAssociation association,
-    FVizBool depth_prepass)
+static void fviz_gl_selection_draw_actor(FVizGLDevice* device, const FVizActor* actor, FVizGLActorResource* resource,
+                                         FVizSelectionAssociation association, FVizBool depth_prepass)
 {
     const FVizGLFunctions* gl = &device->gl;
     gl->glBindVertexArray(resource->vao);
@@ -3752,24 +3618,22 @@ static void fviz_gl_selection_draw_actor(
         if (resource->index_count <= 0) return;
         gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->index_buffer);
         if (resource->instance_count > 0)
-            gl->glDrawElementsInstanced(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT,
-                (const void*)0, resource->instance_count);
+            gl->glDrawElementsInstanced(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0,
+                                        resource->instance_count);
         else
             glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
         return;
     }
     if (association == FVIZ_SELECTION_POINT)
     {
-        const float point_size = fviz_actor_point_size(actor) > 7.0f
-            ? fviz_actor_point_size(actor) : 7.0f;
+        const float point_size = fviz_actor_point_size(actor) > 7.0f ? fviz_actor_point_size(actor) : 7.0f;
         glPointSize(point_size);
         glDrawArrays(FVIZ_GL_POINTS, 0, (GLsizei)resource->point_count);
         return;
     }
     if (association == FVIZ_SELECTION_EDGE)
     {
-        const float line_width = fviz_actor_line_width(actor) > 5.0f
-            ? fviz_actor_line_width(actor) : 5.0f;
+        const float line_width = fviz_actor_line_width(actor) > 5.0f ? fviz_actor_line_width(actor) : 5.0f;
         glLineWidth(line_width);
         gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->triangle_edge_index_buffer);
         glDrawElements(GL_LINES, resource->triangle_edge_index_count, GL_UNSIGNED_INT, (const void*)0);
@@ -3781,8 +3645,8 @@ static void fviz_gl_selection_draw_actor(
         {
             gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->index_buffer);
             if (resource->instance_count > 0)
-                gl->glDrawElementsInstanced(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT,
-                    (const void*)0, resource->instance_count);
+                gl->glDrawElementsInstanced(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0,
+                                            resource->instance_count);
             else
                 glDrawElements(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0);
         }
@@ -3800,18 +3664,10 @@ static void fviz_gl_selection_draw_actor(
     }
 }
 
-FVizResult fviz_internal_gl_device_select(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    float aspect_ratio,
-    int x,
-    int y,
-    int viewport_width,
-    int viewport_height,
-    FVizSelectionAssociation association,
-    FVizSize* out_actor_index,
-    FVizSize* out_primitive_id,
-    float* out_depth)
+FVizResult fviz_internal_gl_device_select(FVizGLDevice* device, FVizRenderer* renderer, float aspect_ratio, int x,
+                                          int y, int viewport_width, int viewport_height,
+                                          FVizSelectionAssociation association, FVizSize* out_actor_index,
+                                          FVizSize* out_primitive_id, float* out_depth)
 {
     const FVizGLFunctions* gl;
     FVizCamera* camera;
@@ -3839,14 +3695,13 @@ FVizResult fviz_internal_gl_device_select(
     GLfloat previous_point_size = 1.0f;
     FVizSize i;
     FVizResult result;
-    const FVizBool needs_surface_depth = association == FVIZ_SELECTION_POINT ||
-        association == FVIZ_SELECTION_EDGE ? FVIZ_TRUE : FVIZ_FALSE;
+    const FVizBool needs_surface_depth =
+        association == FVIZ_SELECTION_POINT || association == FVIZ_SELECTION_EDGE ? FVIZ_TRUE : FVIZ_FALSE;
 
-    if (device == NULL || renderer == NULL || out_actor_index == NULL ||
-        out_primitive_id == NULL || out_depth == NULL || aspect_ratio <= 0.0f ||
-        viewport_width <= 0 || viewport_height <= 0 || x < 0 || y < 0 ||
-        x >= viewport_width || y >= viewport_height ||
-        association < FVIZ_SELECTION_ACTOR || association > FVIZ_SELECTION_GLYPH_INSTANCE)
+    if (device == NULL || renderer == NULL || out_actor_index == NULL || out_primitive_id == NULL ||
+        out_depth == NULL || aspect_ratio <= 0.0f || viewport_width <= 0 || viewport_height <= 0 || x < 0 || y < 0 ||
+        x >= viewport_width || y >= viewport_height || association < FVIZ_SELECTION_ACTOR ||
+        association > FVIZ_SELECTION_GLYPH_INSTANCE)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     result = fviz_gl_ensure_selection_target(device, viewport_width, viewport_height);
     if (result != FVIZ_OK) return result;
@@ -3884,9 +3739,8 @@ FVizResult fviz_internal_gl_device_select(
     glViewport(0, 0, viewport_width, viewport_height);
     gl->glClearBufferuiv(FVIZ_GL_COLOR, 0, clear_ids);
     glClear(GL_DEPTH_BUFFER_BIT);
-    view_projection = fviz_mat4_multiply(
-        fviz_camera_projection_matrix(camera, aspect_ratio),
-        fviz_camera_view_matrix(camera));
+    view_projection =
+        fviz_mat4_multiply(fviz_camera_projection_matrix(camera, aspect_ratio), fviz_camera_view_matrix(camera));
     gl->glUseProgram(device->selection_program);
 
     if (needs_surface_depth != FVIZ_FALSE)
@@ -3897,10 +3751,8 @@ FVizResult fviz_internal_gl_device_select(
         {
             const FVizActor* actor = fviz_scene_const_actor(scene, i);
             FVizGLActorResource* resource = fviz_gl_selection_prepare_actor(
-                device, renderer, actor, i, association, FVIZ_TRUE,
-                aspect_ratio, viewport_height, view_projection);
-            if (resource != NULL)
-                fviz_gl_selection_draw_actor(device, actor, resource, association, FVIZ_TRUE);
+                device, renderer, actor, i, association, FVIZ_TRUE, aspect_ratio, viewport_height, view_projection);
+            if (resource != NULL) fviz_gl_selection_draw_actor(device, actor, resource, association, FVIZ_TRUE);
         }
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         glDepthMask(GL_FALSE);
@@ -3912,10 +3764,8 @@ FVizResult fviz_internal_gl_device_select(
     {
         const FVizActor* actor = fviz_scene_const_actor(scene, i);
         FVizGLActorResource* resource = fviz_gl_selection_prepare_actor(
-            device, renderer, actor, i, association, FVIZ_FALSE,
-            aspect_ratio, viewport_height, view_projection);
-        if (resource != NULL)
-            fviz_gl_selection_draw_actor(device, actor, resource, association, FVIZ_FALSE);
+            device, renderer, actor, i, association, FVIZ_FALSE, aspect_ratio, viewport_height, view_projection);
+        if (resource != NULL) fviz_gl_selection_draw_actor(device, actor, resource, association, FVIZ_FALSE);
     }
 
     gl->glBindVertexArray(0u);
@@ -3936,12 +3786,23 @@ FVizResult fviz_internal_gl_device_select(
     glColorMask(color_write[0], color_write[1], color_write[2], color_write[3]);
     glViewport(previous_viewport[0], previous_viewport[1], previous_viewport[2], previous_viewport[3]);
     if (multisample_was_enabled != GL_FALSE) glEnable(FVIZ_GL_MULTISAMPLE);
-    else glDisable(FVIZ_GL_MULTISAMPLE);
-    if (blend_was_enabled != GL_FALSE) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-    if (dither_was_enabled != GL_FALSE) glEnable(GL_DITHER); else glDisable(GL_DITHER);
-    if (depth_was_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-    if (cull_was_enabled != GL_FALSE) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
-    if (scissor_was_enabled != GL_FALSE) glEnable(FVIZ_GL_SCISSOR_TEST); else glDisable(FVIZ_GL_SCISSOR_TEST);
+    else
+        glDisable(FVIZ_GL_MULTISAMPLE);
+    if (blend_was_enabled != GL_FALSE) glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
+    if (dither_was_enabled != GL_FALSE) glEnable(GL_DITHER);
+    else
+        glDisable(GL_DITHER);
+    if (depth_was_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+    if (cull_was_enabled != GL_FALSE) glEnable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
+    if (scissor_was_enabled != GL_FALSE) glEnable(FVIZ_GL_SCISSOR_TEST);
+    else
+        glDisable(FVIZ_GL_SCISSOR_TEST);
     glDepthMask(depth_write);
     if (glGetError() != GL_NO_ERROR) return FVIZ_ERROR_GRAPHICS;
     if (ids[0] == 0u || ids[1] == 0u || ids[2] == 0u) return FVIZ_ERROR_NOT_FOUND;
@@ -3951,38 +3812,34 @@ FVizResult fviz_internal_gl_device_select(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_gl_ensure_oit_buffers(
-    FVizGLDevice* device, int width, int height, uint32_t samples)
+static FVizResult fviz_gl_ensure_oit_buffers(FVizGLDevice* device, int width, int height, uint32_t samples)
 {
     const FVizGLFunctions* gl;
     if (device == NULL || width <= 0 || height <= 0 || samples == 0u || samples > 32u)
         return FVIZ_ERROR_INVALID_ARGUMENT;
-    if (fviz_internal_gl_device_weighted_oit_supported(device) == FVIZ_FALSE)
-        return FVIZ_ERROR_NOT_SUPPORTED;
-    if (device->oit_width == width && device->oit_height == height && device->oit_samples == samples)
-        return FVIZ_OK;
+    if (fviz_internal_gl_device_weighted_oit_supported(device) == FVIZ_FALSE) return FVIZ_ERROR_NOT_SUPPORTED;
+    if (device->oit_width == width && device->oit_height == height && device->oit_samples == samples) return FVIZ_OK;
     gl = &device->gl;
 
     gl->glBindRenderbuffer(FVIZ_GL_RENDERBUFFER, device->oit_color_renderbuffer);
     if (samples > 1u)
-        gl->glRenderbufferStorageMultisample(FVIZ_GL_RENDERBUFFER, (GLsizei)samples,
-            FVIZ_GL_RGBA16F, width, height);
+        gl->glRenderbufferStorageMultisample(FVIZ_GL_RENDERBUFFER, (GLsizei)samples, FVIZ_GL_RGBA16F, width, height);
     else
         gl->glRenderbufferStorage(FVIZ_GL_RENDERBUFFER, FVIZ_GL_RGBA16F, width, height);
 
     gl->glBindRenderbuffer(FVIZ_GL_RENDERBUFFER, device->oit_depth_renderbuffer);
     if (samples > 1u)
-        gl->glRenderbufferStorageMultisample(FVIZ_GL_RENDERBUFFER, (GLsizei)samples,
-            FVIZ_GL_DEPTH24_STENCIL8, width, height);
+        gl->glRenderbufferStorageMultisample(FVIZ_GL_RENDERBUFFER, (GLsizei)samples, FVIZ_GL_DEPTH24_STENCIL8, width,
+                                             height);
     else
         gl->glRenderbufferStorage(FVIZ_GL_RENDERBUFFER, FVIZ_GL_DEPTH24_STENCIL8, width, height);
     gl->glBindRenderbuffer(FVIZ_GL_RENDERBUFFER, 0u);
 
     gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->oit_framebuffer);
-    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0,
-        FVIZ_GL_RENDERBUFFER, device->oit_color_renderbuffer);
-    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_STENCIL_ATTACHMENT,
-        FVIZ_GL_RENDERBUFFER, device->oit_depth_renderbuffer);
+    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0, FVIZ_GL_RENDERBUFFER,
+                                  device->oit_color_renderbuffer);
+    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_STENCIL_ATTACHMENT, FVIZ_GL_RENDERBUFFER,
+                                  device->oit_depth_renderbuffer);
     if (gl->glCheckFramebufferStatus(FVIZ_GL_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
     {
         gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, 0u);
@@ -4011,28 +3868,23 @@ static FVizResult fviz_gl_ensure_oit_buffers(
     return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
 }
 
-static FVizResult fviz_gl_resolve_oit_color(
-    FVizGLDevice* device, GLuint texture, int width, int height)
+static FVizResult fviz_gl_resolve_oit_color(FVizGLDevice* device, GLuint texture, int width, int height)
 {
     const FVizGLFunctions* gl = &device->gl;
     gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, device->oit_framebuffer);
     gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, device->oit_resolve_framebuffer);
-    gl->glFramebufferTexture2D(FVIZ_GL_DRAW_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0,
-        GL_TEXTURE_2D, texture, 0);
+    gl->glFramebufferTexture2D(FVIZ_GL_DRAW_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
     if (gl->glCheckFramebufferStatus(FVIZ_GL_DRAW_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
         return FVIZ_ERROR_GRAPHICS;
-    gl->glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-        GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    gl->glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     return FVIZ_OK;
 }
 
-static FVizResult fviz_gl_ensure_peel_buffers(
-    FVizGLDevice* device, int width, int height)
+static FVizResult fviz_gl_ensure_peel_buffers(FVizGLDevice* device, int width, int height)
 {
     const FVizGLFunctions* gl;
     if (device == NULL || width <= 0 || height <= 0) return FVIZ_ERROR_INVALID_ARGUMENT;
-    if (device->peel_width == width && device->peel_height == height && device->peel_framebuffer != 0u)
-        return FVIZ_OK;
+    if (device->peel_width == width && device->peel_height == height && device->peel_framebuffer != 0u) return FVIZ_OK;
     gl = &device->gl;
     if (device->peel_framebuffer == 0u)
     {
@@ -4054,16 +3906,16 @@ static FVizResult fviz_gl_ensure_peel_buffers(
     glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_S, FVIZ_GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_T, FVIZ_GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_COMPARE_MODE, FVIZ_GL_NONE);
-    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_DEPTH_COMPONENT24, width, height, 0,
-        FVIZ_GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_DEPTH_COMPONENT24, width, height, 0, FVIZ_GL_DEPTH_COMPONENT, GL_FLOAT,
+                 NULL);
     glBindTexture(GL_TEXTURE_2D, device->peel_back_depth_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_S, FVIZ_GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_WRAP_T, FVIZ_GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, FVIZ_GL_TEXTURE_COMPARE_MODE, FVIZ_GL_NONE);
-    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_DEPTH_COMPONENT24, width, height, 0,
-        FVIZ_GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, FVIZ_GL_DEPTH_COMPONENT24, width, height, 0, FVIZ_GL_DEPTH_COMPONENT, GL_FLOAT,
+                 NULL);
     glBindTexture(GL_TEXTURE_2D, 0u);
     /* Color accumulation texture. */
     glBindTexture(GL_TEXTURE_2D, device->peel_color_texture);
@@ -4073,8 +3925,8 @@ static FVizResult fviz_gl_ensure_peel_buffers(
     glBindTexture(GL_TEXTURE_2D, 0u);
     /* Depth-only framebuffer holds the peeled depth texture. */
     gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->peel_depth_framebuffer);
-    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_ATTACHMENT,
-        GL_TEXTURE_2D, device->peel_front_depth_texture, 0);
+    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                               device->peel_front_depth_texture, 0);
     glDrawBuffer(FVIZ_GL_NONE);
     glReadBuffer(FVIZ_GL_NONE);
     if (gl->glCheckFramebufferStatus(FVIZ_GL_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
@@ -4084,13 +3936,12 @@ static FVizResult fviz_gl_ensure_peel_buffers(
     }
     /* Accumulation framebuffer: color + its own depth buffer for peeling. */
     gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->peel_framebuffer);
-    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0,
-        GL_TEXTURE_2D, device->peel_color_texture, 0);
+    gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                               device->peel_color_texture, 0);
     gl->glBindRenderbuffer(FVIZ_GL_RENDERBUFFER, device->peel_depth_renderbuffer);
-    gl->glRenderbufferStorage(FVIZ_GL_RENDERBUFFER, FVIZ_GL_DEPTH24_STENCIL8,
-        width, height);
-    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_ATTACHMENT,
-        FVIZ_GL_RENDERBUFFER, device->peel_depth_renderbuffer);
+    gl->glRenderbufferStorage(FVIZ_GL_RENDERBUFFER, FVIZ_GL_DEPTH24_STENCIL8, width, height);
+    gl->glFramebufferRenderbuffer(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_DEPTH_ATTACHMENT, FVIZ_GL_RENDERBUFFER,
+                                  device->peel_depth_renderbuffer);
     if (gl->glCheckFramebufferStatus(FVIZ_GL_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
     {
         gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, 0u);
@@ -4103,18 +3954,16 @@ static FVizResult fviz_gl_ensure_peel_buffers(
 }
 
 /* Sets the main program's peel uniforms for the depth-compare path. */
-static void fviz_gl_set_peel_uniforms(
-    FVizGLDevice* device, FVizBool enabled, GLuint depth_texture, int width, int height)
+static void fviz_gl_set_peel_uniforms(FVizGLDevice* device, FVizBool enabled, GLuint depth_texture, int width,
+                                      int height)
 {
     const FVizGLFunctions* gl = &device->gl;
     gl->glUniform1i(device->peel_enabled_location, enabled != FVIZ_FALSE ? 1 : 0);
     gl->glUniform1i(device->peel_depth_texture_location, 0);
     gl->glActiveTexture(FVIZ_GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, depth_texture);
-    gl->glUniform1f(device->peel_screen_width_inv_location,
-        width > 0 ? 1.0f / (float)width : 0.0f);
-    gl->glUniform1f(device->peel_screen_height_inv_location,
-        height > 0 ? 1.0f / (float)height : 0.0f);
+    gl->glUniform1f(device->peel_screen_width_inv_location, width > 0 ? 1.0f / (float)width : 0.0f);
+    gl->glUniform1f(device->peel_screen_height_inv_location, height > 0 ? 1.0f / (float)height : 0.0f);
 }
 
 /* Lazily allocates the unit-cube vertex/index buffers used to bound the
@@ -4122,18 +3971,12 @@ static void fviz_gl_set_peel_uniforms(
 static FVizResult fviz_gl_ensure_volume_geometry(FVizGLDevice* device)
 {
     const FVizGLFunctions* gl;
-    static const float k_fviz_volume_cube_positions[8][3] = {
-        {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
-        {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}
-    };
-    static const uint32_t k_fviz_volume_cube_indices[36] = {
-        0u, 1u, 2u, 0u, 2u, 3u,
-        4u, 6u, 5u, 4u, 7u, 6u,
-        0u, 4u, 5u, 0u, 5u, 1u,
-        1u, 5u, 6u, 1u, 6u, 2u,
-        2u, 6u, 7u, 2u, 7u, 3u,
-        3u, 7u, 4u, 3u, 4u, 0u
-    };
+    static const float k_fviz_volume_cube_positions[8][3] = {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f},
+                                                             {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f},
+                                                             {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}};
+    static const uint32_t k_fviz_volume_cube_indices[36] = {0u, 1u, 2u, 0u, 2u, 3u, 4u, 6u, 5u, 4u, 7u, 6u,
+                                                            0u, 4u, 5u, 0u, 5u, 1u, 1u, 5u, 6u, 1u, 6u, 2u,
+                                                            2u, 6u, 7u, 2u, 7u, 3u, 3u, 7u, 4u, 3u, 4u, 0u};
     if (device == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (device->volume_vao != 0u) return FVIZ_OK;
     gl = &device->gl;
@@ -4143,21 +3986,20 @@ static FVizResult fviz_gl_ensure_volume_geometry(FVizGLDevice* device)
     gl->glGenBuffers(1, &device->volume_vbo);
     gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, device->volume_vbo);
     gl->glBufferData(FVIZ_GL_ARRAY_BUFFER, (GLsizeiptr)sizeof(k_fviz_volume_cube_positions),
-        k_fviz_volume_cube_positions, FVIZ_GL_STATIC_DRAW);
+                     k_fviz_volume_cube_positions, FVIZ_GL_STATIC_DRAW);
     gl->glEnableVertexAttribArray(0u);
     gl->glVertexAttribPointer(0u, 3, GL_FLOAT, GL_FALSE, 0, (const void*)0);
     gl->glGenBuffers(1, &device->volume_ibo);
     gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, device->volume_ibo);
     gl->glBufferData(FVIZ_GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)sizeof(k_fviz_volume_cube_indices),
-        k_fviz_volume_cube_indices, FVIZ_GL_STATIC_DRAW);
+                     k_fviz_volume_cube_indices, FVIZ_GL_STATIC_DRAW);
     gl->glBindVertexArray(0u);
     return FVIZ_OK;
 }
 
 /* Builds the transfer function LUT (256x1 RGBA8) from the mapper's color and
  * opacity control points and uploads it once per transfer-function mtime. */
-static FVizResult fviz_gl_volume_upload_transfer(
-    FVizGLDevice* device, const FVizVolumeMapper* mapper)
+static FVizResult fviz_gl_volume_upload_transfer(FVizGLDevice* device, const FVizVolumeMapper* mapper)
 {
     const FVizGLFunctions* gl;
     uint8_t lut[256 * 4];
@@ -4234,8 +4076,8 @@ static FVizResult fviz_gl_volume_upload_transfer(
                 (void)fviz_volume_mapper_color_point_at(mapper, low - 1u, &low_point);
                 (void)fviz_volume_mapper_color_point_at(mapper, low, &high_point);
                 fraction = high_point.scalar > low_point.scalar
-                    ? (scalar - low_point.scalar) / (high_point.scalar - low_point.scalar)
-                    : 0.0f;
+                               ? (scalar - low_point.scalar) / (high_point.scalar - low_point.scalar)
+                               : 0.0f;
                 red = low_point.red + (high_point.red - low_point.red) * fraction;
                 green = low_point.green + (high_point.green - low_point.green) * fraction;
                 blue = low_point.blue + (high_point.blue - low_point.blue) * fraction;
@@ -4275,8 +4117,8 @@ static FVizResult fviz_gl_volume_upload_transfer(
                     (void)fviz_volume_mapper_opacity_point_at(mapper, opacity_low - 1u, &low_point);
                     (void)fviz_volume_mapper_opacity_point_at(mapper, opacity_low, &high_point);
                     fraction = high_point.scalar > low_point.scalar
-                        ? (scalar - low_point.scalar) / (high_point.scalar - low_point.scalar)
-                        : 0.0f;
+                                   ? (scalar - low_point.scalar) / (high_point.scalar - low_point.scalar)
+                                   : 0.0f;
                     alpha = low_point.opacity + (high_point.opacity - low_point.opacity) * fraction;
                 }
             }
@@ -4302,8 +4144,7 @@ static FVizResult fviz_gl_volume_upload_transfer(
 /* Uploads the active scalar array of the image data as a GL_R32F 3D texture.
  * Returns FVIZ_OK when the texture is current, FVIZ_ERROR_NOT_SUPPORTED when
  * the array layout cannot be uploaded. */
-static FVizResult fviz_gl_volume_upload_scalar(
-    FVizGLDevice* device, const FVizVolumeMapper* mapper)
+static FVizResult fviz_gl_volume_upload_scalar(FVizGLDevice* device, const FVizVolumeMapper* mapper)
 {
     const FVizImageData* image;
     const FVizAttributeSet* point_data;
@@ -4338,8 +4179,7 @@ static FVizResult fviz_gl_volume_upload_scalar(
     if (values == NULL) return fviz_last_error_code();
     if (fviz_data_array_const_data(array) != NULL)
     {
-        (void)memcpy(values, fviz_data_array_const_data(array),
-            point_count * (FVizSize)sizeof(float));
+        (void)memcpy(values, fviz_data_array_const_data(array), point_count * (FVizSize)sizeof(float));
         progress = FVIZ_TRUE;
     }
     else
@@ -4369,9 +4209,8 @@ static FVizResult fviz_gl_volume_upload_scalar(
     glTexParameteri(FVIZ_GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, 0x812F);
     glTexParameteri(FVIZ_GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, 0x812F);
     glTexParameteri(FVIZ_GL_TEXTURE_3D, FVIZ_GL_TEXTURE_WRAP_R, 0x812F);
-    gl->glTexImage3D(FVIZ_GL_TEXTURE_3D, 0, FVIZ_GL_R32F,
-        (GLsizei)dimensions[0], (GLsizei)dimensions[1], (GLsizei)dimensions[2],
-        0, FVIZ_GL_RED, GL_FLOAT, values);
+    gl->glTexImage3D(FVIZ_GL_TEXTURE_3D, 0, FVIZ_GL_R32F, (GLsizei)dimensions[0], (GLsizei)dimensions[1],
+                     (GLsizei)dimensions[2], 0, FVIZ_GL_RED, GL_FLOAT, values);
     glBindTexture(FVIZ_GL_TEXTURE_3D, 0u);
     fviz_free(values);
     device->volume_scalar_width = (int)dimensions[0];
@@ -4388,22 +4227,35 @@ static FVizMat4 fviz_gl_invert_affine(const FVizMat4* matrix)
     FVizVec3 translation;
     FVizVec3 inverse_translation;
     FVizMat3 inverse_linear;
-    linear.m[0] = matrix->m[0]; linear.m[1] = matrix->m[1]; linear.m[2] = matrix->m[2];
-    linear.m[3] = matrix->m[4]; linear.m[4] = matrix->m[5]; linear.m[5] = matrix->m[6];
-    linear.m[6] = matrix->m[8]; linear.m[7] = matrix->m[9]; linear.m[8] = matrix->m[10];
+    linear.m[0] = matrix->m[0];
+    linear.m[1] = matrix->m[1];
+    linear.m[2] = matrix->m[2];
+    linear.m[3] = matrix->m[4];
+    linear.m[4] = matrix->m[5];
+    linear.m[5] = matrix->m[6];
+    linear.m[6] = matrix->m[8];
+    linear.m[7] = matrix->m[9];
+    linear.m[8] = matrix->m[10];
     inverse_linear = fviz_mat3_inverse(linear);
     translation = fviz_vec3(matrix->m[12], matrix->m[13], matrix->m[14]);
-    inverse_translation = fviz_vec3(
-        -(inverse_linear.m[0] * translation.x + inverse_linear.m[3] * translation.y +
-          inverse_linear.m[6] * translation.z),
-        -(inverse_linear.m[1] * translation.x + inverse_linear.m[4] * translation.y +
-          inverse_linear.m[7] * translation.z),
-        -(inverse_linear.m[2] * translation.x + inverse_linear.m[5] * translation.y +
-          inverse_linear.m[8] * translation.z));
-    inverse.m[0] = inverse_linear.m[0]; inverse.m[1] = inverse_linear.m[1]; inverse.m[2] = inverse_linear.m[2];
-    inverse.m[4] = inverse_linear.m[3]; inverse.m[5] = inverse_linear.m[4]; inverse.m[6] = inverse_linear.m[5];
-    inverse.m[8] = inverse_linear.m[6]; inverse.m[9] = inverse_linear.m[7]; inverse.m[10] = inverse_linear.m[8];
-    inverse.m[3] = 0.0f; inverse.m[7] = 0.0f; inverse.m[11] = 0.0f;
+    inverse_translation = fviz_vec3(-(inverse_linear.m[0] * translation.x + inverse_linear.m[3] * translation.y +
+                                      inverse_linear.m[6] * translation.z),
+                                    -(inverse_linear.m[1] * translation.x + inverse_linear.m[4] * translation.y +
+                                      inverse_linear.m[7] * translation.z),
+                                    -(inverse_linear.m[2] * translation.x + inverse_linear.m[5] * translation.y +
+                                      inverse_linear.m[8] * translation.z));
+    inverse.m[0] = inverse_linear.m[0];
+    inverse.m[1] = inverse_linear.m[1];
+    inverse.m[2] = inverse_linear.m[2];
+    inverse.m[4] = inverse_linear.m[3];
+    inverse.m[5] = inverse_linear.m[4];
+    inverse.m[6] = inverse_linear.m[5];
+    inverse.m[8] = inverse_linear.m[6];
+    inverse.m[9] = inverse_linear.m[7];
+    inverse.m[10] = inverse_linear.m[8];
+    inverse.m[3] = 0.0f;
+    inverse.m[7] = 0.0f;
+    inverse.m[11] = 0.0f;
     inverse.m[12] = inverse_translation.x;
     inverse.m[13] = inverse_translation.y;
     inverse.m[14] = inverse_translation.z;
@@ -4414,11 +4266,8 @@ static FVizMat4 fviz_gl_invert_affine(const FVizMat4* matrix)
 /* Renders one volume actor through the ray-casting program. The unit cube is
  * drawn with a box that bounds the volume in world space, so entry/exit slab
  * intersection and object-space marching both work for any camera placement. */
-static FVizResult fviz_gl_render_volume(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    const FVizActor* actor,
-    float aspect_ratio)
+static FVizResult fviz_gl_render_volume(FVizGLDevice* device, FVizRenderer* renderer, const FVizActor* actor,
+                                        float aspect_ratio)
 {
     const FVizVolumeMapper* mapper;
     const FVizImageData* image;
@@ -4443,8 +4292,7 @@ static FVizResult fviz_gl_render_volume(
     if (device == NULL || renderer == NULL || actor == NULL || device->volume_program_ready == FVIZ_FALSE)
         return FVIZ_ERROR_NOT_SUPPORTED;
     mapper = fviz_actor_const_volume_mapper(actor);
-    if (mapper == NULL || fviz_volume_mapper_is_empty(mapper) != FVIZ_FALSE)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (mapper == NULL || fviz_volume_mapper_is_empty(mapper) != FVIZ_FALSE) return FVIZ_ERROR_INVALID_ARGUMENT;
     image = fviz_volume_mapper_const_image_data(mapper);
     if (image == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     mapper_mtime = fviz_object_mtime((const FVizObject*)mapper);
@@ -4488,10 +4336,8 @@ static FVizResult fviz_gl_render_volume(
      * world-space bounds used by the slab intersection. */
     {
         FVizMat4 box_to_volume;
-        const FVizVec3 size = fviz_vec3(
-            (float)(bounds.max.x - bounds.min.x),
-            (float)(bounds.max.y - bounds.min.y),
-            (float)(bounds.max.z - bounds.min.z));
+        const FVizVec3 size = fviz_vec3((float)(bounds.max.x - bounds.min.x), (float)(bounds.max.y - bounds.min.y),
+                                        (float)(bounds.max.z - bounds.min.z));
         (void)memset(&box_to_volume, 0, sizeof(box_to_volume));
         box_to_volume.m[0] = size.x;
         box_to_volume.m[5] = size.y;
@@ -4504,15 +4350,13 @@ static FVizResult fviz_gl_render_volume(
     }
     inv_model = fviz_gl_invert_affine(&model);
     mvp = fviz_mat4_multiply(fviz_camera_projection_matrix(camera, aspect_ratio),
-        fviz_mat4_multiply(fviz_camera_view_matrix(camera), model));
+                             fviz_mat4_multiply(fviz_camera_view_matrix(camera), model));
     fviz_volume_mapper_get_scalar_range(mapper, &scalar_minimum, &scalar_maximum);
     step_size = fviz_volume_mapper_sampling_step(mapper);
     if (step_size <= 0.0f)
     {
-        const FVizVec3 size = fviz_vec3(
-            (float)(bounds.max.x - bounds.min.x),
-            (float)(bounds.max.y - bounds.min.y),
-            (float)(bounds.max.z - bounds.min.z));
+        const FVizVec3 size = fviz_vec3((float)(bounds.max.x - bounds.min.x), (float)(bounds.max.y - bounds.min.y),
+                                        (float)(bounds.max.z - bounds.min.z));
         const float diagonal = sqrtf(size.x * size.x + size.y * size.y + size.z * size.z);
         step_size = diagonal / 128.0f;
         if (step_size <= 1e-6f) step_size = 1.0f;
@@ -4530,18 +4374,14 @@ static FVizResult fviz_gl_render_volume(
     gl->glUniform1f(device->volume_step_size_location, step_size);
     gl->glUniform1f(device->volume_scalar_range_location, scalar_minimum);
     gl->glUniform1f(device->volume_scalar_range_max_location, scalar_maximum);
-    gl->glUniform1i(device->volume_shading_location,
-        fviz_volume_mapper_shading(mapper) != FVIZ_FALSE ? 1 : 0);
+    gl->glUniform1i(device->volume_shading_location, fviz_volume_mapper_shading(mapper) != FVIZ_FALSE ? 1 : 0);
     for (i = 0u; i < fviz_renderer_light_count(renderer) && light_count < 4; ++i)
     {
         const FVizLight* light = fviz_renderer_light_at(renderer, i);
         FVizVec3 position;
-        if (light == NULL || fviz_light_enabled(light) == FVIZ_FALSE ||
-            fviz_light_intensity(light) <= 0.0f)
-            continue;
-        position = fviz_light_type(light) == FVIZ_LIGHT_HEADLIGHT
-            ? fviz_camera_position(camera)
-            : fviz_light_position(light);
+        if (light == NULL || fviz_light_enabled(light) == FVIZ_FALSE || fviz_light_intensity(light) <= 0.0f) continue;
+        position =
+            fviz_light_type(light) == FVIZ_LIGHT_HEADLIGHT ? fviz_camera_position(camera) : fviz_light_position(light);
         light_position_intensity[light_count * 4 + 0] = position.x;
         light_position_intensity[light_count * 4 + 1] = position.y;
         light_position_intensity[light_count * 4 + 2] = position.z;
@@ -4560,8 +4400,7 @@ static FVizResult fviz_gl_render_volume(
     gl->glUniform1i(device->volume_light_count_location, light_count);
     if (light_count > 0)
     {
-        gl->glUniform4fv(device->volume_light_position_intensity_location, light_count,
-            light_position_intensity);
+        gl->glUniform4fv(device->volume_light_position_intensity_location, light_count, light_position_intensity);
         gl->glUniform3fv(device->volume_light_color_location, light_count, light_colors);
     }
     gl->glUniform1f(device->volume_ambient_location, 0.25f);
@@ -4584,18 +4423,10 @@ static FVizResult fviz_gl_render_volume(
     return FVIZ_OK;
 }
 
-
-FVizResult fviz_internal_gl_device_render_depth_peeling(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    int viewport_x,
-    int viewport_y,
-    int width,
-    int height,
-    uint32_t samples,
-    float aspect_ratio,
-    uint32_t target_framebuffer,
-    uint32_t max_layers)
+FVizResult fviz_internal_gl_device_render_depth_peeling(FVizGLDevice* device, FVizRenderer* renderer, int viewport_x,
+                                                        int viewport_y, int width, int height, uint32_t samples,
+                                                        float aspect_ratio, uint32_t target_framebuffer,
+                                                        uint32_t max_layers)
 {
     const FVizGLFunctions* gl;
     GLboolean depth_enabled;
@@ -4619,8 +4450,8 @@ FVizResult fviz_internal_gl_device_render_depth_peeling(
     /* Seed the peel depth from the already-rendered opaque scene. */
     gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, (GLuint)target_framebuffer);
     gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, device->peel_depth_framebuffer);
-    gl->glBlitFramebuffer(viewport_x, viewport_y, viewport_x + width, viewport_y + height,
-        0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    gl->glBlitFramebuffer(viewport_x, viewport_y, viewport_x + width, viewport_y + height, 0, 0, width, height,
+                          GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
     /* Accumulate layers front-to-back. Layer 0 passes everything; later layers
      * discard fragments at or in front of the previously peeled depth. */
@@ -4637,47 +4468,44 @@ FVizResult fviz_internal_gl_device_render_depth_peeling(
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         gl->glUseProgram(device->program);
-        if (layer == 0u)
-            fviz_gl_set_peel_uniforms(device, FVIZ_FALSE, 0u, width, height);
+        if (layer == 0u) fviz_gl_set_peel_uniforms(device, FVIZ_FALSE, 0u, width, height);
         else
             fviz_gl_set_peel_uniforms(device, FVIZ_TRUE, device->peel_front_depth_texture, width, height);
         device->peel_pass = 1;
-        result = fviz_internal_gl_device_render_stage(device, renderer, aspect_ratio,
-            width, height, FVIZ_RENDER_PASS_TRANSLUCENT);
+        result = fviz_internal_gl_device_render_stage(device, renderer, aspect_ratio, width, height,
+                                                      FVIZ_RENDER_PASS_TRANSLUCENT);
         device->peel_pass = 0;
         if (result != FVIZ_OK) goto cleanup;
         /* Refresh the peeled depth from the layer just drawn. */
         gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, device->peel_framebuffer);
         gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, device->peel_depth_framebuffer);
-        gl->glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-            GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        gl->glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
     }
     /* Copy the accumulated color into the target framebuffer. */
     gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, device->peel_framebuffer);
     gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, (GLuint)target_framebuffer);
-    gl->glBlitFramebuffer(0, 0, width, height, viewport_x, viewport_y,
-        viewport_x + width, viewport_y + height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    gl->glBlitFramebuffer(0, 0, width, height, viewport_x, viewport_y, viewport_x + width, viewport_y + height,
+                          GL_COLOR_BUFFER_BIT, GL_NEAREST);
     result = FVIZ_OK;
 
 cleanup:
     gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, (GLuint)target_framebuffer);
     glViewport(viewport_x, viewport_y, width, height);
-    if (depth_enabled) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-    if (blend_enabled) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-    if (depth_write) glDepthMask(GL_TRUE); else glDepthMask(GL_FALSE);
+    if (depth_enabled) glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+    if (blend_enabled) glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
+    if (depth_write) glDepthMask(GL_TRUE);
+    else
+        glDepthMask(GL_FALSE);
     return result;
 }
 
-FVizResult fviz_internal_gl_device_render_weighted_oit(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    int viewport_x,
-    int viewport_y,
-    int width,
-    int height,
-    uint32_t samples,
-    float aspect_ratio,
-    uint32_t target_framebuffer)
+FVizResult fviz_internal_gl_device_render_weighted_oit(FVizGLDevice* device, FVizRenderer* renderer, int viewport_x,
+                                                       int viewport_y, int width, int height, uint32_t samples,
+                                                       float aspect_ratio, uint32_t target_framebuffer)
 {
     const FVizGLFunctions* gl;
     GLboolean depth_enabled;
@@ -4699,8 +4527,8 @@ FVizResult fviz_internal_gl_device_render_weighted_oit(
     /* Seed the OIT depth attachment from the already rendered opaque scene. */
     gl->glBindFramebuffer(FVIZ_GL_READ_FRAMEBUFFER, (GLuint)target_framebuffer);
     gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, device->oit_framebuffer);
-    gl->glBlitFramebuffer(viewport_x, viewport_y, viewport_x + width, viewport_y + height,
-        0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    gl->glBlitFramebuffer(viewport_x, viewport_y, viewport_x + width, viewport_y + height, 0, 0, width, height,
+                          GL_DEPTH_BUFFER_BIT, GL_NEAREST);
     glViewport(0, 0, width, height);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
@@ -4712,8 +4540,8 @@ FVizResult fviz_internal_gl_device_render_weighted_oit(
     glClear(GL_COLOR_BUFFER_BIT);
     glBlendFunc(GL_ONE, GL_ONE);
     device->oit_pass = 1;
-    result = fviz_internal_gl_device_render_stage(device, renderer, aspect_ratio,
-        width, height, FVIZ_RENDER_PASS_TRANSLUCENT);
+    result = fviz_internal_gl_device_render_stage(device, renderer, aspect_ratio, width, height,
+                                                  FVIZ_RENDER_PASS_TRANSLUCENT);
     device->oit_pass = 0;
     if (result != FVIZ_OK) goto cleanup;
     result = fviz_gl_resolve_oit_color(device, device->oit_accum_texture, width, height);
@@ -4725,8 +4553,8 @@ FVizResult fviz_internal_gl_device_render_weighted_oit(
     glClear(GL_COLOR_BUFFER_BIT);
     glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
     device->oit_pass = 2;
-    result = fviz_internal_gl_device_render_stage(device, renderer, aspect_ratio,
-        width, height, FVIZ_RENDER_PASS_TRANSLUCENT);
+    result = fviz_internal_gl_device_render_stage(device, renderer, aspect_ratio, width, height,
+                                                  FVIZ_RENDER_PASS_TRANSLUCENT);
     device->oit_pass = 0;
     if (result != FVIZ_OK) goto cleanup;
     result = fviz_gl_resolve_oit_color(device, device->oit_reveal_texture, width, height);
@@ -4760,21 +4588,23 @@ cleanup:
     device->oit_pass = 0;
     gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, (GLuint)target_framebuffer);
     glDepthMask(depth_write);
-    if (depth_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+    if (depth_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
+    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
     glViewport(viewport_x, viewport_y, width, height);
     if (result == FVIZ_OK && glGetError() != GL_NO_ERROR) result = FVIZ_ERROR_GRAPHICS;
     return result;
 }
 
-FVizResult fviz_internal_gl_device_apply_fxaa(
-    FVizGLDevice* device,
-    int width,
-    int height,
-    const FVizFXAAOptions* options,
-    FVizBool srgb,
-    uint32_t target_framebuffer)
+FVizResult fviz_internal_gl_device_apply_fxaa(FVizGLDevice* device, int width, int height,
+                                              const FVizFXAAOptions* options, FVizBool srgb,
+                                              uint32_t target_framebuffer)
 {
     const FVizGLFunctions* gl;
     GLfloat inv_screen[4];
@@ -4799,14 +4629,13 @@ FVizResult fviz_internal_gl_device_apply_fxaa(
         device->fxaa_srgb != (srgb != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE))
     {
         glTexImage2D(GL_TEXTURE_2D, 0, srgb != FVIZ_FALSE ? FVIZ_GL_SRGB8_ALPHA8 : FVIZ_GL_RGBA8, width, height, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+                     GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         device->fxaa_width = width;
         device->fxaa_height = height;
         device->fxaa_srgb = srgb != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
         gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, device->fxaa_framebuffer);
-        gl->glFramebufferTexture2D(
-            FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-            device->fxaa_texture, 0);
+        gl->glFramebufferTexture2D(FVIZ_GL_FRAMEBUFFER, FVIZ_GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, device->fxaa_texture,
+                                   0);
         if (gl->glCheckFramebufferStatus(FVIZ_GL_FRAMEBUFFER) != FVIZ_GL_FRAMEBUFFER_COMPLETE)
         {
             gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, (GLuint)target_framebuffer);
@@ -4822,9 +4651,7 @@ FVizResult fviz_internal_gl_device_apply_fxaa(
      * loop; always select the correct read source first. */
     glReadBuffer(target_framebuffer != 0u ? FVIZ_GL_COLOR_ATTACHMENT0 : GL_BACK);
     gl->glBindFramebuffer(FVIZ_GL_DRAW_FRAMEBUFFER, device->fxaa_framebuffer);
-    gl->glBlitFramebuffer(
-        0, 0, width, height, 0, 0, width, height,
-        GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    gl->glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
     gl->glBindFramebuffer(FVIZ_GL_FRAMEBUFFER, (GLuint)target_framebuffer);
     glBindTexture(GL_TEXTURE_2D, device->fxaa_texture);
     glDisable(GL_DEPTH_TEST);
@@ -4849,11 +4676,14 @@ FVizResult fviz_internal_gl_device_apply_fxaa(
     glBindTexture(GL_TEXTURE_2D, 0u);
     glDepthMask(depth_write);
     if (depth_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST);
-    else glDisable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
     if (blend_enabled != GL_FALSE) glEnable(GL_BLEND);
-    else glDisable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
     if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE);
-    else glDisable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
     return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
 }
 
@@ -4885,11 +4715,8 @@ typedef struct FVizGLTextBuildContext
     float content_scale;
 } FVizGLTextBuildContext;
 
-static FVizResult fviz_gl_text_visit_glyph(
-    const FVizFontGlyph* glyph,
-    uint32_t codepoint,
-    float x0, float y0, float x1, float y1,
-    void* user_data)
+static FVizResult fviz_gl_text_visit_glyph(const FVizFontGlyph* glyph, uint32_t codepoint, float x0, float y0, float x1,
+                                           float y1, void* user_data)
 {
     FVizGLTextBuildContext* context = (FVizGLTextBuildContext*)user_data;
     FVizGLTextVertex* v;
@@ -4906,8 +4733,8 @@ static FVizResult fviz_gl_text_visit_glyph(
     float u1;
     float v1;
     (void)codepoint;
-    if (context == NULL || glyph == NULL || context->atlas == NULL ||
-        context->viewport_width <= 0 || context->viewport_height <= 0)
+    if (context == NULL || glyph == NULL || context->atlas == NULL || context->viewport_width <= 0 ||
+        context->viewport_height <= 0)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     if (context->count + 6u > context->capacity) return FVIZ_ERROR_OVERFLOW;
     px0 = context->base_x + x0 * context->content_scale;
@@ -4923,18 +4750,25 @@ static FVizResult fviz_gl_text_visit_glyph(
     u1 = (float)(glyph->x + glyph->width) / (float)fviz_font_atlas_width(context->atlas);
     v1 = (float)(glyph->y + glyph->height) / (float)fviz_font_atlas_height(context->atlas);
     v = &context->vertices[context->count];
-#define FVIZ_SET_TEXT_VERTEX(index_, x_, y_, u_, v_) do { \
-    v[(index_)].x=(x_); v[(index_)].y=(y_); v[(index_)].z=context->base_z; \
-    v[(index_)].u=(u_); v[(index_)].v=(v_); \
-    v[(index_)].r=context->color[0]; v[(index_)].g=context->color[1]; \
-    v[(index_)].b=context->color[2]; v[(index_)].a=context->color[3]; \
-} while (0)
-    FVIZ_SET_TEXT_VERTEX(0u,nx0,ny0,u0,v0);
-    FVIZ_SET_TEXT_VERTEX(1u,nx1,ny0,u1,v0);
-    FVIZ_SET_TEXT_VERTEX(2u,nx1,ny1,u1,v1);
-    FVIZ_SET_TEXT_VERTEX(3u,nx0,ny0,u0,v0);
-    FVIZ_SET_TEXT_VERTEX(4u,nx1,ny1,u1,v1);
-    FVIZ_SET_TEXT_VERTEX(5u,nx0,ny1,u0,v1);
+#define FVIZ_SET_TEXT_VERTEX(index_, x_, y_, u_, v_)                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        v[(index_)].x = (x_);                                                                                          \
+        v[(index_)].y = (y_);                                                                                          \
+        v[(index_)].z = context->base_z;                                                                               \
+        v[(index_)].u = (u_);                                                                                          \
+        v[(index_)].v = (v_);                                                                                          \
+        v[(index_)].r = context->color[0];                                                                             \
+        v[(index_)].g = context->color[1];                                                                             \
+        v[(index_)].b = context->color[2];                                                                             \
+        v[(index_)].a = context->color[3];                                                                             \
+    } while (0)
+    FVIZ_SET_TEXT_VERTEX(0u, nx0, ny0, u0, v0);
+    FVIZ_SET_TEXT_VERTEX(1u, nx1, ny0, u1, v0);
+    FVIZ_SET_TEXT_VERTEX(2u, nx1, ny1, u1, v1);
+    FVIZ_SET_TEXT_VERTEX(3u, nx0, ny0, u0, v0);
+    FVIZ_SET_TEXT_VERTEX(4u, nx1, ny1, u1, v1);
+    FVIZ_SET_TEXT_VERTEX(5u, nx0, ny1, u0, v1);
 #undef FVIZ_SET_TEXT_VERTEX
     context->count += 6u;
     return FVIZ_OK;
@@ -4946,14 +4780,15 @@ static FVizResult fviz_gl_ensure_text_atlas(FVizGLDevice* device, const FVizFont
     if (device == NULL || atlas == NULL || device->text_texture == 0u) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (device->text_atlas == atlas) return FVIZ_OK;
     if (fviz_font_atlas_pixels(atlas) == NULL || fviz_font_atlas_width(atlas) == 0u ||
-        fviz_font_atlas_height(atlas) == 0u) return FVIZ_ERROR_INVALID_STATE;
+        fviz_font_atlas_height(atlas) == 0u)
+        return FVIZ_ERROR_INVALID_STATE;
     if (fviz_retain((void*)atlas) == NULL) return fviz_last_error_code();
     glGetIntegerv(0x0CF5, &unpack_alignment); /* GL_UNPACK_ALIGNMENT */
     glPixelStorei(0x0CF5, 1);
     glBindTexture(GL_TEXTURE_2D, device->text_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, 0x8229, (GLsizei)fviz_font_atlas_width(atlas),
-        (GLsizei)fviz_font_atlas_height(atlas), 0, 0x1903, GL_UNSIGNED_BYTE,
-        fviz_font_atlas_pixels(atlas)); /* GL_R8 / GL_RED */
+                 (GLsizei)fviz_font_atlas_height(atlas), 0, 0x1903, GL_UNSIGNED_BYTE,
+                 fviz_font_atlas_pixels(atlas)); /* GL_R8 / GL_RED */
     glPixelStorei(0x0CF5, unpack_alignment);
     glBindTexture(GL_TEXTURE_2D, 0u);
     if (glGetError() != GL_NO_ERROR)
@@ -4966,27 +4801,26 @@ static FVizResult fviz_gl_ensure_text_atlas(FVizGLDevice* device, const FVizFont
     return FVIZ_OK;
 }
 
-static void fviz_gl_text_anchor_bounds(
-    const FVizTextProperty* property,
-    const FVizTextMetrics* metrics,
-    float* out_x0, float* out_y0, float* out_x1, float* out_y1)
+static void fviz_gl_text_anchor_bounds(const FVizTextProperty* property, const FVizTextMetrics* metrics, float* out_x0,
+                                       float* out_y0, float* out_x1, float* out_y1)
 {
     float x0 = 0.0f;
     float y0 = 0.0f;
     if (fviz_text_property_horizontal_alignment(property) == FVIZ_TEXT_ALIGN_CENTER) x0 = -0.5f * metrics->width;
-    else if (fviz_text_property_horizontal_alignment(property) == FVIZ_TEXT_ALIGN_RIGHT) x0 = -metrics->width;
+    else if (fviz_text_property_horizontal_alignment(property) == FVIZ_TEXT_ALIGN_RIGHT)
+        x0 = -metrics->width;
     if (fviz_text_property_vertical_alignment(property) == FVIZ_TEXT_ALIGN_MIDDLE) y0 = -0.5f * metrics->height;
-    else if (fviz_text_property_vertical_alignment(property) == FVIZ_TEXT_ALIGN_TOP) y0 = -metrics->height;
-    *out_x0 = x0; *out_y0 = y0; *out_x1 = x0 + metrics->width; *out_y1 = y0 + metrics->height;
+    else if (fviz_text_property_vertical_alignment(property) == FVIZ_TEXT_ALIGN_TOP)
+        y0 = -metrics->height;
+    *out_x0 = x0;
+    *out_y0 = y0;
+    *out_x1 = x0 + metrics->width;
+    *out_y1 = y0 + metrics->height;
 }
 
-static FVizResult fviz_gl_draw_text_vertices(
-    FVizGLDevice* device,
-    const FVizGLTextVertex* vertices,
-    FVizSize vertex_count,
-    const FVizFontAtlas* atlas,
-    FVizBool depth_test,
-    FVizBool solid)
+static FVizResult fviz_gl_draw_text_vertices(FVizGLDevice* device, const FVizGLTextVertex* vertices,
+                                             FVizSize vertex_count, const FVizFontAtlas* atlas, FVizBool depth_test,
+                                             FVizBool solid)
 {
     const FVizGLFunctions* gl;
     GLboolean depth_enabled;
@@ -4996,8 +4830,7 @@ static FVizResult fviz_gl_draw_text_vertices(
     GLint active_texture = (GLint)FVIZ_GL_TEXTURE0;
     GLint texture_binding = 0;
     GLsizeiptr bytes;
-    if (device == NULL || vertices == NULL || vertex_count == 0u || atlas == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device == NULL || vertices == NULL || vertex_count == 0u || atlas == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (device->text_program == 0u || vertex_count > (FVizSize)INT_MAX ||
         vertex_count > (FVizSize)(PTRDIFF_MAX / (ptrdiff_t)sizeof(FVizGLTextVertex)))
         return FVIZ_ERROR_NOT_SUPPORTED;
@@ -5011,12 +4844,15 @@ static FVizResult fviz_gl_draw_text_vertices(
         gl->glBufferData(FVIZ_GL_ARRAY_BUFFER, bytes, vertices, FVIZ_GL_DYNAMIC_DRAW);
         device->text_capacity_bytes = bytes;
     }
-    else gl->glBufferSubData(FVIZ_GL_ARRAY_BUFFER, 0, bytes, vertices);
+    else
+        gl->glBufferSubData(FVIZ_GL_ARRAY_BUFFER, 0, bytes, vertices);
     gl->glVertexAttribPointer(0u, 3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGLTextVertex), (const void*)0);
     gl->glEnableVertexAttribArray(0u);
-    gl->glVertexAttribPointer(1u, 2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGLTextVertex), (const void*)(3u*sizeof(float)));
+    gl->glVertexAttribPointer(1u, 2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGLTextVertex),
+                              (const void*)(3u * sizeof(float)));
     gl->glEnableVertexAttribArray(1u);
-    gl->glVertexAttribPointer(2u, 4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGLTextVertex), (const void*)(5u*sizeof(float)));
+    gl->glVertexAttribPointer(2u, 4, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGLTextVertex),
+                              (const void*)(5u * sizeof(float)));
     gl->glEnableVertexAttribArray(2u);
     ++device->frame_statistics.gpu_uploads;
     device->frame_statistics.gpu_upload_bytes += (uint64_t)bytes;
@@ -5027,7 +4863,9 @@ static FVizResult fviz_gl_draw_text_vertices(
     glGetIntegerv(0x84E0, &active_texture); /* GL_ACTIVE_TEXTURE */
     gl->glActiveTexture(FVIZ_GL_TEXTURE0);
     glGetIntegerv(0x8069, &texture_binding); /* GL_TEXTURE_BINDING_2D */
-    if (depth_test != FVIZ_FALSE) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+    if (depth_test != FVIZ_FALSE) glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
@@ -5044,9 +4882,15 @@ static FVizResult fviz_gl_draw_text_vertices(
     gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, 0u);
     gl->glBindVertexArray(0u);
     glDepthMask(depth_write);
-    if (depth_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND); else glDisable(GL_BLEND);
-    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+    if (depth_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
+    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
     return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
 }
 
@@ -5056,8 +4900,7 @@ static FVizGLTextVertex* fviz_gl_text_staging_vertices(FVizGLDevice* device, FVi
     FVizSize bytes;
     void* memory;
     if (device == NULL || required_vertices == 0u) return NULL;
-    if (required_vertices <= device->text_staging_capacity_vertices)
-        return (FVizGLTextVertex*)device->text_staging;
+    if (required_vertices <= device->text_staging_capacity_vertices) return (FVizGLTextVertex*)device->text_staging;
     capacity = device->text_staging_capacity_vertices != 0u ? device->text_staging_capacity_vertices : 256u;
     while (capacity < required_vertices)
     {
@@ -5082,17 +4925,9 @@ static FVizGLTextVertex* fviz_gl_text_staging_vertices(FVizGLDevice* device, FVi
     return (FVizGLTextVertex*)memory;
 }
 
-static FVizResult fviz_gl_draw_text_string(
-    FVizGLDevice* device,
-    const FVizTextProperty* property,
-    const char* text,
-    float base_x,
-    float base_y,
-    float ndc_z,
-    int width,
-    int height,
-    float content_scale,
-    FVizBool depth_test)
+static FVizResult fviz_gl_draw_text_string(FVizGLDevice* device, const FVizTextProperty* property, const char* text,
+                                           float base_x, float base_y, float ndc_z, int width, int height,
+                                           float content_scale, FVizBool depth_test)
 {
     FVizTextMetrics metrics;
     FVizGLTextBuildContext context;
@@ -5102,8 +4937,8 @@ static FVizResult fviz_gl_draw_text_string(
     FVizResult result;
     float red, green, blue, alpha;
     float bg_r, bg_g, bg_b, bg_a;
-    if (device == NULL || property == NULL || text == NULL || width <= 0 || height <= 0 ||
-        !isfinite(content_scale) || content_scale <= 0.0f)
+    if (device == NULL || property == NULL || text == NULL || width <= 0 || height <= 0 || !isfinite(content_scale) ||
+        content_scale <= 0.0f)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     if (*text == '\0') return FVIZ_OK;
     result = fviz_text_measure_utf8(property, text, &metrics);
@@ -5114,51 +4949,88 @@ static FVizResult fviz_gl_draw_text_string(
     if (vertices == NULL) return fviz_last_error_code();
     atlas = fviz_font_const_atlas(fviz_text_property_const_font(property));
     (void)memset(&context, 0, sizeof(context));
-    context.vertices=vertices; context.capacity=capacity; context.atlas=atlas;
-    context.base_x=base_x; context.base_y=base_y; context.base_z=ndc_z;
-    context.viewport_width=width; context.viewport_height=height; context.content_scale=content_scale;
-    fviz_text_property_get_color(property,&red,&green,&blue,&alpha);
-    context.color[0]=red;context.color[1]=green;context.color[2]=blue;context.color[3]=alpha;
-    fviz_text_property_get_background(property,&bg_r,&bg_g,&bg_b,&bg_a);
+    context.vertices = vertices;
+    context.capacity = capacity;
+    context.atlas = atlas;
+    context.base_x = base_x;
+    context.base_y = base_y;
+    context.base_z = ndc_z;
+    context.viewport_width = width;
+    context.viewport_height = height;
+    context.content_scale = content_scale;
+    fviz_text_property_get_color(property, &red, &green, &blue, &alpha);
+    context.color[0] = red;
+    context.color[1] = green;
+    context.color[2] = blue;
+    context.color[3] = alpha;
+    fviz_text_property_get_background(property, &bg_r, &bg_g, &bg_b, &bg_a);
     if (bg_a > 0.001f)
     {
         FVizGLTextVertex quad[6];
-        float x0,y0,x1,y1;
+        float x0, y0, x1, y1;
         FVizSize q;
-        fviz_gl_text_anchor_bounds(property,&metrics,&x0,&y0,&x1,&y1);
-        x0=(x0-2.0f)*content_scale; y0=(y0-2.0f)*content_scale;
-        x1=(x1+2.0f)*content_scale; y1=(y1+2.0f)*content_scale;
-        for(q=0u;q<6u;++q){quad[q].u=0;quad[q].v=0;quad[q].r=bg_r;quad[q].g=bg_g;quad[q].b=bg_b;quad[q].a=bg_a;quad[q].z=ndc_z;}
-#define FVIZ_BGXY(i_, px_, py_) do { quad[(i_)].x=2.0f*(base_x+(px_))/(float)width-1.0f; quad[(i_)].y=2.0f*(base_y+(py_))/(float)height-1.0f; } while(0)
-        FVIZ_BGXY(0u,x0,y0);FVIZ_BGXY(1u,x1,y0);FVIZ_BGXY(2u,x1,y1);FVIZ_BGXY(3u,x0,y0);FVIZ_BGXY(4u,x1,y1);FVIZ_BGXY(5u,x0,y1);
+        fviz_gl_text_anchor_bounds(property, &metrics, &x0, &y0, &x1, &y1);
+        x0 = (x0 - 2.0f) * content_scale;
+        y0 = (y0 - 2.0f) * content_scale;
+        x1 = (x1 + 2.0f) * content_scale;
+        y1 = (y1 + 2.0f) * content_scale;
+        for (q = 0u; q < 6u; ++q)
+        {
+            quad[q].u = 0;
+            quad[q].v = 0;
+            quad[q].r = bg_r;
+            quad[q].g = bg_g;
+            quad[q].b = bg_b;
+            quad[q].a = bg_a;
+            quad[q].z = ndc_z;
+        }
+#define FVIZ_BGXY(i_, px_, py_)                                                                                        \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        quad[(i_)].x = 2.0f * (base_x + (px_)) / (float)width - 1.0f;                                                  \
+        quad[(i_)].y = 2.0f * (base_y + (py_)) / (float)height - 1.0f;                                                 \
+    } while (0)
+        FVIZ_BGXY(0u, x0, y0);
+        FVIZ_BGXY(1u, x1, y0);
+        FVIZ_BGXY(2u, x1, y1);
+        FVIZ_BGXY(3u, x0, y0);
+        FVIZ_BGXY(4u, x1, y1);
+        FVIZ_BGXY(5u, x0, y1);
 #undef FVIZ_BGXY
-        result=fviz_gl_draw_text_vertices(device,quad,6u,atlas,depth_test,FVIZ_TRUE);
-        if(result!=FVIZ_OK)return result;
+        result = fviz_gl_draw_text_vertices(device, quad, 6u, atlas, depth_test, FVIZ_TRUE);
+        if (result != FVIZ_OK) return result;
     }
     if (fviz_text_property_shadow(property) != FVIZ_FALSE)
     {
-        float sx,sy,so;
-        fviz_text_property_get_shadow(property,&sx,&sy,&so);
-        context.base_x=base_x+sx*content_scale; context.base_y=base_y+sy*content_scale; context.count=0u;
-        context.color[0]=0;context.color[1]=0;context.color[2]=0;context.color[3]=alpha*so;
-        result=fviz_internal_text_layout_visit(property,text,fviz_gl_text_visit_glyph,&context,NULL);
-        if(result==FVIZ_OK)result=fviz_gl_draw_text_vertices(device,vertices,context.count,atlas,depth_test,FVIZ_FALSE);
-        if(result!=FVIZ_OK)return result;
+        float sx, sy, so;
+        fviz_text_property_get_shadow(property, &sx, &sy, &so);
+        context.base_x = base_x + sx * content_scale;
+        context.base_y = base_y + sy * content_scale;
+        context.count = 0u;
+        context.color[0] = 0;
+        context.color[1] = 0;
+        context.color[2] = 0;
+        context.color[3] = alpha * so;
+        result = fviz_internal_text_layout_visit(property, text, fviz_gl_text_visit_glyph, &context, NULL);
+        if (result == FVIZ_OK)
+            result = fviz_gl_draw_text_vertices(device, vertices, context.count, atlas, depth_test, FVIZ_FALSE);
+        if (result != FVIZ_OK) return result;
     }
-    context.base_x=base_x;context.base_y=base_y;context.count=0u;
-    context.color[0]=red;context.color[1]=green;context.color[2]=blue;context.color[3]=alpha;
-    result=fviz_internal_text_layout_visit(property,text,fviz_gl_text_visit_glyph,&context,NULL);
-    if(result==FVIZ_OK)result=fviz_gl_draw_text_vertices(device,vertices,context.count,atlas,depth_test,FVIZ_FALSE);
+    context.base_x = base_x;
+    context.base_y = base_y;
+    context.count = 0u;
+    context.color[0] = red;
+    context.color[1] = green;
+    context.color[2] = blue;
+    context.color[3] = alpha;
+    result = fviz_internal_text_layout_visit(property, text, fviz_gl_text_visit_glyph, &context, NULL);
+    if (result == FVIZ_OK)
+        result = fviz_gl_draw_text_vertices(device, vertices, context.count, atlas, depth_test, FVIZ_FALSE);
     return result;
 }
 
-static FVizResult fviz_gl_draw_label_set_3d(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    FVizLabelSet3D* label_set,
-    int width,
-    int height,
-    float content_scale)
+static FVizResult fviz_gl_draw_label_set_3d(FVizGLDevice* device, FVizRenderer* renderer, FVizLabelSet3D* label_set,
+                                            int width, int height, float content_scale)
 {
     const FVizTextProperty* property;
     const FVizFontAtlas* atlas;
@@ -5186,7 +5058,9 @@ static FVizResult fviz_gl_draw_label_set_3d(
     /* Background/shadow need additional per-label geometry. Keep correctness first and
        use the single-label renderer for these uncommon styles. */
     fviz_text_property_get_background(property, &bg_r, &bg_g, &bg_b, &bg_a);
-    (void)bg_r; (void)bg_g; (void)bg_b;
+    (void)bg_r;
+    (void)bg_g;
+    (void)bg_b;
     if (bg_a > 0.001f || fviz_text_property_shadow(property) != FVIZ_FALSE)
     {
         fviz_label_set_3d_get_pixel_offset(label_set, &ox, &oy);
@@ -5199,9 +5073,9 @@ static FVizResult fviz_gl_draw_label_set_3d(
             if (fviz_renderer_view_to_ndc(renderer, view, (float)width / (float)height, &ndc) != FVIZ_OK) continue;
             if (ndc.z < -1.0f || ndc.z > 1.0f) continue;
             result = fviz_gl_draw_text_string(device, property, text,
-                (ndc.x + 1.0f) * 0.5f * (float)width + ox * content_scale,
-                (ndc.y + 1.0f) * 0.5f * (float)height + oy * content_scale,
-                ndc.z, width, height, content_scale, fviz_label_set_3d_depth_test(label_set));
+                                              (ndc.x + 1.0f) * 0.5f * (float)width + ox * content_scale,
+                                              (ndc.y + 1.0f) * 0.5f * (float)height + oy * content_scale, ndc.z, width,
+                                              height, content_scale, fviz_label_set_3d_depth_test(label_set));
             if (result != FVIZ_OK) return result;
         }
         return FVIZ_OK;
@@ -5229,7 +5103,10 @@ static FVizResult fviz_gl_draw_label_set_3d(
     context.viewport_height = height;
     context.content_scale = content_scale;
     fviz_text_property_get_color(property, &red, &green, &blue, &alpha);
-    context.color[0] = red; context.color[1] = green; context.color[2] = blue; context.color[3] = alpha;
+    context.color[0] = red;
+    context.color[1] = green;
+    context.color[2] = blue;
+    context.color[3] = alpha;
     fviz_label_set_3d_get_pixel_offset(label_set, &ox, &oy);
     for (i = 0u; i < label_count; ++i)
     {
@@ -5246,22 +5123,19 @@ static FVizResult fviz_gl_draw_label_set_3d(
         if (result != FVIZ_OK) return result;
     }
     if (context.count == 0u) return FVIZ_OK;
-    return fviz_gl_draw_text_vertices(device, vertices, context.count, atlas,
-        fviz_label_set_3d_depth_test(label_set), FVIZ_FALSE);
+    return fviz_gl_draw_text_vertices(device, vertices, context.count, atlas, fviz_label_set_3d_depth_test(label_set),
+                                      FVIZ_FALSE);
 }
 
-FVizResult fviz_internal_gl_device_render_text_actors(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    int width,
-    int height,
-    float content_scale)
+FVizResult fviz_internal_gl_device_render_text_actors(FVizGLDevice* device, FVizRenderer* renderer, int width,
+                                                      int height, float content_scale)
 {
     FVizSize i;
-    if (device == NULL || renderer == NULL || width <= 0 || height <= 0 ||
-        !isfinite(content_scale) || content_scale <= 0.0f) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device == NULL || renderer == NULL || width <= 0 || height <= 0 || !isfinite(content_scale) ||
+        content_scale <= 0.0f)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
     if (device->text_program == 0u) return FVIZ_ERROR_NOT_SUPPORTED;
-    for (i=0u;i<fviz_renderer_label_set_3d_count(renderer);++i)
+    for (i = 0u; i < fviz_renderer_label_set_3d_count(renderer); ++i)
     {
         FVizLabelSet3D* label_set = fviz_renderer_label_set_3d_at(renderer, i);
         FVizResult result;
@@ -5269,36 +5143,46 @@ FVizResult fviz_internal_gl_device_render_text_actors(
         result = fviz_gl_draw_label_set_3d(device, renderer, label_set, width, height, content_scale);
         if (result != FVIZ_OK) return result;
     }
-    for (i=0u;i<fviz_renderer_billboard_text_actor_3d_count(renderer);++i)
+    for (i = 0u; i < fviz_renderer_billboard_text_actor_3d_count(renderer); ++i)
     {
-        FVizBillboardTextActor3D* actor=fviz_renderer_billboard_text_actor_3d_at(renderer,i);
-        FVizVec3 view,ndc;
-        float ox,oy;
+        FVizBillboardTextActor3D* actor = fviz_renderer_billboard_text_actor_3d_at(renderer, i);
+        FVizVec3 view, ndc;
+        float ox, oy;
         FVizResult result;
-        if(actor==NULL||fviz_billboard_text_actor_3d_is_visible(actor)==FVIZ_FALSE)continue;
-        if(fviz_renderer_world_to_view(renderer,fviz_billboard_text_actor_3d_world_position(actor),&view)!=FVIZ_OK)continue;
-        if(fviz_renderer_view_to_ndc(renderer,view,(float)width/(float)height,&ndc)!=FVIZ_OK)continue;
-        if(ndc.z < -1.0f || ndc.z > 1.0f)continue;
-        fviz_billboard_text_actor_3d_get_pixel_offset(actor,&ox,&oy);
-        result=fviz_gl_draw_text_string(device,fviz_billboard_text_actor_3d_const_text_property(actor),
-            fviz_billboard_text_actor_3d_text(actor),(ndc.x+1.0f)*0.5f*(float)width+ox*content_scale,
-            (ndc.y+1.0f)*0.5f*(float)height+oy*content_scale,ndc.z,width,height,content_scale,
-            fviz_billboard_text_actor_3d_depth_test(actor));
-        if(result!=FVIZ_OK)return result;
+        if (actor == NULL || fviz_billboard_text_actor_3d_is_visible(actor) == FVIZ_FALSE) continue;
+        if (fviz_renderer_world_to_view(renderer, fviz_billboard_text_actor_3d_world_position(actor), &view) != FVIZ_OK)
+            continue;
+        if (fviz_renderer_view_to_ndc(renderer, view, (float)width / (float)height, &ndc) != FVIZ_OK) continue;
+        if (ndc.z < -1.0f || ndc.z > 1.0f) continue;
+        fviz_billboard_text_actor_3d_get_pixel_offset(actor, &ox, &oy);
+        result = fviz_gl_draw_text_string(device, fviz_billboard_text_actor_3d_const_text_property(actor),
+                                          fviz_billboard_text_actor_3d_text(actor),
+                                          (ndc.x + 1.0f) * 0.5f * (float)width + ox * content_scale,
+                                          (ndc.y + 1.0f) * 0.5f * (float)height + oy * content_scale, ndc.z, width,
+                                          height, content_scale, fviz_billboard_text_actor_3d_depth_test(actor));
+        if (result != FVIZ_OK) return result;
     }
-    for (i=0u;i<fviz_renderer_text_actor_2d_count(renderer);++i)
+    for (i = 0u; i < fviz_renderer_text_actor_2d_count(renderer); ++i)
     {
-        FVizTextActor2D* actor=fviz_renderer_text_actor_2d_at(renderer,i);
-        float x,y;
+        FVizTextActor2D* actor = fviz_renderer_text_actor_2d_at(renderer, i);
+        float x, y;
         FVizResult result;
-        if(actor==NULL||fviz_text_actor_2d_is_visible(actor)==FVIZ_FALSE)continue;
-        fviz_text_actor_2d_get_position(actor,&x,&y);
-        if(fviz_text_actor_2d_coordinate_system(actor)==FVIZ_TEXT_COORDINATE_NORMALIZED_VIEWPORT)
-        { x*=(float)width; y*=(float)height; }
-        else { x*=content_scale; y*=content_scale; }
-        result=fviz_gl_draw_text_string(device,fviz_text_actor_2d_const_text_property(actor),
-            fviz_text_actor_2d_text(actor),x,y,-0.95f,width,height,content_scale,FVIZ_FALSE);
-        if(result!=FVIZ_OK)return result;
+        if (actor == NULL || fviz_text_actor_2d_is_visible(actor) == FVIZ_FALSE) continue;
+        fviz_text_actor_2d_get_position(actor, &x, &y);
+        if (fviz_text_actor_2d_coordinate_system(actor) == FVIZ_TEXT_COORDINATE_NORMALIZED_VIEWPORT)
+        {
+            x *= (float)width;
+            y *= (float)height;
+        }
+        else
+        {
+            x *= content_scale;
+            y *= content_scale;
+        }
+        result = fviz_gl_draw_text_string(device, fviz_text_actor_2d_const_text_property(actor),
+                                          fviz_text_actor_2d_text(actor), x, y, -0.95f, width, height, content_scale,
+                                          FVIZ_FALSE);
+        if (result != FVIZ_OK) return result;
     }
     return FVIZ_OK;
 }
@@ -5312,16 +5196,8 @@ typedef struct FVizGL2DVertex
     float b;
 } FVizGL2DVertex;
 
-static void fviz_gl2d_emit_quad(
-    FVizGL2DVertex* vertices,
-    FVizSize* count,
-    float x0,
-    float y0,
-    float x1,
-    float y1,
-    float r,
-    float g,
-    float b)
+static void fviz_gl2d_emit_quad(FVizGL2DVertex* vertices, FVizSize* count, float x0, float y0, float x1, float y1,
+                                float r, float g, float b)
 {
     const FVizSize index = *count;
     vertices[index + 0u] = (FVizGL2DVertex){x0, y0, r, g, b};
@@ -5333,11 +5209,8 @@ static void fviz_gl2d_emit_quad(
     *count += 6u;
 }
 
-static FVizResult fviz_gl_draw_2d_vertices(
-    FVizGLDevice* device,
-    const FVizGL2DVertex* vertices,
-    FVizSize vertex_count,
-    const FVizMat4* matrix)
+static FVizResult fviz_gl_draw_2d_vertices(FVizGLDevice* device, const FVizGL2DVertex* vertices, FVizSize vertex_count,
+                                           const FVizMat4* matrix)
 {
     const FVizGLFunctions* gl;
     GLboolean depth_enabled;
@@ -5345,26 +5218,22 @@ static FVizResult fviz_gl_draw_2d_vertices(
     GLboolean blend_enabled;
     GLboolean depth_write = GL_TRUE;
     GLsizeiptr bytes;
-    if (device == NULL || vertices == NULL || vertex_count == 0u || matrix == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device == NULL || vertices == NULL || vertex_count == 0u || matrix == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (vertex_count > (FVizSize)INT_MAX) return FVIZ_ERROR_OVERFLOW;
-    if (vertex_count > (FVizSize)(PTRDIFF_MAX / (ptrdiff_t)sizeof(FVizGL2DVertex)))
-        return FVIZ_ERROR_OVERFLOW;
+    if (vertex_count > (FVizSize)(PTRDIFF_MAX / (ptrdiff_t)sizeof(FVizGL2DVertex))) return FVIZ_ERROR_OVERFLOW;
     bytes = (GLsizeiptr)(vertex_count * sizeof(FVizGL2DVertex));
     gl = &device->gl;
     if (device->overlay_vao == 0u)
     {
         gl->glGenVertexArrays(1, &device->overlay_vao);
         gl->glGenBuffers(1, &device->overlay_vbo);
-        if (device->overlay_vao == 0u || device->overlay_vbo == 0u)
-            return FVIZ_ERROR_GRAPHICS;
+        if (device->overlay_vao == 0u || device->overlay_vbo == 0u) return FVIZ_ERROR_GRAPHICS;
         gl->glBindVertexArray(device->overlay_vao);
         gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, device->overlay_vbo);
-        gl->glVertexAttribPointer(0u, 2, GL_FLOAT, GL_FALSE,
-            (GLsizei)sizeof(FVizGL2DVertex), (const void*)0);
+        gl->glVertexAttribPointer(0u, 2, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGL2DVertex), (const void*)0);
         gl->glEnableVertexAttribArray(0u);
-        gl->glVertexAttribPointer(1u, 3, GL_FLOAT, GL_FALSE,
-            (GLsizei)sizeof(FVizGL2DVertex), (const void*)(2 * sizeof(float)));
+        gl->glVertexAttribPointer(1u, 3, GL_FLOAT, GL_FALSE, (GLsizei)sizeof(FVizGL2DVertex),
+                                  (const void*)(2 * sizeof(float)));
         gl->glEnableVertexAttribArray(1u);
     }
     else
@@ -5398,36 +5267,35 @@ static FVizResult fviz_gl_draw_2d_vertices(
     gl->glBindBuffer(FVIZ_GL_ARRAY_BUFFER, 0u);
     gl->glBindVertexArray(0u);
     glDepthMask(depth_write);
-    if (depth_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
-    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
-    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+    if (depth_enabled != GL_FALSE) glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+    if (cull_enabled != GL_FALSE) glEnable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
+    if (blend_enabled != GL_FALSE) glEnable(GL_BLEND);
+    else
+        glDisable(GL_BLEND);
     return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
 }
 
-FVizResult fviz_internal_gl_device_render_gradient_background(
-    FVizGLDevice* device,
-    const float bottom_color[3],
-    const float top_color[3])
+FVizResult fviz_internal_gl_device_render_gradient_background(FVizGLDevice* device, const float bottom_color[3],
+                                                              const float top_color[3])
 {
     FVizGL2DVertex vertices[6];
     FVizMat4 identity = fviz_mat4_identity();
-    if (device == NULL || bottom_color == NULL || top_color == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (device == NULL || bottom_color == NULL || top_color == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     vertices[0] = (FVizGL2DVertex){-1.0f, -1.0f, bottom_color[0], bottom_color[1], bottom_color[2]};
-    vertices[1] = (FVizGL2DVertex){ 1.0f, -1.0f, bottom_color[0], bottom_color[1], bottom_color[2]};
-    vertices[2] = (FVizGL2DVertex){ 1.0f,  1.0f, top_color[0], top_color[1], top_color[2]};
+    vertices[1] = (FVizGL2DVertex){1.0f, -1.0f, bottom_color[0], bottom_color[1], bottom_color[2]};
+    vertices[2] = (FVizGL2DVertex){1.0f, 1.0f, top_color[0], top_color[1], top_color[2]};
     vertices[3] = (FVizGL2DVertex){-1.0f, -1.0f, bottom_color[0], bottom_color[1], bottom_color[2]};
-    vertices[4] = (FVizGL2DVertex){ 1.0f,  1.0f, top_color[0], top_color[1], top_color[2]};
-    vertices[5] = (FVizGL2DVertex){-1.0f,  1.0f, top_color[0], top_color[1], top_color[2]};
+    vertices[4] = (FVizGL2DVertex){1.0f, 1.0f, top_color[0], top_color[1], top_color[2]};
+    vertices[5] = (FVizGL2DVertex){-1.0f, 1.0f, top_color[0], top_color[1], top_color[2]};
     return fviz_gl_draw_2d_vertices(device, vertices, 6u, &identity);
 }
 
-FVizResult fviz_internal_gl_device_render_legend(
-    FVizGLDevice* device,
-    const FVizScalarLegend* legend,
-    int width,
-    int height,
-    float content_scale)
+FVizResult fviz_internal_gl_device_render_legend(FVizGLDevice* device, const FVizScalarLegend* legend, int width,
+                                                 int height, float content_scale)
 {
     FVizGL2DVertex vertices[512];
     FVizSize vertex_count = 0u;
@@ -5467,8 +5335,8 @@ FVizResult fviz_internal_gl_device_render_legend(
     float bar_label_spacing;
     float bar_statistics_spacing;
 
-    if (device == NULL || legend == NULL || width <= 0 || height <= 0 ||
-        !isfinite(content_scale) || content_scale <= 0.0f)
+    if (device == NULL || legend == NULL || width <= 0 || height <= 0 || !isfinite(content_scale) ||
+        content_scale <= 0.0f)
     {
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
@@ -5493,28 +5361,25 @@ FVizResult fviz_internal_gl_device_render_legend(
     if (bar_h > 420.0f * content_scale) bar_h = 420.0f * content_scale;
     discrete = fviz_scalar_legend_is_discrete(legend);
     if (discrete != FVIZ_FALSE)
-        segments = fviz_scalar_legend_tick_count(legend) > 1u
-            ? (FVizSize)fviz_scalar_legend_tick_count(legend) - 1u : 1u;
+        segments =
+            fviz_scalar_legend_tick_count(legend) > 1u ? (FVizSize)fviz_scalar_legend_tick_count(legend) - 1u : 1u;
     fviz_scalar_legend_get_panel_color(legend, &panel_r, &panel_g, &panel_b, &panel_a);
     fviz_scalar_legend_get_border_color(legend, &border_r, &border_g, &border_b, NULL);
     fviz_scalar_legend_get_tick_style(legend, &ticks_visible, &tick_length);
-    fviz_scalar_legend_get_layout_spacing(legend, &title_subtitle_spacing,
-        &subtitle_bar_spacing, &bar_label_spacing, &bar_statistics_spacing);
+    fviz_scalar_legend_get_layout_spacing(legend, &title_subtitle_spacing, &subtitle_bar_spacing, &bar_label_spacing,
+                                          &bar_statistics_spacing);
     tick_length *= content_scale;
     top_text_extent = 0.45f * content_scale *
-        fviz_text_property_font_size(
-            fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend));
-    if (fviz_scalar_legend_title(legend) != NULL &&
-        *fviz_scalar_legend_title(legend) != '\0')
+                      fviz_text_property_font_size(fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend));
+    if (fviz_scalar_legend_title(legend) != NULL && *fviz_scalar_legend_title(legend) != '\0')
     {
-        top_text_extent = content_scale * (14.0f +
-            fviz_text_property_font_size(
-                fviz_scalar_legend_title_text_property((FVizScalarLegend*)legend)) +
-                (fviz_scalar_legend_units(legend) != NULL &&
-                 *fviz_scalar_legend_units(legend) != '\0'
-                    ? fviz_text_property_font_size(
-                        fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)) + 3.0f
-                    : 0.0f));
+        top_text_extent =
+            content_scale *
+            (14.0f + fviz_text_property_font_size(fviz_scalar_legend_title_text_property((FVizScalarLegend*)legend)) +
+             (fviz_scalar_legend_units(legend) != NULL && *fviz_scalar_legend_units(legend) != '\0'
+                  ? fviz_text_property_font_size(fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)) +
+                        3.0f
+                  : 0.0f));
     }
     {
         float range_min;
@@ -5530,9 +5395,8 @@ FVizResult fviz_internal_gl_device_render_legend(
             const float t = (float)tick / (float)(tick_count - 1u);
             const float value = range_min + t * (range_max - range_min);
             if (snprintf(label, sizeof(label), fviz_scalar_legend_label_format(legend), (double)value) >= 0 &&
-                fviz_text_measure_utf8(
-                    fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend),
-                    label, &metrics) == FVIZ_OK &&
+                fviz_text_measure_utf8(fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend), label,
+                                       &metrics) == FVIZ_OK &&
                 metrics.width * content_scale * text_extent_correction > maximum_label_width)
                 maximum_label_width = metrics.width * content_scale * text_extent_correction;
         }
@@ -5549,9 +5413,8 @@ FVizResult fviz_internal_gl_device_render_legend(
                 (void)snprintf(title_buffer, sizeof(title_buffer), "%s [%s]", title, units);
             else
                 (void)snprintf(title_buffer, sizeof(title_buffer), "%s", title);
-            if (fviz_text_measure_utf8(
-                    fviz_scalar_legend_title_text_property((FVizScalarLegend*)legend),
-                    title_buffer, &metrics) == FVIZ_OK &&
+            if (fviz_text_measure_utf8(fviz_scalar_legend_title_text_property((FVizScalarLegend*)legend), title_buffer,
+                                       &metrics) == FVIZ_OK &&
                 metrics.width * content_scale * text_extent_correction > layout_width)
                 layout_width = metrics.width * content_scale * text_extent_correction;
             title_width = metrics.width * content_scale * text_extent_correction;
@@ -5566,14 +5429,12 @@ FVizResult fviz_internal_gl_device_render_legend(
         fviz_scalar_legend_get_range(legend, &range_min, &range_max);
         (void)snprintf(max_buffer, sizeof(max_buffer), "Max: %+.3e", (double)range_max);
         (void)snprintf(min_buffer, sizeof(min_buffer), "Min: %+.3e", (double)range_min);
-        if (fviz_text_measure_utf8(
-                fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend),
-                max_buffer, &metrics) == FVIZ_OK)
+        if (fviz_text_measure_utf8(fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend), max_buffer,
+                                   &metrics) == FVIZ_OK)
             stats_width = metrics.width * content_scale * text_extent_correction;
-        if (fviz_text_measure_utf8(
-                fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend),
-                min_buffer, &metrics) == FVIZ_OK &&
-                metrics.width * content_scale * text_extent_correction > stats_width)
+        if (fviz_text_measure_utf8(fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend), min_buffer,
+                                   &metrics) == FVIZ_OK &&
+            metrics.width * content_scale * text_extent_correction > stats_width)
             stats_width = metrics.width * content_scale * text_extent_correction;
     }
     content_width = bar_w + tick_length + maximum_label_width + 8.0f * content_scale;
@@ -5592,23 +5453,19 @@ FVizResult fviz_internal_gl_device_render_legend(
     switch (fviz_scalar_legend_position(legend))
     {
         case FVIZ_LEGEND_TOP_LEFT:
-            layout_item.anchor = fviz_vec3(
-                margin_x / (float)width, 1.0f - margin_y / (float)height, 0.0f);
+            layout_item.anchor = fviz_vec3(margin_x / (float)width, 1.0f - margin_y / (float)height, 0.0f);
             layout_item.vertical_alignment = FVIZ_OVERLAY_ALIGN_TOP;
             break;
         case FVIZ_LEGEND_BOTTOM_RIGHT:
-            layout_item.anchor = fviz_vec3(
-                1.0f - margin_x / (float)width, margin_y / (float)height, 0.0f);
+            layout_item.anchor = fviz_vec3(1.0f - margin_x / (float)width, margin_y / (float)height, 0.0f);
             layout_item.horizontal_alignment = FVIZ_OVERLAY_ALIGN_RIGHT;
             break;
         case FVIZ_LEGEND_BOTTOM_LEFT:
-            layout_item.anchor = fviz_vec3(
-                margin_x / (float)width, margin_y / (float)height, 0.0f);
+            layout_item.anchor = fviz_vec3(margin_x / (float)width, margin_y / (float)height, 0.0f);
             break;
         case FVIZ_LEGEND_TOP_RIGHT:
         default:
-            layout_item.anchor = fviz_vec3(
-                1.0f - margin_x / (float)width, 1.0f - margin_y / (float)height, 0.0f);
+            layout_item.anchor = fviz_vec3(1.0f - margin_x / (float)width, 1.0f - margin_y / (float)height, 0.0f);
             layout_item.horizontal_alignment = FVIZ_OVERLAY_ALIGN_RIGHT;
             layout_item.vertical_alignment = FVIZ_OVERLAY_ALIGN_TOP;
             break;
@@ -5619,12 +5476,9 @@ FVizResult fviz_internal_gl_device_render_legend(
     bar_y = layout_result.y;
 
     if (panel_a > 0.001f)
-        fviz_gl2d_emit_quad(vertices, &vertex_count,
-            bar_x - 8.0f * content_scale,
-            bar_y - 44.0f * content_scale,
-            bar_x + content_width,
-            bar_y + bar_h + top_text_extent + 5.0f * content_scale,
-            panel_r, panel_g, panel_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x - 8.0f * content_scale, bar_y - 44.0f * content_scale,
+                            bar_x + content_width, bar_y + bar_h + top_text_extent + 5.0f * content_scale, panel_r,
+                            panel_g, panel_b);
     /* Abaqus-style bounding box and accent frames for title/statistics. */
     {
         const float box_l = bar_x - 8.0f * content_scale;
@@ -5632,14 +5486,10 @@ FVizResult fviz_internal_gl_device_render_legend(
         const float box_t = bar_y - 44.0f * content_scale;
         const float box_b = bar_y + bar_h + top_text_extent + 5.0f * content_scale;
         const float line = 1.0f * content_scale;
-        fviz_gl2d_emit_quad(vertices, &vertex_count, box_l, box_t, box_r, box_t + line,
-            border_r, border_g, border_b);
-        fviz_gl2d_emit_quad(vertices, &vertex_count, box_l, box_b - line, box_r, box_b,
-            border_r, border_g, border_b);
-        fviz_gl2d_emit_quad(vertices, &vertex_count, box_l, box_t, box_l + line, box_b,
-            border_r, border_g, border_b);
-        fviz_gl2d_emit_quad(vertices, &vertex_count, box_r - line, box_t, box_r, box_b,
-            border_r, border_g, border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, box_l, box_t, box_r, box_t + line, border_r, border_g, border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, box_l, box_b - line, box_r, box_b, border_r, border_g, border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, box_l, box_t, box_l + line, box_b, border_r, border_g, border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, box_r - line, box_t, box_r, box_b, border_r, border_g, border_b);
     }
 
     {
@@ -5655,32 +5505,22 @@ FVizResult fviz_internal_gl_device_render_legend(
             float g;
             float b;
             fviz_lookup_table_map_scalar(table, value, &r, &g, &b);
-            fviz_gl2d_emit_quad(vertices, &vertex_count,
-                bar_x, bar_y + f0 * bar_h,
-                bar_x + bar_w, bar_y + f1 * bar_h,
-                r, g, b);
+            fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x, bar_y + f0 * bar_h, bar_x + bar_w, bar_y + f1 * bar_h,
+                                r, g, b);
             if (discrete != FVIZ_FALSE && i > 0u)
-                fviz_gl2d_emit_quad(vertices, &vertex_count,
-                    bar_x, bar_y + f0 * bar_h - 0.5f * content_scale,
-                    bar_x + bar_w, bar_y + f0 * bar_h + 0.5f * content_scale,
-                    border_r, border_g, border_b);
+                fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x, bar_y + f0 * bar_h - 0.5f * content_scale,
+                                    bar_x + bar_w, bar_y + f0 * bar_h + 0.5f * content_scale, border_r, border_g,
+                                    border_b);
         }
-        fviz_gl2d_emit_quad(vertices, &vertex_count,
-            bar_x - 2.0f * content_scale, bar_y,
-            bar_x + bar_w + 2.0f * content_scale, bar_y + 2.0f * content_scale,
-            border_r, border_g, border_b);
-        fviz_gl2d_emit_quad(vertices, &vertex_count,
-            bar_x - 2.0f * content_scale, bar_y + bar_h - 2.0f * content_scale,
-            bar_x + bar_w + 2.0f * content_scale, bar_y + bar_h,
-            border_r, border_g, border_b);
-        fviz_gl2d_emit_quad(vertices, &vertex_count,
-            bar_x - 2.0f * content_scale, bar_y,
-            bar_x, bar_y + bar_h,
-            border_r, border_g, border_b);
-        fviz_gl2d_emit_quad(vertices, &vertex_count,
-            bar_x + bar_w, bar_y,
-            bar_x + bar_w + 2.0f * content_scale, bar_y + bar_h,
-            border_r, border_g, border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x - 2.0f * content_scale, bar_y,
+                            bar_x + bar_w + 2.0f * content_scale, bar_y + 2.0f * content_scale, border_r, border_g,
+                            border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x - 2.0f * content_scale, bar_y + bar_h - 2.0f * content_scale,
+                            bar_x + bar_w + 2.0f * content_scale, bar_y + bar_h, border_r, border_g, border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x - 2.0f * content_scale, bar_y, bar_x, bar_y + bar_h,
+                            border_r, border_g, border_b);
+        fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x + bar_w, bar_y, bar_x + bar_w + 2.0f * content_scale,
+                            bar_y + bar_h, border_r, border_g, border_b);
         if (ticks_visible != FVIZ_FALSE && tick_length > 0.0f)
         {
             uint32_t tick_count = fviz_scalar_legend_tick_count(legend);
@@ -5689,15 +5529,12 @@ FVizResult fviz_internal_gl_device_render_legend(
             {
                 const float t = tick_count > 1u ? (float)tick / (float)(tick_count - 1u) : 0.0f;
                 const float y = bar_y + t * bar_h;
-                fviz_gl2d_emit_quad(vertices, &vertex_count,
-                    bar_x + bar_w, y - 0.5f * content_scale,
-                    bar_x + bar_w + tick_length, y + 0.5f * content_scale,
-                    border_r, border_g, border_b);
-                fviz_gl2d_emit_quad(vertices, &vertex_count,
-                    bar_x + bar_w + tick_length, y - 0.5f * content_scale,
-                    bar_x + bar_w + tick_length + 4.0f * content_scale,
-                    y + 0.5f * content_scale,
-                    border_r, border_g, border_b);
+                fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x + bar_w, y - 0.5f * content_scale,
+                                    bar_x + bar_w + tick_length, y + 0.5f * content_scale, border_r, border_g,
+                                    border_b);
+                fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x + bar_w + tick_length, y - 0.5f * content_scale,
+                                    bar_x + bar_w + tick_length + 4.0f * content_scale, y + 0.5f * content_scale,
+                                    border_r, border_g, border_b);
             }
         }
         for (i = 0u; i < (FVizSize)fviz_scalar_legend_tick_count(legend); ++i)
@@ -5705,11 +5542,9 @@ FVizResult fviz_internal_gl_device_render_legend(
             const uint32_t tick_count = fviz_scalar_legend_tick_count(legend);
             const float t = tick_count > 1u ? (float)i / (float)(tick_count - 1u) : 0.0f;
             const float y = bar_y + t * bar_h;
-            fviz_gl2d_emit_quad(vertices, &vertex_count,
-                bar_x + bar_w + tick_length, y - 0.5f * content_scale,
-                bar_x + bar_w + 6.0f * content_scale,
-                y + 0.5f * content_scale,
-                border_r, border_g, border_b);
+            fviz_gl2d_emit_quad(vertices, &vertex_count, bar_x + bar_w + tick_length, y - 0.5f * content_scale,
+                                bar_x + bar_w + 6.0f * content_scale, y + 0.5f * content_scale, border_r, border_g,
+                                border_b);
         }
     }
 
@@ -5740,18 +5575,17 @@ FVizResult fviz_internal_gl_device_render_legend(
                 if (units != NULL && *units != '\0')
                 {
                     result = fviz_gl_draw_text_string(
-                        device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend),
-                        units, bar_x,
-                        bar_y + bar_h + subtitle_bar_spacing * content_scale,
-                        -0.95f, width, height, content_scale, FVIZ_FALSE);
+                        device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend), units, bar_x,
+                        bar_y + bar_h + subtitle_bar_spacing * content_scale, -0.95f, width, height, content_scale,
+                        FVIZ_FALSE);
                     if (result != FVIZ_OK) return result;
                 }
                 result = fviz_gl_draw_text_string(
-                    device, fviz_scalar_legend_title_text_property((FVizScalarLegend*)legend),
-                    title_buffer, bar_x,
+                    device, fviz_scalar_legend_title_text_property((FVizScalarLegend*)legend), title_buffer, bar_x,
                     bar_y + bar_h + subtitle_bar_spacing * content_scale +
                         fviz_text_property_font_size(
-                            fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)) * content_scale +
+                            fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)) *
+                            content_scale +
                         title_subtitle_spacing * content_scale,
                     -0.95f, width, height, content_scale, FVIZ_FALSE);
                 if (result != FVIZ_OK) return result;
@@ -5762,18 +5596,17 @@ FVizResult fviz_internal_gl_device_render_legend(
                 (void)snprintf(max_buffer, sizeof(max_buffer), "Max: %+.3e", (double)range_max);
                 (void)snprintf(min_buffer, sizeof(min_buffer), "Min: %+.3e", (double)range_min);
                 result = fviz_gl_draw_text_string(
-                    device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend),
-                    max_buffer, bar_x,
-                    bar_y - bar_statistics_spacing * content_scale, -0.95f,
-                    width, height, content_scale, FVIZ_FALSE);
+                    device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend), max_buffer, bar_x,
+                    bar_y - bar_statistics_spacing * content_scale, -0.95f, width, height, content_scale, FVIZ_FALSE);
                 if (result != FVIZ_OK) return result;
                 result = fviz_gl_draw_text_string(
-                    device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend),
-                    min_buffer, bar_x,
+                    device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend), min_buffer, bar_x,
                     bar_y - (bar_statistics_spacing +
-                        fviz_text_property_font_size(fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)) +
-                        4.0f) * content_scale, -0.95f,
-                    width, height, content_scale, FVIZ_FALSE);
+                             fviz_text_property_font_size(
+                                 fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)) +
+                             4.0f) *
+                                content_scale,
+                    -0.95f, width, height, content_scale, FVIZ_FALSE);
                 if (result != FVIZ_OK) return result;
             }
             if (tick_count < 2u) tick_count = 2u;
@@ -5782,15 +5615,16 @@ FVizResult fviz_internal_gl_device_render_legend(
                 char label[96];
                 const float t = (float)tick / (float)(tick_count - 1u);
                 const float value = range_min + t * (range_max - range_min);
-                const int written = snprintf(label, sizeof(label),
-                    fviz_scalar_legend_label_format(legend), (double)value);
+                const int written =
+                    snprintf(label, sizeof(label), fviz_scalar_legend_label_format(legend), (double)value);
                 if (written < 0) continue;
                 result = fviz_gl_draw_text_string(
-                    device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend),
-                    label, bar_x + bar_w + bar_label_spacing * content_scale,
-                    bar_y + t * bar_h - 0.45f * content_scale *
-                        fviz_text_property_font_size(
-                            fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)),
+                    device, fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend), label,
+                    bar_x + bar_w + bar_label_spacing * content_scale,
+                    bar_y + t * bar_h -
+                        0.45f * content_scale *
+                            fviz_text_property_font_size(
+                                fviz_scalar_legend_label_text_property((FVizScalarLegend*)legend)),
                     -0.95f, width, height, content_scale, FVIZ_FALSE);
                 if (result != FVIZ_OK) return result;
             }

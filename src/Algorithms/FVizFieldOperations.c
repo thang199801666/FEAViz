@@ -18,21 +18,25 @@ typedef struct FVizFieldIdEntry
 
 static FVizBool fviz_field_integer_type(FVizDataType type)
 {
-    return type >= FVIZ_DATA_INT8 && type <= FVIZ_DATA_UINT64 &&
-        type != FVIZ_DATA_FLOAT32 && type != FVIZ_DATA_FLOAT64;
+    return type >= FVIZ_DATA_INT8 && type <= FVIZ_DATA_UINT64 && type != FVIZ_DATA_FLOAT32 && type != FVIZ_DATA_FLOAT64;
 }
 
-static FVizResult fviz_field_read_id(
-    const FVizDataArray* array, FVizSize tuple, FVizId* out_id)
+static FVizResult fviz_field_read_id(const FVizDataArray* array, FVizSize tuple, FVizId* out_id)
 {
     const void* value = fviz_data_array_const_tuple(array, tuple);
     if (value == NULL || out_id == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
-#define FVIZ_READ_SIGNED_ID(type_value, c_type) \
-    case type_value: { const c_type item = *(const c_type*)value; \
-        if (item < 0) return FVIZ_ERROR_INVALID_ARGUMENT; \
-        *out_id = (FVizId)item; return FVIZ_OK; }
-#define FVIZ_READ_UNSIGNED_ID(type_value, c_type) \
-    case type_value: *out_id = (FVizId)*(const c_type*)value; return FVIZ_OK
+#define FVIZ_READ_SIGNED_ID(type_value, c_type)                                                                        \
+    case type_value:                                                                                                   \
+        {                                                                                                              \
+            const c_type item = *(const c_type*)value;                                                                 \
+            if (item < 0) return FVIZ_ERROR_INVALID_ARGUMENT;                                                          \
+            *out_id = (FVizId)item;                                                                                    \
+            return FVIZ_OK;                                                                                            \
+        }
+#define FVIZ_READ_UNSIGNED_ID(type_value, c_type)                                                                      \
+    case type_value:                                                                                                   \
+        *out_id = (FVizId) * (const c_type*)value;                                                                     \
+        return FVIZ_OK
     switch (fviz_data_array_type(array))
     {
         FVIZ_READ_SIGNED_ID(FVIZ_DATA_INT8, int8_t);
@@ -43,7 +47,8 @@ static FVizResult fviz_field_read_id(
         FVIZ_READ_UNSIGNED_ID(FVIZ_DATA_UINT32, uint32_t);
         FVIZ_READ_SIGNED_ID(FVIZ_DATA_INT64, int64_t);
         FVIZ_READ_UNSIGNED_ID(FVIZ_DATA_UINT64, uint64_t);
-        default: return FVIZ_ERROR_INVALID_ARGUMENT;
+        default:
+            return FVIZ_ERROR_INVALID_ARGUMENT;
     }
 #undef FVIZ_READ_UNSIGNED_ID
 #undef FVIZ_READ_SIGNED_ID
@@ -56,8 +61,7 @@ static int fviz_field_id_entry_compare(const void* left, const void* right)
     return a->id < b->id ? -1 : (a->id > b->id ? 1 : 0);
 }
 
-static const FVizFieldIdEntry* fviz_field_find_id(
-    const FVizFieldIdEntry* entries, FVizSize count, FVizId id)
+static const FVizFieldIdEntry* fviz_field_find_id(const FVizFieldIdEntry* entries, FVizSize count, FVizId id)
 {
     FVizSize first = 0u;
     FVizSize last = count;
@@ -65,7 +69,8 @@ static const FVizFieldIdEntry* fviz_field_find_id(
     {
         const FVizSize middle = first + (last - first) / 2u;
         if (entries[middle].id < id) first = middle + 1u;
-        else last = middle;
+        else
+            last = middle;
     }
     return first < count && entries[first].id == id ? &entries[first] : NULL;
 }
@@ -86,9 +91,8 @@ void fviz_indexed_average_options_initialize(FVizIndexedAverageOptions* options)
     options->ignore_non_finite = FVIZ_TRUE;
 }
 
-static FVizResult fviz_field_derived_scalar(
-    const FVizDataArray* source, uint32_t component, FVizBool magnitude,
-    FVizDataArray** out_values)
+static FVizResult fviz_field_derived_scalar(const FVizDataArray* source, uint32_t component, FVizBool magnitude,
+                                            FVizDataArray** out_values)
 {
     FVizDataArray* output = NULL;
     double* destination;
@@ -130,20 +134,17 @@ fail:
     return fviz_last_error_code();
 }
 
-FVizResult fviz_field_extract_component(
-    const FVizDataArray* source, uint32_t component, FVizDataArray** out_values)
+FVizResult fviz_field_extract_component(const FVizDataArray* source, uint32_t component, FVizDataArray** out_values)
 {
     return fviz_field_derived_scalar(source, component, FVIZ_FALSE, out_values);
 }
 
-FVizResult fviz_field_compute_magnitude(
-    const FVizDataArray* source, FVizDataArray** out_values)
+FVizResult fviz_field_compute_magnitude(const FVizDataArray* source, FVizDataArray** out_values)
 {
     return fviz_field_derived_scalar(source, 0u, FVIZ_TRUE, out_values);
 }
 
-FVizResult fviz_field_compute_finite_mask(
-    const FVizDataArray* source, FVizDataArray** out_mask)
+FVizResult fviz_field_compute_finite_mask(const FVizDataArray* source, FVizDataArray** out_mask)
 {
     FVizDataArray* mask = NULL;
     uint8_t* values;
@@ -167,7 +168,11 @@ FVizResult fviz_field_compute_finite_mask(
         {
             double value;
             if (fviz_data_array_get_component(source, tuple, component, &value) != FVIZ_OK) goto fail;
-            if (!isfinite(value)) { values[tuple] = 0u; break; }
+            if (!isfinite(value))
+            {
+                values[tuple] = 0u;
+                break;
+            }
         }
     }
     fviz_object_modified((FVizObject*)mask);
@@ -178,13 +183,9 @@ fail:
     return fviz_last_error_code();
 }
 
-FVizResult fviz_field_gather_by_ids(
-    const FVizDataArray* source_values,
-    const FVizDataArray* source_ids,
-    const FVizDataArray* target_ids,
-    const FVizFieldGatherOptions* options,
-    FVizDataArray** out_values,
-    FVizDataArray** out_valid_mask)
+FVizResult fviz_field_gather_by_ids(const FVizDataArray* source_values, const FVizDataArray* source_ids,
+                                    const FVizDataArray* target_ids, const FVizFieldGatherOptions* options,
+                                    FVizDataArray** out_values, FVizDataArray** out_valid_mask)
 {
     FVizFieldGatherOptions defaults;
     FVizFieldIdEntry* entries = NULL;
@@ -205,8 +206,7 @@ FVizResult fviz_field_gather_by_ids(
         fviz_field_integer_type(fviz_data_array_type(source_ids)) == FVIZ_FALSE ||
         fviz_field_integer_type(fviz_data_array_type(target_ids)) == FVIZ_FALSE ||
         fviz_data_array_tuple_count(source_values) != fviz_data_array_tuple_count(source_ids) ||
-        (options->missing_id_policy != FVIZ_MISSING_ID_ERROR &&
-         options->missing_id_policy != FVIZ_MISSING_ID_FILL))
+        (options->missing_id_policy != FVIZ_MISSING_ID_ERROR && options->missing_id_policy != FVIZ_MISSING_ID_FILL))
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "field gather arguments are incompatible");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -227,8 +227,8 @@ FVizResult fviz_field_gather_by_ids(
             fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "field gather source IDs must be unique");
             goto fail;
         }
-    if (fviz_data_array_create(fviz_data_array_type(source_values),
-            fviz_data_array_components(source_values), &output) != FVIZ_OK ||
+    if (fviz_data_array_create(fviz_data_array_type(source_values), fviz_data_array_components(source_values),
+                               &output) != FVIZ_OK ||
         fviz_data_array_resize(output, fviz_data_array_tuple_count(target_ids)) != FVIZ_OK ||
         fviz_data_array_create(FVIZ_DATA_UINT8, 1u, &mask) != FVIZ_OK ||
         fviz_data_array_resize(mask, fviz_data_array_tuple_count(target_ids)) != FVIZ_OK)
@@ -244,8 +244,8 @@ FVizResult fviz_field_gather_by_ids(
         entry = fviz_field_find_id(entries, fviz_data_array_tuple_count(source_ids), id);
         if (entry != NULL)
         {
-            (void)memcpy(output_data + tuple * stride,
-                fviz_data_array_const_tuple(source_values, entry->tuple), (size_t)stride);
+            (void)memcpy(output_data + tuple * stride, fviz_data_array_const_tuple(source_values, entry->tuple),
+                         (size_t)stride);
             mask_data[tuple] = 1u;
         }
         else
@@ -267,7 +267,8 @@ FVizResult fviz_field_gather_by_ids(
     fviz_free(entries);
     *out_values = output;
     if (out_valid_mask != NULL) *out_valid_mask = mask;
-    else fviz_release(mask);
+    else
+        fviz_release(mask);
     return FVIZ_OK;
 invalid:
     fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "field gather IDs must be non-negative integers");
@@ -278,13 +279,10 @@ fail:
     return fviz_last_error_code();
 }
 
-FVizResult fviz_field_indexed_weighted_average(
-    const FVizDataArray* source_values,
-    const FVizDataArray* destination_indices,
-    const FVizDataArray* weights,
-    const FVizIndexedAverageOptions* options,
-    FVizDataArray** out_values,
-    FVizDataArray** out_valid_mask)
+FVizResult fviz_field_indexed_weighted_average(const FVizDataArray* source_values,
+                                               const FVizDataArray* destination_indices, const FVizDataArray* weights,
+                                               const FVizIndexedAverageOptions* options, FVizDataArray** out_values,
+                                               FVizDataArray** out_valid_mask)
 {
     FVizIndexedAverageOptions defaults;
     FVizDataArray* output = NULL;
@@ -305,12 +303,11 @@ FVizResult fviz_field_indexed_weighted_average(
     if (options == NULL) options = &defaults;
     count = source_values != NULL ? fviz_data_array_tuple_count(source_values) : 0u;
     if (source_values == NULL || destination_indices == NULL || components == 0u ||
-        options->destination_tuple_count == 0u ||
-        fviz_data_array_components(destination_indices) != 1u ||
+        options->destination_tuple_count == 0u || fviz_data_array_components(destination_indices) != 1u ||
         fviz_field_integer_type(fviz_data_array_type(destination_indices)) == FVIZ_FALSE ||
         fviz_data_array_tuple_count(destination_indices) != count ||
-        (weights != NULL && (fviz_data_array_components(weights) != 1u ||
-         fviz_data_array_tuple_count(weights) != count)))
+        (weights != NULL &&
+         (fviz_data_array_components(weights) != 1u || fviz_data_array_tuple_count(weights) != count)))
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "indexed average arguments are incompatible");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -371,8 +368,8 @@ FVizResult fviz_field_indexed_weighted_average(
         uint32_t component;
         valid[tuple] = weight_sums[tuple] != 0.0 && isfinite(weight_sums[tuple]) ? 1u : 0u;
         for (component = 0u; component < components; ++component)
-            destination[tuple * components + component] = valid[tuple] != 0u
-                ? sums[tuple * components + component] / weight_sums[tuple] : NAN;
+            destination[tuple * components + component] =
+                valid[tuple] != 0u ? sums[tuple * components + component] / weight_sums[tuple] : NAN;
     }
     fviz_object_modified((FVizObject*)output);
     fviz_object_modified((FVizObject*)mask);
@@ -380,7 +377,8 @@ FVizResult fviz_field_indexed_weighted_average(
     fviz_free(sums);
     *out_values = output;
     if (out_valid_mask != NULL) *out_valid_mask = mask;
-    else fviz_release(mask);
+    else
+        fviz_release(mask);
     return FVIZ_OK;
 fail:
     fviz_release(mask);
@@ -390,19 +388,14 @@ fail:
     return fviz_last_error_code();
 }
 
-FVizResult fviz_field_apply_tuple_matrix(
-    const FVizDataArray* source_values,
-    const double* matrix,
-    FVizSize output_tuple_count,
-    FVizDataArray** out_values)
+FVizResult fviz_field_apply_tuple_matrix(const FVizDataArray* source_values, const double* matrix,
+                                         FVizSize output_tuple_count, FVizDataArray** out_values)
 {
     FVizDataArray* output = NULL;
     double* destination;
     FVizSize row;
-    const FVizSize input_count = source_values != NULL
-        ? fviz_data_array_tuple_count(source_values) : 0u;
-    const uint32_t components = source_values != NULL
-        ? fviz_data_array_components(source_values) : 0u;
+    const FVizSize input_count = source_values != NULL ? fviz_data_array_tuple_count(source_values) : 0u;
+    const uint32_t components = source_values != NULL ? fviz_data_array_components(source_values) : 0u;
     if (out_values == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_values = NULL;
     if (source_values == NULL || matrix == NULL || input_count == 0u || components == 0u)
@@ -421,8 +414,7 @@ FVizResult fviz_field_apply_tuple_matrix(
             for (column = 0u; column < input_count; ++column)
             {
                 double value;
-                if (fviz_data_array_get_component(
-                    source_values, column, component, &value) != FVIZ_OK) goto fail;
+                if (fviz_data_array_get_component(source_values, column, component, &value) != FVIZ_OK) goto fail;
                 sum += matrix[row * input_count + column] * value;
             }
             destination[row * components + component] = sum;
@@ -436,19 +428,16 @@ fail:
     return fviz_last_error_code();
 }
 
-FVizResult fviz_field_least_squares_operator(
-    const double* basis_matrix,
-    FVizSize sample_count,
-    FVizSize coefficient_count,
-    double* out_operator)
+FVizResult fviz_field_least_squares_operator(const double* basis_matrix, FVizSize sample_count,
+                                             FVizSize coefficient_count, double* out_operator)
 {
     double* augmented = NULL;
     FVizSize width;
     FVizSize scalar_count;
     FVizSize bytes;
     FVizSize row;
-    if (basis_matrix == NULL || out_operator == NULL || sample_count == 0u ||
-        coefficient_count == 0u || sample_count < coefficient_count)
+    if (basis_matrix == NULL || out_operator == NULL || sample_count == 0u || coefficient_count == 0u ||
+        sample_count < coefficient_count)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     if (fviz_size_add(coefficient_count, coefficient_count, &width) != FVIZ_OK ||
         fviz_size_multiply(coefficient_count, width, &scalar_count) != FVIZ_OK ||
@@ -465,8 +454,7 @@ FVizResult fviz_field_least_squares_operator(
             FVizSize sample;
             for (sample = 0u; sample < sample_count; ++sample)
                 augmented[row * width + column] +=
-                    basis_matrix[sample * coefficient_count + row] *
-                    basis_matrix[sample * coefficient_count + column];
+                    basis_matrix[sample * coefficient_count + row] * basis_matrix[sample * coefficient_count + column];
         }
         augmented[row * width + coefficient_count + row] = 1.0;
     }
@@ -478,7 +466,11 @@ FVizResult fviz_field_least_squares_operator(
         for (candidate = row + 1u; candidate < coefficient_count; ++candidate)
         {
             const double value = fabs(augmented[candidate * width + row]);
-            if (value > pivot_abs) { pivot_abs = value; pivot = candidate; }
+            if (value > pivot_abs)
+            {
+                pivot_abs = value;
+                pivot = candidate;
+            }
         }
         if (pivot_abs <= 1.0e-14)
         {
@@ -507,8 +499,7 @@ FVizResult fviz_field_least_squares_operator(
             const double factor = augmented[candidate * width + row];
             if (candidate == row) continue;
             for (column = 0u; column < width; ++column)
-                augmented[candidate * width + column] -=
-                    factor * augmented[row * width + column];
+                augmented[candidate * width + column] -= factor * augmented[row * width + column];
         }
     }
     for (row = 0u; row < coefficient_count; ++row)
@@ -520,7 +511,7 @@ FVizResult fviz_field_least_squares_operator(
             double value = 0.0;
             for (column = 0u; column < coefficient_count; ++column)
                 value += augmented[row * width + coefficient_count + column] *
-                    basis_matrix[sample * coefficient_count + column];
+                         basis_matrix[sample * coefficient_count + column];
             out_operator[row * sample_count + sample] = value;
         }
     }
@@ -528,12 +519,10 @@ FVizResult fviz_field_least_squares_operator(
     return FVIZ_OK;
 }
 
-FVizResult fviz_field_compute_indexed_discontinuity_mask(
-    const FVizDataArray* source_values,
-    const FVizDataArray* destination_indices,
-    FVizSize destination_tuple_count,
-    double relative_threshold,
-    FVizDataArray** out_mask)
+FVizResult fviz_field_compute_indexed_discontinuity_mask(const FVizDataArray* source_values,
+                                                         const FVizDataArray* destination_indices,
+                                                         FVizSize destination_tuple_count, double relative_threshold,
+                                                         FVizDataArray** out_mask)
 {
     FVizDataArray* mask = NULL;
     double* minima = NULL;
@@ -542,13 +531,11 @@ FVizResult fviz_field_compute_indexed_discontinuity_mask(
     FVizSize scalar_count;
     FVizSize bytes;
     FVizSize tuple;
-    const uint32_t components = source_values != NULL
-        ? fviz_data_array_components(source_values) : 0u;
+    const uint32_t components = source_values != NULL ? fviz_data_array_components(source_values) : 0u;
     if (out_mask == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_mask = NULL;
-    if (source_values == NULL || destination_indices == NULL || components == 0u ||
-        relative_threshold < 0.0 || fviz_data_array_tuple_count(source_values) !=
-        fviz_data_array_tuple_count(destination_indices) ||
+    if (source_values == NULL || destination_indices == NULL || components == 0u || relative_threshold < 0.0 ||
+        fviz_data_array_tuple_count(source_values) != fviz_data_array_tuple_count(destination_indices) ||
         fviz_data_array_components(destination_indices) != 1u ||
         fviz_field_integer_type(fviz_data_array_type(destination_indices)) == FVIZ_FALSE)
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -568,20 +555,21 @@ FVizResult fviz_field_compute_indexed_discontinuity_mask(
         FVizId destination;
         uint32_t component;
         if (fviz_field_read_id(destination_indices, tuple, &destination) != FVIZ_OK ||
-            destination >= destination_tuple_count) goto invalid;
+            destination >= destination_tuple_count)
+            goto invalid;
         for (component = 0u; component < components; ++component)
         {
             double value;
             const FVizSize offset = (FVizSize)destination * components + component;
-            if (fviz_data_array_get_component(source_values, tuple, component, &value) != FVIZ_OK)
-                goto fail;
+            if (fviz_data_array_get_component(source_values, tuple, component, &value) != FVIZ_OK) goto fail;
             if (!isfinite(value)) continue;
             if (value < minima[offset]) minima[offset] = value;
             if (value > maxima[offset]) maxima[offset] = value;
         }
     }
     if (fviz_data_array_create(FVIZ_DATA_UINT8, 1u, &mask) != FVIZ_OK ||
-        fviz_data_array_resize(mask, destination_tuple_count) != FVIZ_OK) goto fail;
+        fviz_data_array_resize(mask, destination_tuple_count) != FVIZ_OK)
+        goto fail;
     flags = (uint8_t*)fviz_data_array_data(mask);
     for (tuple = 0u; tuple < destination_tuple_count; ++tuple)
     {
@@ -591,9 +579,11 @@ FVizResult fviz_field_compute_indexed_discontinuity_mask(
         {
             const FVizSize offset = tuple * components + component;
             const double reference = fmax(fmax(fabs(minima[offset]), fabs(maxima[offset])), 1.0e-30);
-            if (isfinite(minima[offset]) &&
-                (maxima[offset] - minima[offset]) / reference > relative_threshold)
-            { flags[tuple] = 1u; break; }
+            if (isfinite(minima[offset]) && (maxima[offset] - minima[offset]) / reference > relative_threshold)
+            {
+                flags[tuple] = 1u;
+                break;
+            }
         }
     }
     fviz_object_modified((FVizObject*)mask);
@@ -602,8 +592,7 @@ FVizResult fviz_field_compute_indexed_discontinuity_mask(
     *out_mask = mask;
     return FVIZ_OK;
 invalid:
-    fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
-        "discontinuity destination index is out of range");
+    fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "discontinuity destination index is out of range");
 fail:
     fviz_release(mask);
     fviz_free(maxima);

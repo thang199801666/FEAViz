@@ -4,13 +4,7 @@
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Rendering/FVizLightPrivate.h>
 
-static const FVizObjectClass g_fviz_light_class = {
-    FVIZ_TYPE_LIGHT,
-    "FVizLight",
-    &g_fviz_object_class,
-    NULL,
-    NULL
-};
+static const FVizObjectClass g_fviz_light_class = {FVIZ_TYPE_LIGHT, "FVizLight", &g_fviz_object_class, NULL, NULL};
 
 static float fviz_light_clamp01(float value)
 {
@@ -74,8 +68,7 @@ FVizBool fviz_light_enabled(const FVizLight* light)
 void fviz_light_set_position(FVizLight* light, FVizVec3 position)
 {
     if (light == NULL) return;
-    if (light->position.x != position.x || light->position.y != position.y ||
-        light->position.z != position.z)
+    if (light->position.x != position.x || light->position.y != position.y || light->position.z != position.z)
     {
         light->position = position;
         fviz_object_modified((FVizObject*)light);

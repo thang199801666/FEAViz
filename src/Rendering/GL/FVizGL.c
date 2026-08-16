@@ -29,13 +29,13 @@ static PROC fviz_gl_lookup_symbol(const char* name)
     return GetProcAddress(opengl_module, name);
 }
 
-#define FVIZ_GL_LOAD_PROC(field, proc_name) \
-    do \
-    { \
-        PROC fviz_proc_address = fviz_gl_lookup_symbol(proc_name); \
-        _Static_assert(sizeof(functions->field) == sizeof(fviz_proc_address), \
-                       "OpenGL function pointer size must match PROC"); \
-        memcpy(&functions->field, &fviz_proc_address, sizeof(fviz_proc_address)); \
+#define FVIZ_GL_LOAD_PROC(field, proc_name)                                                                            \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        PROC fviz_proc_address = fviz_gl_lookup_symbol(proc_name);                                                     \
+        _Static_assert(sizeof(functions->field) == sizeof(fviz_proc_address),                                          \
+                       "OpenGL function pointer size must match PROC");                                                \
+        memcpy(&functions->field, &fviz_proc_address, sizeof(fviz_proc_address));                                      \
     } while (0)
 
 FVizResult fviz_internal_gl_load(FVizGLFunctions* functions)
@@ -104,54 +104,27 @@ FVizResult fviz_internal_gl_load(FVizGLFunctions* functions)
     FVIZ_GL_LOAD_PROC(glTexImage3D, "glTexImage3D");
     FVIZ_GL_LOAD_PROC(glTexSubImage3D, "glTexSubImage3D");
 
-    if (functions->glGenVertexArrays == NULL ||
-        functions->glBindVertexArray == NULL ||
-        functions->glDeleteVertexArrays == NULL ||
-        functions->glGenBuffers == NULL ||
-        functions->glBindBuffer == NULL ||
-        functions->glBufferData == NULL ||
-        functions->glBufferSubData == NULL ||
-        functions->glDeleteBuffers == NULL ||
-        functions->glGenRenderbuffers == NULL ||
-        functions->glBindRenderbuffer == NULL ||
-        functions->glRenderbufferStorage == NULL ||
-        functions->glRenderbufferStorageMultisample == NULL ||
-        functions->glFramebufferRenderbuffer == NULL ||
-        functions->glDeleteRenderbuffers == NULL ||
-        functions->glActiveTexture == NULL ||
-        functions->glGenFramebuffers == NULL ||
-        functions->glBindFramebuffer == NULL ||
-        functions->glFramebufferTexture2D == NULL ||
-        functions->glCheckFramebufferStatus == NULL ||
-        functions->glDeleteFramebuffers == NULL ||
-        functions->glBlitFramebuffer == NULL ||
-        functions->glVertexAttribPointer == NULL ||
-        functions->glEnableVertexAttribArray == NULL ||
-        functions->glDisableVertexAttribArray == NULL ||
-        functions->glVertexAttribDivisor == NULL ||
-        functions->glDrawElementsInstanced == NULL ||
-        functions->glCreateShader == NULL ||
-        functions->glShaderSource == NULL ||
-        functions->glCompileShader == NULL ||
-        functions->glGetShaderiv == NULL ||
-        functions->glGetShaderInfoLog == NULL ||
-        functions->glDeleteShader == NULL ||
-        functions->glCreateProgram == NULL ||
-        functions->glAttachShader == NULL ||
-        functions->glLinkProgram == NULL ||
-        functions->glGetProgramiv == NULL ||
-        functions->glGetProgramInfoLog == NULL ||
-        functions->glDeleteProgram == NULL ||
-        functions->glUseProgram == NULL ||
-        functions->glGetUniformLocation == NULL ||
-        functions->glUniformMatrix4fv == NULL ||
-        functions->glUniformMatrix3fv == NULL ||
-        functions->glUniform3fv == NULL ||
-        functions->glUniform4fv == NULL ||
-        functions->glUniform1f == NULL ||
-        functions->glUniform1i == NULL ||
-        functions->glUniform1ui == NULL ||
-        functions->glClearBufferuiv == NULL)
+    if (functions->glGenVertexArrays == NULL || functions->glBindVertexArray == NULL ||
+        functions->glDeleteVertexArrays == NULL || functions->glGenBuffers == NULL || functions->glBindBuffer == NULL ||
+        functions->glBufferData == NULL || functions->glBufferSubData == NULL || functions->glDeleteBuffers == NULL ||
+        functions->glGenRenderbuffers == NULL || functions->glBindRenderbuffer == NULL ||
+        functions->glRenderbufferStorage == NULL || functions->glRenderbufferStorageMultisample == NULL ||
+        functions->glFramebufferRenderbuffer == NULL || functions->glDeleteRenderbuffers == NULL ||
+        functions->glActiveTexture == NULL || functions->glGenFramebuffers == NULL ||
+        functions->glBindFramebuffer == NULL || functions->glFramebufferTexture2D == NULL ||
+        functions->glCheckFramebufferStatus == NULL || functions->glDeleteFramebuffers == NULL ||
+        functions->glBlitFramebuffer == NULL || functions->glVertexAttribPointer == NULL ||
+        functions->glEnableVertexAttribArray == NULL || functions->glDisableVertexAttribArray == NULL ||
+        functions->glVertexAttribDivisor == NULL || functions->glDrawElementsInstanced == NULL ||
+        functions->glCreateShader == NULL || functions->glShaderSource == NULL || functions->glCompileShader == NULL ||
+        functions->glGetShaderiv == NULL || functions->glGetShaderInfoLog == NULL ||
+        functions->glDeleteShader == NULL || functions->glCreateProgram == NULL || functions->glAttachShader == NULL ||
+        functions->glLinkProgram == NULL || functions->glGetProgramiv == NULL ||
+        functions->glGetProgramInfoLog == NULL || functions->glDeleteProgram == NULL ||
+        functions->glUseProgram == NULL || functions->glGetUniformLocation == NULL ||
+        functions->glUniformMatrix4fv == NULL || functions->glUniformMatrix3fv == NULL ||
+        functions->glUniform3fv == NULL || functions->glUniform4fv == NULL || functions->glUniform1f == NULL ||
+        functions->glUniform1i == NULL || functions->glUniform1ui == NULL || functions->glClearBufferuiv == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_GRAPHICS, "OpenGL 3.3 function loader is incomplete");
         return FVIZ_ERROR_GRAPHICS;

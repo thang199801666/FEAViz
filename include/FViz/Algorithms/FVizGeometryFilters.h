@@ -51,28 +51,28 @@ FVIZ_API FVizResult fviz_triangle_filter_update(FVizTriangleFilter* filter);
 FVIZ_API FVizResult fviz_poly_data_normals_filter_create(FVizPolyDataNormalsFilter** out_filter);
 FVIZ_API FVizResult fviz_poly_data_normals_filter_set_array_name(FVizPolyDataNormalsFilter* filter, const char* name);
 FVIZ_API const char* fviz_poly_data_normals_filter_array_name(const FVizPolyDataNormalsFilter* filter);
-FVIZ_API FVizResult fviz_poly_data_normals_filter_set_input_data(FVizPolyDataNormalsFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_poly_data_normals_filter_set_input_connection(FVizPolyDataNormalsFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_poly_data_normals_filter_set_input_data(FVizPolyDataNormalsFilter* filter,
+                                                                 FVizPolyData* input);
+FVIZ_API FVizResult fviz_poly_data_normals_filter_set_input_connection(FVizPolyDataNormalsFilter* filter,
+                                                                       FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_poly_data_normals_filter_algorithm(FVizPolyDataNormalsFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_poly_data_normals_filter_output_port(FVizPolyDataNormalsFilter* filter);
 FVIZ_API FVizPolyData* fviz_poly_data_normals_filter_output(FVizPolyDataNormalsFilter* filter);
 FVIZ_API FVizResult fviz_poly_data_normals_filter_update(FVizPolyDataNormalsFilter* filter);
 
 FVIZ_API FVizResult fviz_poly_data_connectivity_filter_create(FVizPolyDataConnectivityFilter** out_filter);
-FVIZ_API void fviz_poly_data_connectivity_filter_set_extraction_mode(
-    FVizPolyDataConnectivityFilter* filter, FVizConnectivityExtractionMode mode);
-FVIZ_API FVizConnectivityExtractionMode fviz_poly_data_connectivity_filter_extraction_mode(
-    const FVizPolyDataConnectivityFilter* filter);
-FVIZ_API FVizResult fviz_poly_data_connectivity_filter_set_array_name(
-    FVizPolyDataConnectivityFilter* filter, const char* name);
-FVIZ_API const char* fviz_poly_data_connectivity_filter_array_name(
-    const FVizPolyDataConnectivityFilter* filter);
-FVIZ_API uint32_t fviz_poly_data_connectivity_filter_region_count(
-    const FVizPolyDataConnectivityFilter* filter);
-FVIZ_API FVizResult fviz_poly_data_connectivity_filter_set_input_data(
-    FVizPolyDataConnectivityFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_poly_data_connectivity_filter_set_input_connection(
-    FVizPolyDataConnectivityFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_API void fviz_poly_data_connectivity_filter_set_extraction_mode(FVizPolyDataConnectivityFilter* filter,
+                                                                     FVizConnectivityExtractionMode mode);
+FVIZ_API FVizConnectivityExtractionMode
+fviz_poly_data_connectivity_filter_extraction_mode(const FVizPolyDataConnectivityFilter* filter);
+FVIZ_API FVizResult fviz_poly_data_connectivity_filter_set_array_name(FVizPolyDataConnectivityFilter* filter,
+                                                                      const char* name);
+FVIZ_API const char* fviz_poly_data_connectivity_filter_array_name(const FVizPolyDataConnectivityFilter* filter);
+FVIZ_API uint32_t fviz_poly_data_connectivity_filter_region_count(const FVizPolyDataConnectivityFilter* filter);
+FVIZ_API FVizResult fviz_poly_data_connectivity_filter_set_input_data(FVizPolyDataConnectivityFilter* filter,
+                                                                      FVizPolyData* input);
+FVIZ_API FVizResult fviz_poly_data_connectivity_filter_set_input_connection(FVizPolyDataConnectivityFilter* filter,
+                                                                            FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_poly_data_connectivity_filter_algorithm(FVizPolyDataConnectivityFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_poly_data_connectivity_filter_output_port(FVizPolyDataConnectivityFilter* filter);
 FVIZ_API FVizPolyData* fviz_poly_data_connectivity_filter_output(FVizPolyDataConnectivityFilter* filter);
@@ -86,7 +86,8 @@ FVIZ_API void fviz_feature_edges_filter_set_feature_edges(FVizFeatureEdgesFilter
 FVIZ_API void fviz_feature_edges_filter_set_non_manifold_edges(FVizFeatureEdgesFilter* filter, FVizBool enabled);
 FVIZ_API void fviz_feature_edges_filter_set_manifold_edges(FVizFeatureEdgesFilter* filter, FVizBool enabled);
 FVIZ_API FVizResult fviz_feature_edges_filter_set_input_data(FVizFeatureEdgesFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_feature_edges_filter_set_input_connection(FVizFeatureEdgesFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_feature_edges_filter_set_input_connection(FVizFeatureEdgesFilter* filter,
+                                                                   FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_feature_edges_filter_algorithm(FVizFeatureEdgesFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_feature_edges_filter_output_port(FVizFeatureEdgesFilter* filter);
 FVIZ_API FVizPolyData* fviz_feature_edges_filter_output(FVizFeatureEdgesFilter* filter);

@@ -26,20 +26,16 @@ static void fviz_arrow_source_destroy(FVizObject* object)
     source->algorithm = NULL;
 }
 
-static const FVizObjectClass g_fviz_arrow_source_class = {
-    FVIZ_TYPE_ARROW_SOURCE, "FVizArrowSource", &g_fviz_object_class,
-    fviz_arrow_source_destroy, NULL
-};
+static const FVizObjectClass g_fviz_arrow_source_class = {FVIZ_TYPE_ARROW_SOURCE, "FVizArrowSource",
+                                                          &g_fviz_object_class, fviz_arrow_source_destroy, NULL};
 
 static FVizMTime fviz_arrow_source_state_mtime(const void* state)
 {
     return fviz_object_mtime((const FVizObject*)state);
 }
 
-static FVizResult fviz_arrow_source_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_arrow_source_process_request(FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request,
+                                                    void* state)
 {
     FVizArrowSource* source = (FVizArrowSource*)state;
     FVizPolyData* output = NULL;
@@ -63,8 +59,7 @@ static FVizResult fviz_arrow_source_process_request(
     point_count = (FVizSize)3u * n + 2u;
     triangle_count = (FVizSize)6u * n;
     if (point_count > UINT32_MAX) return FVIZ_ERROR_OVERFLOW;
-    if (fviz_size_multiply(point_count, sizeof(*points), &bytes) != FVIZ_OK)
-        return FVIZ_ERROR_OVERFLOW;
+    if (fviz_size_multiply(point_count, sizeof(*points), &bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
     points = (FVizVec3*)fviz_alloc(bytes);
     if (triangle_count > (FVizSize)-1 / 3u ||
         fviz_size_multiply(triangle_count * 3u, sizeof(*triangles), &bytes) != FVIZ_OK)
@@ -86,19 +81,21 @@ static FVizResult fviz_arrow_source_process_request(
         const double angle = 2.0 * pi * (double)i / (double)n;
         const float c = (float)cos(angle);
         const float s = (float)sin(angle);
-        points[rear_ring + i] = fviz_vec3(0.0f,
-            (float)source->shaft_radius * c,
-            (float)source->shaft_radius * s);
-        points[front_ring + i] = fviz_vec3((float)shaft_end,
-            (float)source->shaft_radius * c,
-            (float)source->shaft_radius * s);
-        points[tip_ring + i] = fviz_vec3((float)shaft_end,
-            (float)source->tip_radius * c,
-            (float)source->tip_radius * s);
+        points[rear_ring + i] = fviz_vec3(0.0f, (float)source->shaft_radius * c, (float)source->shaft_radius * s);
+        points[front_ring + i] =
+            fviz_vec3((float)shaft_end, (float)source->shaft_radius * c, (float)source->shaft_radius * s);
+        points[tip_ring + i] =
+            fviz_vec3((float)shaft_end, (float)source->tip_radius * c, (float)source->tip_radius * s);
     }
     points[apex] = fviz_vec3(1.0f, 0.0f, 0.0f);
 
-#define TRI(a,b,c) do { triangles[ti++] = (a); triangles[ti++] = (b); triangles[ti++] = (c); } while (0)
+#define TRI(a, b, c)                                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        triangles[ti++] = (a);                                                                                         \
+        triangles[ti++] = (b);                                                                                         \
+        triangles[ti++] = (c);                                                                                         \
+    } while (0)
     for (i = 0u; i < n; ++i)
     {
         const uint32_t next = (i + 1u) % n;
@@ -125,8 +122,7 @@ static FVizResult fviz_arrow_source_process_request(
         fviz_poly_data_add_points(output, points, point_count, NULL) != FVIZ_OK ||
         fviz_poly_data_add_triangles(output, triangles, triangle_count) != FVIZ_OK ||
         fviz_poly_data_compute_normals(output) != FVIZ_OK ||
-        fviz_algorithm_set_output_data(algorithm, request->requested_output_port,
-            (FVizDataObject*)output) != FVIZ_OK)
+        fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
         goto fail;
 
     fviz_free(triangles);
@@ -151,8 +147,7 @@ FVizResult fviz_arrow_source_create(FVizArrowSource** out_source)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_source = NULL;
-    source = (FVizArrowSource*)fviz_internal_object_allocate(
-        sizeof(*source), &g_fviz_arrow_source_class, NULL);
+    source = (FVizArrowSource*)fviz_internal_object_allocate(sizeof(*source), &g_fviz_arrow_source_class, NULL);
     if (source == NULL) return fviz_last_error_code();
     source->shaft_radius = 0.03;
     source->tip_radius = 0.08;
@@ -172,8 +167,8 @@ FVizResult fviz_arrow_source_create(FVizArrowSource** out_source)
     return FVIZ_OK;
 }
 
-static FVizResult fviz_arrow_source_set_positive(
-    FVizArrowSource* source, double value, double* target, const char* name)
+static FVizResult fviz_arrow_source_set_positive(FVizArrowSource* source, double value, double* target,
+                                                 const char* name)
 {
     if (source == NULL || target == NULL || !isfinite(value) || value <= 0.0 || value > FLT_MAX)
     {
@@ -190,14 +185,14 @@ static FVizResult fviz_arrow_source_set_positive(
 
 FVizResult fviz_arrow_source_set_shaft_radius(FVizArrowSource* source, double radius)
 {
-    return fviz_arrow_source_set_positive(source, radius,
-        source != NULL ? &source->shaft_radius : NULL, "arrow shaft radius must be positive");
+    return fviz_arrow_source_set_positive(source, radius, source != NULL ? &source->shaft_radius : NULL,
+                                          "arrow shaft radius must be positive");
 }
 
 FVizResult fviz_arrow_source_set_tip_radius(FVizArrowSource* source, double radius)
 {
-    return fviz_arrow_source_set_positive(source, radius,
-        source != NULL ? &source->tip_radius : NULL, "arrow tip radius must be positive");
+    return fviz_arrow_source_set_positive(source, radius, source != NULL ? &source->tip_radius : NULL,
+                                          "arrow tip radius must be positive");
 }
 
 FVizResult fviz_arrow_source_set_tip_length(FVizArrowSource* source, double length)
@@ -230,11 +225,42 @@ FVizResult fviz_arrow_source_set_radial_resolution(FVizArrowSource* source, uint
     return FVIZ_OK;
 }
 
-double fviz_arrow_source_shaft_radius(const FVizArrowSource* source) { return source != NULL ? source->shaft_radius : 0.0; }
-double fviz_arrow_source_tip_radius(const FVizArrowSource* source) { return source != NULL ? source->tip_radius : 0.0; }
-double fviz_arrow_source_tip_length(const FVizArrowSource* source) { return source != NULL ? source->tip_length : 0.0; }
-uint32_t fviz_arrow_source_radial_resolution(const FVizArrowSource* source) { return source != NULL ? source->radial_resolution : 0u; }
-FVizAlgorithm* fviz_arrow_source_algorithm(FVizArrowSource* source) { return source != NULL ? source->algorithm : NULL; }
-FVizAlgorithmOutput* fviz_arrow_source_output_port(FVizArrowSource* source) { return source != NULL ? fviz_algorithm_output_port(source->algorithm, 0u) : NULL; }
-FVizPolyData* fviz_arrow_source_output(FVizArrowSource* source) { return source != NULL ? (FVizPolyData*)fviz_algorithm_output_data(source->algorithm, 0u) : NULL; }
-FVizResult fviz_arrow_source_update(FVizArrowSource* source) { return source != NULL ? fviz_algorithm_update(source->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT; }
+double fviz_arrow_source_shaft_radius(const FVizArrowSource* source)
+{
+    return source != NULL ? source->shaft_radius : 0.0;
+}
+
+double fviz_arrow_source_tip_radius(const FVizArrowSource* source)
+{
+    return source != NULL ? source->tip_radius : 0.0;
+}
+
+double fviz_arrow_source_tip_length(const FVizArrowSource* source)
+{
+    return source != NULL ? source->tip_length : 0.0;
+}
+
+uint32_t fviz_arrow_source_radial_resolution(const FVizArrowSource* source)
+{
+    return source != NULL ? source->radial_resolution : 0u;
+}
+
+FVizAlgorithm* fviz_arrow_source_algorithm(FVizArrowSource* source)
+{
+    return source != NULL ? source->algorithm : NULL;
+}
+
+FVizAlgorithmOutput* fviz_arrow_source_output_port(FVizArrowSource* source)
+{
+    return source != NULL ? fviz_algorithm_output_port(source->algorithm, 0u) : NULL;
+}
+
+FVizPolyData* fviz_arrow_source_output(FVizArrowSource* source)
+{
+    return source != NULL ? (FVizPolyData*)fviz_algorithm_output_data(source->algorithm, 0u) : NULL;
+}
+
+FVizResult fviz_arrow_source_update(FVizArrowSource* source)
+{
+    return source != NULL ? fviz_algorithm_update(source->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
+}

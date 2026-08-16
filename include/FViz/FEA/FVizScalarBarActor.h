@@ -50,19 +50,14 @@ typedef struct FVizFEAScalarBarOptions
 } FVizFEAScalarBarOptions;
 
 FVIZ_FEA_API void fviz_fea_scalar_bar_options_initialize(FVizFEAScalarBarOptions* options);
-FVIZ_FEA_API FVizResult fviz_fea_scalar_bar_actor_create(
-    const FVizFEAScalarBarOptions* options,
-    FVizFEAScalarBarActor** out_actor);
-FVIZ_FEA_API FVizResult fviz_fea_scalar_bar_actor_apply(
-    FVizFEAScalarBarActor* actor,
-    const FVizFEAScalarBarOptions* options);
-FVIZ_FEA_API FVizScalarLegend* fviz_fea_scalar_bar_actor_legend(
-    FVizFEAScalarBarActor* actor);
-FVIZ_FEA_API const FVizScalarLegend* fviz_fea_scalar_bar_actor_const_legend(
-    const FVizFEAScalarBarActor* actor);
+FVIZ_FEA_API FVizResult fviz_fea_scalar_bar_actor_create(const FVizFEAScalarBarOptions* options,
+                                                         FVizFEAScalarBarActor** out_actor);
+FVIZ_FEA_API FVizResult fviz_fea_scalar_bar_actor_apply(FVizFEAScalarBarActor* actor,
+                                                        const FVizFEAScalarBarOptions* options);
+FVIZ_FEA_API FVizScalarLegend* fviz_fea_scalar_bar_actor_legend(FVizFEAScalarBarActor* actor);
+FVIZ_FEA_API const FVizScalarLegend* fviz_fea_scalar_bar_actor_const_legend(const FVizFEAScalarBarActor* actor);
 /* Convenience attachment; renderer retains the legend independently. */
-FVIZ_FEA_API FVizResult fviz_fea_scalar_bar_actor_attach(
-    FVizFEAScalarBarActor* actor, FVizRenderer* renderer);
+FVIZ_FEA_API FVizResult fviz_fea_scalar_bar_actor_attach(FVizFEAScalarBarActor* actor, FVizRenderer* renderer);
 
 FVIZ_EXTERN_C_END
 

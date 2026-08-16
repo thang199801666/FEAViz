@@ -32,19 +32,13 @@ typedef enum FVizInteractionState
 
 FVIZ_API FVizResult fviz_interactor_style_trackball_camera_create(FVizInteractorStyle** out_style);
 FVIZ_API FVizResult fviz_interactor_style_trackball_actor_create(FVizInteractorStyle** out_style);
-FVIZ_API FVizResult fviz_interactor_style_trackball_actor_set_actor(
-    FVizInteractorStyle* style,
-    FVizActor* actor);
+FVIZ_API FVizResult fviz_interactor_style_trackball_actor_set_actor(FVizInteractorStyle* style, FVizActor* actor);
 FVIZ_API FVizActor* fviz_interactor_style_trackball_actor_actor(FVizInteractorStyle* style);
 FVIZ_API FVizResult fviz_interactor_style_rubber_band_create(FVizInteractorStyle** out_style);
 FVIZ_API FVizBool fviz_interactor_style_rubber_band_active(const FVizInteractorStyle* style);
 FVIZ_API FVizBool fviz_interactor_style_rubber_band_completed(const FVizInteractorStyle* style);
-FVIZ_API FVizResult fviz_interactor_style_rubber_band_rectangle(
-    const FVizInteractorStyle* style,
-    int* minimum_x,
-    int* minimum_y,
-    int* maximum_x,
-    int* maximum_y);
+FVIZ_API FVizResult fviz_interactor_style_rubber_band_rectangle(const FVizInteractorStyle* style, int* minimum_x,
+                                                                int* minimum_y, int* maximum_x, int* maximum_y);
 FVIZ_API void fviz_interactor_style_rubber_band_reset(FVizInteractorStyle* style);
 FVIZ_API void fviz_interactor_style_set_orbit_sensitivity(FVizInteractorStyle* style, float radians_per_pixel);
 FVIZ_API float fviz_interactor_style_orbit_sensitivity(const FVizInteractorStyle* style);
@@ -54,10 +48,8 @@ FVIZ_API void fviz_interactor_style_set_dolly_factor(FVizInteractorStyle* style,
 FVIZ_API float fviz_interactor_style_dolly_factor(const FVizInteractorStyle* style);
 FVIZ_API FVizInteractionState fviz_interactor_style_state(const FVizInteractorStyle* style);
 FVIZ_API void fviz_interactor_style_cancel_interaction(FVizInteractorStyle* style);
-FVIZ_API FVizBool fviz_interactor_style_process_event(
-    FVizInteractorStyle* style,
-    FVizRenderer* renderer,
-    const FVizInteractionEvent* event);
+FVIZ_API FVizBool fviz_interactor_style_process_event(FVizInteractorStyle* style, FVizRenderer* renderer,
+                                                      const FVizInteractionEvent* event);
 
 FVIZ_EXTERN_C_END
 

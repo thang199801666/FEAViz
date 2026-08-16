@@ -12,13 +12,11 @@ typedef struct FVizFont FVizFont;
 #define FVIZ_TYPE_FONT UINT64_C(0xE42391AD7B50A102)
 
 FVIZ_API FVizResult fviz_font_create_builtin(FVizFont** out_font);
-FVIZ_API FVizResult fviz_font_create_system(
-    const char* family, float pixel_size, FVizFont** out_font);
-FVIZ_API FVizResult fviz_font_create_from_file(
-    const char* file_path, const char* family, float pixel_size, FVizFont** out_font);
+FVIZ_API FVizResult fviz_font_create_system(const char* family, float pixel_size, FVizFont** out_font);
+FVIZ_API FVizResult fviz_font_create_from_file(const char* file_path, const char* family, float pixel_size,
+                                               FVizFont** out_font);
 FVIZ_API void fviz_font_cache_clear(void);
-FVIZ_API FVizResult fviz_font_create_from_atlas(
-    const char* family, FVizFontAtlas* atlas, FVizFont** out_font);
+FVIZ_API FVizResult fviz_font_create_from_atlas(const char* family, FVizFontAtlas* atlas, FVizFont** out_font);
 FVIZ_API const char* fviz_font_family(const FVizFont* font);
 FVIZ_API FVizFontAtlas* fviz_font_atlas(FVizFont* font);
 FVIZ_API const FVizFontAtlas* fviz_font_const_atlas(const FVizFont* font);

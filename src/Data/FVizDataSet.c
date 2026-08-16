@@ -9,29 +9,28 @@
 
 static void fviz_data_set_destroy(FVizObject* object);
 static FVizMTime fviz_data_set_mtime(const FVizObject* object);
-static const FVizObjectClass g_fviz_data_set_class = {
-    FVIZ_TYPE_DATA_SET, "FVizDataSet", &g_fviz_data_object_class,
-    fviz_data_set_destroy, fviz_data_set_mtime
-};
+static const FVizObjectClass g_fviz_data_set_class = {FVIZ_TYPE_DATA_SET, "FVizDataSet", &g_fviz_data_object_class,
+                                                      fviz_data_set_destroy, fviz_data_set_mtime};
 
-static FVizBool fviz_data_set_attributes_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_data_set_attributes_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                  void* client_data)
 {
     FVizDataSet* data_set = (FVizDataSet*)client_data;
-    (void)caller; (void)event_id; (void)call_data;
+    (void)caller;
+    (void)event_id;
+    (void)call_data;
     if (data_set != NULL) fviz_object_modified((FVizObject*)data_set);
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_data_set_observe_attributes(
-    FVizDataSet* data_set, FVizAttributeSet* attributes, FVizObserverTag* out_tag)
+static FVizResult fviz_data_set_observe_attributes(FVizDataSet* data_set, FVizAttributeSet* attributes,
+                                                   FVizObserverTag* out_tag)
 {
     if (out_tag == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (attributes == NULL) return FVIZ_OK;
-    return fviz_object_add_observer(
-        (FVizObject*)attributes, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_data_set_attributes_modified, data_set, out_tag);
+    return fviz_object_add_observer((FVizObject*)attributes, FVIZ_EVENT_MODIFIED, 0.0f,
+                                    fviz_data_set_attributes_modified, data_set, out_tag);
 }
 
 static FVizMTime fviz_data_set_mtime(const FVizObject* object)
@@ -72,7 +71,8 @@ FVizResult fviz_data_set_create(FVizDataSet** out_data_set)
         fviz_release(data_set);
         return fviz_last_error_code();
     }
-    if (fviz_data_set_observe_attributes(data_set, data_set->point_data, &data_set->point_data_modified_tag) != FVIZ_OK ||
+    if (fviz_data_set_observe_attributes(data_set, data_set->point_data, &data_set->point_data_modified_tag) !=
+            FVIZ_OK ||
         fviz_data_set_observe_attributes(data_set, data_set->cell_data, &data_set->cell_data_modified_tag) != FVIZ_OK ||
         fviz_data_set_observe_attributes(data_set, data_set->field_data, &data_set->field_data_modified_tag) != FVIZ_OK)
     {
@@ -83,10 +83,18 @@ FVizResult fviz_data_set_create(FVizDataSet** out_data_set)
     return FVIZ_OK;
 }
 
-FVizSize fviz_data_set_point_count(const FVizDataSet* data_set) { return data_set != NULL ? data_set->point_count : 0u; }
-FVizSize fviz_data_set_cell_count(const FVizDataSet* data_set) { return data_set != NULL ? data_set->cell_count : 0u; }
+FVizSize fviz_data_set_point_count(const FVizDataSet* data_set)
+{
+    return data_set != NULL ? data_set->point_count : 0u;
+}
 
-static FVizResult fviz_data_set_set_count(FVizDataSet* data_set, FVizSize count, FVizAttributeSet* attributes, FVizSize* destination)
+FVizSize fviz_data_set_cell_count(const FVizDataSet* data_set)
+{
+    return data_set != NULL ? data_set->cell_count : 0u;
+}
+
+static FVizResult fviz_data_set_set_count(FVizDataSet* data_set, FVizSize count, FVizAttributeSet* attributes,
+                                          FVizSize* destination)
 {
     FVizSize i;
     if (data_set == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -109,17 +117,30 @@ static FVizResult fviz_data_set_set_count(FVizDataSet* data_set, FVizSize count,
 
 FVizResult fviz_data_set_set_point_count(FVizDataSet* data_set, FVizSize count)
 {
-    return fviz_data_set_set_count(data_set, count, data_set != NULL ? data_set->point_data : NULL, data_set != NULL ? &data_set->point_count : NULL);
+    return fviz_data_set_set_count(data_set, count, data_set != NULL ? data_set->point_data : NULL,
+                                   data_set != NULL ? &data_set->point_count : NULL);
 }
 
 FVizResult fviz_data_set_set_cell_count(FVizDataSet* data_set, FVizSize count)
 {
-    return fviz_data_set_set_count(data_set, count, data_set != NULL ? data_set->cell_data : NULL, data_set != NULL ? &data_set->cell_count : NULL);
+    return fviz_data_set_set_count(data_set, count, data_set != NULL ? data_set->cell_data : NULL,
+                                   data_set != NULL ? &data_set->cell_count : NULL);
 }
 
-FVizAttributeSet* fviz_data_set_point_data(FVizDataSet* data_set) { return data_set != NULL ? data_set->point_data : NULL; }
-FVizAttributeSet* fviz_data_set_cell_data(FVizDataSet* data_set) { return data_set != NULL ? data_set->cell_data : NULL; }
-FVizAttributeSet* fviz_data_set_field_data(FVizDataSet* data_set) { return data_set != NULL ? data_set->field_data : NULL; }
+FVizAttributeSet* fviz_data_set_point_data(FVizDataSet* data_set)
+{
+    return data_set != NULL ? data_set->point_data : NULL;
+}
+
+FVizAttributeSet* fviz_data_set_cell_data(FVizDataSet* data_set)
+{
+    return data_set != NULL ? data_set->cell_data : NULL;
+}
+
+FVizAttributeSet* fviz_data_set_field_data(FVizDataSet* data_set)
+{
+    return data_set != NULL ? data_set->field_data : NULL;
+}
 
 FVizResult fviz_data_set_validate(const FVizDataSet* data_set)
 {

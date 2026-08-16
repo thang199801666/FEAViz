@@ -22,11 +22,8 @@ static FVizBool fviz_pvtu_extension_equals(const char* extension, const char* ex
     return *extension == '\0' && *expected == '\0' ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizResult fviz_pvtu_writer_names(
-    const char* manifest_path,
-    FVizSize piece_index,
-    char** out_source_name,
-    char** out_full_path)
+static FVizResult fviz_pvtu_writer_names(const char* manifest_path, FVizSize piece_index, char** out_source_name,
+                                         char** out_full_path)
 {
     const char* slash_a;
     const char* slash_b;
@@ -40,8 +37,7 @@ static FVizResult fviz_pvtu_writer_names(
     char* source;
     char* full;
     int written;
-    if (manifest_path == NULL || out_source_name == NULL || out_full_path == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (manifest_path == NULL || out_source_name == NULL || out_full_path == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_source_name = NULL;
     *out_full_path = NULL;
     slash_a = strrchr(manifest_path, '/');
@@ -51,8 +47,8 @@ static FVizResult fviz_pvtu_writer_names(
     base = manifest_path + prefix_length;
     extension = strrchr(base, '.');
     stem_length = extension != NULL && fviz_pvtu_extension_equals(extension, ".pvtu") != FVIZ_FALSE
-        ? (FVizSize)(extension - base)
-        : strlen(base);
+                      ? (FVizSize)(extension - base)
+                      : strlen(base);
     if (stem_length == 0u)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "PVTU writer manifest has no basename");
@@ -71,8 +67,8 @@ static FVizResult fviz_pvtu_writer_names(
     }
     (void)memcpy(source, base, stem_length);
     source[stem_length] = '\0';
-    written = snprintf(source + stem_length, source_capacity - stem_length,
-        "_piece%05llu.vtu", (unsigned long long)piece_index);
+    written = snprintf(source + stem_length, source_capacity - stem_length, "_piece%05llu.vtu",
+                       (unsigned long long)piece_index);
     if (written < 0 || (FVizSize)written >= source_capacity - stem_length)
     {
         fviz_free(full);
@@ -90,17 +86,28 @@ static const char* fviz_pvtu_writer_type_name(FVizDataType type)
 {
     switch (type)
     {
-        case FVIZ_DATA_INT8: return "Int8";
-        case FVIZ_DATA_UINT8: return "UInt8";
-        case FVIZ_DATA_INT16: return "Int16";
-        case FVIZ_DATA_UINT16: return "UInt16";
-        case FVIZ_DATA_INT32: return "Int32";
-        case FVIZ_DATA_UINT32: return "UInt32";
-        case FVIZ_DATA_INT64: return "Int64";
-        case FVIZ_DATA_UINT64: return "UInt64";
-        case FVIZ_DATA_FLOAT32: return "Float32";
-        case FVIZ_DATA_FLOAT64: return "Float64";
-        default: return NULL;
+        case FVIZ_DATA_INT8:
+            return "Int8";
+        case FVIZ_DATA_UINT8:
+            return "UInt8";
+        case FVIZ_DATA_INT16:
+            return "Int16";
+        case FVIZ_DATA_UINT16:
+            return "UInt16";
+        case FVIZ_DATA_INT32:
+            return "Int32";
+        case FVIZ_DATA_UINT32:
+            return "UInt32";
+        case FVIZ_DATA_INT64:
+            return "Int64";
+        case FVIZ_DATA_UINT64:
+            return "UInt64";
+        case FVIZ_DATA_FLOAT32:
+            return "Float32";
+        case FVIZ_DATA_FLOAT64:
+            return "Float64";
+        default:
+            return NULL;
     }
 }
 
@@ -111,36 +118,39 @@ static FVizBool fviz_pvtu_write_xml_escaped(FILE* file, const char* value)
     {
         const char* replacement = NULL;
         if (*cursor == '&') replacement = "&amp;";
-        else if (*cursor == '<') replacement = "&lt;";
-        else if (*cursor == '>') replacement = "&gt;";
-        else if (*cursor == '"') replacement = "&quot;";
-        else if (*cursor == '\'') replacement = "&apos;";
+        else if (*cursor == '<')
+            replacement = "&lt;";
+        else if (*cursor == '>')
+            replacement = "&gt;";
+        else if (*cursor == '"')
+            replacement = "&quot;";
+        else if (*cursor == '\'')
+            replacement = "&apos;";
         if (replacement != NULL)
         {
             if (fputs(replacement, file) == EOF) return FVIZ_FALSE;
         }
-        else if (fputc(*cursor, file) == EOF) return FVIZ_FALSE;
+        else if (fputc(*cursor, file) == EOF)
+            return FVIZ_FALSE;
         ++cursor;
     }
     return FVIZ_TRUE;
 }
 
-static FVizBool fviz_pvtu_attribute_schema_equal(
-    const FVizAttributeSet* left, const FVizAttributeSet* right)
+static FVizBool fviz_pvtu_attribute_schema_equal(const FVizAttributeSet* left, const FVizAttributeSet* right)
 {
     FVizSize i;
     FVizAttributeRole role;
-    if (left == NULL || right == NULL ||
-        fviz_attribute_set_count(left) != fviz_attribute_set_count(right)) return FVIZ_FALSE;
+    if (left == NULL || right == NULL || fviz_attribute_set_count(left) != fviz_attribute_set_count(right))
+        return FVIZ_FALSE;
     for (i = 0u; i < fviz_attribute_set_count(left); ++i)
     {
         const char* left_name = fviz_attribute_set_name_at(left, i);
         const char* right_name = fviz_attribute_set_name_at(right, i);
         const FVizDataArray* left_array = fviz_attribute_set_const_array_at(left, i);
         const FVizDataArray* right_array = fviz_attribute_set_const_array_at(right, i);
-        if (left_name == NULL || right_name == NULL || strcmp(left_name, right_name) != 0 ||
-            left_array == NULL || right_array == NULL ||
-            fviz_data_array_type(left_array) != fviz_data_array_type(right_array) ||
+        if (left_name == NULL || right_name == NULL || strcmp(left_name, right_name) != 0 || left_array == NULL ||
+            right_array == NULL || fviz_data_array_type(left_array) != fviz_data_array_type(right_array) ||
             fviz_data_array_components(left_array) != fviz_data_array_components(right_array))
             return FVIZ_FALSE;
     }
@@ -152,66 +162,60 @@ static FVizBool fviz_pvtu_attribute_schema_equal(
         {
             if (left_active != right_active) return FVIZ_FALSE;
         }
-        else if (strcmp(left_active, right_active) != 0) return FVIZ_FALSE;
+        else if (strcmp(left_active, right_active) != 0)
+            return FVIZ_FALSE;
     }
     return FVIZ_TRUE;
 }
 
 static FVizBool fviz_pvtu_has_native_ghost(const FVizAttributeSet* attributes)
 {
-    const FVizDataArray* array = attributes != NULL
-        ? fviz_attribute_set_const_get(attributes, FVIZ_GHOST_ARRAY_NAME) : NULL;
-    return array != NULL && fviz_data_array_type(array) == FVIZ_DATA_UINT8 &&
-        fviz_data_array_components(array) == 1u ? FVIZ_TRUE : FVIZ_FALSE;
+    const FVizDataArray* array =
+        attributes != NULL ? fviz_attribute_set_const_get(attributes, FVIZ_GHOST_ARRAY_NAME) : NULL;
+    return array != NULL && fviz_data_array_type(array) == FVIZ_DATA_UINT8 && fviz_data_array_components(array) == 1u
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
-static const char* fviz_pvtu_export_name(
-    const FVizAttributeSet* attributes,
-    const char* name,
-    const FVizDataArray* array,
-    FVizBool associated_data)
+static const char* fviz_pvtu_export_name(const FVizAttributeSet* attributes, const char* name,
+                                         const FVizDataArray* array, FVizBool associated_data)
 {
-    if (associated_data != FVIZ_FALSE && name != NULL && array != NULL &&
-        strcmp(name, FVIZ_GHOST_ARRAY_NAME) == 0 &&
-        fviz_data_array_type(array) == FVIZ_DATA_UINT8 &&
-        fviz_data_array_components(array) == 1u)
+    if (associated_data != FVIZ_FALSE && name != NULL && array != NULL && strcmp(name, FVIZ_GHOST_ARRAY_NAME) == 0 &&
+        fviz_data_array_type(array) == FVIZ_DATA_UINT8 && fviz_data_array_components(array) == 1u)
         return FVIZ_VTK_GHOST_ARRAY_NAME;
     (void)attributes;
     return name;
 }
 
-static FVizBool fviz_pvtu_skip_export_name(
-    const FVizAttributeSet* attributes,
-    const char* name)
+static FVizBool fviz_pvtu_skip_export_name(const FVizAttributeSet* attributes, const char* name)
 {
     return name != NULL && strcmp(name, FVIZ_VTK_GHOST_ARRAY_NAME) == 0 &&
-        fviz_pvtu_has_native_ghost(attributes) != FVIZ_FALSE
-        ? FVIZ_TRUE : FVIZ_FALSE;
+                   fviz_pvtu_has_native_ghost(attributes) != FVIZ_FALSE
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
-static FVizBool fviz_pvtu_write_parallel_attributes(
-    FILE* file, const char* section_name, const FVizAttributeSet* attributes)
+static FVizBool fviz_pvtu_write_parallel_attributes(FILE* file, const char* section_name,
+                                                    const FVizAttributeSet* attributes)
 {
-    static const char* role_attributes[FVIZ_ATTRIBUTE_ROLE_COUNT] = {
-        "Scalars", "Vectors", "Normals", "Tensors", "GlobalIds"};
+    static const char* role_attributes[FVIZ_ATTRIBUTE_ROLE_COUNT] = {"Scalars", "Vectors", "Normals", "Tensors",
+                                                                     "GlobalIds"};
     FVizSize i;
     FVizAttributeRole role;
     const FVizBool associated_data =
-        (strcmp(section_name, "PointData") == 0 || strcmp(section_name, "CellData") == 0)
-        ? FVIZ_TRUE : FVIZ_FALSE;
+        (strcmp(section_name, "PointData") == 0 || strcmp(section_name, "CellData") == 0) ? FVIZ_TRUE : FVIZ_FALSE;
     if (fprintf(file, "    <P%s", section_name) < 0) return FVIZ_FALSE;
     for (role = FVIZ_ATTRIBUTE_SCALARS; role < FVIZ_ATTRIBUTE_ROLE_COUNT; ++role)
     {
         const char* active = fviz_attribute_set_active_name(attributes, role);
-        const FVizDataArray* active_array = active != NULL
-            ? fviz_attribute_set_const_get(attributes, active) : NULL;
-        const char* export_active = active != NULL
-            ? fviz_pvtu_export_name(attributes, active, active_array, associated_data) : NULL;
+        const FVizDataArray* active_array = active != NULL ? fviz_attribute_set_const_get(attributes, active) : NULL;
+        const char* export_active =
+            active != NULL ? fviz_pvtu_export_name(attributes, active, active_array, associated_data) : NULL;
         if (export_active != NULL)
         {
             if (fprintf(file, " %s=\"", role_attributes[role]) < 0 ||
-                fviz_pvtu_write_xml_escaped(file, export_active) == FVIZ_FALSE ||
-                fputc('"', file) == EOF) return FVIZ_FALSE;
+                fviz_pvtu_write_xml_escaped(file, export_active) == FVIZ_FALSE || fputc('"', file) == EOF)
+                return FVIZ_FALSE;
         }
     }
     if (fputs(">\n", file) == EOF) return FVIZ_FALSE;
@@ -226,8 +230,7 @@ static FVizBool fviz_pvtu_write_parallel_attributes(
         if (export_name == NULL || array == NULL || type_name == NULL ||
             fprintf(file, "      <PDataArray type=\"%s\" Name=\"", type_name) < 0 ||
             fviz_pvtu_write_xml_escaped(file, export_name) == FVIZ_FALSE ||
-            fprintf(file, "\" NumberOfComponents=\"%u\"/>\n",
-                fviz_data_array_components(array)) < 0)
+            fprintf(file, "\" NumberOfComponents=\"%u\"/>\n", fviz_data_array_components(array)) < 0)
             return FVIZ_FALSE;
     }
     return fprintf(file, "    </P%s>\n", section_name) >= 0 ? FVIZ_TRUE : FVIZ_FALSE;
@@ -242,8 +245,7 @@ static uint32_t fviz_pvtu_grid_ghost_level(const FVizUnstructuredGrid* grid)
     uint32_t maximum = 0u;
     FVizSize i;
     if (levels != NULL && fviz_data_array_type(levels) == FVIZ_DATA_UINT16 &&
-        fviz_data_array_components(levels) == 1u &&
-        fviz_data_array_tuple_count(levels) == cell_count)
+        fviz_data_array_components(levels) == 1u && fviz_data_array_tuple_count(levels) == cell_count)
     {
         const uint16_t* values = (const uint16_t*)fviz_data_array_const_data(levels);
         for (i = 0u; i < cell_count; ++i)
@@ -255,7 +257,10 @@ static uint32_t fviz_pvtu_grid_ghost_level(const FVizUnstructuredGrid* grid)
         const uint8_t* values = (const uint8_t*)fviz_data_array_const_data(ghosts);
         for (i = 0u; i < cell_count; ++i)
             if ((values[i] & (uint8_t)(FVIZ_GHOST_DUPLICATE | FVIZ_GHOST_HIDDEN)) != 0u)
-            { maximum = 1u; break; }
+            {
+                maximum = 1u;
+                break;
+            }
     }
     return maximum;
 }
@@ -268,10 +273,8 @@ void fviz_pvtu_writer_options_initialize(FVizPVTUWriterOptions* options)
     fviz_vtu_writer_options_initialize(&options->piece_options);
 }
 
-FVizResult fviz_pvtu_write(
-    const char* file_path,
-    const FVizPartitionedDataSet* data_set,
-    const FVizPVTUWriterOptions* options)
+FVizResult fviz_pvtu_write(const char* file_path, const FVizPartitionedDataSet* data_set,
+                           const FVizPVTUWriterOptions* options)
 {
     FVizPVTUWriterOptions defaults;
     FVizSize count;
@@ -282,8 +285,7 @@ FVizResult fviz_pvtu_write(
     char** source_names = NULL;
     FILE* manifest = NULL;
     FVizResult result = FVIZ_OK;
-    if (file_path == NULL || file_path[0] == '\0' || data_set == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (file_path == NULL || file_path[0] == '\0' || data_set == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (options == NULL)
     {
         fviz_pvtu_writer_options_initialize(&defaults);
@@ -314,32 +316,31 @@ FVizResult fviz_pvtu_write(
         {
             result = FVIZ_ERROR_INVALID_ARGUMENT;
             fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
-                "PVTU writer requires every partition to be an UnstructuredGrid");
+                                    "PVTU writer requires every partition to be an UnstructuredGrid");
             goto cleanup;
         }
-        if (first_grid == NULL)
-            first_grid = (const FVizUnstructuredGrid*)piece;
-        else if (fviz_pvtu_attribute_schema_equal(
-                     fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)first_grid),
-                     fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)piece)) == FVIZ_FALSE ||
-                 fviz_pvtu_attribute_schema_equal(
-                     fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)first_grid),
-                     fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)piece)) == FVIZ_FALSE)
+        if (first_grid == NULL) first_grid = (const FVizUnstructuredGrid*)piece;
+        else if (fviz_pvtu_attribute_schema_equal(fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)first_grid),
+                                                  fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)piece)) ==
+                     FVIZ_FALSE ||
+                 fviz_pvtu_attribute_schema_equal(fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)first_grid),
+                                                  fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)piece)) ==
+                     FVIZ_FALSE)
         {
             result = FVIZ_ERROR_INVALID_ARGUMENT;
             fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
-                "PVTU partitions must have matching point/cell attribute schemas");
+                                    "PVTU partitions must have matching point/cell attribute schemas");
             goto cleanup;
         }
         {
             const uint32_t piece_ghost_level = fviz_pvtu_grid_ghost_level((const FVizUnstructuredGrid*)piece);
             if (piece_ghost_level > ghost_level) ghost_level = piece_ghost_level;
         }
-        result = fviz_pvtu_writer_names(
-            file_path, piece_index, &source_names[piece_index], &generated_paths[piece_index]);
+        result =
+            fviz_pvtu_writer_names(file_path, piece_index, &source_names[piece_index], &generated_paths[piece_index]);
         if (result != FVIZ_OK) goto cleanup;
-        result = fviz_vtu_write(
-            generated_paths[piece_index], (const FVizUnstructuredGrid*)piece, &options->piece_options);
+        result =
+            fviz_vtu_write(generated_paths[piece_index], (const FVizUnstructuredGrid*)piece, &options->piece_options);
         if (result != FVIZ_OK) goto cleanup;
     }
 
@@ -351,13 +352,15 @@ FVizResult fviz_pvtu_write(
         goto cleanup;
     }
     if (fprintf(manifest,
-            "<?xml version=\"1.0\"?>\n"
-            "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\">\n"
-            "  <PUnstructuredGrid GhostLevel=\"%u\">\n", ghost_level) < 0 ||
+                "<?xml version=\"1.0\"?>\n"
+                "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\">\n"
+                "  <PUnstructuredGrid GhostLevel=\"%u\">\n",
+                ghost_level) < 0 ||
         fviz_pvtu_write_parallel_attributes(manifest, "PointData",
-            fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)first_grid)) == FVIZ_FALSE ||
-        fviz_pvtu_write_parallel_attributes(manifest, "CellData",
-            fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)first_grid)) == FVIZ_FALSE ||
+                                            fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)first_grid)) ==
+            FVIZ_FALSE ||
+        fviz_pvtu_write_parallel_attributes(
+            manifest, "CellData", fviz_unstructured_grid_cell_data((FVizUnstructuredGrid*)first_grid)) == FVIZ_FALSE ||
         fputs("    <PPoints><PDataArray type=\"Float32\" NumberOfComponents=\"3\"/></PPoints>\n", manifest) == EOF)
     {
         result = FVIZ_ERROR_IO;

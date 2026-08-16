@@ -17,8 +17,6 @@ struct FVizExecutive
     FVizArena* scratch_arena;
 };
 
-FVizResult fviz_internal_executive_create(
-    FVizAlgorithm* algorithm,
-    FVizExecutive** out_executive);
+FVizResult fviz_internal_executive_create(FVizAlgorithm* algorithm, FVizExecutive** out_executive);
 
 #endif /* FVIZ_INTERNAL_PIPELINE_EXECUTIVE_PRIVATE_H */

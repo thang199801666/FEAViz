@@ -71,7 +71,7 @@ struct FVizFEAStep
     FVizString* description;
     FVizFEAStepDomain domain;
     double time_period;
-    FVizArray* frames; /* FVizFEAObservedFrame */
+    FVizArray* frames;          /* FVizFEAObservedFrame */
     FVizArray* history_regions; /* FVizFEAObservedHistoryRegion */
 };
 

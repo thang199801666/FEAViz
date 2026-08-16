@@ -29,7 +29,7 @@ struct FVizGlyphMapper
 };
 
 FVizMTime fviz_internal_glyph_mapper_instances_mtime(const FVizGlyphMapper* mapper);
-FVizResult fviz_internal_glyph_mapper_dirty_range_since(
-    const FVizGlyphMapper* mapper, FVizMTime since_mtime, FVizDirtyRange* out_range);
+FVizResult fviz_internal_glyph_mapper_dirty_range_since(const FVizGlyphMapper* mapper, FVizMTime since_mtime,
+                                                        FVizDirtyRange* out_range);
 
 #endif /* FVIZ_INTERNAL_RENDERING_GLYPH_MAPPER_PRIVATE_H */

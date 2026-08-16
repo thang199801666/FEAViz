@@ -42,14 +42,10 @@ FVIZ_API void fviz_image_comparison_options_initialize(FVizImageComparisonOption
 FVIZ_API void fviz_image_comparison_result_initialize(FVizImageComparisonResult* result);
 /* Images and optional diff output are tightly packed RGBA8. Diff pixels contain
  * amplified absolute RGB error and opaque alpha; equal pixels are black. */
-FVIZ_API FVizResult fviz_image_compare_rgba8(
-    const uint8_t* reference,
-    const uint8_t* actual,
-    FVizSize pixel_count,
-    const FVizImageComparisonOptions* options,
-    FVizImageComparisonResult* result,
-    uint8_t* diff_rgba8,
-    FVizSize diff_byte_capacity);
+FVIZ_API FVizResult fviz_image_compare_rgba8(const uint8_t* reference, const uint8_t* actual, FVizSize pixel_count,
+                                             const FVizImageComparisonOptions* options,
+                                             FVizImageComparisonResult* result, uint8_t* diff_rgba8,
+                                             FVizSize diff_byte_capacity);
 
 FVIZ_EXTERN_C_END
 

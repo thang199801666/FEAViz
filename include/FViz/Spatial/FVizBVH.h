@@ -49,28 +49,16 @@ FVIZ_API FVizBool fviz_bvh_ray_cast_any(const FVizBVH* bvh, FVizRay ray);
 /* Finds the closest point on any indexed triangle. A negative max_distance
  * means unbounded search; otherwise NOT_FOUND is returned when no triangle is
  * within that world-space distance. */
-FVIZ_API FVizResult fviz_bvh_closest_point(
-    const FVizBVH* bvh,
-    FVizVec3 query,
-    float max_distance,
-    FVizClosestPoint* out_result);
+FVIZ_API FVizResult fviz_bvh_closest_point(const FVizBVH* bvh, FVizVec3 query, float max_distance,
+                                           FVizClosestPoint* out_result);
 /* Executes independent queries in parallel when profitable.  Each result flag
  * is written deterministically at the same index as its input query. */
-FVIZ_API FVizResult fviz_bvh_ray_cast_batch(
-    const FVizBVH* bvh,
-    const FVizRay* rays,
-    FVizSize query_count,
-    FVizRayHit* out_hits,
-    FVizBool* out_hit_flags,
-    FVizCancellationToken* cancellation);
-FVIZ_API FVizResult fviz_bvh_closest_point_batch(
-    const FVizBVH* bvh,
-    const FVizVec3* queries,
-    FVizSize query_count,
-    float max_distance,
-    FVizClosestPoint* out_results,
-    FVizBool* out_found_flags,
-    FVizCancellationToken* cancellation);
+FVIZ_API FVizResult fviz_bvh_ray_cast_batch(const FVizBVH* bvh, const FVizRay* rays, FVizSize query_count,
+                                            FVizRayHit* out_hits, FVizBool* out_hit_flags,
+                                            FVizCancellationToken* cancellation);
+FVIZ_API FVizResult fviz_bvh_closest_point_batch(const FVizBVH* bvh, const FVizVec3* queries, FVizSize query_count,
+                                                 float max_distance, FVizClosestPoint* out_results,
+                                                 FVizBool* out_found_flags, FVizCancellationToken* cancellation);
 /* CPU bytes owned directly by the acceleration structure, excluding retained
  * source PolyData memory. */
 FVIZ_API FVizSize fviz_bvh_memory_size(const FVizBVH* bvh);

@@ -51,13 +51,8 @@ static void fviz_cell_adjacency_destroy(FVizObject* object)
     adjacency->offsets = NULL;
 }
 
-static const FVizObjectClass g_fviz_cell_adjacency_class = {
-    FVIZ_TYPE_CELL_ADJACENCY,
-    "FVizCellAdjacency",
-    &g_fviz_object_class,
-    fviz_cell_adjacency_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_cell_adjacency_class = {FVIZ_TYPE_CELL_ADJACENCY, "FVizCellAdjacency",
+                                                            &g_fviz_object_class, fviz_cell_adjacency_destroy, NULL};
 
 static void fviz_boundary_sort(FVizId* ids, uint32_t count)
 {
@@ -89,10 +84,7 @@ static uint32_t fviz_boundary_entity_count(const FVizCellView* view)
     return traits.face_count;
 }
 
-static FVizResult fviz_boundary_entity(
-    const FVizCellView* view,
-    uint32_t entity_index,
-    FVizBoundaryEntity* out_entity)
+static FVizResult fviz_boundary_entity(const FVizCellView* view, uint32_t entity_index, FVizBoundaryEntity* out_entity)
 {
     const FVizCellTypeTraits traits = fviz_cell_type_traits(view->type);
     uint32_t local_ids[9];
@@ -105,8 +97,7 @@ static FVizResult fviz_boundary_entity(
         if (entity_index >= 2u) return FVIZ_ERROR_NOT_FOUND;
         out_entity->count = 1u;
         if (view->type == FVIZ_CELL_POLY_LINE)
-            out_entity->ids[0] = fviz_cell_view_point_id(
-                view, entity_index == 0u ? 0u : view->point_count - 1u);
+            out_entity->ids[0] = fviz_cell_view_point_id(view, entity_index == 0u ? 0u : view->point_count - 1u);
         else
             out_entity->ids[0] = fviz_cell_view_point_id(view, entity_index == 0u ? 0u : 1u);
         return FVIZ_OK;
@@ -118,20 +109,16 @@ static FVizResult fviz_boundary_entity(
             if ((FVizSize)entity_index >= view->point_count) return FVIZ_ERROR_NOT_FOUND;
             out_entity->count = 2u;
             out_entity->ids[0] = fviz_cell_view_point_id(view, (FVizSize)entity_index);
-            out_entity->ids[1] = fviz_cell_view_point_id(
-                view, ((FVizSize)entity_index + 1u) % view->point_count);
+            out_entity->ids[1] = fviz_cell_view_point_id(view, ((FVizSize)entity_index + 1u) % view->point_count);
             fviz_boundary_sort(out_entity->ids, out_entity->count);
             return FVIZ_OK;
         }
         if (view->type == FVIZ_CELL_TRIANGLE_STRIP)
         {
-            fviz_internal_set_error(
-                FVIZ_ERROR_NOT_SUPPORTED,
-                "triangle-strip cell adjacency is not supported");
+            fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED, "triangle-strip cell adjacency is not supported");
             return FVIZ_ERROR_NOT_SUPPORTED;
         }
-        if (fviz_cell_type_edge(view->type, entity_index, local_ids) != FVIZ_OK)
-            return fviz_last_error_code();
+        if (fviz_cell_type_edge(view->type, entity_index, local_ids) != FVIZ_OK) return fviz_last_error_code();
         count = 2u;
     }
     else if (traits.dimension == 3u)
@@ -154,13 +141,10 @@ static FVizResult fviz_boundary_entity(
     return FVIZ_OK;
 }
 
-static FVizBool fviz_boundary_equal(
-    const FVizBoundaryEntity* a,
-    const FVizBoundaryEntity* b)
+static FVizBool fviz_boundary_equal(const FVizBoundaryEntity* a, const FVizBoundaryEntity* b)
 {
-    return a->count == b->count &&
-        memcmp(a->ids, b->ids, (size_t)a->count * sizeof(FVizId)) == 0
-        ? FVIZ_TRUE : FVIZ_FALSE;
+    return a->count == b->count && memcmp(a->ids, b->ids, (size_t)a->count * sizeof(FVizId)) == 0 ? FVIZ_TRUE
+                                                                                                  : FVIZ_FALSE;
 }
 
 static uint64_t fviz_boundary_hash(const FVizBoundaryEntity* entity)
@@ -226,27 +210,21 @@ static void fviz_facet_records_release(FVizArray* records)
     }
 }
 
-static FVizResult fviz_facet_record_connect(
-    FVizFacetRecord* record,
-    FVizId cell_id,
-    FVizArray* pairs)
+static FVizResult fviz_facet_record_connect(FVizFacetRecord* record, FVizId cell_id, FVizArray* pairs)
 {
     FVizSize i;
-    if (fviz_adjacency_add_pair(pairs, record->first_cell, cell_id) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_adjacency_add_pair(pairs, record->first_cell, cell_id) != FVIZ_OK) return fviz_last_error_code();
     if (record->second_cell == FVIZ_INVALID_ID)
     {
         record->second_cell = cell_id;
         return FVIZ_OK;
     }
-    if (fviz_adjacency_add_pair(pairs, record->second_cell, cell_id) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_adjacency_add_pair(pairs, record->second_cell, cell_id) != FVIZ_OK) return fviz_last_error_code();
     if (record->extra_cells != NULL)
     {
         const FVizId* extras = (const FVizId*)fviz_array_const_data(record->extra_cells);
         for (i = 0u; i < fviz_array_count(record->extra_cells); ++i)
-            if (fviz_adjacency_add_pair(pairs, extras[i], cell_id) != FVIZ_OK)
-                return fviz_last_error_code();
+            if (fviz_adjacency_add_pair(pairs, extras[i], cell_id) != FVIZ_OK) return fviz_last_error_code();
     }
     else if (fviz_array_create(sizeof(FVizId), &record->extra_cells) != FVIZ_OK)
     {
@@ -255,10 +233,8 @@ static FVizResult fviz_facet_record_connect(
     return fviz_array_push(record->extra_cells, &cell_id);
 }
 
-FVizResult fviz_cell_adjacency_build(
-    const FVizCellArray* cells,
-    FVizSize point_count,
-    FVizCellAdjacency** out_adjacency)
+FVizResult fviz_cell_adjacency_build(const FVizCellArray* cells, FVizSize point_count,
+                                     FVizCellAdjacency** out_adjacency)
 {
     FVizCellAdjacency* adjacency = NULL;
     FVizHashMap* facet_heads = NULL;
@@ -345,16 +321,14 @@ FVizResult fviz_cell_adjacency_build(
                 record.entity = entity;
                 record.first_cell = (FVizId)cell_id;
                 record.second_cell = FVIZ_INVALID_ID;
-                record.next_record_plus_one = encoded_head != NULL
-                    ? (FVizSize)(uintptr_t)encoded_head : 0u;
+                record.next_record_plus_one = encoded_head != NULL ? (FVizSize)(uintptr_t)encoded_head : 0u;
                 if (new_index >= (FVizSize)UINTPTR_MAX)
                 {
                     result = FVIZ_ERROR_OVERFLOW;
                     goto done;
                 }
                 if (fviz_array_push(records, &record) != FVIZ_OK ||
-                    fviz_hash_map_set(
-                        facet_heads, (FVizId)hash, (void*)(uintptr_t)(new_index + 1u)) != FVIZ_OK)
+                    fviz_hash_map_set(facet_heads, (FVizId)hash, (void*)(uintptr_t)(new_index + 1u)) != FVIZ_OK)
                 {
                     result = fviz_last_error_code();
                     goto done;
@@ -372,8 +346,7 @@ FVizResult fviz_cell_adjacency_build(
         const FVizSize pair_count = fviz_array_count(pairs);
         for (read_index = 0u; read_index < pair_count; ++read_index)
         {
-            if (write_index != 0u &&
-                data[write_index - 1u].a == data[read_index].a &&
+            if (write_index != 0u && data[write_index - 1u].a == data[read_index].a &&
                 data[write_index - 1u].b == data[read_index].b)
                 continue;
             data[write_index++] = data[read_index];
@@ -385,8 +358,8 @@ FVizResult fviz_cell_adjacency_build(
         }
     }
 
-    adjacency = (FVizCellAdjacency*)fviz_internal_object_allocate(
-        sizeof(*adjacency), &g_fviz_cell_adjacency_class, NULL);
+    adjacency =
+        (FVizCellAdjacency*)fviz_internal_object_allocate(sizeof(*adjacency), &g_fviz_cell_adjacency_class, NULL);
     if (adjacency == NULL)
     {
         result = fviz_last_error_code();
@@ -484,18 +457,13 @@ FVizSize fviz_cell_adjacency_cell_count(const FVizCellAdjacency* adjacency)
     return adjacency != NULL ? adjacency->cell_count : 0u;
 }
 
-FVizSize fviz_cell_adjacency_neighbor_count(
-    const FVizCellAdjacency* adjacency,
-    FVizId cell_id)
+FVizSize fviz_cell_adjacency_neighbor_count(const FVizCellAdjacency* adjacency, FVizId cell_id)
 {
     if (adjacency == NULL || (FVizSize)cell_id >= adjacency->cell_count) return 0u;
     return adjacency->offsets[(FVizSize)cell_id + 1u] - adjacency->offsets[(FVizSize)cell_id];
 }
 
-const FVizId* fviz_cell_adjacency_neighbors(
-    const FVizCellAdjacency* adjacency,
-    FVizId cell_id,
-    FVizSize* out_count)
+const FVizId* fviz_cell_adjacency_neighbors(const FVizCellAdjacency* adjacency, FVizId cell_id, FVizSize* out_count)
 {
     FVizSize count = 0u;
     if (out_count != NULL) *out_count = 0u;

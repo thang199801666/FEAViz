@@ -9,9 +9,7 @@
 static double fviz_image_srgb_to_linear(uint8_t value)
 {
     const double normalized = (double)value / 255.0;
-    return normalized <= 0.04045
-        ? normalized / 12.92
-        : pow((normalized + 0.055) / 1.055, 2.4);
+    return normalized <= 0.04045 ? normalized / 12.92 : pow((normalized + 0.055) / 1.055, 2.4);
 }
 
 void fviz_image_comparison_options_initialize(FVizImageComparisonOptions* options)
@@ -29,14 +27,9 @@ void fviz_image_comparison_result_initialize(FVizImageComparisonResult* result)
     result->struct_size = (uint32_t)sizeof(*result);
 }
 
-FVizResult fviz_image_compare_rgba8(
-    const uint8_t* reference,
-    const uint8_t* actual,
-    FVizSize pixel_count,
-    const FVizImageComparisonOptions* options,
-    FVizImageComparisonResult* result,
-    uint8_t* diff_rgba8,
-    FVizSize diff_byte_capacity)
+FVizResult fviz_image_compare_rgba8(const uint8_t* reference, const uint8_t* actual, FVizSize pixel_count,
+                                    const FVizImageComparisonOptions* options, FVizImageComparisonResult* result,
+                                    uint8_t* diff_rgba8, FVizSize diff_byte_capacity)
 {
     FVizImageComparisonOptions defaults;
     double squared[4] = {0.0, 0.0, 0.0, 0.0};
@@ -49,10 +42,10 @@ FVizResult fviz_image_compare_rgba8(
         options = &defaults;
     }
     if ((pixel_count != 0u && (reference == NULL || actual == NULL)) || result == NULL ||
-        options->struct_size < sizeof(*options) ||
-        options->mode < FVIZ_IMAGE_COMPARE_EXACT || options->mode > FVIZ_IMAGE_COMPARE_PERCEPTUAL ||
-        !isfinite(options->rmse_threshold) || options->rmse_threshold < 0.0 ||
-        !isfinite(options->perceptual_threshold) || options->perceptual_threshold < 0.0 ||
+        options->struct_size < sizeof(*options) || options->mode < FVIZ_IMAGE_COMPARE_EXACT ||
+        options->mode > FVIZ_IMAGE_COMPARE_PERCEPTUAL || !isfinite(options->rmse_threshold) ||
+        options->rmse_threshold < 0.0 || !isfinite(options->perceptual_threshold) ||
+        options->perceptual_threshold < 0.0 ||
         (diff_rgba8 != NULL && (pixel_count > (FVizSize)-1 / 4u || diff_byte_capacity < pixel_count * 4u)))
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "invalid RGBA8 image comparison arguments");
@@ -68,31 +61,26 @@ FVizResult fviz_image_compare_rgba8(
         static const double luma_weights[3] = {0.2126, 0.7152, 0.0722};
         for (channel = 0u; channel < 4u; ++channel)
         {
-            const int difference = (int)actual[pixel * 4u + channel] -
-                (int)reference[pixel * 4u + channel];
+            const int difference = (int)actual[pixel * 4u + channel] - (int)reference[pixel * 4u + channel];
             const uint8_t absolute = (uint8_t)(difference < 0 ? -difference : difference);
             squared[channel] += (double)difference * (double)difference;
-            if (absolute > result->maximum_channel_error[channel])
-                result->maximum_channel_error[channel] = absolute;
+            if (absolute > result->maximum_channel_error[channel]) result->maximum_channel_error[channel] = absolute;
             if (absolute != 0u) pixel_differs = FVIZ_TRUE;
             if (absolute > options->channel_tolerance[channel]) tolerance_match = FVIZ_FALSE;
             if (diff_rgba8 != NULL && channel < 3u)
             {
                 const uint32_t amplified = (uint32_t)absolute * 4u;
-                diff_rgba8[pixel * 4u + channel] =
-                    (uint8_t)(amplified > 255u ? 255u : amplified);
+                diff_rgba8[pixel * 4u + channel] = (uint8_t)(amplified > 255u ? 255u : amplified);
             }
         }
         if (diff_rgba8 != NULL) diff_rgba8[pixel * 4u + 3u] = 255u;
         if (pixel_differs != FVIZ_FALSE) ++result->differing_pixels;
-        reference_luma =
-            luma_weights[0] * fviz_image_srgb_to_linear(reference[pixel * 4u]) +
-            luma_weights[1] * fviz_image_srgb_to_linear(reference[pixel * 4u + 1u]) +
-            luma_weights[2] * fviz_image_srgb_to_linear(reference[pixel * 4u + 2u]);
-        actual_luma =
-            luma_weights[0] * fviz_image_srgb_to_linear(actual[pixel * 4u]) +
-            luma_weights[1] * fviz_image_srgb_to_linear(actual[pixel * 4u + 1u]) +
-            luma_weights[2] * fviz_image_srgb_to_linear(actual[pixel * 4u + 2u]);
+        reference_luma = luma_weights[0] * fviz_image_srgb_to_linear(reference[pixel * 4u]) +
+                         luma_weights[1] * fviz_image_srgb_to_linear(reference[pixel * 4u + 1u]) +
+                         luma_weights[2] * fviz_image_srgb_to_linear(reference[pixel * 4u + 2u]);
+        actual_luma = luma_weights[0] * fviz_image_srgb_to_linear(actual[pixel * 4u]) +
+                      luma_weights[1] * fviz_image_srgb_to_linear(actual[pixel * 4u + 1u]) +
+                      luma_weights[2] * fviz_image_srgb_to_linear(actual[pixel * 4u + 2u]);
         perceptual_squared += (actual_luma - reference_luma) * (actual_luma - reference_luma);
     }
     if (pixel_count != 0u)

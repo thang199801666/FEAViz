@@ -8,13 +8,8 @@
 #include <FViz/Core/FVizErrorInternal.h>
 
 static void fviz_array_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_array_class = {
-    FVIZ_TYPE_ARRAY,
-    "FVizArray",
-    &g_fviz_object_class,
-    fviz_array_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_array_class = {FVIZ_TYPE_ARRAY, "FVizArray", &g_fviz_object_class,
+                                                   fviz_array_destroy, NULL};
 
 static void fviz_array_destroy(FVizObject* object)
 {
@@ -58,11 +53,30 @@ FVizResult fviz_array_create_reserve(FVizSize stride, FVizSize capacity, FVizArr
     return FVIZ_OK;
 }
 
-FVizSize fviz_array_count(const FVizArray* array) { return array != NULL ? array->count : 0u; }
-FVizSize fviz_array_capacity(const FVizArray* array) { return array != NULL ? array->capacity : 0u; }
-FVizSize fviz_array_stride(const FVizArray* array) { return array != NULL ? array->stride : 0u; }
-void* fviz_array_data(FVizArray* array) { return array != NULL ? array->data : NULL; }
-const void* fviz_array_const_data(const FVizArray* array) { return array != NULL ? array->data : NULL; }
+FVizSize fviz_array_count(const FVizArray* array)
+{
+    return array != NULL ? array->count : 0u;
+}
+
+FVizSize fviz_array_capacity(const FVizArray* array)
+{
+    return array != NULL ? array->capacity : 0u;
+}
+
+FVizSize fviz_array_stride(const FVizArray* array)
+{
+    return array != NULL ? array->stride : 0u;
+}
+
+void* fviz_array_data(FVizArray* array)
+{
+    return array != NULL ? array->data : NULL;
+}
+
+const void* fviz_array_const_data(const FVizArray* array)
+{
+    return array != NULL ? array->data : NULL;
+}
 
 void* fviz_array_at(FVizArray* array, FVizSize index)
 {
@@ -145,13 +159,11 @@ FVizResult fviz_array_resize(FVizArray* array, FVizSize count)
 {
     const FVizSize old_count = array != NULL ? array->count : 0u;
     const FVizResult result = fviz_internal_array_resize_untracked(array, count);
-    if (result == FVIZ_OK && array != NULL && count != old_count)
-        fviz_object_modified((FVizObject*)array);
+    if (result == FVIZ_OK && array != NULL && count != old_count) fviz_object_modified((FVizObject*)array);
     return result;
 }
 
-FVizResult fviz_internal_array_append_uninitialized(
-    FVizArray* array, FVizSize count, void** out_first_slot)
+FVizResult fviz_internal_array_append_uninitialized(FVizArray* array, FVizSize count, void** out_first_slot)
 {
     FVizSize required;
     FVizResult result;
@@ -163,9 +175,7 @@ FVizResult fviz_internal_array_append_uninitialized(
     *out_first_slot = NULL;
     if (count == 0u)
     {
-        *out_first_slot = array->data != NULL
-            ? array->data + array->count * array->stride
-            : NULL;
+        *out_first_slot = array->data != NULL ? array->data + array->count * array->stride : NULL;
         return FVIZ_OK;
     }
     if (count > (FVizSize)-1 - array->count)

@@ -92,27 +92,21 @@ FVIZ_API FVizResult fviz_cell_array_create(FVizCellArray** out_cells);
 FVIZ_API FVizResult fviz_cell_array_create_with_storage(FVizIdStorage storage, FVizCellArray** out_cells);
 FVIZ_API FVizResult fviz_cell_array_deep_copy(const FVizCellArray* source, FVizCellArray** out_copy);
 FVIZ_API void fviz_cell_array_clear(FVizCellArray* cells);
-FVIZ_API FVizResult fviz_cell_array_reserve(FVizCellArray* cells, FVizSize cell_capacity, FVizSize connectivity_capacity);
+FVIZ_API FVizResult fviz_cell_array_reserve(FVizCellArray* cells, FVizSize cell_capacity,
+                                            FVizSize connectivity_capacity);
 FVIZ_API FVizIdStorage fviz_cell_array_id_storage(const FVizCellArray* cells);
 /* Converts connectivity storage. UINT64->UINT32 is checked and fails on overflow. */
 FVIZ_API FVizResult fviz_cell_array_convert_id_storage(FVizCellArray* cells, FVizIdStorage storage);
-FVIZ_API FVizResult fviz_cell_array_append(FVizCellArray* cells, FVizCellType type, FVizSize point_count, const uint32_t* point_ids);
+FVIZ_API FVizResult fviz_cell_array_append(FVizCellArray* cells, FVizCellType type, FVizSize point_count,
+                                           const uint32_t* point_ids);
 /* Fast path for batches of fixed-width cells such as lines and triangles. */
-FVIZ_API FVizResult fviz_cell_array_append_fixed(
-    FVizCellArray* cells, FVizCellType type, FVizSize points_per_cell,
-    FVizSize cell_count, const uint32_t* point_ids);
+FVIZ_API FVizResult fviz_cell_array_append_fixed(FVizCellArray* cells, FVizCellType type, FVizSize points_per_cell,
+                                                 FVizSize cell_count, const uint32_t* point_ids);
 /* Native ID path. Storage automatically promotes to UINT64 when required. */
-FVIZ_API FVizResult fviz_cell_array_append_ids(
-    FVizCellArray* cells,
-    FVizCellType type,
-    FVizSize point_count,
-    const FVizId* point_ids);
-FVIZ_API FVizResult fviz_cell_array_append_fixed_ids(
-    FVizCellArray* cells,
-    FVizCellType type,
-    FVizSize points_per_cell,
-    FVizSize cell_count,
-    const FVizId* point_ids);
+FVIZ_API FVizResult fviz_cell_array_append_ids(FVizCellArray* cells, FVizCellType type, FVizSize point_count,
+                                               const FVizId* point_ids);
+FVIZ_API FVizResult fviz_cell_array_append_fixed_ids(FVizCellArray* cells, FVizCellType type, FVizSize points_per_cell,
+                                                     FVizSize cell_count, const FVizId* point_ids);
 FVIZ_API FVizSize fviz_cell_array_count(const FVizCellArray* cells);
 FVIZ_API FVizSize fviz_cell_array_connectivity_size(const FVizCellArray* cells);
 FVIZ_API FVizCellType fviz_cell_array_type(const FVizCellArray* cells, FVizSize cell_id);
@@ -123,13 +117,12 @@ FVIZ_API const uint32_t* fviz_cell_array_connectivity(const FVizCellArray* cells
 FVIZ_API const uint64_t* fviz_cell_array_point_ids64(const FVizCellArray* cells, FVizSize cell_id);
 FVIZ_API const uint64_t* fviz_cell_array_connectivity64(const FVizCellArray* cells);
 FVIZ_API const FVizSize* fviz_cell_array_offsets(const FVizCellArray* cells);
-FVIZ_API FVizResult fviz_cell_array_cell_view(
-    const FVizCellArray* cells, FVizSize cell_id, FVizCellView* out_view);
+FVIZ_API FVizResult fviz_cell_array_cell_view(const FVizCellArray* cells, FVizSize cell_id, FVizCellView* out_view);
 FVIZ_API FVizId fviz_cell_view_point_id(const FVizCellView* view, FVizSize local_point_id);
-FVIZ_API FVizResult fviz_cell_array_point_id(
-    const FVizCellArray* cells, FVizSize cell_id, FVizSize local_point_id, FVizId* out_point_id);
-FVIZ_API FVizResult fviz_cell_array_copy_point_ids(
-    const FVizCellArray* cells, FVizSize cell_id, FVizId* out_point_ids, FVizSize capacity);
+FVIZ_API FVizResult fviz_cell_array_point_id(const FVizCellArray* cells, FVizSize cell_id, FVizSize local_point_id,
+                                             FVizId* out_point_id);
+FVIZ_API FVizResult fviz_cell_array_copy_point_ids(const FVizCellArray* cells, FVizSize cell_id, FVizId* out_point_ids,
+                                                   FVizSize capacity);
 FVIZ_API FVizResult fviz_cell_array_validate(const FVizCellArray* cells, FVizSize point_count);
 
 FVIZ_EXTERN_C_END

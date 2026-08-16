@@ -13,7 +13,8 @@ typedef struct FVizMat4
 
 FVIZ_API FVizMat4 fviz_mat4_identity(void);
 FVIZ_API FVizMat4 fviz_mat4_perspective(float fov_y_radians, float aspect, float near_plane, float far_plane);
-FVIZ_API FVizMat4 fviz_mat4_orthographic(float left, float right, float bottom, float top, float near_plane, float far_plane);
+FVIZ_API FVizMat4 fviz_mat4_orthographic(float left, float right, float bottom, float top, float near_plane,
+                                         float far_plane);
 FVIZ_API FVizMat4 fviz_mat4_look_at(FVizVec3 eye, FVizVec3 target, FVizVec3 up);
 FVIZ_API FVizMat4 fviz_mat4_multiply(FVizMat4 a, FVizMat4 b);
 

@@ -2,6 +2,7 @@
 #define FVIZ_INTERNAL_RENDERING_TEXT_PROPERTY_PRIVATE_H
 #include <FViz/Core/FVizObjectPrivate.h>
 #include <FViz/Rendering/FVizTextProperty.h>
+
 struct FVizTextProperty
 {
     FVizObject base;

@@ -14,18 +14,9 @@ typedef struct FVizLogState
     void* user_data;
 } FVizLogState;
 
-static FVizLogState g_fviz_log_state = {
-    { FVIZ_LOG_INFO },
-    { 0u },
-    NULL,
-    NULL
-};
+static FVizLogState g_fviz_log_state = {{FVIZ_LOG_INFO}, {0u}, NULL, NULL};
 
-static void fviz_default_log_callback(
-    FVizLogLevel level,
-    const char* category,
-    const char* message,
-    void* user_data)
+static void fviz_default_log_callback(FVizLogLevel level, const char* category, const char* message, void* user_data)
 {
     FVIZ_UNUSED(user_data);
 
@@ -43,14 +34,22 @@ const char* fviz_log_level_string(FVizLogLevel level)
 {
     switch (level)
     {
-        case FVIZ_LOG_TRACE: return "TRACE";
-        case FVIZ_LOG_DEBUG: return "DEBUG";
-        case FVIZ_LOG_INFO: return "INFO";
-        case FVIZ_LOG_WARNING: return "WARNING";
-        case FVIZ_LOG_ERROR: return "ERROR";
-        case FVIZ_LOG_FATAL: return "FATAL";
-        case FVIZ_LOG_OFF: return "OFF";
-        default: return "UNKNOWN";
+        case FVIZ_LOG_TRACE:
+            return "TRACE";
+        case FVIZ_LOG_DEBUG:
+            return "DEBUG";
+        case FVIZ_LOG_INFO:
+            return "INFO";
+        case FVIZ_LOG_WARNING:
+            return "WARNING";
+        case FVIZ_LOG_ERROR:
+            return "ERROR";
+        case FVIZ_LOG_FATAL:
+            return "FATAL";
+        case FVIZ_LOG_OFF:
+            return "OFF";
+        default:
+            return "UNKNOWN";
     }
 }
 
@@ -65,10 +64,7 @@ FVizResult fviz_log_set_level(FVizLogLevel level)
     }
 
     expected = fviz_atomic_u32_load(&g_fviz_log_state.minimum_level);
-    while (!fviz_atomic_u32_compare_exchange(
-        &g_fviz_log_state.minimum_level,
-        &expected,
-        (uint32_t)level))
+    while (!fviz_atomic_u32_compare_exchange(&g_fviz_log_state.minimum_level, &expected, (uint32_t)level))
     {
     }
 

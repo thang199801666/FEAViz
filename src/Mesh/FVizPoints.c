@@ -9,10 +9,8 @@
 #include <FViz/Mesh/FVizPointsPrivate.h>
 
 static void fviz_points_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_points_class = {
-    FVIZ_TYPE_POINTS, "FVizPoints", &g_fviz_object_class,
-    fviz_points_destroy, NULL
-};
+static const FVizObjectClass g_fviz_points_class = {FVIZ_TYPE_POINTS, "FVizPoints", &g_fviz_object_class,
+                                                    fviz_points_destroy, NULL};
 
 static void fviz_points_destroy(FVizObject* object)
 {
@@ -63,8 +61,8 @@ FVizResult fviz_points_reserve(FVizPoints* points, FVizSize capacity)
     return fviz_array_reserve(points->data, capacity);
 }
 
-static FVizResult fviz_points_append_many_native(
-    FVizPoints* points, const FVizVec3* values, FVizSize count, FVizSize* out_first)
+static FVizResult fviz_points_append_many_native(FVizPoints* points, const FVizVec3* values, FVizSize count,
+                                                 FVizSize* out_first)
 {
     const FVizSize first = points != NULL ? fviz_array_count(points->data) : 0u;
     FVizSize i;
@@ -80,7 +78,8 @@ static FVizResult fviz_points_append_many_native(
     }
     if (fviz_internal_array_append(points->data, values, count) != FVIZ_OK) return fviz_last_error_code();
     if (points->bounds_dirty == FVIZ_FALSE)
-        for (i = 0u; i < count; ++i) fviz_bounds_include_point(&points->bounds, values[i]);
+        for (i = 0u; i < count; ++i)
+            fviz_bounds_include_point(&points->bounds, values[i]);
     if (count != 0u) fviz_object_modified((FVizObject*)points);
     if (out_first != NULL) *out_first = first;
     return FVIZ_OK;
@@ -93,7 +92,8 @@ FVizResult fviz_points_append_many(FVizPoints* points, const FVizVec3* values, F
     FVizResult result;
     if (points != NULL && count > (FVizSize)UINT32_MAX + 1u - first)
     {
-        fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "point IDs exceed compatibility UINT32 capacity; use fviz_points_append_many_ids");
+        fviz_internal_set_error(FVIZ_ERROR_OVERFLOW,
+                                "point IDs exceed compatibility UINT32 capacity; use fviz_points_append_many_ids");
         return FVIZ_ERROR_OVERFLOW;
     }
     result = fviz_points_append_many_native(points, values, count, &native_first);
@@ -106,8 +106,7 @@ FVizResult fviz_points_append(FVizPoints* points, FVizVec3 point, uint32_t* out_
     return fviz_points_append_many(points, &point, 1u, out_id);
 }
 
-FVizResult fviz_points_append_many_ids(
-    FVizPoints* points, const FVizVec3* values, FVizSize count, FVizId* out_first_id)
+FVizResult fviz_points_append_many_ids(FVizPoints* points, const FVizVec3* values, FVizSize count, FVizId* out_first_id)
 {
     FVizSize first = 0u;
     FVizResult result = fviz_points_append_many_native(points, values, count, &first);
@@ -120,8 +119,7 @@ FVizResult fviz_points_append_id(FVizPoints* points, FVizVec3 point, FVizId* out
     return fviz_points_append_many_ids(points, &point, 1u, out_id);
 }
 
-FVizResult fviz_points_set_many(
-    FVizPoints* points, FVizSize first, const FVizVec3* values, FVizSize count)
+FVizResult fviz_points_set_many(FVizPoints* points, FVizSize first, const FVizVec3* values, FVizSize count)
 {
     FVizVec3* destination;
     FVizSize point_count;
@@ -152,8 +150,16 @@ FVizResult fviz_points_set(FVizPoints* points, FVizSize index, FVizVec3 value)
     return fviz_points_set_many(points, index, &value, 1u);
 }
 
-FVizSize fviz_points_count(const FVizPoints* points) { return points != NULL ? fviz_array_count(points->data) : 0u; }
-const FVizVec3* fviz_points_data(const FVizPoints* points) { return points != NULL ? (const FVizVec3*)fviz_array_const_data(points->data) : NULL; }
+FVizSize fviz_points_count(const FVizPoints* points)
+{
+    return points != NULL ? fviz_array_count(points->data) : 0u;
+}
+
+const FVizVec3* fviz_points_data(const FVizPoints* points)
+{
+    return points != NULL ? (const FVizVec3*)fviz_array_const_data(points->data) : NULL;
+}
+
 FVizBounds fviz_points_bounds(const FVizPoints* points)
 {
     FVizPoints* mutable_points;
@@ -163,8 +169,7 @@ FVizBounds fviz_points_bounds(const FVizPoints* points)
     mutable_points = (FVizPoints*)points;
     mutable_points->bounds = fviz_bounds_empty();
     for (i = 0u; i < fviz_array_count(points->data); ++i)
-        fviz_bounds_include_point(
-            &mutable_points->bounds, ((const FVizVec3*)fviz_array_const_data(points->data))[i]);
+        fviz_bounds_include_point(&mutable_points->bounds, ((const FVizVec3*)fviz_array_const_data(points->data))[i]);
     mutable_points->bounds_dirty = FVIZ_FALSE;
     return mutable_points->bounds;
 }

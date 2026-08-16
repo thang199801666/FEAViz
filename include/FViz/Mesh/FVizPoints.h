@@ -17,15 +17,15 @@ FVIZ_API FVizResult fviz_points_create(FVizPoints** out_points);
 FVIZ_API void fviz_points_clear(FVizPoints* points);
 FVIZ_API FVizResult fviz_points_reserve(FVizPoints* points, FVizSize capacity);
 FVIZ_API FVizResult fviz_points_append(FVizPoints* points, FVizVec3 point, uint32_t* out_id);
-FVIZ_API FVizResult fviz_points_append_many(FVizPoints* points, const FVizVec3* values, FVizSize count, uint32_t* out_first_id);
+FVIZ_API FVizResult fviz_points_append_many(FVizPoints* points, const FVizVec3* values, FVizSize count,
+                                            uint32_t* out_first_id);
 FVIZ_API FVizResult fviz_points_append_id(FVizPoints* points, FVizVec3 point, FVizId* out_id);
-FVIZ_API FVizResult fviz_points_append_many_ids(
-    FVizPoints* points, const FVizVec3* values, FVizSize count, FVizId* out_first_id);
+FVIZ_API FVizResult fviz_points_append_many_ids(FVizPoints* points, const FVizVec3* values, FVizSize count,
+                                                FVizId* out_first_id);
 /* Update existing coordinates without reallocating topology storage.  Batch updates
  * emit one ModifiedEvent and lazily refresh the cached bounds on demand. */
 FVIZ_API FVizResult fviz_points_set(FVizPoints* points, FVizSize index, FVizVec3 value);
-FVIZ_API FVizResult fviz_points_set_many(
-    FVizPoints* points, FVizSize first, const FVizVec3* values, FVizSize count);
+FVIZ_API FVizResult fviz_points_set_many(FVizPoints* points, FVizSize first, const FVizVec3* values, FVizSize count);
 FVIZ_API FVizSize fviz_points_count(const FVizPoints* points);
 FVIZ_API const FVizVec3* fviz_points_data(const FVizPoints* points);
 FVIZ_API FVizBounds fviz_points_bounds(const FVizPoints* points);

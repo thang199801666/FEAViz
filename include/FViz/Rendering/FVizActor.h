@@ -82,11 +82,7 @@ FVIZ_API float fviz_actor_opacity(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_edge_visibility(FVizActor* actor, FVizBool visible);
 FVIZ_API FVizBool fviz_actor_edge_visibility(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_edge_color(FVizActor* actor, float red, float green, float blue);
-FVIZ_API void fviz_actor_get_edge_color(
-    const FVizActor* actor,
-    float* red,
-    float* green,
-    float* blue);
+FVIZ_API void fviz_actor_get_edge_color(const FVizActor* actor, float* red, float* green, float* blue);
 FVIZ_API void fviz_actor_set_line_width(FVizActor* actor, float width);
 FVIZ_API float fviz_actor_line_width(const FVizActor* actor);
 /* Pulls line fragments toward the camera in normalized clip-space to resolve
@@ -100,8 +96,7 @@ FVIZ_API FVizLineJoin fviz_actor_line_join(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_line_miter_limit(FVizActor* actor, float limit);
 FVIZ_API float fviz_actor_line_miter_limit(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_line_dash(FVizActor* actor, float dash_length, float gap_length, float phase);
-FVIZ_API void fviz_actor_get_line_dash(
-    const FVizActor* actor, float* dash_length, float* gap_length, float* phase);
+FVIZ_API void fviz_actor_get_line_dash(const FVizActor* actor, float* dash_length, float* gap_length, float* phase);
 FVIZ_API void fviz_actor_set_line_scalar_coloring(FVizActor* actor, FVizBool enabled);
 FVIZ_API FVizBool fviz_actor_line_scalar_coloring(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_point_visibility(FVizActor* actor, FVizBool visible);
@@ -111,22 +106,13 @@ FVIZ_API float fviz_actor_point_size(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_point_shape(FVizActor* actor, FVizPointShape shape);
 FVIZ_API FVizPointShape fviz_actor_point_shape(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_point_color(FVizActor* actor, float red, float green, float blue);
-FVIZ_API void fviz_actor_get_point_color(
-    const FVizActor* actor, float* red, float* green, float* blue);
+FVIZ_API void fviz_actor_get_point_color(const FVizActor* actor, float* red, float* green, float* blue);
 FVIZ_API void fviz_actor_set_point_scalar_coloring(FVizActor* actor, FVizBool enabled);
 FVIZ_API FVizBool fviz_actor_point_scalar_coloring(const FVizActor* actor);
-FVIZ_API void fviz_actor_set_material(
-    FVizActor* actor,
-    float ambient,
-    float diffuse,
-    float specular,
-    float specular_power);
-FVIZ_API void fviz_actor_get_material(
-    const FVizActor* actor,
-    float* ambient,
-    float* diffuse,
-    float* specular,
-    float* specular_power);
+FVIZ_API void fviz_actor_set_material(FVizActor* actor, float ambient, float diffuse, float specular,
+                                      float specular_power);
+FVIZ_API void fviz_actor_get_material(const FVizActor* actor, float* ambient, float* diffuse, float* specular,
+                                      float* specular_power);
 FVIZ_API void fviz_actor_set_shading_mode(FVizActor* actor, FVizShadingMode mode);
 FVIZ_API FVizShadingMode fviz_actor_shading_mode(const FVizActor* actor);
 FVIZ_API void fviz_actor_set_cull_mode(FVizActor* actor, FVizCullMode mode);

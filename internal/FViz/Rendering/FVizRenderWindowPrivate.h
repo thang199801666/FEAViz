@@ -86,36 +86,23 @@ FVizResult fviz_internal_render_window_release_external_opengl_platform(FVizRend
 FVizResult fviz_internal_render_window_reinitialize_external_opengl_platform(FVizRenderWindow* window);
 FVizResult fviz_internal_render_window_resize_platform(FVizRenderWindow* window);
 FVizResult fviz_internal_render_window_sync_host_size_platform(FVizRenderWindow* window);
-FVizResult fviz_internal_render_window_reparent_platform(
-    FVizRenderWindow* window,
-    void* host_native_handle);
+FVizResult fviz_internal_render_window_reparent_platform(FVizRenderWindow* window, void* host_native_handle);
 FVizResult fviz_internal_render_window_read_rgba8_platform(FVizRenderWindow* window, uint8_t* pixels);
 FVizResult fviz_internal_render_window_read_depth_f32_platform(FVizRenderWindow* window, float* depth);
-FVizResult fviz_internal_render_window_hardware_pick_platform(
-    FVizRenderWindow* window,
-    FVizRenderer* renderer,
-    int x,
-    int y,
-    FVizSelectionAssociation association,
-    FVizSize* out_actor_index,
-    FVizSize* out_primitive_id,
-    float* out_depth);
+FVizResult fviz_internal_render_window_hardware_pick_platform(FVizRenderWindow* window, FVizRenderer* renderer, int x,
+                                                              int y, FVizSelectionAssociation association,
+                                                              FVizSize* out_actor_index, FVizSize* out_primitive_id,
+                                                              float* out_depth);
 void fviz_internal_render_window_destroy_platform(FVizRenderWindow* window);
 void fviz_internal_render_window_request_close_platform(FVizRenderWindow* window);
 FVizBool fviz_internal_render_window_supported_platform(void);
 FVizResult fviz_internal_render_window_set_swap_interval_platform(FVizRenderWindow* window, int interval);
-FVizResult fviz_internal_render_window_release_gpu_mesh_resources_platform(
-    FVizRenderWindow* window);
+FVizResult fviz_internal_render_window_release_gpu_mesh_resources_platform(FVizRenderWindow* window);
 void fviz_internal_render_window_set_interaction_active(FVizRenderWindow* window, FVizBool active);
 void fviz_internal_render_window_clear_pass_statistics(FVizRenderWindow* window);
-void fviz_internal_render_window_record_pass_statistics(
-    FVizRenderWindow* window,
-    FVizRenderer* renderer,
-    FVizRenderGraphPassId graph_pass_id,
-    FVizSize execution_index,
-    FVizRenderPass* pass,
-    const char* name,
-    double cpu_seconds,
-    FVizResult result);
+void fviz_internal_render_window_record_pass_statistics(FVizRenderWindow* window, FVizRenderer* renderer,
+                                                        FVizRenderGraphPassId graph_pass_id, FVizSize execution_index,
+                                                        FVizRenderPass* pass, const char* name, double cpu_seconds,
+                                                        FVizResult result);
 
 #endif /* FVIZ_INTERNAL_RENDERING_RENDER_WINDOW_PRIVATE_H */

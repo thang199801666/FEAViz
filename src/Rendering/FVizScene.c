@@ -11,8 +11,7 @@
 static void fviz_scene_destroy(FVizObject* object);
 static FVizMTime fviz_scene_mtime(const FVizObject* object);
 
-static FVizBool fviz_scene_actor_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_scene_actor_modified(FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
 {
     FVizScene* scene = (FVizScene*)client_data;
     (void)caller;
@@ -22,13 +21,8 @@ static FVizBool fviz_scene_actor_modified(
     return FVIZ_FALSE;
 }
 
-static const FVizObjectClass g_fviz_scene_class = {
-    FVIZ_TYPE_SCENE,
-    "FVizScene",
-    &g_fviz_object_class,
-    fviz_scene_destroy,
-    fviz_scene_mtime
-};
+static const FVizObjectClass g_fviz_scene_class = {FVIZ_TYPE_SCENE, "FVizScene", &g_fviz_object_class,
+                                                   fviz_scene_destroy, fviz_scene_mtime};
 
 static FVizMTime fviz_scene_mtime(const FVizObject* object)
 {
@@ -40,8 +34,8 @@ static void fviz_scene_release_actors(FVizScene* scene)
 {
     FVizSize i;
     FVizActor** actors = (FVizActor**)fviz_array_data(scene->actors);
-    FVizObserverTag* tags = scene->actor_modified_tags != NULL
-        ? (FVizObserverTag*)fviz_array_data(scene->actor_modified_tags) : NULL;
+    FVizObserverTag* tags =
+        scene->actor_modified_tags != NULL ? (FVizObserverTag*)fviz_array_data(scene->actor_modified_tags) : NULL;
     for (i = 0u; i < fviz_array_count(scene->actors); ++i)
     {
         if (actors[i] != NULL && tags != NULL && tags[i] != FVIZ_OBSERVER_TAG_INVALID)
@@ -96,8 +90,7 @@ FVizResult fviz_scene_reserve(FVizScene* scene, FVizSize actor_capacity)
     return FVIZ_OK;
 }
 
-FVizResult fviz_scene_add_actors(
-    FVizScene* scene, FVizActor* const* actors, FVizSize actor_count)
+FVizResult fviz_scene_add_actors(FVizScene* scene, FVizActor* const* actors, FVizSize actor_count)
 {
     FVizSize old_count;
     FVizSize required;
@@ -130,9 +123,8 @@ FVizResult fviz_scene_add_actors(
         FVizActor* retained = (FVizActor*)fviz_retain(actors[i]);
         FVizObserverTag tag = FVIZ_OBSERVER_TAG_INVALID;
         if (retained == NULL ||
-            fviz_object_add_observer(
-                (FVizObject*)retained, FVIZ_EVENT_MODIFIED, 0.0f,
-                fviz_scene_actor_modified, scene, &tag) != FVIZ_OK ||
+            fviz_object_add_observer((FVizObject*)retained, FVIZ_EVENT_MODIFIED, 0.0f, fviz_scene_actor_modified, scene,
+                                     &tag) != FVIZ_OK ||
             fviz_internal_array_append(scene->actors, &retained, 1u) != FVIZ_OK ||
             fviz_internal_array_append(scene->actor_modified_tags, &tag, 1u) != FVIZ_OK)
         {
@@ -140,8 +132,7 @@ FVizResult fviz_scene_add_actors(
             if (tag != FVIZ_OBSERVER_TAG_INVALID && retained != NULL)
                 (void)fviz_object_remove_observer((FVizObject*)retained, tag);
             if (fviz_array_count(scene->actors) > fviz_array_count(scene->actor_modified_tags))
-                (void)fviz_internal_array_resize_untracked(
-                    scene->actors, fviz_array_count(scene->actors) - 1u);
+                (void)fviz_internal_array_resize_untracked(scene->actors, fviz_array_count(scene->actors) - 1u);
             fviz_release(retained);
             rollback_count = fviz_array_count(scene->actors);
             while (rollback_count > old_count)
@@ -174,9 +165,8 @@ FVizResult fviz_scene_add_actor(FVizScene* scene, FVizActor* actor)
     }
     retained = (FVizActor*)fviz_retain(actor);
     if (retained == NULL) return fviz_last_error_code();
-    if (fviz_object_add_observer(
-            (FVizObject*)retained, FVIZ_EVENT_MODIFIED, 0.0f,
-            fviz_scene_actor_modified, scene, &tag) != FVIZ_OK)
+    if (fviz_object_add_observer((FVizObject*)retained, FVIZ_EVENT_MODIFIED, 0.0f, fviz_scene_actor_modified, scene,
+                                 &tag) != FVIZ_OK)
     {
         fviz_release(retained);
         return fviz_last_error_code();
@@ -186,8 +176,7 @@ FVizResult fviz_scene_add_actor(FVizScene* scene, FVizActor* actor)
     {
         (void)fviz_object_remove_observer((FVizObject*)retained, tag);
         if (fviz_array_count(scene->actors) > fviz_array_count(scene->actor_modified_tags))
-            (void)fviz_internal_array_resize_untracked(
-                scene->actors, fviz_array_count(scene->actors) - 1u);
+            (void)fviz_internal_array_resize_untracked(scene->actors, fviz_array_count(scene->actors) - 1u);
         fviz_release(retained);
         return fviz_last_error_code();
     }
@@ -237,13 +226,18 @@ void fviz_scene_clear(FVizScene* scene)
     fviz_scene_release_actors(scene);
     fviz_object_modified((FVizObject*)scene);
 }
-FVizSize fviz_scene_actor_count(const FVizScene* scene) { return scene != NULL ? fviz_array_count(scene->actors) : 0u; }
+
+FVizSize fviz_scene_actor_count(const FVizScene* scene)
+{
+    return scene != NULL ? fviz_array_count(scene->actors) : 0u;
+}
 
 FVizActor* fviz_scene_actor(FVizScene* scene, FVizSize index)
 {
     FVizActor* const* slot = scene != NULL ? (FVizActor* const*)fviz_array_const_at(scene->actors, index) : NULL;
     return slot != NULL ? *slot : NULL;
 }
+
 const FVizActor* fviz_scene_const_actor(const FVizScene* scene, FVizSize index)
 {
     FVizActor* const* slot = scene != NULL ? (FVizActor* const*)fviz_array_const_at(scene->actors, index) : NULL;

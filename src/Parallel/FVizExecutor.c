@@ -109,8 +109,7 @@ static uint64_t fviz_executor_now_ns(void)
     LARGE_INTEGER counter;
     QueryPerformanceFrequency(&frequency);
     QueryPerformanceCounter(&counter);
-    return frequency.QuadPart > 0
-        ? (uint64_t)((counter.QuadPart * UINT64_C(1000000000)) / frequency.QuadPart) : 0u;
+    return frequency.QuadPart > 0 ? (uint64_t)((counter.QuadPart * UINT64_C(1000000000)) / frequency.QuadPart) : 0u;
 #else
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0u;
@@ -126,6 +125,7 @@ static void fviz_executor_lock(FVizExecutor* executor)
     (void)pthread_mutex_lock(&executor->mutex);
 #endif
 }
+
 static void fviz_executor_unlock(FVizExecutor* executor)
 {
 #if defined(_WIN32)
@@ -134,6 +134,7 @@ static void fviz_executor_unlock(FVizExecutor* executor)
     (void)pthread_mutex_unlock(&executor->mutex);
 #endif
 }
+
 static void fviz_future_lock(FVizFuture* future)
 {
 #if defined(_WIN32)
@@ -142,6 +143,7 @@ static void fviz_future_lock(FVizFuture* future)
     (void)pthread_mutex_lock(&future->mutex);
 #endif
 }
+
 static void fviz_future_unlock(FVizFuture* future)
 {
 #if defined(_WIN32)
@@ -169,8 +171,7 @@ static void fviz_executor_wake_all(FVizExecutor* executor)
 #endif
 }
 
-static void fviz_future_complete(FVizFuture* future, FVizResult result, void* value,
-    FVizFuture** out_waiters)
+static void fviz_future_complete(FVizFuture* future, FVizResult result, void* value, FVizFuture** out_waiters)
 {
     FVizFuture* waiters = NULL;
     fviz_future_lock(future);
@@ -195,15 +196,16 @@ static void fviz_future_complete(FVizFuture* future, FVizResult result, void* va
 
 /* Appends a detached waiter chain to a collected list, keeping the tail cached
  * so repeated appends are O(1) per chain plus O(1) tail advance. */
-static void fviz_executor_collect_waiters(
-    FVizFuture** head, FVizFuture** tail, FVizFuture* waiters)
+static void fviz_executor_collect_waiters(FVizFuture** head, FVizFuture** tail, FVizFuture* waiters)
 {
     FVizFuture* last;
     if (waiters == NULL) return;
     if (*tail != NULL) (*tail)->waiter_next = waiters;
-    else *head = waiters;
+    else
+        *head = waiters;
     last = waiters;
-    while (last->waiter_next != NULL) last = last->waiter_next;
+    while (last->waiter_next != NULL)
+        last = last->waiter_next;
     *tail = last;
 }
 
@@ -294,16 +296,19 @@ static void fviz_pending_link(FVizExecutor* executor, FVizFuture* future)
     future->pending_prev = executor->pending_tail;
     future->pending_next = NULL;
     if (executor->pending_tail != NULL) executor->pending_tail->pending_next = future;
-    else executor->pending_head = future;
+    else
+        executor->pending_head = future;
     executor->pending_tail = future;
 }
 
 static void fviz_pending_unlink(FVizExecutor* executor, FVizFuture* future)
 {
     if (future->pending_prev != NULL) future->pending_prev->pending_next = future->pending_next;
-    else executor->pending_head = future->pending_next;
+    else
+        executor->pending_head = future->pending_next;
     if (future->pending_next != NULL) future->pending_next->pending_prev = future->pending_prev;
-    else executor->pending_tail = future->pending_prev;
+    else
+        executor->pending_tail = future->pending_prev;
     future->pending_prev = NULL;
     future->pending_next = NULL;
 }
@@ -384,58 +389,57 @@ static void* fviz_executor_worker_entry(void* user_data)
         {
             const uint64_t execution_begin_ns = fviz_executor_now_ns();
             uint64_t execution_end_ns = execution_begin_ns;
-        if (fviz_cancellation_token_is_cancelled(future->cancellation) != FVIZ_FALSE)
-            result = FVIZ_ERROR_CANCELLED;
-        else if (future->continuation_function != NULL)
-        {
-            FVizResult antecedent_result;
-            fviz_future_lock(future->dependency);
-            antecedent_result = future->dependency->result;
-            fviz_future_unlock(future->dependency);
+            if (fviz_cancellation_token_is_cancelled(future->cancellation) != FVIZ_FALSE) result = FVIZ_ERROR_CANCELLED;
+            else if (future->continuation_function != NULL)
+            {
+                FVizResult antecedent_result;
+                fviz_future_lock(future->dependency);
+                antecedent_result = future->dependency->result;
+                fviz_future_unlock(future->dependency);
+                fviz_future_release_dependency(future);
+                result =
+                    future->continuation_function(antecedent_result, future->cancellation, future->user_data, &value);
+            }
+            else if (future->context_function != NULL)
+            {
+                FVizTaskContext context;
+                context.future = future;
+                result = future->context_function(&context, future->user_data, &value);
+            }
+            else
+                result = future->function(future->cancellation, future->user_data, &value);
+            /* Release the dependency before invoking the user-data destroy callback.
+             * A cancelled continuation skips the in-branch release above, so without
+             * this ordering the antecedent would keep its dependent_count and a
+             * destroy callback that frees antecedent futures (e.g. a pipeline chain
+             * freeing its intermediate links) would block forever in
+             * fviz_future_destroy. */
             fviz_future_release_dependency(future);
-            result = future->continuation_function(
-                antecedent_result, future->cancellation, future->user_data, &value);
-        }
-        else if (future->context_function != NULL)
-        {
-            FVizTaskContext context;
-            context.future = future;
-            result = future->context_function(&context, future->user_data, &value);
-        }
-        else
-            result = future->function(future->cancellation, future->user_data, &value);
-        /* Release the dependency before invoking the user-data destroy callback.
-         * A cancelled continuation skips the in-branch release above, so without
-         * this ordering the antecedent would keep its dependent_count and a
-         * destroy callback that frees antecedent futures (e.g. a pipeline chain
-         * freeing its intermediate links) would block forever in
-         * fviz_future_destroy. */
-        fviz_future_release_dependency(future);
-        if (future->user_data_destroy != NULL) future->user_data_destroy(future->user_data);
-        future->user_data = NULL;
-        if (result != FVIZ_OK && value != NULL && future->value_destroy != NULL)
-        {
-            future->value_destroy(value);
-            value = NULL;
-        }
-        execution_end_ns = fviz_executor_now_ns();
-        /* Publish completion and clear worker->current before publishing ready,
-         * so a waiter thread that destroys the future cannot race with an
-         * executor_destroy reading worker->current. */
-        fviz_executor_lock(executor);
-        worker->current = NULL;
-        --executor->running;
-        ++executor->completed;
-        if (result == FVIZ_ERROR_CANCELLED) ++executor->cancelled;
-        else if (result != FVIZ_OK) ++executor->failed;
-        if (execution_end_ns >= execution_begin_ns)
-            executor->execution_ns += execution_end_ns - execution_begin_ns;
-        fviz_executor_unlock(executor);
-        fviz_future_complete(future, result, value, &waiters);
-        /* The completed future may now unlock dependents parked on other
-         * executors; schedule them. The completed future must not be touched
-         * here: a waiter thread may destroy it as soon as it observes ready. */
-        fviz_executor_promote_waiters(waiters);
+            if (future->user_data_destroy != NULL) future->user_data_destroy(future->user_data);
+            future->user_data = NULL;
+            if (result != FVIZ_OK && value != NULL && future->value_destroy != NULL)
+            {
+                future->value_destroy(value);
+                value = NULL;
+            }
+            execution_end_ns = fviz_executor_now_ns();
+            /* Publish completion and clear worker->current before publishing ready,
+             * so a waiter thread that destroys the future cannot race with an
+             * executor_destroy reading worker->current. */
+            fviz_executor_lock(executor);
+            worker->current = NULL;
+            --executor->running;
+            ++executor->completed;
+            if (result == FVIZ_ERROR_CANCELLED) ++executor->cancelled;
+            else if (result != FVIZ_OK)
+                ++executor->failed;
+            if (execution_end_ns >= execution_begin_ns) executor->execution_ns += execution_end_ns - execution_begin_ns;
+            fviz_executor_unlock(executor);
+            fviz_future_complete(future, result, value, &waiters);
+            /* The completed future may now unlock dependents parked on other
+             * executors; schedule them. The completed future must not be touched
+             * here: a waiter thread may destroy it as soon as it observes ready. */
+            fviz_executor_promote_waiters(waiters);
         }
     }
 #if defined(_WIN32)
@@ -452,8 +456,7 @@ void fviz_executor_options_initialize(FVizExecutorOptions* options)
     options->struct_size = (uint32_t)sizeof(*options);
 }
 
-FVizResult fviz_executor_create(
-    const FVizExecutorOptions* options, FVizExecutor** out_executor)
+FVizResult fviz_executor_create(const FVizExecutorOptions* options, FVizExecutor** out_executor)
 {
     FVizExecutorOptions defaults;
     FVizExecutor* executor;
@@ -467,22 +470,20 @@ FVizResult fviz_executor_create(
         options = &defaults;
     }
     if (options->struct_size < sizeof(*options)) return FVIZ_ERROR_INVALID_ARGUMENT;
-    thread_count = options->thread_count != 0u
-        ? options->thread_count : fviz_parallel_thread_limit();
+    thread_count = options->thread_count != 0u ? options->thread_count : fviz_parallel_thread_limit();
     if (thread_count == 0u) thread_count = fviz_parallel_hardware_thread_count();
     if (thread_count > FVIZ_EXECUTOR_MAX_THREADS) thread_count = FVIZ_EXECUTOR_MAX_THREADS;
     executor = (FVizExecutor*)fviz_alloc(sizeof(*executor));
     if (executor == NULL) return fviz_last_error_code();
     memset(executor, 0, sizeof(*executor));
-    executor->queue_capacity = options->queue_capacity != 0u
-        ? options->queue_capacity : FVIZ_EXECUTOR_DEFAULT_QUEUE_CAPACITY;
+    executor->queue_capacity =
+        options->queue_capacity != 0u ? options->queue_capacity : FVIZ_EXECUTOR_DEFAULT_QUEUE_CAPACITY;
     if (executor->queue_capacity > (FVizSize)-1 / sizeof(*executor->queue))
     {
         fviz_free(executor);
         return FVIZ_ERROR_OVERFLOW;
     }
-    executor->queue = (FVizFuture**)fviz_alloc(
-        executor->queue_capacity * sizeof(*executor->queue));
+    executor->queue = (FVizFuture**)fviz_alloc(executor->queue_capacity * sizeof(*executor->queue));
     if (executor->queue == NULL)
     {
         fviz_free(executor);
@@ -492,10 +493,10 @@ FVizResult fviz_executor_create(
     InitializeCriticalSection(&executor->mutex);
     InitializeConditionVariable(&executor->work_condition);
 #else
-    if (pthread_mutex_init(&executor->mutex, NULL) != 0 ||
-        pthread_cond_init(&executor->work_condition, NULL) != 0)
+    if (pthread_mutex_init(&executor->mutex, NULL) != 0 || pthread_cond_init(&executor->work_condition, NULL) != 0)
     {
-        fviz_free(executor->queue); fviz_free(executor);
+        fviz_free(executor->queue);
+        fviz_free(executor);
         return FVIZ_ERROR_INTERNAL;
     }
 #endif
@@ -503,12 +504,10 @@ FVizResult fviz_executor_create(
     {
         executor->workers[i].executor = executor;
 #if defined(_WIN32)
-        executor->threads[i] = CreateThread(NULL, 0u, fviz_executor_worker_entry,
-            &executor->workers[i], 0u, NULL);
+        executor->threads[i] = CreateThread(NULL, 0u, fviz_executor_worker_entry, &executor->workers[i], 0u, NULL);
         if (executor->threads[i] == NULL) break;
 #else
-        if (pthread_create(&executor->threads[i], NULL, fviz_executor_worker_entry,
-                &executor->workers[i]) != 0) break;
+        if (pthread_create(&executor->threads[i], NULL, fviz_executor_worker_entry, &executor->workers[i]) != 0) break;
 #endif
         ++executor->thread_count;
     }
@@ -532,8 +531,7 @@ void fviz_executor_destroy(FVizExecutor* executor)
     fviz_executor_lock(executor);
     executor->stopping = FVIZ_TRUE;
     for (i = 0u; i < executor->thread_count; ++i)
-        if (executor->workers[i].current != NULL)
-            fviz_future_cancel(executor->workers[i].current);
+        if (executor->workers[i].current != NULL) fviz_future_cancel(executor->workers[i].current);
     while (executor->queue_count != 0u)
     {
         FVizFuture* waiters = NULL;
@@ -569,8 +567,7 @@ void fviz_executor_destroy(FVizExecutor* executor)
             if (future->dependency != NULL)
             {
                 fviz_future_lock(future->dependency);
-                if (future->dependency->waiting_head == future)
-                    future->dependency->waiting_head = future->waiter_next;
+                if (future->dependency->waiting_head == future) future->dependency->waiting_head = future->waiter_next;
                 else
                 {
                     FVizFuture* cursor = future->dependency->waiting_head;
@@ -613,17 +610,15 @@ void fviz_executor_destroy(FVizExecutor* executor)
     fviz_free(executor);
 }
 
-static FVizResult fviz_executor_submit_internal(
-    FVizExecutor* executor, int priority, FVizTaskFn function,
-    FVizTaskContextFn context_function, FVizContinuationFn continuation_function,
-    FVizFuture* dependency, void* user_data,
-    FVizTaskDataDestroyFn user_data_destroy, FVizTaskValueDestroyFn value_destroy,
-    FVizFuture** out_future)
+static FVizResult fviz_executor_submit_internal(FVizExecutor* executor, int priority, FVizTaskFn function,
+                                                FVizTaskContextFn context_function,
+                                                FVizContinuationFn continuation_function, FVizFuture* dependency,
+                                                void* user_data, FVizTaskDataDestroyFn user_data_destroy,
+                                                FVizTaskValueDestroyFn value_destroy, FVizFuture** out_future)
 {
     FVizFuture* future;
     FVizBool parked = FVIZ_FALSE;
-    if (executor == NULL ||
-        (function == NULL && context_function == NULL && continuation_function == NULL) ||
+    if (executor == NULL || (function == NULL && context_function == NULL && continuation_function == NULL) ||
         out_future == NULL)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_future = NULL;
@@ -634,9 +629,11 @@ static FVizResult fviz_executor_submit_internal(
     InitializeCriticalSection(&future->mutex);
     InitializeConditionVariable(&future->condition);
 #else
-    if (pthread_mutex_init(&future->mutex, NULL) != 0 ||
-        pthread_cond_init(&future->condition, NULL) != 0)
-    { fviz_free(future); return FVIZ_ERROR_INTERNAL; }
+    if (pthread_mutex_init(&future->mutex, NULL) != 0 || pthread_cond_init(&future->condition, NULL) != 0)
+    {
+        fviz_free(future);
+        return FVIZ_ERROR_INTERNAL;
+    }
 #endif
     future->function = function;
     future->context_function = context_function;
@@ -649,10 +646,12 @@ static FVizResult fviz_executor_submit_internal(
     future->priority = priority;
     future->result = FVIZ_ERROR_BUSY;
     if (fviz_cancellation_token_create(&future->cancellation) != FVIZ_OK)
-    { fviz_future_destroy(future); return fviz_last_error_code(); }
+    {
+        fviz_future_destroy(future);
+        return fviz_last_error_code();
+    }
     fviz_executor_lock(executor);
-    if (executor->stopping != FVIZ_FALSE ||
-        executor->pending_count >= executor->queue_capacity)
+    if (executor->stopping != FVIZ_FALSE || executor->pending_count >= executor->queue_capacity)
     {
         fviz_executor_unlock(executor);
         future->user_data = NULL;
@@ -701,37 +700,32 @@ static FVizResult fviz_executor_submit_internal(
     return FVIZ_OK;
 }
 
-FVizResult fviz_executor_submit(
-    FVizExecutor* executor, int priority, FVizTaskFn function, void* user_data,
-    FVizTaskDataDestroyFn user_data_destroy, FVizTaskValueDestroyFn value_destroy,
-    FVizFuture** out_future)
+FVizResult fviz_executor_submit(FVizExecutor* executor, int priority, FVizTaskFn function, void* user_data,
+                                FVizTaskDataDestroyFn user_data_destroy, FVizTaskValueDestroyFn value_destroy,
+                                FVizFuture** out_future)
 {
-    return fviz_executor_submit_internal(executor, priority, function, NULL, NULL,
-        NULL, user_data, user_data_destroy, value_destroy, out_future);
+    return fviz_executor_submit_internal(executor, priority, function, NULL, NULL, NULL, user_data, user_data_destroy,
+                                         value_destroy, out_future);
 }
 
-FVizResult fviz_executor_submit_context(
-    FVizExecutor* executor, int priority, FVizTaskContextFn function, void* user_data,
-    FVizTaskDataDestroyFn user_data_destroy, FVizTaskValueDestroyFn value_destroy,
-    FVizFuture** out_future)
+FVizResult fviz_executor_submit_context(FVizExecutor* executor, int priority, FVizTaskContextFn function,
+                                        void* user_data, FVizTaskDataDestroyFn user_data_destroy,
+                                        FVizTaskValueDestroyFn value_destroy, FVizFuture** out_future)
 {
-    return fviz_executor_submit_internal(executor, priority, NULL, function, NULL,
-        NULL, user_data, user_data_destroy, value_destroy, out_future);
+    return fviz_executor_submit_internal(executor, priority, NULL, function, NULL, NULL, user_data, user_data_destroy,
+                                         value_destroy, out_future);
 }
 
-FVizResult fviz_future_then(
-    FVizFuture* antecedent, FVizExecutor* executor, int priority,
-    FVizContinuationFn function, void* user_data,
-    FVizTaskDataDestroyFn user_data_destroy, FVizTaskValueDestroyFn value_destroy,
-    FVizFuture** out_future)
+FVizResult fviz_future_then(FVizFuture* antecedent, FVizExecutor* executor, int priority, FVizContinuationFn function,
+                            void* user_data, FVizTaskDataDestroyFn user_data_destroy,
+                            FVizTaskValueDestroyFn value_destroy, FVizFuture** out_future)
 {
     if (antecedent == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
-    return fviz_executor_submit_internal(executor, priority, NULL, NULL, function,
-        antecedent, user_data, user_data_destroy, value_destroy, out_future);
+    return fviz_executor_submit_internal(executor, priority, NULL, NULL, function, antecedent, user_data,
+                                         user_data_destroy, value_destroy, out_future);
 }
 
-void fviz_executor_get_statistics(
-    const FVizExecutor* executor, FVizExecutorStatistics* out_statistics)
+void fviz_executor_get_statistics(const FVizExecutor* executor, FVizExecutorStatistics* out_statistics)
 {
     FVizExecutor* mutable_executor = (FVizExecutor*)executor;
     if (out_statistics == NULL) return;
@@ -757,8 +751,7 @@ void fviz_future_cancel(FVizFuture* future)
 
 FVizCancellationToken* fviz_task_context_cancellation(FVizTaskContext* context)
 {
-    return context != NULL && context->future != NULL
-        ? context->future->cancellation : NULL;
+    return context != NULL && context->future != NULL ? context->future->cancellation : NULL;
 }
 
 FVizResult fviz_task_context_report_progress(FVizTaskContext* context, double progress)
@@ -766,8 +759,8 @@ FVizResult fviz_task_context_report_progress(FVizTaskContext* context, double pr
     FVizFuture* future;
     FVizFutureProgressFn callback;
     void* user_data;
-    if (context == NULL || context->future == NULL || !isfinite(progress) ||
-        progress < 0.0 || progress > 1.0) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (context == NULL || context->future == NULL || !isfinite(progress) || progress < 0.0 || progress > 1.0)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
     future = context->future;
     fviz_future_lock(future);
     if (progress < future->progress)
@@ -795,8 +788,7 @@ double fviz_future_progress(const FVizFuture* future)
     return progress;
 }
 
-void fviz_future_set_progress_callback(
-    FVizFuture* future, FVizFutureProgressFn callback, void* user_data)
+void fviz_future_set_progress_callback(FVizFuture* future, FVizFutureProgressFn callback, void* user_data)
 {
     if (future == NULL) return;
     fviz_future_lock(future);
@@ -807,8 +799,7 @@ void fviz_future_set_progress_callback(
 
 FVizBool fviz_future_ready(const FVizFuture* future)
 {
-    return future != NULL && fviz_atomic_u32_load(&future->ready) != 0u
-        ? FVIZ_TRUE : FVIZ_FALSE;
+    return future != NULL && fviz_atomic_u32_load(&future->ready) != 0u ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
 FVizResult fviz_future_wait(FVizFuture* future)
@@ -867,8 +858,7 @@ void fviz_future_destroy(FVizFuture* future)
 #endif
     }
     fviz_future_unlock(future);
-    if (future->value != NULL && future->value_destroy != NULL)
-        future->value_destroy(future->value);
+    if (future->value != NULL && future->value_destroy != NULL) future->value_destroy(future->value);
     fviz_cancellation_token_destroy(future->cancellation);
 #if defined(_WIN32)
     DeleteCriticalSection(&future->mutex);

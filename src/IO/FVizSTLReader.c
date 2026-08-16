@@ -9,10 +9,7 @@
 
 static uint32_t fviz_u32_le(const unsigned char bytes[4])
 {
-    return (uint32_t)bytes[0] |
-        ((uint32_t)bytes[1] << 8u) |
-        ((uint32_t)bytes[2] << 16u) |
-        ((uint32_t)bytes[3] << 24u);
+    return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8u) | ((uint32_t)bytes[2] << 16u) | ((uint32_t)bytes[3] << 24u);
 }
 
 static float fviz_f32_le(const unsigned char bytes[4])
@@ -149,9 +146,8 @@ FVizResult fviz_stl_read(const char* path, FVizPolyData** out_poly_data)
         (void)fclose(file);
         return fviz_last_error_code();
     }
-    result = binary == FVIZ_TRUE ?
-        fviz_stl_read_binary(file, triangle_count, poly_data) :
-        fviz_stl_read_ascii(file, poly_data);
+    result = binary == FVIZ_TRUE ? fviz_stl_read_binary(file, triangle_count, poly_data)
+                                 : fviz_stl_read_ascii(file, poly_data);
     (void)fclose(file);
     if (result != FVIZ_OK)
     {

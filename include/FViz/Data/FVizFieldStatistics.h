@@ -66,18 +66,14 @@ FVIZ_API void fviz_field_statistics_options_initialize(FVizFieldStatisticsOption
  * PartitionedDataSet and TemporalDataSet recursively. Non-finite values and
  * leaves missing array_name are skipped. Standard duplicate/hidden ghost
  * tuples are skipped by default. */
-FVIZ_API FVizResult fviz_field_statistics_compute(
-    const FVizDataObject* data,
-    const char* array_name,
-    const FVizFieldStatisticsOptions* options,
-    FVizFieldStatistics* out_statistics);
+FVIZ_API FVizResult fviz_field_statistics_compute(const FVizDataObject* data, const char* array_name,
+                                                  const FVizFieldStatisticsOptions* options,
+                                                  FVizFieldStatistics* out_statistics);
 /* Computes deterministic parallel moments using the same traversal and ghost
  * policy as fviz_field_statistics_compute(). */
-FVIZ_API FVizResult fviz_field_statistics_compute_moments(
-    const FVizDataObject* data,
-    const char* array_name,
-    const FVizFieldStatisticsOptions* options,
-    FVizFieldMoments* out_moments);
+FVIZ_API FVizResult fviz_field_statistics_compute_moments(const FVizDataObject* data, const char* array_name,
+                                                          const FVizFieldStatisticsOptions* options,
+                                                          FVizFieldMoments* out_moments);
 
 FVIZ_EXTERN_C_END
 

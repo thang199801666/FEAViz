@@ -26,15 +26,9 @@ typedef enum FVizFilterOutputType
     FVIZ_FILTER_OUTPUT_POLY_DATA = 2
 } FVizFilterOutputType;
 
-FVIZ_API FVizResult fviz_threshold_filter_create(
-    const char* scalar_name,
-    double minimum,
-    double maximum,
-    FVizFilter** out_filter);
-FVIZ_API FVizResult fviz_warp_filter_create(
-    const char* vector_name,
-    double scale,
-    FVizFilter** out_filter);
+FVIZ_API FVizResult fviz_threshold_filter_create(const char* scalar_name, double minimum, double maximum,
+                                                 FVizFilter** out_filter);
+FVIZ_API FVizResult fviz_warp_filter_create(const char* vector_name, double scale, FVizFilter** out_filter);
 FVIZ_API FVizResult fviz_cell_data_to_point_filter_create(FVizFilter** out_filter);
 FVIZ_API FVizResult fviz_surface_filter_create(FVizBool transfer_scalars, FVizFilter** out_filter);
 FVIZ_API FVizResult fviz_slice_filter_create(FVizPlane plane, FVizFilter** out_filter);

@@ -24,22 +24,16 @@ static void fviz_image_geometry_destroy(FVizObject* object)
     filter->algorithm = NULL;
 }
 
-static const FVizObjectClass g_fviz_image_geometry_class = {
-    FVIZ_TYPE_IMAGE_DATA_GEOMETRY_FILTER,
-    "FVizImageDataGeometryFilter",
-    &g_fviz_object_class,
-    fviz_image_geometry_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_image_geometry_class = {FVIZ_TYPE_IMAGE_DATA_GEOMETRY_FILTER,
+                                                            "FVizImageDataGeometryFilter", &g_fviz_object_class,
+                                                            fviz_image_geometry_destroy, NULL};
 
 static FVizMTime fviz_image_geometry_state_mtime(const void* state)
 {
     return fviz_object_mtime((const FVizObject*)state);
 }
 
-static FVizResult fviz_image_geometry_copy_attribute_set(
-    const FVizAttributeSet* source,
-    FVizAttributeSet* destination)
+static FVizResult fviz_image_geometry_copy_attribute_set(const FVizAttributeSet* source, FVizAttributeSet* destination)
 {
     FVizSize i;
     for (i = 0u; i < fviz_attribute_set_count(source); ++i)
@@ -67,10 +61,9 @@ static FVizResult fviz_image_geometry_copy_attribute_set(
 
 static FVizId fviz_image_geometry_source_cell_id(const FVizImageData* input, FVizId cell_id)
 {
-    const FVizDataArray* upstream = fviz_attribute_set_const_get(
-        fviz_image_data_const_cell_data(input), "FVizOriginalCellIds");
-    if (upstream != NULL &&
-        fviz_data_array_type(upstream) == FVIZ_DATA_UINT64 &&
+    const FVizDataArray* upstream =
+        fviz_attribute_set_const_get(fviz_image_data_const_cell_data(input), "FVizOriginalCellIds");
+    if (upstream != NULL && fviz_data_array_type(upstream) == FVIZ_DATA_UINT64 &&
         fviz_data_array_components(upstream) == 1u &&
         fviz_data_array_tuple_count(upstream) == fviz_image_data_cell_count(input))
     {
@@ -80,10 +73,8 @@ static FVizId fviz_image_geometry_source_cell_id(const FVizImageData* input, FVi
     return cell_id;
 }
 
-static FVizResult fviz_image_geometry_copy_cell_data(
-    const FVizImageData* input,
-    FVizPolyData* output,
-    const FVizDataArray* source_cell_indices)
+static FVizResult fviz_image_geometry_copy_cell_data(const FVizImageData* input, FVizPolyData* output,
+                                                     const FVizDataArray* source_cell_indices)
 {
     const FVizAttributeSet* source = fviz_image_data_const_cell_data(input);
     FVizAttributeSet* destination = fviz_poly_data_cell_data(output);
@@ -104,8 +95,8 @@ static FVizResult fviz_image_geometry_copy_cell_data(
             fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "ImageData geometry provenance storage is unavailable");
             return FVIZ_ERROR_INVALID_STATE;
         }
-        if (fviz_data_array_create(
-                fviz_data_array_type(source_array), fviz_data_array_components(source_array), &out_array) != FVIZ_OK ||
+        if (fviz_data_array_create(fviz_data_array_type(source_array), fviz_data_array_components(source_array),
+                                   &out_array) != FVIZ_OK ||
             fviz_data_array_resize(out_array, fviz_data_array_tuple_count(source_cell_indices)) != FVIZ_OK)
             goto fail;
         {
@@ -130,21 +121,16 @@ static FVizResult fviz_image_geometry_copy_cell_data(
         }
         fviz_release(out_array);
         continue;
-fail:
+    fail:
         fviz_release(out_array);
         return fviz_last_error_code();
     }
     return FVIZ_OK;
 }
 
-static FVizResult fviz_image_geometry_append_cell(
-    const FVizImageData* input,
-    FVizPolyData* output,
-    FVizDataArray* provenance,
-    FVizDataArray* source_cell_indices,
-    FVizId cell_id,
-    const FVizId* ids,
-    uint32_t count)
+static FVizResult fviz_image_geometry_append_cell(const FVizImageData* input, FVizPolyData* output,
+                                                  FVizDataArray* provenance, FVizDataArray* source_cell_indices,
+                                                  FVizId cell_id, const FVizId* ids, uint32_t count)
 {
     uint32_t compatible[8];
     uint32_t i;
@@ -154,7 +140,8 @@ static FVizResult fviz_image_geometry_append_cell(
     {
         if (ids[i] > UINT32_MAX)
         {
-            fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED,
+            fviz_internal_set_error(
+                FVIZ_ERROR_NOT_SUPPORTED,
                 "ImageData geometry output currently requires renderable UINT32 PolyData point IDs");
             return FVIZ_ERROR_NOT_SUPPORTED;
         }
@@ -190,7 +177,7 @@ static FVizResult fviz_image_geometry_append_cell(
 
 static FVizResult fviz_image_geometry_estimated_triangles(const FVizImageData* input, FVizSize* out_triangles)
 {
-    FVizSize dims[3] = {0u,0u,0u};
+    FVizSize dims[3] = {0u, 0u, 0u};
     const uint32_t dimension = fviz_image_data_dimension(input);
     FVizSize triangles = 0u;
     if (out_triangles == NULL)
@@ -210,10 +197,8 @@ static FVizResult fviz_image_geometry_estimated_triangles(const FVizImageData* i
         const FVizSize cy = dims[1] - 1u;
         const FVizSize cz = dims[2] - 1u;
         FVizSize xy, yz, zx, sum;
-        if (fviz_size_multiply(cx, cy, &xy) != FVIZ_OK ||
-            fviz_size_multiply(cy, cz, &yz) != FVIZ_OK ||
-            fviz_size_multiply(cz, cx, &zx) != FVIZ_OK ||
-            xy > (FVizSize)-1 - yz || xy + yz > (FVizSize)-1 - zx)
+        if (fviz_size_multiply(cx, cy, &xy) != FVIZ_OK || fviz_size_multiply(cy, cz, &yz) != FVIZ_OK ||
+            fviz_size_multiply(cz, cx, &zx) != FVIZ_OK || xy > (FVizSize)-1 - yz || xy + yz > (FVizSize)-1 - zx)
             return FVIZ_ERROR_OVERFLOW;
         sum = xy + yz + zx;
         if (fviz_size_multiply(sum, 4u, &triangles) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
@@ -222,7 +207,8 @@ static FVizResult fviz_image_geometry_estimated_triangles(const FVizImageData* i
     return FVIZ_OK;
 }
 
-static FVizResult fviz_image_geometry_materialize_points(const FVizImageData* input, FVizVec3* points, FVizSize point_count)
+static FVizResult fviz_image_geometry_materialize_points(const FVizImageData* input, FVizVec3* points,
+                                                         FVizSize point_count)
 {
     int64_t extent[6];
     double origin[3];
@@ -251,12 +237,13 @@ static FVizResult fviz_image_geometry_materialize_points(const FVizImageData* in
                 const double sx = (double)i * spacing[0];
                 const double sy = (double)j * spacing[1];
                 const double sz = (double)k * spacing[2];
-                const double x = origin[0] + direction[0]*sx + direction[1]*sy + direction[2]*sz;
-                const double y = origin[1] + direction[3]*sx + direction[4]*sy + direction[5]*sz;
-                const double z = origin[2] + direction[6]*sx + direction[7]*sy + direction[8]*sz;
+                const double x = origin[0] + direction[0] * sx + direction[1] * sy + direction[2] * sz;
+                const double y = origin[1] + direction[3] * sx + direction[4] * sy + direction[5] * sz;
+                const double z = origin[2] + direction[6] * sx + direction[7] * sy + direction[8] * sz;
                 if (cursor >= point_count)
                 {
-                    fviz_internal_set_error(FVIZ_ERROR_INTERNAL, "structured point materialization exceeded expected count");
+                    fviz_internal_set_error(FVIZ_ERROR_INTERNAL,
+                                            "structured point materialization exceeded expected count");
                     return FVIZ_ERROR_INTERNAL;
                 }
                 points[cursor++] = fviz_vec3((float)x, (float)y, (float)z);
@@ -274,10 +261,8 @@ static FVizResult fviz_image_geometry_materialize_points(const FVizImageData* in
     return FVIZ_OK;
 }
 
-static FVizResult fviz_image_geometry_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_image_geometry_process_request(FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request,
+                                                      void* state)
 {
     FVizImageDataGeometryFilter* filter = (FVizImageDataGeometryFilter*)state;
     FVizImageData* input;
@@ -303,7 +288,7 @@ static FVizResult fviz_image_geometry_process_request(
     if (point_count > (FVizSize)UINT32_MAX + 1u)
     {
         fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED,
-            "ImageData geometry rendering currently requires at most UINT32_MAX+1 points");
+                                "ImageData geometry rendering currently requires at most UINT32_MAX+1 points");
         return FVIZ_ERROR_NOT_SUPPORTED;
     }
     if (fviz_size_multiply(point_count, sizeof(FVizVec3), &point_bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
@@ -317,13 +302,16 @@ static FVizResult fviz_image_geometry_process_request(
         fviz_poly_data_add_points(output, points, point_count, NULL) != FVIZ_OK ||
         fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &provenance) != FVIZ_OK ||
         fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &source_cell_indices) != FVIZ_OK ||
-        fviz_data_array_reserve(provenance, estimated_triangles != 0u ? estimated_triangles : fviz_image_data_cell_count(input)) != FVIZ_OK ||
-        fviz_data_array_reserve(source_cell_indices, estimated_triangles != 0u ? estimated_triangles : fviz_image_data_cell_count(input)) != FVIZ_OK)
+        fviz_data_array_reserve(provenance, estimated_triangles != 0u ? estimated_triangles
+                                                                      : fviz_image_data_cell_count(input)) != FVIZ_OK ||
+        fviz_data_array_reserve(source_cell_indices,
+                                estimated_triangles != 0u ? estimated_triangles : fviz_image_data_cell_count(input)) !=
+            FVIZ_OK)
         goto fail;
-    if (fviz_image_geometry_copy_attribute_set(
-            fviz_image_data_const_point_data(input), fviz_poly_data_point_data(output)) != FVIZ_OK ||
-        fviz_image_geometry_copy_attribute_set(
-            fviz_image_data_const_field_data(input), fviz_poly_data_field_data(output)) != FVIZ_OK)
+    if (fviz_image_geometry_copy_attribute_set(fviz_image_data_const_point_data(input),
+                                               fviz_poly_data_point_data(output)) != FVIZ_OK ||
+        fviz_image_geometry_copy_attribute_set(fviz_image_data_const_field_data(input),
+                                               fviz_poly_data_field_data(output)) != FVIZ_OK)
         goto fail;
 
     dimension = fviz_image_data_dimension(input);
@@ -336,7 +324,8 @@ static FVizResult fviz_image_geometry_process_request(
                 FVizId ids[8];
                 uint32_t count;
                 if (fviz_image_data_cell_point_ids(input, (FVizId)i, ids, &count) != FVIZ_OK ||
-                    fviz_image_geometry_append_cell(input, output, provenance, source_cell_indices, (FVizId)i, ids, count) != FVIZ_OK)
+                    fviz_image_geometry_append_cell(input, output, provenance, source_cell_indices, (FVizId)i, ids,
+                                                    count) != FVIZ_OK)
                     goto fail;
             }
         }
@@ -349,11 +338,8 @@ static FVizResult fviz_image_geometry_process_request(
             {
                 FVizId ids[8];
                 uint32_t count;
-                const uint32_t faces[6][4] = {
-                    {0u,4u,7u,3u}, {1u,2u,6u,5u},
-                    {0u,1u,5u,4u}, {3u,7u,6u,2u},
-                    {0u,3u,2u,1u}, {4u,5u,6u,7u}
-                };
+                const uint32_t faces[6][4] = {{0u, 4u, 7u, 3u}, {1u, 2u, 6u, 5u}, {0u, 1u, 5u, 4u},
+                                              {3u, 7u, 6u, 2u}, {0u, 3u, 2u, 1u}, {4u, 5u, 6u, 7u}};
                 uint32_t face;
                 if (fviz_image_data_cell_ijk(input, (FVizId)i, ijk) != FVIZ_OK ||
                     fviz_image_data_cell_point_ids(input, (FVizId)i, ids, &count) != FVIZ_OK || count != 8u)
@@ -364,18 +350,34 @@ static FVizResult fviz_image_geometry_process_request(
                     FVizId face_ids[4];
                     switch (face)
                     {
-                        case 0u: boundary = ijk[0] == extent[0] ? FVIZ_TRUE : FVIZ_FALSE; break;
-                        case 1u: boundary = ijk[0] == extent[1]-1 ? FVIZ_TRUE : FVIZ_FALSE; break;
-                        case 2u: boundary = ijk[1] == extent[2] ? FVIZ_TRUE : FVIZ_FALSE; break;
-                        case 3u: boundary = ijk[1] == extent[3]-1 ? FVIZ_TRUE : FVIZ_FALSE; break;
-                        case 4u: boundary = ijk[2] == extent[4] ? FVIZ_TRUE : FVIZ_FALSE; break;
-                        case 5u: boundary = ijk[2] == extent[5]-1 ? FVIZ_TRUE : FVIZ_FALSE; break;
-                        default: break;
+                        case 0u:
+                            boundary = ijk[0] == extent[0] ? FVIZ_TRUE : FVIZ_FALSE;
+                            break;
+                        case 1u:
+                            boundary = ijk[0] == extent[1] - 1 ? FVIZ_TRUE : FVIZ_FALSE;
+                            break;
+                        case 2u:
+                            boundary = ijk[1] == extent[2] ? FVIZ_TRUE : FVIZ_FALSE;
+                            break;
+                        case 3u:
+                            boundary = ijk[1] == extent[3] - 1 ? FVIZ_TRUE : FVIZ_FALSE;
+                            break;
+                        case 4u:
+                            boundary = ijk[2] == extent[4] ? FVIZ_TRUE : FVIZ_FALSE;
+                            break;
+                        case 5u:
+                            boundary = ijk[2] == extent[5] - 1 ? FVIZ_TRUE : FVIZ_FALSE;
+                            break;
+                        default:
+                            break;
                     }
                     if (boundary == FVIZ_FALSE) continue;
-                    face_ids[0]=ids[faces[face][0]]; face_ids[1]=ids[faces[face][1]];
-                    face_ids[2]=ids[faces[face][2]]; face_ids[3]=ids[faces[face][3]];
-                    if (fviz_image_geometry_append_cell(input, output, provenance, source_cell_indices, (FVizId)i, face_ids, 4u) != FVIZ_OK)
+                    face_ids[0] = ids[faces[face][0]];
+                    face_ids[1] = ids[faces[face][1]];
+                    face_ids[2] = ids[faces[face][2]];
+                    face_ids[3] = ids[faces[face][3]];
+                    if (fviz_image_geometry_append_cell(input, output, provenance, source_cell_indices, (FVizId)i,
+                                                        face_ids, 4u) != FVIZ_OK)
                         goto fail;
                 }
             }
@@ -409,15 +411,16 @@ FVizResult fviz_image_data_geometry_filter_create(FVizImageDataGeometryFilter** 
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_filter = NULL;
-    filter = (FVizImageDataGeometryFilter*)fviz_internal_object_allocate(
-        sizeof(*filter), &g_fviz_image_geometry_class, NULL);
+    filter = (FVizImageDataGeometryFilter*)fviz_internal_object_allocate(sizeof(*filter), &g_fviz_image_geometry_class,
+                                                                         NULL);
     if (filter == NULL) return fviz_last_error_code();
     fviz_algorithm_callbacks_initialize(&callbacks);
     callbacks.process_request = fviz_image_geometry_process_request;
     callbacks.get_state_mtime = fviz_image_geometry_state_mtime;
     callbacks.state_object = (FVizObject*)filter;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_IMAGE_DATA, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_IMAGE_DATA, FVIZ_FALSE, FVIZ_FALSE) !=
+            FVIZ_OK ||
         fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA) != FVIZ_OK)
     {
         fviz_release(filter);
@@ -429,15 +432,33 @@ FVizResult fviz_image_data_geometry_filter_create(FVizImageDataGeometryFilter** 
 
 FVizResult fviz_image_data_geometry_filter_set_input_data(FVizImageDataGeometryFilter* filter, FVizImageData* input)
 {
-    return filter != NULL ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input) : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizResult fviz_image_data_geometry_filter_set_input_connection(FVizImageDataGeometryFilter* filter, FVizAlgorithmOutput* input)
+FVizResult fviz_image_data_geometry_filter_set_input_connection(FVizImageDataGeometryFilter* filter,
+                                                                FVizAlgorithmOutput* input)
 {
-    return filter != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input) : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizAlgorithm* fviz_image_data_geometry_filter_algorithm(FVizImageDataGeometryFilter* filter) { return filter != NULL ? filter->algorithm : NULL; }
-FVizAlgorithmOutput* fviz_image_data_geometry_filter_output_port(FVizImageDataGeometryFilter* filter) { return filter != NULL ? fviz_algorithm_output_port(filter->algorithm,0u) : NULL; }
-FVizPolyData* fviz_image_data_geometry_filter_output(FVizImageDataGeometryFilter* filter) { return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm,0u) : NULL; }
-FVizResult fviz_image_data_geometry_filter_update(FVizImageDataGeometryFilter* filter) { return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT; }
+FVizAlgorithm* fviz_image_data_geometry_filter_algorithm(FVizImageDataGeometryFilter* filter)
+{
+    return filter != NULL ? filter->algorithm : NULL;
+}
+
+FVizAlgorithmOutput* fviz_image_data_geometry_filter_output_port(FVizImageDataGeometryFilter* filter)
+{
+    return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL;
+}
+
+FVizPolyData* fviz_image_data_geometry_filter_output(FVizImageDataGeometryFilter* filter)
+{
+    return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL;
+}
+
+FVizResult fviz_image_data_geometry_filter_update(FVizImageDataGeometryFilter* filter)
+{
+    return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
+}

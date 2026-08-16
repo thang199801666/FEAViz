@@ -25,18 +25,16 @@ static void fviz_rectilinear_geometry_destroy(FVizObject* object)
 }
 
 static const FVizObjectClass g_fviz_rectilinear_geometry_class = {
-    FVIZ_TYPE_RECTILINEAR_GRID_GEOMETRY_FILTER,
-    "FVizRectilinearGridGeometryFilter",
-    &g_fviz_object_class,
-    fviz_rectilinear_geometry_destroy,
-    NULL
-};
+    FVIZ_TYPE_RECTILINEAR_GRID_GEOMETRY_FILTER, "FVizRectilinearGridGeometryFilter", &g_fviz_object_class,
+    fviz_rectilinear_geometry_destroy, NULL};
 
 static FVizMTime fviz_rectilinear_geometry_state_mtime(const void* state)
-{ return fviz_object_mtime((const FVizObject*)state); }
+{
+    return fviz_object_mtime((const FVizObject*)state);
+}
 
-static FVizResult fviz_rectilinear_geometry_copy_attributes(
-    const FVizAttributeSet* source, FVizAttributeSet* destination)
+static FVizResult fviz_rectilinear_geometry_copy_attributes(const FVizAttributeSet* source,
+                                                            FVizAttributeSet* destination)
 {
     FVizSize i;
     for (i = 0u; i < fviz_attribute_set_count(source); ++i)
@@ -62,8 +60,8 @@ static FVizResult fviz_rectilinear_geometry_copy_attributes(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_rectilinear_geometry_process_request(
-    FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request, void* state)
+static FVizResult fviz_rectilinear_geometry_process_request(FVizAlgorithm* algorithm,
+                                                            const FVizPipelineRequestInfo* request, void* state)
 {
     FVizRectilinearGrid* input;
     FVizStructuredGrid* structured = NULL;
@@ -87,8 +85,7 @@ static FVizResult fviz_rectilinear_geometry_process_request(
     if (point_count != 0u)
     {
         FVizSize bytes;
-        if (fviz_size_multiply(point_count, sizeof(FVizVec3), &bytes) != FVIZ_OK)
-            return FVIZ_ERROR_OVERFLOW;
+        if (fviz_size_multiply(point_count, sizeof(FVizVec3), &bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
         points = (FVizVec3*)fviz_alloc(bytes);
         if (points == NULL) return fviz_last_error_code();
         for (i = 0u; i < point_count; ++i)
@@ -102,12 +99,12 @@ static FVizResult fviz_rectilinear_geometry_process_request(
     if (fviz_structured_grid_create(&structured) != FVIZ_OK ||
         fviz_structured_grid_set_extent(structured, extent) != FVIZ_OK ||
         fviz_structured_grid_set_points(structured, points, point_count) != FVIZ_OK ||
-        fviz_rectilinear_geometry_copy_attributes(
-            fviz_rectilinear_grid_const_point_data(input), fviz_structured_grid_point_data(structured)) != FVIZ_OK ||
-        fviz_rectilinear_geometry_copy_attributes(
-            fviz_rectilinear_grid_const_cell_data(input), fviz_structured_grid_cell_data(structured)) != FVIZ_OK ||
-        fviz_rectilinear_geometry_copy_attributes(
-            fviz_rectilinear_grid_const_field_data(input), fviz_structured_grid_field_data(structured)) != FVIZ_OK ||
+        fviz_rectilinear_geometry_copy_attributes(fviz_rectilinear_grid_const_point_data(input),
+                                                  fviz_structured_grid_point_data(structured)) != FVIZ_OK ||
+        fviz_rectilinear_geometry_copy_attributes(fviz_rectilinear_grid_const_cell_data(input),
+                                                  fviz_structured_grid_cell_data(structured)) != FVIZ_OK ||
+        fviz_rectilinear_geometry_copy_attributes(fviz_rectilinear_grid_const_field_data(input),
+                                                  fviz_structured_grid_field_data(structured)) != FVIZ_OK ||
         fviz_structured_grid_geometry_filter_create(&delegate) != FVIZ_OK ||
         fviz_structured_grid_geometry_filter_set_input_data(delegate, structured) != FVIZ_OK ||
         fviz_structured_grid_geometry_filter_update(delegate) != FVIZ_OK)
@@ -117,8 +114,7 @@ static FVizResult fviz_rectilinear_geometry_process_request(
     }
     output = fviz_structured_grid_geometry_filter_output(delegate);
     if (output == NULL ||
-        fviz_algorithm_set_output_data(
-            algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
+        fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
     {
         result = output == NULL ? FVIZ_ERROR_INVALID_STATE : fviz_last_error_code();
         if (output == NULL)
@@ -132,8 +128,7 @@ done:
     return result;
 }
 
-FVizResult fviz_rectilinear_grid_geometry_filter_create(
-    FVizRectilinearGridGeometryFilter** out_filter)
+FVizResult fviz_rectilinear_grid_geometry_filter_create(FVizRectilinearGridGeometryFilter** out_filter)
 {
     FVizRectilinearGridGeometryFilter* filter;
     FVizAlgorithmCallbacks callbacks;
@@ -151,8 +146,8 @@ FVizResult fviz_rectilinear_grid_geometry_filter_create(
     callbacks.get_state_mtime = fviz_rectilinear_geometry_state_mtime;
     callbacks.state_object = (FVizObject*)filter;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(
-            filter->algorithm, 0u, FVIZ_TYPE_RECTILINEAR_GRID, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_RECTILINEAR_GRID, FVIZ_FALSE,
+                                            FVIZ_FALSE) != FVIZ_OK ||
         fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA) != FVIZ_OK)
     {
         fviz_release(filter);
@@ -162,8 +157,8 @@ FVizResult fviz_rectilinear_grid_geometry_filter_create(
     return FVIZ_OK;
 }
 
-FVizResult fviz_rectilinear_grid_geometry_filter_set_input_data(
-    FVizRectilinearGridGeometryFilter* filter, FVizRectilinearGrid* input)
+FVizResult fviz_rectilinear_grid_geometry_filter_set_input_data(FVizRectilinearGridGeometryFilter* filter,
+                                                                FVizRectilinearGrid* input)
 {
     if (filter == NULL || input == NULL)
     {
@@ -173,8 +168,8 @@ FVizResult fviz_rectilinear_grid_geometry_filter_set_input_data(
     return fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input);
 }
 
-FVizResult fviz_rectilinear_grid_geometry_filter_set_input_connection(
-    FVizRectilinearGridGeometryFilter* filter, FVizAlgorithmOutput* input)
+FVizResult fviz_rectilinear_grid_geometry_filter_set_input_connection(FVizRectilinearGridGeometryFilter* filter,
+                                                                      FVizAlgorithmOutput* input)
 {
     if (filter == NULL || input == NULL)
     {
@@ -185,11 +180,20 @@ FVizResult fviz_rectilinear_grid_geometry_filter_set_input_connection(
 }
 
 FVizAlgorithm* fviz_rectilinear_grid_geometry_filter_algorithm(FVizRectilinearGridGeometryFilter* filter)
-{ return filter != NULL ? filter->algorithm : NULL; }
+{
+    return filter != NULL ? filter->algorithm : NULL;
+}
+
 FVizAlgorithmOutput* fviz_rectilinear_grid_geometry_filter_output_port(FVizRectilinearGridGeometryFilter* filter)
-{ return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL; }
+{
+    return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL;
+}
+
 FVizPolyData* fviz_rectilinear_grid_geometry_filter_output(FVizRectilinearGridGeometryFilter* filter)
-{ return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL; }
+{
+    return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL;
+}
+
 FVizResult fviz_rectilinear_grid_geometry_filter_update(FVizRectilinearGridGeometryFilter* filter)
 {
     if (filter == NULL)

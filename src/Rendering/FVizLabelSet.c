@@ -11,12 +11,7 @@ static void fviz_label_set_3d_destroy(FVizObject* object);
 static FVizMTime fviz_label_set_3d_mtime(const FVizObject* object);
 
 static const FVizObjectClass g_fviz_label_set_3d_class = {
-    FVIZ_TYPE_LABEL_SET_3D,
-    "FVizLabelSet3D",
-    &g_fviz_object_class,
-    fviz_label_set_3d_destroy,
-    fviz_label_set_3d_mtime
-};
+    FVIZ_TYPE_LABEL_SET_3D, "FVizLabelSet3D", &g_fviz_object_class, fviz_label_set_3d_destroy, fviz_label_set_3d_mtime};
 
 static FVizMTime fviz_label_set_3d_mtime(const FVizObject* object)
 {
@@ -81,7 +76,11 @@ void fviz_label_set_3d_clear(FVizLabelSet3D* label_set)
     for (i = 0u; i < fviz_array_count(label_set->entries); ++i)
     {
         FVizLabelSet3DEntry* entry = (FVizLabelSet3DEntry*)fviz_array_at(label_set->entries, i);
-        if (entry != NULL) { fviz_release(entry->text); entry->text = NULL; }
+        if (entry != NULL)
+        {
+            fviz_release(entry->text);
+            entry->text = NULL;
+        }
     }
     fviz_array_clear(label_set->entries);
     fviz_object_modified((FVizObject*)label_set);
@@ -93,13 +92,11 @@ FVizResult fviz_label_set_3d_reserve(FVizLabelSet3D* label_set, FVizSize capacit
     return fviz_array_reserve(label_set->entries, capacity);
 }
 
-FVizResult fviz_label_set_3d_add(
-    FVizLabelSet3D* label_set, FVizVec3 position, const char* utf8, FVizSize* out_index)
+FVizResult fviz_label_set_3d_add(FVizLabelSet3D* label_set, FVizVec3 position, const char* utf8, FVizSize* out_index)
 {
     FVizLabelSet3DEntry entry;
     FVizSize index;
-    if (label_set == NULL || utf8 == NULL ||
-        !isfinite(position.x) || !isfinite(position.y) || !isfinite(position.z))
+    if (label_set == NULL || utf8 == NULL || !isfinite(position.x) || !isfinite(position.y) || !isfinite(position.z))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     (void)memset(&entry, 0, sizeof(entry));
     entry.position = position;
@@ -122,15 +119,15 @@ FVizSize fviz_label_set_3d_count(const FVizLabelSet3D* label_set)
 
 FVizVec3 fviz_label_set_3d_position_at(const FVizLabelSet3D* label_set, FVizSize index)
 {
-    const FVizLabelSet3DEntry* entry = label_set != NULL ?
-        (const FVizLabelSet3DEntry*)fviz_array_const_at(label_set->entries, index) : NULL;
+    const FVizLabelSet3DEntry* entry =
+        label_set != NULL ? (const FVizLabelSet3DEntry*)fviz_array_const_at(label_set->entries, index) : NULL;
     return entry != NULL ? entry->position : fviz_vec3(0.0f, 0.0f, 0.0f);
 }
 
 const char* fviz_label_set_3d_text_at(const FVizLabelSet3D* label_set, FVizSize index)
 {
-    const FVizLabelSet3DEntry* entry = label_set != NULL ?
-        (const FVizLabelSet3DEntry*)fviz_array_const_at(label_set->entries, index) : NULL;
+    const FVizLabelSet3DEntry* entry =
+        label_set != NULL ? (const FVizLabelSet3DEntry*)fviz_array_const_at(label_set->entries, index) : NULL;
     return entry != NULL ? fviz_string_c_str(entry->text) : "";
 }
 
@@ -171,7 +168,11 @@ void fviz_label_set_3d_set_visible(FVizLabelSet3D* label_set, FVizBool visible)
 {
     if (label_set == NULL) return;
     visible = visible != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
-    if (label_set->visible != visible) { label_set->visible = visible; fviz_object_modified((FVizObject*)label_set); }
+    if (label_set->visible != visible)
+    {
+        label_set->visible = visible;
+        fviz_object_modified((FVizObject*)label_set);
+    }
 }
 
 FVizBool fviz_label_set_3d_visible(const FVizLabelSet3D* label_set)
@@ -183,7 +184,11 @@ void fviz_label_set_3d_set_depth_test(FVizLabelSet3D* label_set, FVizBool enable
 {
     if (label_set == NULL) return;
     enabled = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
-    if (label_set->depth_test != enabled) { label_set->depth_test = enabled; fviz_object_modified((FVizObject*)label_set); }
+    if (label_set->depth_test != enabled)
+    {
+        label_set->depth_test = enabled;
+        fviz_object_modified((FVizObject*)label_set);
+    }
 }
 
 FVizBool fviz_label_set_3d_depth_test(const FVizLabelSet3D* label_set)

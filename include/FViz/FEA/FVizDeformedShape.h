@@ -63,46 +63,35 @@ typedef struct FVizFEADeformedShapeCacheStatistics
     FVizBool populated;
 } FVizFEADeformedShapeCacheStatistics;
 
-FVIZ_FEA_API void fviz_fea_deformed_shape_options_initialize(
-    FVizFEADeformedShapeOptions* options);
-FVIZ_FEA_API FVizResult fviz_fea_deformed_shape_controller_create(
-    FVizFEADeformedShapeController** out_controller);
-FVIZ_FEA_API void fviz_fea_deformed_shape_controller_clear_cache(
-    FVizFEADeformedShapeController* controller);
+FVIZ_FEA_API void fviz_fea_deformed_shape_options_initialize(FVizFEADeformedShapeOptions* options);
+FVIZ_FEA_API FVizResult fviz_fea_deformed_shape_controller_create(FVizFEADeformedShapeController** out_controller);
+FVIZ_FEA_API void fviz_fea_deformed_shape_controller_clear_cache(FVizFEADeformedShapeController* controller);
 FVIZ_FEA_API FVizFEADeformedShapeCacheStatistics
-fviz_fea_deformed_shape_controller_cache_statistics(
-    const FVizFEADeformedShapeController* controller);
+fviz_fea_deformed_shape_controller_cache_statistics(const FVizFEADeformedShapeController* controller);
 
 /* Evaluates an Abaqus-like deformed-shape state for one mesh instance and one
  * result frame. Only result selection/mapping lives here; actual point
  * deformation and automatic scaling are generic FEAViz::Core primitives. */
-FVIZ_FEA_API FVizResult fviz_fea_deformed_shape_evaluate(
-    FVizFEADeformedShapeController* controller,
-    const FVizFEAFrame* frame,
-    const FVizUnstructuredGrid* grid,
-    const FVizFEADeformedShapeOptions* options,
-    FVizFEADeformedShapeResult** out_result);
+FVIZ_FEA_API FVizResult fviz_fea_deformed_shape_evaluate(FVizFEADeformedShapeController* controller,
+                                                         const FVizFEAFrame* frame, const FVizUnstructuredGrid* grid,
+                                                         const FVizFEADeformedShapeOptions* options,
+                                                         FVizFEADeformedShapeResult** out_result);
 
-FVIZ_FEA_API FVizFEADeformationState fviz_fea_deformed_shape_result_state(
-    const FVizFEADeformedShapeResult* result);
-FVIZ_FEA_API double fviz_fea_deformed_shape_result_scale_factor(
-    const FVizFEADeformedShapeResult* result);
-FVIZ_FEA_API const FVizDeformationMetrics* fviz_fea_deformed_shape_result_metrics(
-    const FVizFEADeformedShapeResult* result);
-FVIZ_FEA_API FVizSize fviz_fea_deformed_shape_result_mapped_point_count(
-    const FVizFEADeformedShapeResult* result);
-FVIZ_FEA_API FVizSize fviz_fea_deformed_shape_result_missing_point_count(
-    const FVizFEADeformedShapeResult* result);
-FVIZ_FEA_API const FVizDataArray* fviz_fea_deformed_shape_result_displacements(
-    const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API FVizFEADeformationState fviz_fea_deformed_shape_result_state(const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API double fviz_fea_deformed_shape_result_scale_factor(const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API const FVizDeformationMetrics*
+fviz_fea_deformed_shape_result_metrics(const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API FVizSize fviz_fea_deformed_shape_result_mapped_point_count(const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API FVizSize fviz_fea_deformed_shape_result_missing_point_count(const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_deformed_shape_result_displacements(const FVizFEADeformedShapeResult* result);
 /* UInt8 one tuple per mesh point: 1 when a displacement result mapped to that
  * point, 0 when the point is intentionally left undeformed. */
-FVIZ_FEA_API const FVizDataArray* fviz_fea_deformed_shape_result_coverage_mask(
-    const FVizFEADeformedShapeResult* result);
-FVIZ_FEA_API const FVizUnstructuredGrid* fviz_fea_deformed_shape_result_base_grid(
-    const FVizFEADeformedShapeResult* result);
-FVIZ_FEA_API const FVizUnstructuredGrid* fviz_fea_deformed_shape_result_grid(
-    const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_deformed_shape_result_coverage_mask(const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API const FVizUnstructuredGrid*
+fviz_fea_deformed_shape_result_base_grid(const FVizFEADeformedShapeResult* result);
+FVIZ_FEA_API const FVizUnstructuredGrid* fviz_fea_deformed_shape_result_grid(const FVizFEADeformedShapeResult* result);
 
 FVIZ_EXTERN_C_END
 

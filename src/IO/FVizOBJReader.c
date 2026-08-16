@@ -12,7 +12,8 @@
 
 static const char* fviz_obj_skip_space(const char* text)
 {
-    while (*text != '\0' && isspace((unsigned char)*text) != 0) ++text;
+    while (*text != '\0' && isspace((unsigned char)*text) != 0)
+        ++text;
     return text;
 }
 
@@ -34,7 +35,8 @@ static FVizBool fviz_obj_parse_vertex_index(const char* token, FVizSize point_co
         int64_t resolved;
         if (sizeof(FVizSize) > sizeof(int64_t) && point_count > (FVizSize)INT64_MAX) return FVIZ_FALSE;
         resolved = (int64_t)point_count + value;
-        if (resolved < 0 || (uint64_t)resolved >= (uint64_t)point_count || (uint64_t)resolved > UINT32_MAX) return FVIZ_FALSE;
+        if (resolved < 0 || (uint64_t)resolved >= (uint64_t)point_count || (uint64_t)resolved > UINT32_MAX)
+            return FVIZ_FALSE;
         *out_index = (uint32_t)resolved;
     }
     return FVIZ_TRUE;
@@ -54,7 +56,8 @@ static FVizResult fviz_obj_parse_face(FVizPolyData* poly_data, char* text)
         current = (char*)fviz_obj_skip_space(current);
         if (*current == '\0' || *current == '#') break;
         token = current;
-        while (*current != '\0' && isspace((unsigned char)*current) == 0) ++current;
+        while (*current != '\0' && isspace((unsigned char)*current) == 0)
+            ++current;
         saved = *current;
         *current = '\0';
         if (count >= FVIZ_ARRAY_COUNT(face) ||

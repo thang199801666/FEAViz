@@ -8,13 +8,8 @@
 
 static void fviz_mapper_destroy(FVizObject* object);
 static FVizMTime fviz_mapper_mtime(const FVizObject* object);
-static const FVizObjectClass g_fviz_mapper_class = {
-    FVIZ_TYPE_MAPPER,
-    "FVizMapper",
-    &g_fviz_object_class,
-    fviz_mapper_destroy,
-    fviz_mapper_mtime
-};
+static const FVizObjectClass g_fviz_mapper_class = {FVIZ_TYPE_MAPPER, "FVizMapper", &g_fviz_object_class,
+                                                    fviz_mapper_destroy, fviz_mapper_mtime};
 
 static FVizMTime fviz_mapper_mtime(const FVizObject* object)
 {
@@ -38,8 +33,8 @@ static void fviz_mapper_color_data_modified(FVizMapper* mapper)
     mapper->color_data_mtime = fviz_internal_object_local_mtime((const FVizObject*)mapper);
 }
 
-static FVizBool fviz_mapper_dependency_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_mapper_dependency_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                void* client_data)
 {
     FVizMapper* mapper = (FVizMapper*)client_data;
     (void)caller;
@@ -49,8 +44,8 @@ static FVizBool fviz_mapper_dependency_modified(
     return FVIZ_FALSE;
 }
 
-static FVizBool fviz_mapper_color_dependency_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_mapper_color_dependency_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                      void* client_data)
 {
     FVizMapper* mapper = (FVizMapper*)client_data;
     (void)caller;
@@ -60,29 +55,26 @@ static FVizBool fviz_mapper_color_dependency_modified(
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_mapper_observe_dependency_with_callback(
-    FVizObject* dependency, FVizMapper* mapper, FVizObserverCallbackFn callback,
-    FVizObserverTag* out_tag)
+static FVizResult fviz_mapper_observe_dependency_with_callback(FVizObject* dependency, FVizMapper* mapper,
+                                                               FVizObserverCallbackFn callback,
+                                                               FVizObserverTag* out_tag)
 {
     if (out_tag == NULL || callback == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (dependency == NULL) return FVIZ_OK;
-    return fviz_object_add_observer(
-        dependency, FVIZ_EVENT_MODIFIED, 0.0f, callback, mapper, out_tag);
+    return fviz_object_add_observer(dependency, FVIZ_EVENT_MODIFIED, 0.0f, callback, mapper, out_tag);
 }
 
-static FVizResult fviz_mapper_observe_dependency(
-    FVizObject* dependency, FVizMapper* mapper, FVizObserverTag* out_tag)
+static FVizResult fviz_mapper_observe_dependency(FVizObject* dependency, FVizMapper* mapper, FVizObserverTag* out_tag)
 {
-    return fviz_mapper_observe_dependency_with_callback(
-        dependency, mapper, fviz_mapper_dependency_modified, out_tag);
+    return fviz_mapper_observe_dependency_with_callback(dependency, mapper, fviz_mapper_dependency_modified, out_tag);
 }
 
-static FVizResult fviz_mapper_observe_color_dependency(
-    FVizObject* dependency, FVizMapper* mapper, FVizObserverTag* out_tag)
+static FVizResult fviz_mapper_observe_color_dependency(FVizObject* dependency, FVizMapper* mapper,
+                                                       FVizObserverTag* out_tag)
 {
-    return fviz_mapper_observe_dependency_with_callback(
-        dependency, mapper, fviz_mapper_color_dependency_modified, out_tag);
+    return fviz_mapper_observe_dependency_with_callback(dependency, mapper, fviz_mapper_color_dependency_modified,
+                                                        out_tag);
 }
 
 static void fviz_mapper_remove_dependency_observer(FVizObject* dependency, FVizObserverTag* tag)
@@ -97,8 +89,7 @@ static FVizLookupTable* fviz_mapper_ensure_lookup_table(FVizMapper* mapper)
     FVizLookupTable* table = NULL;
     FVizObserverTag tag = FVIZ_OBSERVER_TAG_INVALID;
     if (mapper == NULL) return NULL;
-    if (mapper->lookup_table != NULL || mapper->lookup_table_initialized != FVIZ_FALSE)
-        return mapper->lookup_table;
+    if (mapper->lookup_table != NULL || mapper->lookup_table_initialized != FVIZ_FALSE) return mapper->lookup_table;
     if (fviz_lookup_table_create(256u, &table) != FVIZ_OK) return NULL;
     if (mapper->scalar_range_valid != FVIZ_FALSE)
         fviz_lookup_table_set_range(table, mapper->scalar_min, mapper->scalar_max);
@@ -141,12 +132,9 @@ void fviz_array_selection_initialize(FVizArraySelection* selection)
 static void fviz_mapper_destroy(FVizObject* object)
 {
     FVizMapper* mapper = (FVizMapper*)object;
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->input_algorithm, &mapper->input_algorithm_modified_tag);
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->lookup_table, &mapper->lookup_table_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->input_algorithm, &mapper->input_algorithm_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->lookup_table, &mapper->lookup_table_modified_tag);
     fviz_release(mapper->input_algorithm);
     fviz_release(mapper->poly_data);
     fviz_release(mapper->lookup_table);
@@ -213,10 +201,8 @@ FVizResult fviz_mapper_set_poly_data(FVizMapper* mapper, FVizPolyData* poly_data
             return fviz_last_error_code();
         }
     }
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->input_algorithm, &mapper->input_algorithm_modified_tag);
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->input_algorithm, &mapper->input_algorithm_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
     fviz_release(mapper->input_algorithm);
     mapper->input_algorithm = NULL;
     mapper->input_port = 0u;
@@ -227,9 +213,7 @@ FVizResult fviz_mapper_set_poly_data(FVizMapper* mapper, FVizPolyData* poly_data
     return FVIZ_OK;
 }
 
-FVizResult fviz_mapper_set_algorithm_connection(
-    FVizMapper* mapper,
-    FVizAlgorithmOutput* output)
+FVizResult fviz_mapper_set_algorithm_connection(FVizMapper* mapper, FVizAlgorithmOutput* output)
 {
     FVizAlgorithm* producer = fviz_algorithm_output_producer(output);
     uint32_t output_port = fviz_algorithm_output_index(output);
@@ -253,10 +237,8 @@ FVizResult fviz_mapper_set_algorithm_connection(
         fviz_release(producer);
         return fviz_last_error_code();
     }
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->input_algorithm, &mapper->input_algorithm_modified_tag);
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->input_algorithm, &mapper->input_algorithm_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
     fviz_release(mapper->input_algorithm);
     mapper->input_algorithm = producer;
     mapper->input_algorithm_modified_tag = new_tag;
@@ -270,8 +252,8 @@ FVizResult fviz_mapper_set_algorithm_connection(
 FVizAlgorithmOutput* fviz_mapper_algorithm_connection(FVizMapper* mapper)
 {
     return mapper != NULL && mapper->input_algorithm != NULL
-        ? fviz_algorithm_output_port(mapper->input_algorithm, mapper->input_port)
-        : NULL;
+               ? fviz_algorithm_output_port(mapper->input_algorithm, mapper->input_port)
+               : NULL;
 }
 
 FVizResult fviz_mapper_set_input_connection(FVizMapper* mapper, FVizFilter* producer)
@@ -287,9 +269,9 @@ FVizResult fviz_mapper_set_input_connection(FVizMapper* mapper, FVizFilter* prod
 FVizFilter* fviz_mapper_input_connection(FVizMapper* mapper)
 {
     return mapper != NULL && mapper->input_algorithm != NULL &&
-        fviz_object_is_type((const FVizObject*)mapper->input_algorithm, FVIZ_TYPE_FILTER)
-        ? (FVizFilter*)mapper->input_algorithm
-        : NULL;
+                   fviz_object_is_type((const FVizObject*)mapper->input_algorithm, FVIZ_TYPE_FILTER)
+               ? (FVizFilter*)mapper->input_algorithm
+               : NULL;
 }
 
 FVizResult fviz_mapper_update(FVizMapper* mapper)
@@ -316,8 +298,7 @@ FVizResult fviz_mapper_update(FVizMapper* mapper)
         fviz_release(output);
         return fviz_last_error_code();
     }
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->poly_data, &mapper->poly_data_modified_tag);
     fviz_release(mapper->poly_data);
     mapper->poly_data = output;
     mapper->poly_data_modified_tag = new_tag;
@@ -325,8 +306,15 @@ FVizResult fviz_mapper_update(FVizMapper* mapper)
     return FVIZ_OK;
 }
 
-FVizPolyData* fviz_mapper_poly_data(FVizMapper* mapper) { return mapper != NULL ? mapper->poly_data : NULL; }
-const FVizPolyData* fviz_mapper_const_poly_data(const FVizMapper* mapper) { return mapper != NULL ? mapper->poly_data : NULL; }
+FVizPolyData* fviz_mapper_poly_data(FVizMapper* mapper)
+{
+    return mapper != NULL ? mapper->poly_data : NULL;
+}
+
+const FVizPolyData* fviz_mapper_const_poly_data(const FVizMapper* mapper)
+{
+    return mapper != NULL ? mapper->poly_data : NULL;
+}
 
 void fviz_mapper_set_lookup_table(FVizMapper* mapper, FVizLookupTable* table)
 {
@@ -342,8 +330,7 @@ void fviz_mapper_set_lookup_table(FVizMapper* mapper, FVizLookupTable* table)
             return;
         }
     }
-    fviz_mapper_remove_dependency_observer(
-        (FVizObject*)mapper->lookup_table, &mapper->lookup_table_modified_tag);
+    fviz_mapper_remove_dependency_observer((FVizObject*)mapper->lookup_table, &mapper->lookup_table_modified_tag);
     fviz_release(mapper->lookup_table);
     mapper->lookup_table = table;
     mapper->lookup_table_modified_tag = new_tag;
@@ -376,15 +363,14 @@ void fviz_mapper_set_scalar_range(FVizMapper* mapper, float minimum, float maxim
     {
         maximum = minimum + 1.0f;
     }
-    if (mapper->scalar_range_valid != FVIZ_FALSE &&
-        mapper->scalar_min == minimum && mapper->scalar_max == maximum) return;
+    if (mapper->scalar_range_valid != FVIZ_FALSE && mapper->scalar_min == minimum && mapper->scalar_max == maximum)
+        return;
     {
         const FVizMTime before = fviz_internal_object_local_mtime((const FVizObject*)mapper);
         mapper->scalar_min = minimum;
         mapper->scalar_max = maximum;
         mapper->scalar_range_valid = FVIZ_TRUE;
-        if (mapper->lookup_table != NULL)
-            fviz_lookup_table_set_range(mapper->lookup_table, minimum, maximum);
+        if (mapper->lookup_table != NULL) fviz_lookup_table_set_range(mapper->lookup_table, minimum, maximum);
         /* The lookup-table observer already marks color data when its range
            changed. If the LUT was absent or already had this range, mark the
            mapper exactly once here. */
@@ -412,17 +398,12 @@ void fviz_mapper_use_automatic_scalar_range(FVizMapper* mapper)
     fviz_mapper_color_data_modified(mapper);
 }
 
-FVizResult fviz_mapper_set_array_selection(
-    FVizMapper* mapper,
-    const FVizArraySelection* selection)
+FVizResult fviz_mapper_set_array_selection(FVizMapper* mapper, const FVizArraySelection* selection)
 {
     FVizSize length;
-    if (mapper == NULL || selection == NULL ||
-        selection->struct_size < sizeof(FVizArraySelection) ||
-        selection->name == NULL || selection->name[0] == '\0' ||
-        selection->association < FVIZ_ASSOCIATION_POINTS ||
-        selection->association > FVIZ_ASSOCIATION_FIELD ||
-        selection->component_mode < FVIZ_COMPONENT_DIRECT ||
+    if (mapper == NULL || selection == NULL || selection->struct_size < sizeof(FVizArraySelection) ||
+        selection->name == NULL || selection->name[0] == '\0' || selection->association < FVIZ_ASSOCIATION_POINTS ||
+        selection->association > FVIZ_ASSOCIATION_FIELD || selection->component_mode < FVIZ_COMPONENT_DIRECT ||
         selection->component_mode > FVIZ_COMPONENT_COLOR)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "mapper array selection is invalid");
@@ -434,10 +415,9 @@ FVizResult fviz_mapper_set_array_selection(
         fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "mapper array name is too long");
         return FVIZ_ERROR_OVERFLOW;
     }
-    if (mapper->association == selection->association &&
-        mapper->component_mode == selection->component_mode &&
-        mapper->component == selection->component &&
-        strcmp(mapper->array_name, selection->name) == 0) return FVIZ_OK;
+    if (mapper->association == selection->association && mapper->component_mode == selection->component_mode &&
+        mapper->component == selection->component && strcmp(mapper->array_name, selection->name) == 0)
+        return FVIZ_OK;
     (void)memcpy(mapper->array_name, selection->name, length + 1u);
     mapper->association = selection->association;
     mapper->component_mode = selection->component_mode;
@@ -446,9 +426,7 @@ FVizResult fviz_mapper_set_array_selection(
     return FVIZ_OK;
 }
 
-FVizResult fviz_mapper_get_array_selection(
-    const FVizMapper* mapper,
-    FVizArraySelection* out_selection)
+FVizResult fviz_mapper_get_array_selection(const FVizMapper* mapper, FVizArraySelection* out_selection)
 {
     if (mapper == NULL || out_selection == NULL)
     {
@@ -467,8 +445,7 @@ const FVizDataArray* fviz_mapper_selected_array(const FVizMapper* mapper)
 {
     const FVizAttributeSet* attributes;
     if (mapper == NULL || mapper->poly_data == NULL || mapper->array_name[0] == '\0') return NULL;
-    if (mapper->association == FVIZ_ASSOCIATION_POINTS)
-        attributes = fviz_poly_data_const_point_data(mapper->poly_data);
+    if (mapper->association == FVIZ_ASSOCIATION_POINTS) attributes = fviz_poly_data_const_point_data(mapper->poly_data);
     else if (mapper->association == FVIZ_ASSOCIATION_CELLS)
         attributes = fviz_poly_data_const_cell_data(mapper->poly_data);
     else
@@ -476,9 +453,7 @@ const FVizDataArray* fviz_mapper_selected_array(const FVizMapper* mapper)
     return fviz_attribute_set_const_get(attributes, mapper->array_name);
 }
 
-void fviz_mapper_set_scalar_interpolation(
-    FVizMapper* mapper,
-    FVizScalarInterpolation interpolation)
+void fviz_mapper_set_scalar_interpolation(FVizMapper* mapper, FVizScalarInterpolation interpolation)
 {
     if (mapper == NULL || interpolation < FVIZ_SCALAR_INTERPOLATION_DEFAULT ||
         interpolation > FVIZ_SCALAR_INTERPOLATION_POINT)
@@ -514,9 +489,7 @@ FVizResult fviz_mapper_set_opacity_array(FVizMapper* mapper, const char* name)
 
 const char* fviz_mapper_opacity_array(const FVizMapper* mapper)
 {
-    return mapper != NULL && mapper->opacity_array_name[0] != '\0'
-        ? mapper->opacity_array_name
-        : NULL;
+    return mapper != NULL && mapper->opacity_array_name[0] != '\0' ? mapper->opacity_array_name : NULL;
 }
 
 FVizResult fviz_mapper_add_clipping_plane(FVizMapper* mapper, FVizPlane plane)
@@ -525,8 +498,7 @@ FVizResult fviz_mapper_add_clipping_plane(FVizMapper* mapper, FVizPlane plane)
     return fviz_mapper_add_clipping_plane_with_id(mapper, plane, &ignored);
 }
 
-FVizResult fviz_mapper_add_clipping_plane_with_id(
-    FVizMapper* mapper, FVizPlane plane, FVizClipPlaneId* out_id)
+FVizResult fviz_mapper_add_clipping_plane_with_id(FVizMapper* mapper, FVizPlane plane, FVizClipPlaneId* out_id)
 {
     FVizSize index;
     if (out_id != NULL) *out_id = FVIZ_CLIP_PLANE_ID_INVALID;
@@ -543,22 +515,20 @@ FVizResult fviz_mapper_add_clipping_plane_with_id(
     return FVIZ_OK;
 }
 
-FVizResult fviz_mapper_update_clipping_plane(
-    FVizMapper* mapper, FVizClipPlaneId id, FVizPlane plane)
+FVizResult fviz_mapper_update_clipping_plane(FVizMapper* mapper, FVizClipPlaneId id, FVizPlane plane)
 {
     FVizSize i;
-    if (mapper == NULL || id == FVIZ_CLIP_PLANE_ID_INVALID ||
-        fviz_vec3_length(plane.normal) == 0.0f) return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (mapper == NULL || id == FVIZ_CLIP_PLANE_ID_INVALID || fviz_vec3_length(plane.normal) == 0.0f)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
     plane.normal = fviz_vec3_normalize(plane.normal);
     for (i = 0u; i < mapper->clipping_plane_count; ++i)
     {
         if (mapper->clipping_plane_ids[i] == id)
         {
             const FVizPlane current = mapper->clipping_planes[i];
-            if (current.normal.x == plane.normal.x &&
-                current.normal.y == plane.normal.y &&
-                current.normal.z == plane.normal.z &&
-                current.distance == plane.distance) return FVIZ_OK;
+            if (current.normal.x == plane.normal.x && current.normal.y == plane.normal.y &&
+                current.normal.z == plane.normal.z && current.distance == plane.distance)
+                return FVIZ_OK;
             mapper->clipping_planes[i] = plane;
             fviz_mapper_render_data_modified(mapper);
             return FVIZ_OK;
@@ -578,9 +548,9 @@ FVizResult fviz_mapper_remove_clipping_plane(FVizMapper* mapper, FVizClipPlaneId
             if (i + 1u < mapper->clipping_plane_count)
             {
                 (void)memmove(&mapper->clipping_planes[i], &mapper->clipping_planes[i + 1u],
-                    (size_t)(mapper->clipping_plane_count - i - 1u) * sizeof(mapper->clipping_planes[0]));
+                              (size_t)(mapper->clipping_plane_count - i - 1u) * sizeof(mapper->clipping_planes[0]));
                 (void)memmove(&mapper->clipping_plane_ids[i], &mapper->clipping_plane_ids[i + 1u],
-                    (size_t)(mapper->clipping_plane_count - i - 1u) * sizeof(mapper->clipping_plane_ids[0]));
+                              (size_t)(mapper->clipping_plane_count - i - 1u) * sizeof(mapper->clipping_plane_ids[0]));
             }
             --mapper->clipping_plane_count;
             fviz_mapper_render_data_modified(mapper);
@@ -592,9 +562,8 @@ FVizResult fviz_mapper_remove_clipping_plane(FVizMapper* mapper, FVizClipPlaneId
 
 FVizClipPlaneId fviz_mapper_clipping_plane_id(const FVizMapper* mapper, FVizSize index)
 {
-    return mapper != NULL && index < mapper->clipping_plane_count
-        ? mapper->clipping_plane_ids[index]
-        : FVIZ_CLIP_PLANE_ID_INVALID;
+    return mapper != NULL && index < mapper->clipping_plane_count ? mapper->clipping_plane_ids[index]
+                                                                  : FVIZ_CLIP_PLANE_ID_INVALID;
 }
 
 void fviz_mapper_remove_all_clipping_planes(FVizMapper* mapper)
@@ -609,10 +578,7 @@ FVizSize fviz_mapper_clipping_plane_count(const FVizMapper* mapper)
     return mapper != NULL ? mapper->clipping_plane_count : 0u;
 }
 
-FVizResult fviz_mapper_clipping_plane(
-    const FVizMapper* mapper,
-    FVizSize index,
-    FVizPlane* out_plane)
+FVizResult fviz_mapper_clipping_plane(const FVizMapper* mapper, FVizSize index, FVizPlane* out_plane)
 {
     if (mapper == NULL || out_plane == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (index >= mapper->clipping_plane_count) return FVIZ_ERROR_NOT_FOUND;

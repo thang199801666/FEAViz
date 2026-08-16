@@ -71,27 +71,17 @@ typedef enum FVizEvent
 /* Returning FVIZ_TRUE aborts propagation to lower-priority observers, just as
  * vtkCommand::AbortFlag stops later observers. client_data is registration-time
  * state; call_data belongs to the event source and is valid only for the call. */
-typedef FVizBool (*FVizObserverCallbackFn)(
-    FVizObject* caller,
-    FVizEventId event_id,
-    void* call_data,
-    void* client_data);
+typedef FVizBool (*FVizObserverCallbackFn)(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                           void* client_data);
 
 /* Reusable command objects provide the vtkCommand-style path. A command can be
  * registered on multiple objects/events. The observer retains the command until
  * its tag is removed or the observed object is destroyed. Returning FVIZ_TRUE,
  * or setting the command abort flag from inside the callback, stops propagation. */
-typedef FVizBool (*FVizCommandExecuteFn)(
-    FVizCommand* command,
-    FVizObject* caller,
-    FVizEventId event_id,
-    void* call_data,
-    void* client_data);
+typedef FVizBool (*FVizCommandExecuteFn)(FVizCommand* command, FVizObject* caller, FVizEventId event_id,
+                                         void* call_data, void* client_data);
 
-FVIZ_API FVizResult fviz_command_create(
-    FVizCommandExecuteFn execute,
-    void* client_data,
-    FVizCommand** out_command);
+FVIZ_API FVizResult fviz_command_create(FVizCommandExecuteFn execute, void* client_data, FVizCommand** out_command);
 FVIZ_API void fviz_command_set_execute(FVizCommand* command, FVizCommandExecuteFn execute);
 FVIZ_API FVizCommandExecuteFn fviz_command_execute_function(const FVizCommand* command);
 FVIZ_API void fviz_command_set_client_data(FVizCommand* command, void* client_data);
@@ -99,11 +89,7 @@ FVIZ_API void* fviz_command_client_data(FVizCommand* command);
 FVIZ_API const void* fviz_command_const_client_data(const FVizCommand* command);
 FVIZ_API void fviz_command_set_abort_flag(FVizCommand* command, FVizBool abort_flag);
 FVIZ_API FVizBool fviz_command_abort_flag(const FVizCommand* command);
-FVIZ_API FVizBool fviz_command_execute(
-    FVizCommand* command,
-    FVizObject* caller,
-    FVizEventId event_id,
-    void* call_data);
+FVIZ_API FVizBool fviz_command_execute(FVizCommand* command, FVizObject* caller, FVizEventId event_id, void* call_data);
 
 FVIZ_API const char* fviz_event_name(FVizEventId event_id);
 

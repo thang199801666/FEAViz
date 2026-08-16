@@ -13,7 +13,7 @@ typedef struct FVizThreadErrorState
     char message[FVIZ_ERROR_MESSAGE_CAPACITY];
 } FVizThreadErrorState;
 
-static FVIZ_THREAD_LOCAL FVizThreadErrorState g_fviz_error_state = { FVIZ_OK, { 0 } };
+static FVIZ_THREAD_LOCAL FVizThreadErrorState g_fviz_error_state = {FVIZ_OK, {0}};
 
 void fviz_internal_set_error(FVizResult result, const char* message)
 {
@@ -26,16 +26,9 @@ void fviz_internal_set_error(FVizResult result, const char* message)
     }
 
 #if defined(_MSC_VER)
-    (void)strncpy_s(
-        g_fviz_error_state.message,
-        FVIZ_ERROR_MESSAGE_CAPACITY,
-        message,
-        _TRUNCATE);
+    (void)strncpy_s(g_fviz_error_state.message, FVIZ_ERROR_MESSAGE_CAPACITY, message, _TRUNCATE);
 #else
-    (void)strncpy(
-        g_fviz_error_state.message,
-        message,
-        FVIZ_ERROR_MESSAGE_CAPACITY - 1u);
+    (void)strncpy(g_fviz_error_state.message, message, FVIZ_ERROR_MESSAGE_CAPACITY - 1u);
     g_fviz_error_state.message[FVIZ_ERROR_MESSAGE_CAPACITY - 1u] = '\0';
 #endif
 }
@@ -44,19 +37,32 @@ const char* fviz_result_string(FVizResult result)
 {
     switch (result)
     {
-        case FVIZ_OK: return "success";
-        case FVIZ_ERROR_INVALID_ARGUMENT: return "invalid argument";
-        case FVIZ_ERROR_OUT_OF_MEMORY: return "out of memory";
-        case FVIZ_ERROR_NOT_SUPPORTED: return "not supported";
-        case FVIZ_ERROR_IO: return "I/O error";
-        case FVIZ_ERROR_INTERNAL: return "internal error";
-        case FVIZ_ERROR_OVERFLOW: return "numeric overflow";
-        case FVIZ_ERROR_INVALID_STATE: return "invalid state";
-        case FVIZ_ERROR_NOT_FOUND: return "not found";
-        case FVIZ_ERROR_BUSY: return "resource busy";
-        case FVIZ_ERROR_PARSE: return "parse error";
-        case FVIZ_ERROR_GRAPHICS: return "graphics error";
-        default: return "unknown result";
+        case FVIZ_OK:
+            return "success";
+        case FVIZ_ERROR_INVALID_ARGUMENT:
+            return "invalid argument";
+        case FVIZ_ERROR_OUT_OF_MEMORY:
+            return "out of memory";
+        case FVIZ_ERROR_NOT_SUPPORTED:
+            return "not supported";
+        case FVIZ_ERROR_IO:
+            return "I/O error";
+        case FVIZ_ERROR_INTERNAL:
+            return "internal error";
+        case FVIZ_ERROR_OVERFLOW:
+            return "numeric overflow";
+        case FVIZ_ERROR_INVALID_STATE:
+            return "invalid state";
+        case FVIZ_ERROR_NOT_FOUND:
+            return "not found";
+        case FVIZ_ERROR_BUSY:
+            return "resource busy";
+        case FVIZ_ERROR_PARSE:
+            return "parse error";
+        case FVIZ_ERROR_GRAPHICS:
+            return "graphics error";
+        default:
+            return "unknown result";
     }
 }
 

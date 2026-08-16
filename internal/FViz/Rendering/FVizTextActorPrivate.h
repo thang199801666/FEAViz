@@ -3,6 +3,7 @@
 #include <FViz/Core/FVizObjectPrivate.h>
 #include <FViz/Core/FVizString.h>
 #include <FViz/Rendering/FVizTextActor.h>
+
 struct FVizTextActor2D
 {
     FVizObject base;
@@ -13,6 +14,7 @@ struct FVizTextActor2D
     FVizTextCoordinateSystem coordinate_system;
     FVizBool visible;
 };
+
 struct FVizBillboardTextActor3D
 {
     FVizObject base;

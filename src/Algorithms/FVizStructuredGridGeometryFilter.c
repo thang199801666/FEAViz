@@ -25,20 +25,16 @@ static void fviz_structured_geometry_destroy(FVizObject* object)
 }
 
 static const FVizObjectClass g_fviz_structured_geometry_class = {
-    FVIZ_TYPE_STRUCTURED_GRID_GEOMETRY_FILTER,
-    "FVizStructuredGridGeometryFilter",
-    &g_fviz_object_class,
-    fviz_structured_geometry_destroy,
-    NULL
-};
+    FVIZ_TYPE_STRUCTURED_GRID_GEOMETRY_FILTER, "FVizStructuredGridGeometryFilter", &g_fviz_object_class,
+    fviz_structured_geometry_destroy, NULL};
 
 static FVizMTime fviz_structured_geometry_state_mtime(const void* state)
 {
     return fviz_object_mtime((const FVizObject*)state);
 }
 
-static FVizResult fviz_structured_geometry_copy_attributes(
-    const FVizAttributeSet* source, FVizAttributeSet* destination)
+static FVizResult fviz_structured_geometry_copy_attributes(const FVizAttributeSet* source,
+                                                           FVizAttributeSet* destination)
 {
     FVizSize i;
     for (i = 0u; i < fviz_attribute_set_count(source); ++i)
@@ -64,11 +60,10 @@ static FVizResult fviz_structured_geometry_copy_attributes(
     return FVIZ_OK;
 }
 
-static FVizId fviz_structured_geometry_original_cell_id(
-    const FVizStructuredGrid* input, FVizId local_cell)
+static FVizId fviz_structured_geometry_original_cell_id(const FVizStructuredGrid* input, FVizId local_cell)
 {
-    const FVizDataArray* original = fviz_attribute_set_const_get(
-        fviz_structured_grid_const_cell_data(input), "FVizOriginalCellIds");
+    const FVizDataArray* original =
+        fviz_attribute_set_const_get(fviz_structured_grid_const_cell_data(input), "FVizOriginalCellIds");
     if (original != NULL && fviz_data_array_type(original) == FVIZ_DATA_UINT64 &&
         fviz_data_array_components(original) == 1u &&
         fviz_data_array_tuple_count(original) == fviz_structured_grid_cell_count(input))
@@ -80,14 +75,9 @@ static FVizId fviz_structured_geometry_original_cell_id(
     return local_cell;
 }
 
-static FVizResult fviz_structured_geometry_append_primitive(
-    const FVizStructuredGrid* input,
-    FVizPolyData* output,
-    FVizDataArray* provenance,
-    FVizDataArray* source_indices,
-    FVizId cell_id,
-    const FVizId* ids,
-    uint32_t count)
+static FVizResult fviz_structured_geometry_append_primitive(const FVizStructuredGrid* input, FVizPolyData* output,
+                                                            FVizDataArray* provenance, FVizDataArray* source_indices,
+                                                            FVizId cell_id, const FVizId* ids, uint32_t count)
 {
     uint32_t compatible[8];
     uint32_t i;
@@ -98,7 +88,7 @@ static FVizResult fviz_structured_geometry_append_primitive(
         if (ids[i] > UINT32_MAX)
         {
             fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED,
-                "StructuredGrid geometry currently requires UINT32 render point IDs");
+                                    "StructuredGrid geometry currently requires UINT32 render point IDs");
             return FVIZ_ERROR_NOT_SUPPORTED;
         }
         compatible[i] = (uint32_t)ids[i];
@@ -107,13 +97,15 @@ static FVizResult fviz_structured_geometry_append_primitive(
     {
         if (fviz_poly_data_add_vertex(output, compatible[0]) != FVIZ_OK) return fviz_last_error_code();
         if (fviz_data_array_append_tuple(provenance, &original) != FVIZ_OK ||
-            fviz_data_array_append_tuple(source_indices, &local) != FVIZ_OK) return fviz_last_error_code();
+            fviz_data_array_append_tuple(source_indices, &local) != FVIZ_OK)
+            return fviz_last_error_code();
     }
     else if (count == 2u)
     {
         if (fviz_poly_data_add_line(output, compatible[0], compatible[1]) != FVIZ_OK) return fviz_last_error_code();
         if (fviz_data_array_append_tuple(provenance, &original) != FVIZ_OK ||
-            fviz_data_array_append_tuple(source_indices, &local) != FVIZ_OK) return fviz_last_error_code();
+            fviz_data_array_append_tuple(source_indices, &local) != FVIZ_OK)
+            return fviz_last_error_code();
     }
     else if (count == 4u)
     {
@@ -133,8 +125,8 @@ static FVizResult fviz_structured_geometry_append_primitive(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_structured_geometry_copy_cell_data(
-    const FVizStructuredGrid* input, FVizPolyData* output, const FVizDataArray* source_indices)
+static FVizResult fviz_structured_geometry_copy_cell_data(const FVizStructuredGrid* input, FVizPolyData* output,
+                                                          const FVizDataArray* source_indices)
 {
     const FVizAttributeSet* source = fviz_structured_grid_const_cell_data(input);
     FVizAttributeSet* destination = fviz_poly_data_cell_data(output);
@@ -149,15 +141,16 @@ static FVizResult fviz_structured_geometry_copy_cell_data(
         FVizAttributeRole role;
         if (name != NULL && strcmp(name, "FVizOriginalCellIds") == 0) continue;
         if (fviz_data_array_tuple_count(source_array) != fviz_structured_grid_cell_count(input)) continue;
-        if (fviz_data_array_create(
-                fviz_data_array_type(source_array), fviz_data_array_components(source_array), &out_array) != FVIZ_OK ||
+        if (fviz_data_array_create(fviz_data_array_type(source_array), fviz_data_array_components(source_array),
+                                   &out_array) != FVIZ_OK ||
             fviz_data_array_resize(out_array, fviz_data_array_tuple_count(source_indices)) != FVIZ_OK)
             goto fail;
         for (i = 0u; i < fviz_data_array_tuple_count(source_indices); ++i)
         {
             const FVizSize source_id = source_ids != NULL ? (FVizSize)source_ids[i] : (FVizSize)-1;
             const void* tuple = source_id < fviz_data_array_tuple_count(source_array)
-                ? fviz_data_array_const_tuple(source_array, source_id) : NULL;
+                                    ? fviz_data_array_const_tuple(source_array, source_id)
+                                    : NULL;
             void* out_tuple = fviz_data_array_tuple(out_array, i);
             if (tuple == NULL || out_tuple == NULL) goto fail;
             (void)memcpy(out_tuple, tuple, fviz_data_array_tuple_stride(source_array));
@@ -171,15 +164,15 @@ static FVizResult fviz_structured_geometry_copy_cell_data(
         }
         fviz_release(out_array);
         continue;
-fail:
+    fail:
         fviz_release(out_array);
         return fviz_last_error_code();
     }
     return FVIZ_OK;
 }
 
-static FVizResult fviz_structured_geometry_process_request(
-    FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request, void* state)
+static FVizResult fviz_structured_geometry_process_request(FVizAlgorithm* algorithm,
+                                                           const FVizPipelineRequestInfo* request, void* state)
 {
     FVizStructuredGrid* input;
     FVizPolyData* output = NULL;
@@ -193,26 +186,27 @@ static FVizResult fviz_structured_geometry_process_request(
     input = (FVizStructuredGrid*)fviz_algorithm_resolved_input(algorithm, 0u, 0u);
     if (input == NULL || fviz_structured_grid_validate(input) != FVIZ_OK)
     {
-        if (input == NULL) fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "StructuredGrid geometry filter has no input");
+        if (input == NULL)
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "StructuredGrid geometry filter has no input");
         return input == NULL ? FVIZ_ERROR_INVALID_STATE : fviz_last_error_code();
     }
     if (fviz_structured_grid_point_count(input) > (FVizSize)UINT32_MAX + 1u)
     {
         fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED,
-            "StructuredGrid geometry rendering currently requires at most UINT32_MAX+1 points");
+                                "StructuredGrid geometry rendering currently requires at most UINT32_MAX+1 points");
         return FVIZ_ERROR_NOT_SUPPORTED;
     }
     if (fviz_poly_data_create(&output) != FVIZ_OK ||
-        fviz_poly_data_reserve(
-            output, fviz_structured_grid_point_count(input), fviz_structured_grid_cell_count(input) * 2u) != FVIZ_OK ||
-        fviz_poly_data_add_points(
-            output, fviz_structured_grid_points(input), fviz_structured_grid_point_count(input), NULL) != FVIZ_OK ||
+        fviz_poly_data_reserve(output, fviz_structured_grid_point_count(input),
+                               fviz_structured_grid_cell_count(input) * 2u) != FVIZ_OK ||
+        fviz_poly_data_add_points(output, fviz_structured_grid_points(input), fviz_structured_grid_point_count(input),
+                                  NULL) != FVIZ_OK ||
         fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &provenance) != FVIZ_OK ||
         fviz_data_array_create(FVIZ_DATA_UINT64, 1u, &source_indices) != FVIZ_OK ||
-        fviz_structured_geometry_copy_attributes(
-            fviz_structured_grid_const_point_data(input), fviz_poly_data_point_data(output)) != FVIZ_OK ||
-        fviz_structured_geometry_copy_attributes(
-            fviz_structured_grid_const_field_data(input), fviz_poly_data_field_data(output)) != FVIZ_OK)
+        fviz_structured_geometry_copy_attributes(fviz_structured_grid_const_point_data(input),
+                                                 fviz_poly_data_point_data(output)) != FVIZ_OK ||
+        fviz_structured_geometry_copy_attributes(fviz_structured_grid_const_field_data(input),
+                                                 fviz_poly_data_field_data(output)) != FVIZ_OK)
         goto fail;
 
     cell_count = fviz_structured_grid_cell_count(input);
@@ -224,19 +218,16 @@ static FVizResult fviz_structured_geometry_process_request(
             FVizId ids[8];
             uint32_t count = 0u;
             if (fviz_structured_grid_cell_point_ids(input, (FVizId)i, ids, &count) != FVIZ_OK ||
-                fviz_structured_geometry_append_primitive(
-                    input, output, provenance, source_indices, (FVizId)i, ids, count) != FVIZ_OK)
+                fviz_structured_geometry_append_primitive(input, output, provenance, source_indices, (FVizId)i, ids,
+                                                          count) != FVIZ_OK)
                 goto fail;
         }
     }
     else
     {
         int64_t extent[6];
-        static const uint32_t faces[6][4] = {
-            {0u,4u,7u,3u}, {1u,2u,6u,5u},
-            {0u,1u,5u,4u}, {3u,7u,6u,2u},
-            {0u,3u,2u,1u}, {4u,5u,6u,7u}
-        };
+        static const uint32_t faces[6][4] = {{0u, 4u, 7u, 3u}, {1u, 2u, 6u, 5u}, {0u, 1u, 5u, 4u},
+                                             {3u, 7u, 6u, 2u}, {0u, 3u, 2u, 1u}, {4u, 5u, 6u, 7u}};
         fviz_structured_grid_extent(input, extent);
         for (i = 0u; i < cell_count; ++i)
         {
@@ -253,19 +244,34 @@ static FVizResult fviz_structured_geometry_process_request(
                 FVizId face_ids[4];
                 switch (face)
                 {
-                    case 0u: boundary = ijk[0] == extent[0] ? FVIZ_TRUE : FVIZ_FALSE; break;
-                    case 1u: boundary = ijk[0] == extent[1] - 1 ? FVIZ_TRUE : FVIZ_FALSE; break;
-                    case 2u: boundary = ijk[1] == extent[2] ? FVIZ_TRUE : FVIZ_FALSE; break;
-                    case 3u: boundary = ijk[1] == extent[3] - 1 ? FVIZ_TRUE : FVIZ_FALSE; break;
-                    case 4u: boundary = ijk[2] == extent[4] ? FVIZ_TRUE : FVIZ_FALSE; break;
-                    case 5u: boundary = ijk[2] == extent[5] - 1 ? FVIZ_TRUE : FVIZ_FALSE; break;
-                    default: break;
+                    case 0u:
+                        boundary = ijk[0] == extent[0] ? FVIZ_TRUE : FVIZ_FALSE;
+                        break;
+                    case 1u:
+                        boundary = ijk[0] == extent[1] - 1 ? FVIZ_TRUE : FVIZ_FALSE;
+                        break;
+                    case 2u:
+                        boundary = ijk[1] == extent[2] ? FVIZ_TRUE : FVIZ_FALSE;
+                        break;
+                    case 3u:
+                        boundary = ijk[1] == extent[3] - 1 ? FVIZ_TRUE : FVIZ_FALSE;
+                        break;
+                    case 4u:
+                        boundary = ijk[2] == extent[4] ? FVIZ_TRUE : FVIZ_FALSE;
+                        break;
+                    case 5u:
+                        boundary = ijk[2] == extent[5] - 1 ? FVIZ_TRUE : FVIZ_FALSE;
+                        break;
+                    default:
+                        break;
                 }
                 if (boundary == FVIZ_FALSE) continue;
-                face_ids[0] = ids[faces[face][0]]; face_ids[1] = ids[faces[face][1]];
-                face_ids[2] = ids[faces[face][2]]; face_ids[3] = ids[faces[face][3]];
-                if (fviz_structured_geometry_append_primitive(
-                        input, output, provenance, source_indices, (FVizId)i, face_ids, 4u) != FVIZ_OK)
+                face_ids[0] = ids[faces[face][0]];
+                face_ids[1] = ids[faces[face][1]];
+                face_ids[2] = ids[faces[face][2]];
+                face_ids[3] = ids[faces[face][3]];
+                if (fviz_structured_geometry_append_primitive(input, output, provenance, source_indices, (FVizId)i,
+                                                              face_ids, 4u) != FVIZ_OK)
                     goto fail;
             }
         }
@@ -286,8 +292,7 @@ fail:
     return fviz_last_error_code();
 }
 
-FVizResult fviz_structured_grid_geometry_filter_create(
-    FVizStructuredGridGeometryFilter** out_filter)
+FVizResult fviz_structured_grid_geometry_filter_create(FVizStructuredGridGeometryFilter** out_filter)
 {
     FVizStructuredGridGeometryFilter* filter;
     FVizAlgorithmCallbacks callbacks;
@@ -297,16 +302,16 @@ FVizResult fviz_structured_grid_geometry_filter_create(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_filter = NULL;
-    filter = (FVizStructuredGridGeometryFilter*)fviz_internal_object_allocate(
-        sizeof(*filter), &g_fviz_structured_geometry_class, NULL);
+    filter = (FVizStructuredGridGeometryFilter*)fviz_internal_object_allocate(sizeof(*filter),
+                                                                              &g_fviz_structured_geometry_class, NULL);
     if (filter == NULL) return fviz_last_error_code();
     fviz_algorithm_callbacks_initialize(&callbacks);
     callbacks.process_request = fviz_structured_geometry_process_request;
     callbacks.get_state_mtime = fviz_structured_geometry_state_mtime;
     callbacks.state_object = (FVizObject*)filter;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(
-            filter->algorithm, 0u, FVIZ_TYPE_STRUCTURED_GRID, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_STRUCTURED_GRID, FVIZ_FALSE, FVIZ_FALSE) !=
+            FVIZ_OK ||
         fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA) != FVIZ_OK)
     {
         fviz_release(filter);
@@ -316,8 +321,8 @@ FVizResult fviz_structured_grid_geometry_filter_create(
     return FVIZ_OK;
 }
 
-FVizResult fviz_structured_grid_geometry_filter_set_input_data(
-    FVizStructuredGridGeometryFilter* filter, FVizStructuredGrid* input)
+FVizResult fviz_structured_grid_geometry_filter_set_input_data(FVizStructuredGridGeometryFilter* filter,
+                                                               FVizStructuredGrid* input)
 {
     if (filter == NULL || input == NULL)
     {
@@ -327,8 +332,8 @@ FVizResult fviz_structured_grid_geometry_filter_set_input_data(
     return fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input);
 }
 
-FVizResult fviz_structured_grid_geometry_filter_set_input_connection(
-    FVizStructuredGridGeometryFilter* filter, FVizAlgorithmOutput* input)
+FVizResult fviz_structured_grid_geometry_filter_set_input_connection(FVizStructuredGridGeometryFilter* filter,
+                                                                     FVizAlgorithmOutput* input)
 {
     if (filter == NULL || input == NULL)
     {
@@ -339,11 +344,20 @@ FVizResult fviz_structured_grid_geometry_filter_set_input_connection(
 }
 
 FVizAlgorithm* fviz_structured_grid_geometry_filter_algorithm(FVizStructuredGridGeometryFilter* filter)
-{ return filter != NULL ? filter->algorithm : NULL; }
+{
+    return filter != NULL ? filter->algorithm : NULL;
+}
+
 FVizAlgorithmOutput* fviz_structured_grid_geometry_filter_output_port(FVizStructuredGridGeometryFilter* filter)
-{ return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL; }
+{
+    return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL;
+}
+
 FVizPolyData* fviz_structured_grid_geometry_filter_output(FVizStructuredGridGeometryFilter* filter)
-{ return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL; }
+{
+    return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL;
+}
+
 FVizResult fviz_structured_grid_geometry_filter_update(FVizStructuredGridGeometryFilter* filter)
 {
     if (filter == NULL)

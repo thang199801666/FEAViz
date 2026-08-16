@@ -74,35 +74,64 @@ static FVizCellType fviz_vtu_cell_type(int type)
 {
     switch (type)
     {
-        case 5: return FVIZ_CELL_TRIANGLE;
-        case 8: return FVIZ_CELL_PIXEL;
-        case 9: return FVIZ_CELL_QUAD;
-        case 10: return FVIZ_CELL_TETRA;
-        case 11: return FVIZ_CELL_VOXEL;
-        case 12: return FVIZ_CELL_HEXAHEDRON;
-        case 13: return FVIZ_CELL_WEDGE;
-        case 14: return FVIZ_CELL_PYRAMID;
-        case 15: return FVIZ_CELL_PENTAGONAL_PRISM;
-        case 16: return FVIZ_CELL_HEXAGONAL_PRISM;
-        case 21: return FVIZ_CELL_QUADRATIC_EDGE;
-        case 22: return FVIZ_CELL_QUADRATIC_TRIANGLE;
-        case 23: return FVIZ_CELL_QUADRATIC_QUAD;
-        case 24: return FVIZ_CELL_QUADRATIC_TETRA;
-        case 25: return FVIZ_CELL_QUADRATIC_HEXAHEDRON;
-        case 26: return FVIZ_CELL_QUADRATIC_WEDGE;
-        case 27: return FVIZ_CELL_QUADRATIC_PYRAMID;
-        case 28: return FVIZ_CELL_BIQUADRATIC_QUAD;
-        case 29: return FVIZ_CELL_TRIQUADRATIC_HEXAHEDRON;
-        case 30: return FVIZ_CELL_QUADRATIC_LINEAR_QUAD;
-        case 31: return FVIZ_CELL_QUADRATIC_LINEAR_WEDGE;
-        case 32: return FVIZ_CELL_BIQUADRATIC_QUADRATIC_WEDGE;
-        case 33: return FVIZ_CELL_BIQUADRATIC_QUADRATIC_HEXAHEDRON;
-        case 34: return FVIZ_CELL_BIQUADRATIC_TRIANGLE;
-        case 36: return FVIZ_CELL_CUBIC_LINE;
-        case 37: return FVIZ_CELL_QUADRATIC_POLYGON;
-        case 41: return FVIZ_CELL_CONVEX_POINT_SET;
-        case 42: return FVIZ_CELL_POLYHEDRON;
-        default: return (FVizCellType)0;
+        case 5:
+            return FVIZ_CELL_TRIANGLE;
+        case 8:
+            return FVIZ_CELL_PIXEL;
+        case 9:
+            return FVIZ_CELL_QUAD;
+        case 10:
+            return FVIZ_CELL_TETRA;
+        case 11:
+            return FVIZ_CELL_VOXEL;
+        case 12:
+            return FVIZ_CELL_HEXAHEDRON;
+        case 13:
+            return FVIZ_CELL_WEDGE;
+        case 14:
+            return FVIZ_CELL_PYRAMID;
+        case 15:
+            return FVIZ_CELL_PENTAGONAL_PRISM;
+        case 16:
+            return FVIZ_CELL_HEXAGONAL_PRISM;
+        case 21:
+            return FVIZ_CELL_QUADRATIC_EDGE;
+        case 22:
+            return FVIZ_CELL_QUADRATIC_TRIANGLE;
+        case 23:
+            return FVIZ_CELL_QUADRATIC_QUAD;
+        case 24:
+            return FVIZ_CELL_QUADRATIC_TETRA;
+        case 25:
+            return FVIZ_CELL_QUADRATIC_HEXAHEDRON;
+        case 26:
+            return FVIZ_CELL_QUADRATIC_WEDGE;
+        case 27:
+            return FVIZ_CELL_QUADRATIC_PYRAMID;
+        case 28:
+            return FVIZ_CELL_BIQUADRATIC_QUAD;
+        case 29:
+            return FVIZ_CELL_TRIQUADRATIC_HEXAHEDRON;
+        case 30:
+            return FVIZ_CELL_QUADRATIC_LINEAR_QUAD;
+        case 31:
+            return FVIZ_CELL_QUADRATIC_LINEAR_WEDGE;
+        case 32:
+            return FVIZ_CELL_BIQUADRATIC_QUADRATIC_WEDGE;
+        case 33:
+            return FVIZ_CELL_BIQUADRATIC_QUADRATIC_HEXAHEDRON;
+        case 34:
+            return FVIZ_CELL_BIQUADRATIC_TRIANGLE;
+        case 36:
+            return FVIZ_CELL_CUBIC_LINE;
+        case 37:
+            return FVIZ_CELL_QUADRATIC_POLYGON;
+        case 41:
+            return FVIZ_CELL_CONVEX_POINT_SET;
+        case 42:
+            return FVIZ_CELL_POLYHEDRON;
+        default:
+            return (FVizCellType)0;
     }
 }
 
@@ -136,7 +165,8 @@ static FVizBool fviz_attr_long(const char* tag, const char* attr, long* out_valu
     return end != buffer ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizBool fviz_find_data_array(const char* text, const char* end, const char** out_open_end, const char** out_close)
+static FVizBool fviz_find_data_array(const char* text, const char* end, const char** out_open_end,
+                                     const char** out_close)
 {
     const char* open = strstr(text, "<DataArray");
     const char* close;
@@ -165,7 +195,8 @@ static FVizSize fviz_parse_floats(const char* begin, const char* end, float* val
     {
         char* next = NULL;
         double value;
-        while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+        while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ','))
+            ++cursor;
         if (cursor >= end) break;
         value = strtod(cursor, &next);
         if (next == cursor) break;
@@ -225,11 +256,8 @@ static FVizResult fviz_vtu_decode_binary(const FVizDataArrayBlock* block, FVizDe
     return FVIZ_ERROR_NOT_SUPPORTED;
 }
 
-static FVizSize fviz_vtu_read_floats(
-    const FVizDataArrayBlock* block,
-    const char* text_end,
-    float* values,
-    FVizSize max_count)
+static FVizSize fviz_vtu_read_floats(const FVizDataArrayBlock* block, const char* text_end, float* values,
+                                     FVizSize max_count)
 {
     if (strcmp(block->format, "ascii") == 0 || strcmp(block->format, "") == 0)
     {
@@ -261,11 +289,8 @@ static FVizSize fviz_vtu_read_floats(
     return 0u;
 }
 
-static FVizSize fviz_vtu_read_ints(
-    const FVizDataArrayBlock* block,
-    const char* text_end,
-    int64_t* values,
-    FVizSize max_count)
+static FVizSize fviz_vtu_read_ints(const FVizDataArrayBlock* block, const char* text_end, int64_t* values,
+                                   FVizSize max_count)
 {
     if (strcmp(block->format, "ascii") == 0 || strcmp(block->format, "") == 0)
     {
@@ -277,7 +302,8 @@ static FVizSize fviz_vtu_read_ints(
         {
             char* next = NULL;
             long long value;
-            while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+            while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ','))
+                ++cursor;
             if (cursor >= end) break;
             value = strtoll(cursor, &next, 10);
             if (next == cursor) break;
@@ -310,11 +336,8 @@ static FVizSize fviz_vtu_read_ints(
     return 0u;
 }
 
-static FVizResult fviz_vtu_parse_points(
-    FVizUnstructuredGrid* grid,
-    const FVizDataArrayBlock* block,
-    const char* text_end,
-    FVizSize expected_point_count)
+static FVizResult fviz_vtu_parse_points(FVizUnstructuredGrid* grid, const FVizDataArrayBlock* block,
+                                        const char* text_end, FVizSize expected_point_count)
 {
     float* values;
     FVizSize count;
@@ -338,8 +361,7 @@ static FVizResult fviz_vtu_parse_points(
     }
     (void)i;
     _Static_assert(sizeof(FVizVec3) == 3u * sizeof(float), "FVizVec3 must be tightly packed for VTU point ingestion");
-    if (fviz_unstructured_grid_add_points_ids(
-            grid, (const FVizVec3*)values, expected_point_count, NULL) != FVIZ_OK)
+    if (fviz_unstructured_grid_add_points_ids(grid, (const FVizVec3*)values, expected_point_count, NULL) != FVIZ_OK)
     {
         fviz_free(values);
         return fviz_last_error_code();
@@ -348,13 +370,9 @@ static FVizResult fviz_vtu_parse_points(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_vtu_parse_cells(
-    FVizUnstructuredGrid* grid,
-    const FVizDataArrayBlock* blocks,
-    FVizSize block_count,
-    const char* text_end,
-    FVizSize maximum_connectivity_values,
-    FVizSize expected_cell_count)
+static FVizResult fviz_vtu_parse_cells(FVizUnstructuredGrid* grid, const FVizDataArrayBlock* blocks,
+                                       FVizSize block_count, const char* text_end, FVizSize maximum_connectivity_values,
+                                       FVizSize expected_cell_count)
 {
     const FVizDataArrayBlock* connectivity = NULL;
     const FVizDataArrayBlock* offsets = NULL;
@@ -372,8 +390,10 @@ static FVizResult fviz_vtu_parse_cells(
     for (i = 0u; i < block_count; ++i)
     {
         if (strcmp(blocks[i].name, "connectivity") == 0) connectivity = &blocks[i];
-        else if (strcmp(blocks[i].name, "offsets") == 0) offsets = &blocks[i];
-        else if (strcmp(blocks[i].name, "types") == 0) types = &blocks[i];
+        else if (strcmp(blocks[i].name, "offsets") == 0)
+            offsets = &blocks[i];
+        else if (strcmp(blocks[i].name, "types") == 0)
+            types = &blocks[i];
     }
     if (connectivity == NULL || offsets == NULL || types == NULL)
     {
@@ -407,8 +427,10 @@ static FVizResult fviz_vtu_parse_cells(
         }
         int64_t* buffer;
         if (i == 0u) buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
-        else if (i == 1u) buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
-        else buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
+        else if (i == 1u)
+            buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
+        else
+            buffer = (int64_t*)fviz_alloc(estimated * sizeof(int64_t));
         if (buffer == NULL)
         {
             result = fviz_last_error_code();
@@ -498,13 +520,9 @@ cleanup:
     return result;
 }
 
-static FVizResult fviz_vtu_parse_data_arrays(
-    FVizAttributeSet* destination,
-    const FVizDataArrayBlock* blocks,
-    FVizSize block_count,
-    const char* text_end,
-    FVizSize expected_tuple_count,
-    FVizSize maximum_array_values)
+static FVizResult fviz_vtu_parse_data_arrays(FVizAttributeSet* destination, const FVizDataArrayBlock* blocks,
+                                             FVizSize block_count, const char* text_end, FVizSize expected_tuple_count,
+                                             FVizSize maximum_array_values)
 {
     FVizSize i;
     for (i = 0u; i < block_count; ++i)
@@ -514,15 +532,24 @@ static FVizResult fviz_vtu_parse_data_arrays(
         FVizSize component_count = block->components == 0u ? 1u : block->components;
         FVizDataType data_type;
         if (strcmp(block->type, "Int8") == 0) data_type = FVIZ_DATA_INT8;
-        else if (strcmp(block->type, "UInt8") == 0) data_type = FVIZ_DATA_UINT8;
-        else if (strcmp(block->type, "Int16") == 0) data_type = FVIZ_DATA_INT16;
-        else if (strcmp(block->type, "UInt16") == 0) data_type = FVIZ_DATA_UINT16;
-        else if (strcmp(block->type, "Int32") == 0) data_type = FVIZ_DATA_INT32;
-        else if (strcmp(block->type, "UInt32") == 0) data_type = FVIZ_DATA_UINT32;
-        else if (strcmp(block->type, "Int64") == 0) data_type = FVIZ_DATA_INT64;
-        else if (strcmp(block->type, "UInt64") == 0) data_type = FVIZ_DATA_UINT64;
-        else if (strcmp(block->type, "Float64") == 0) data_type = FVIZ_DATA_FLOAT64;
-        else data_type = FVIZ_DATA_FLOAT32;
+        else if (strcmp(block->type, "UInt8") == 0)
+            data_type = FVIZ_DATA_UINT8;
+        else if (strcmp(block->type, "Int16") == 0)
+            data_type = FVIZ_DATA_INT16;
+        else if (strcmp(block->type, "UInt16") == 0)
+            data_type = FVIZ_DATA_UINT16;
+        else if (strcmp(block->type, "Int32") == 0)
+            data_type = FVIZ_DATA_INT32;
+        else if (strcmp(block->type, "UInt32") == 0)
+            data_type = FVIZ_DATA_UINT32;
+        else if (strcmp(block->type, "Int64") == 0)
+            data_type = FVIZ_DATA_INT64;
+        else if (strcmp(block->type, "UInt64") == 0)
+            data_type = FVIZ_DATA_UINT64;
+        else if (strcmp(block->type, "Float64") == 0)
+            data_type = FVIZ_DATA_FLOAT64;
+        else
+            data_type = FVIZ_DATA_FLOAT32;
         if (fviz_data_array_create(data_type, (uint32_t)component_count, &array) != FVIZ_OK)
             return fviz_last_error_code();
         if (strcmp(block->format, "ascii") == 0 || strcmp(block->format, "") == 0)
@@ -541,13 +568,19 @@ static FVizResult fviz_vtu_parse_data_arrays(
             while (cursor < end)
             {
                 char* next = NULL;
-                while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+                while (cursor < end && (isspace((unsigned char)*cursor) || *cursor == ','))
+                    ++cursor;
                 if (cursor >= end) break;
                 if (data_type == FVIZ_DATA_FLOAT32 || data_type == FVIZ_DATA_FLOAT64)
                 {
                     const double value = strtod(cursor, &next);
-                    if (data_type == FVIZ_DATA_FLOAT32) { const float v = (float)value; (void)memcpy(tuple + component * component_size, &v, component_size); }
-                    else (void)memcpy(tuple + component * component_size, &value, component_size);
+                    if (data_type == FVIZ_DATA_FLOAT32)
+                    {
+                        const float v = (float)value;
+                        (void)memcpy(tuple + component * component_size, &v, component_size);
+                    }
+                    else
+                        (void)memcpy(tuple + component * component_size, &value, component_size);
                 }
                 else if (data_type == FVIZ_DATA_UINT8 || data_type == FVIZ_DATA_UINT16 ||
                          data_type == FVIZ_DATA_UINT32 || data_type == FVIZ_DATA_UINT64)
@@ -570,8 +603,7 @@ static FVizResult fviz_vtu_parse_data_arrays(
                 ++component;
                 if (component == component_count)
                 {
-                    if (fviz_data_array_tuple_count(array) >=
-                        maximum_array_values / component_count)
+                    if (fviz_data_array_tuple_count(array) >= maximum_array_values / component_count)
                     {
                         fviz_free(tuple);
                         fviz_release(array);
@@ -627,12 +659,11 @@ static FVizResult fviz_vtu_parse_data_arrays(
                 (void)memcpy(fviz_data_array_data(array), buffer.data + prefix, tuple_count * stride);
             fviz_free(buffer.data);
         }
-        if (expected_tuple_count != SIZE_MAX &&
-            fviz_data_array_tuple_count(array) != expected_tuple_count)
+        if (expected_tuple_count != SIZE_MAX && fviz_data_array_tuple_count(array) != expected_tuple_count)
         {
             fviz_release(array);
             fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
-                "VTU attribute tuple count does not match its association");
+                                    "VTU attribute tuple count does not match its association");
             return FVIZ_ERROR_INVALID_STATE;
         }
         if (fviz_attribute_set_add(destination, block->name, array) != FVIZ_OK)
@@ -645,9 +676,7 @@ static FVizResult fviz_vtu_parse_data_arrays(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_vtu_normalize_vtk_ghost_array(
-    FVizAttributeSet* attributes,
-    FVizBool cell_association)
+static FVizResult fviz_vtu_normalize_vtk_ghost_array(FVizAttributeSet* attributes, FVizBool cell_association)
 {
     const FVizDataArray* vtk_ghosts;
     FVizDataArray* normalized = NULL;
@@ -657,8 +686,7 @@ static FVizResult fviz_vtu_normalize_vtk_ghost_array(
     FVizSize i;
     FVizResult result;
     if (attributes == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
-    if (fviz_attribute_set_const_get(attributes, FVIZ_GHOST_ARRAY_NAME) != NULL)
-        return FVIZ_OK;
+    if (fviz_attribute_set_const_get(attributes, FVIZ_GHOST_ARRAY_NAME) != NULL) return FVIZ_OK;
     vtk_ghosts = fviz_attribute_set_const_get(attributes, FVIZ_VTK_GHOST_ARRAY_NAME);
     if (vtk_ghosts == NULL || fviz_data_array_type(vtk_ghosts) != FVIZ_DATA_UINT8 ||
         fviz_data_array_components(vtk_ghosts) != 1u)
@@ -682,8 +710,7 @@ static FVizResult fviz_vtu_normalize_vtk_ghost_array(
             /* VTK REFINEDCELL (8) and HIDDENCELL (32) should both be ignored
              * by FEAViz rendering/statistics, while connectivity/exterior bits
              * remain informational in the preserved vtkGhostType array. */
-            if ((source[i] & (UINT8_C(8) | UINT8_C(32))) != 0u)
-                flags |= (uint8_t)FVIZ_GHOST_HIDDEN;
+            if ((source[i] & (UINT8_C(8) | UINT8_C(32))) != 0u) flags |= (uint8_t)FVIZ_GHOST_HIDDEN;
         }
         else if ((source[i] & UINT8_C(2)) != 0u)
         {
@@ -697,13 +724,10 @@ static FVizResult fviz_vtu_normalize_vtk_ghost_array(
     return result;
 }
 
-static void fviz_vtu_apply_active_roles(
-    const char* text,
-    const char* section_name,
-    FVizAttributeSet* attributes)
+static void fviz_vtu_apply_active_roles(const char* text, const char* section_name, FVizAttributeSet* attributes)
 {
-    static const char* role_attributes[FVIZ_ATTRIBUTE_ROLE_COUNT] = {
-        "Scalars", "Vectors", "Normals", "Tensors", "GlobalIds"};
+    static const char* role_attributes[FVIZ_ATTRIBUTE_ROLE_COUNT] = {"Scalars", "Vectors", "Normals", "Tensors",
+                                                                     "GlobalIds"};
     const char* section = strstr(text, section_name);
     const char* section_end;
     char tag[1024];
@@ -736,10 +760,8 @@ void fviz_vtu_reader_options_initialize(FVizVTUReaderOptions* options)
     options->maximum_array_values = 800000000u;
 }
 
-FVizResult fviz_vtu_read_with_options(
-    const char* file_path,
-    const FVizVTUReaderOptions* options,
-    FVizUnstructuredGrid** out_grid)
+FVizResult fviz_vtu_read_with_options(const char* file_path, const FVizVTUReaderOptions* options,
+                                      FVizUnstructuredGrid** out_grid)
 {
     FILE* file = NULL;
     char* text = NULL;
@@ -763,9 +785,8 @@ FVizResult fviz_vtu_read_with_options(
     FVizSize expected_cell_count = 0u;
     FVizResult result;
 
-    if (out_grid == NULL || file_path == NULL || options == NULL ||
-        options->struct_size < sizeof(*options) || options->maximum_file_bytes == 0u ||
-        options->maximum_points == 0u || options->maximum_cells == 0u ||
+    if (out_grid == NULL || file_path == NULL || options == NULL || options->struct_size < sizeof(*options) ||
+        options->maximum_file_bytes == 0u || options->maximum_points == 0u || options->maximum_cells == 0u ||
         options->maximum_connectivity_values == 0u || options->maximum_array_values == 0u)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "file path and output must not be NULL");
@@ -828,7 +849,8 @@ FVizResult fviz_vtu_read_with_options(
             if (tag_end != NULL)
             {
                 const char* underscore = tag_end + 1;
-                while (underscore < text + file_size && *underscore != '_') ++underscore;
+                while (underscore < text + file_size && *underscore != '_')
+                    ++underscore;
                 if (underscore < text + file_size)
                 {
                     appended_base = underscore + 1;
@@ -858,8 +880,7 @@ FVizResult fviz_vtu_read_with_options(
         }
     }
 
-    if (expected_point_count > options->maximum_points ||
-        expected_cell_count > options->maximum_cells)
+    if (expected_point_count > options->maximum_points || expected_cell_count > options->maximum_cells)
     {
         fviz_free(text);
         fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "VTU mesh exceeds configured point/cell limits");
@@ -881,28 +902,44 @@ FVizResult fviz_vtu_read_with_options(
             while ((section_open = strstr(section_open, "<PointData")) != NULL && section_open < open)
             {
                 const char* section_close = strstr(section_open, "</PointData>");
-                if (section_close != NULL && open < section_close) { section_kind = 1; break; }
+                if (section_close != NULL && open < section_close)
+                {
+                    section_kind = 1;
+                    break;
+                }
                 ++section_open;
             }
             section_open = text;
             while ((section_open = strstr(section_open, "<CellData")) != NULL && section_open < open)
             {
                 const char* section_close = strstr(section_open, "</CellData>");
-                if (section_close != NULL && open < section_close) { section_kind = 2; break; }
+                if (section_close != NULL && open < section_close)
+                {
+                    section_kind = 2;
+                    break;
+                }
                 ++section_open;
             }
             section_open = text;
             while ((section_open = strstr(section_open, "<FieldData")) != NULL && section_open < open)
             {
                 const char* section_close = strstr(section_open, "</FieldData>");
-                if (section_close != NULL && open < section_close) { section_kind = 3; break; }
+                if (section_close != NULL && open < section_close)
+                {
+                    section_kind = 3;
+                    break;
+                }
                 ++section_open;
             }
             section_open = text;
             while ((section_open = strstr(section_open, "<Points")) != NULL && section_open < open)
             {
                 const char* section_close = strstr(section_open, "</Points>");
-                if (section_close != NULL && open < section_close) { section_kind = 4; break; }
+                if (section_close != NULL && open < section_close)
+                {
+                    section_kind = 4;
+                    break;
+                }
                 ++section_open;
             }
         }
@@ -921,8 +958,7 @@ FVizResult fviz_vtu_read_with_options(
             {
                 /* A VTK XML Points DataArray is not required to carry a Name
                  * attribute. Treat the sole array in <Points> as geometry. */
-                if (section_kind == 4)
-                    (void)strcpy(block.name, "Points");
+                if (section_kind == 4) (void)strcpy(block.name, "Points");
                 else
                 {
                     cursor = self_closing != FVIZ_FALSE ? open_end : close + strlen("</DataArray>");
@@ -945,8 +981,7 @@ FVizResult fviz_vtu_read_with_options(
             {
                 long raw_offset = -1;
                 if (fviz_attr_long(tag, "offset", &raw_offset) != FVIZ_FALSE && raw_offset >= 0 &&
-                    (FVizSize)raw_offset <= appended_size &&
-                    appended_size - (FVizSize)raw_offset >= header_width)
+                    (FVizSize)raw_offset <= appended_size && appended_size - (FVizSize)raw_offset >= header_width)
                 {
                     const unsigned char* header = (const unsigned char*)appended_base + (FVizSize)raw_offset;
                     uint64_t byte_count = 0u;
@@ -967,10 +1002,8 @@ FVizResult fviz_vtu_read_with_options(
                 }
             }
 
-            if (strcmp(block.format, "ascii") != 0 &&
-                strcmp(block.format, "") != 0 &&
-                strcmp(block.format, "binary") != 0 &&
-                strcmp(block.format, "appended") != 0 &&
+            if (strcmp(block.format, "ascii") != 0 && strcmp(block.format, "") != 0 &&
+                strcmp(block.format, "binary") != 0 && strcmp(block.format, "appended") != 0 &&
                 strcmp(block.format, "appended_raw") != 0)
             {
                 cursor = self_closing != FVIZ_FALSE ? open_end : close + strlen("</DataArray>");
@@ -982,8 +1015,7 @@ FVizResult fviz_vtu_read_with_options(
                 points_block = block;
                 found_points = FVIZ_TRUE;
             }
-            else if (strcmp(block.name, "connectivity") == 0 ||
-                     strcmp(block.name, "offsets") == 0 ||
+            else if (strcmp(block.name, "connectivity") == 0 || strcmp(block.name, "offsets") == 0 ||
                      strcmp(block.name, "types") == 0)
             {
                 if (cell_block_count < 8u) cell_blocks[cell_block_count++] = block;
@@ -1020,39 +1052,32 @@ FVizResult fviz_vtu_read_with_options(
         fviz_free(text);
         return fviz_last_error_code();
     }
-    result = fviz_vtu_parse_points(
-        grid, &points_block, text + file_size, expected_point_count);
+    result = fviz_vtu_parse_points(grid, &points_block, text + file_size, expected_point_count);
     if (result == FVIZ_OK)
     {
         result = fviz_vtu_parse_cells(grid, cell_blocks, cell_block_count, text + file_size,
-            options->maximum_connectivity_values, expected_cell_count);
+                                      options->maximum_connectivity_values, expected_cell_count);
     }
     if (result == FVIZ_OK)
     {
-        result = fviz_vtu_parse_data_arrays(
-            fviz_unstructured_grid_point_data(grid),
-            point_data_blocks, point_data_count, text + file_size,
-            expected_point_count, options->maximum_array_values);
+        result =
+            fviz_vtu_parse_data_arrays(fviz_unstructured_grid_point_data(grid), point_data_blocks, point_data_count,
+                                       text + file_size, expected_point_count, options->maximum_array_values);
     }
     if (result == FVIZ_OK)
     {
-        result = fviz_vtu_parse_data_arrays(
-            fviz_unstructured_grid_cell_data(grid),
-            cell_data_blocks, cell_data_count, text + file_size,
-            expected_cell_count, options->maximum_array_values);
+        result = fviz_vtu_parse_data_arrays(fviz_unstructured_grid_cell_data(grid), cell_data_blocks, cell_data_count,
+                                            text + file_size, expected_cell_count, options->maximum_array_values);
     }
     if (result == FVIZ_OK)
-        result = fviz_vtu_normalize_vtk_ghost_array(
-            fviz_unstructured_grid_point_data(grid), FVIZ_FALSE);
+        result = fviz_vtu_normalize_vtk_ghost_array(fviz_unstructured_grid_point_data(grid), FVIZ_FALSE);
     if (result == FVIZ_OK)
-        result = fviz_vtu_normalize_vtk_ghost_array(
-            fviz_unstructured_grid_cell_data(grid), FVIZ_TRUE);
+        result = fviz_vtu_normalize_vtk_ghost_array(fviz_unstructured_grid_cell_data(grid), FVIZ_TRUE);
     if (result == FVIZ_OK)
     {
-        result = fviz_vtu_parse_data_arrays(
-            fviz_unstructured_grid_field_data(grid),
-            field_data_blocks, field_data_count, text + file_size,
-            SIZE_MAX, options->maximum_array_values);
+        result =
+            fviz_vtu_parse_data_arrays(fviz_unstructured_grid_field_data(grid), field_data_blocks, field_data_count,
+                                       text + file_size, SIZE_MAX, options->maximum_array_values);
     }
     if (result == FVIZ_OK)
     {

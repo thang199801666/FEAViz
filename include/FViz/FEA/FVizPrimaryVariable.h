@@ -21,7 +21,7 @@ typedef struct FVizFEAPrimaryVariableResult FVizFEAPrimaryVariableResult;
 #define FVIZ_TYPE_FEA_PRIMARY_VARIABLE_EVALUATOR UINT64_C(0x27AC9741573D04A1)
 #define FVIZ_TYPE_FEA_PRIMARY_VARIABLE_RESULT UINT64_C(0x0BF9F25A8C6E72D3)
 #define FVIZ_FEA_SECTION_POINT_ANY INT32_MIN
-#define FVIZ_FEA_COMPONENT_BY_LABEL ((FVizSize)-1)
+#define FVIZ_FEA_COMPONENT_BY_LABEL ((FVizSize) - 1)
 
 typedef enum FVizFEAPrimaryVariableOperation
 {
@@ -51,13 +51,13 @@ typedef enum FVizFEADisplayAssociation
 typedef struct FVizFEAPrimaryVariable
 {
     uint32_t struct_size;
-    const char* instance_name; /* NULL/empty accepts every instance block. */
+    const char* instance_name;             /* NULL/empty accepts every instance block. */
     FVizFEAResultPosition source_position; /* UNKNOWN selects a compatible source automatically. */
     FVizFEAResultPosition target_position;
     int32_t section_point_number; /* FVIZ_FEA_SECTION_POINT_ANY accepts all section points. */
 
     FVizFEAPrimaryVariableOperation operation;
-    FVizSize component;            /* ignored for invariants; BY_LABEL resolves component_label. */
+    FVizSize component; /* ignored for invariants; BY_LABEL resolves component_label. */
     const char* component_label;
     FVizFEAInvariant invariant;
 
@@ -85,51 +85,46 @@ typedef struct FVizFEAPrimaryVariableCacheStatistics
 
 FVIZ_FEA_API void fviz_fea_primary_variable_initialize(FVizFEAPrimaryVariable* variable);
 
-FVIZ_FEA_API FVizResult fviz_fea_primary_variable_evaluator_create(
-    FVizFEAPrimaryVariableEvaluator** out_evaluator);
-FVIZ_FEA_API void fviz_fea_primary_variable_evaluator_clear_cache(
-    FVizFEAPrimaryVariableEvaluator* evaluator);
+FVIZ_FEA_API FVizResult fviz_fea_primary_variable_evaluator_create(FVizFEAPrimaryVariableEvaluator** out_evaluator);
+FVIZ_FEA_API void fviz_fea_primary_variable_evaluator_clear_cache(FVizFEAPrimaryVariableEvaluator* evaluator);
 FVIZ_FEA_API FVizFEAPrimaryVariableCacheStatistics
-fviz_fea_primary_variable_evaluator_cache_statistics(
-    const FVizFEAPrimaryVariableEvaluator* evaluator);
+fviz_fea_primary_variable_evaluator_cache_statistics(const FVizFEAPrimaryVariableEvaluator* evaluator);
 
 /* Evaluates one scalar primary variable against an UnstructuredGrid instance.
  * The result keeps both source-order raw scalar values and the display-ready
  * representation.  Nodal averaging never mutates the source field. */
-FVIZ_FEA_API FVizResult fviz_fea_primary_variable_evaluate(
-    FVizFEAPrimaryVariableEvaluator* evaluator,
-    const FVizFEAField* field,
-    const FVizUnstructuredGrid* grid,
-    const FVizFEAPrimaryVariable* variable,
-    FVizFEAPrimaryVariableResult** out_result);
+FVIZ_FEA_API FVizResult fviz_fea_primary_variable_evaluate(FVizFEAPrimaryVariableEvaluator* evaluator,
+                                                           const FVizFEAField* field, const FVizUnstructuredGrid* grid,
+                                                           const FVizFEAPrimaryVariable* variable,
+                                                           FVizFEAPrimaryVariableResult** out_result);
 
-FVIZ_FEA_API FVizFEAResultPosition fviz_fea_primary_variable_result_source_position(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API FVizFEAResultPosition fviz_fea_primary_variable_result_target_position(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API FVizFEADisplayAssociation fviz_fea_primary_variable_result_association(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API const FVizDataArray* fviz_fea_primary_variable_result_raw_values(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API const FVizDataArray* fviz_fea_primary_variable_result_raw_entity_ids(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API const FVizDataArray* fviz_fea_primary_variable_result_raw_local_ids(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API const FVizDataArray* fviz_fea_primary_variable_result_display_values(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API const FVizDataArray* fviz_fea_primary_variable_result_display_entity_ids(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API const FVizDataArray* fviz_fea_primary_variable_result_display_local_ids(
-    const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API FVizFEAResultPosition
+fviz_fea_primary_variable_result_source_position(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API FVizFEAResultPosition
+fviz_fea_primary_variable_result_target_position(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API FVizFEADisplayAssociation
+fviz_fea_primary_variable_result_association(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_primary_variable_result_raw_values(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_primary_variable_result_raw_entity_ids(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_primary_variable_result_raw_local_ids(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_primary_variable_result_display_values(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_primary_variable_result_display_entity_ids(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_primary_variable_result_display_local_ids(const FVizFEAPrimaryVariableResult* result);
 /* UInt8, one tuple per display tuple.  Non-zero means that averaging was
  * deliberately rejected because of a block boundary, disabled averaging, or
  * the configured relative-discontinuity threshold. */
-FVIZ_FEA_API const FVizDataArray* fviz_fea_primary_variable_result_discontinuity_mask(
-    const FVizFEAPrimaryVariableResult* result);
-FVIZ_FEA_API FVizBool fviz_fea_primary_variable_result_raw_range(
-    const FVizFEAPrimaryVariableResult* result, double* out_minimum, double* out_maximum);
-FVIZ_FEA_API FVizBool fviz_fea_primary_variable_result_display_range(
-    const FVizFEAPrimaryVariableResult* result, double* out_minimum, double* out_maximum);
+FVIZ_FEA_API const FVizDataArray*
+fviz_fea_primary_variable_result_discontinuity_mask(const FVizFEAPrimaryVariableResult* result);
+FVIZ_FEA_API FVizBool fviz_fea_primary_variable_result_raw_range(const FVizFEAPrimaryVariableResult* result,
+                                                                 double* out_minimum, double* out_maximum);
+FVIZ_FEA_API FVizBool fviz_fea_primary_variable_result_display_range(const FVizFEAPrimaryVariableResult* result,
+                                                                     double* out_minimum, double* out_maximum);
 
 FVIZ_EXTERN_C_END
 

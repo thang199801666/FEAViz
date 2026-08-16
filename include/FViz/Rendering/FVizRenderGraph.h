@@ -54,31 +54,19 @@ typedef struct FVizRenderGraphStatistics
     FVizBool compiled;
 } FVizRenderGraphStatistics;
 
-FVIZ_API void fviz_render_graph_resource_desc_initialize(
-    FVizRenderGraphResourceDesc* desc);
-FVIZ_API void fviz_render_graph_statistics_initialize(
-    FVizRenderGraphStatistics* statistics);
+FVIZ_API void fviz_render_graph_resource_desc_initialize(FVizRenderGraphResourceDesc* desc);
+FVIZ_API void fviz_render_graph_statistics_initialize(FVizRenderGraphStatistics* statistics);
 FVIZ_API FVizResult fviz_render_graph_create(FVizRenderGraph** out_graph);
 FVIZ_API void fviz_render_graph_clear(FVizRenderGraph* graph);
 
-FVIZ_API FVizResult fviz_render_graph_add_resource(
-    FVizRenderGraph* graph,
-    const FVizRenderGraphResourceDesc* desc,
-    FVizRenderGraphResourceId* out_resource_id);
-FVIZ_API FVizResult fviz_render_graph_add_pass(
-    FVizRenderGraph* graph,
-    const char* name,
-    FVizRenderPass* pass,
-    FVizRenderGraphPassId* out_pass_id);
-FVIZ_API FVizResult fviz_render_graph_add_dependency(
-    FVizRenderGraph* graph,
-    FVizRenderGraphPassId before,
-    FVizRenderGraphPassId after);
-FVIZ_API FVizResult fviz_render_graph_use_resource(
-    FVizRenderGraph* graph,
-    FVizRenderGraphPassId pass_id,
-    FVizRenderGraphResourceId resource_id,
-    FVizRenderGraphAccess access);
+FVIZ_API FVizResult fviz_render_graph_add_resource(FVizRenderGraph* graph, const FVizRenderGraphResourceDesc* desc,
+                                                   FVizRenderGraphResourceId* out_resource_id);
+FVIZ_API FVizResult fviz_render_graph_add_pass(FVizRenderGraph* graph, const char* name, FVizRenderPass* pass,
+                                               FVizRenderGraphPassId* out_pass_id);
+FVIZ_API FVizResult fviz_render_graph_add_dependency(FVizRenderGraph* graph, FVizRenderGraphPassId before,
+                                                     FVizRenderGraphPassId after);
+FVIZ_API FVizResult fviz_render_graph_use_resource(FVizRenderGraph* graph, FVizRenderGraphPassId pass_id,
+                                                   FVizRenderGraphResourceId resource_id, FVizRenderGraphAccess access);
 
 /* Compilation validates references and hazards, rejects cycles and reads of
  * uninitialized internal resources, computes a stable execution order, and
@@ -86,25 +74,19 @@ FVIZ_API FVizResult fviz_render_graph_use_resource(
 FVIZ_API FVizResult fviz_render_graph_compile(FVizRenderGraph* graph);
 FVIZ_API FVizBool fviz_render_graph_is_compiled(const FVizRenderGraph* graph);
 FVIZ_API FVizSize fviz_render_graph_execution_count(const FVizRenderGraph* graph);
-FVIZ_API FVizRenderGraphPassId fviz_render_graph_execution_pass_id(
-    const FVizRenderGraph* graph, FVizSize execution_index);
-FVIZ_API FVizRenderPass* fviz_render_graph_execution_pass(
-    const FVizRenderGraph* graph, FVizSize execution_index);
-FVIZ_API const char* fviz_render_graph_pass_name(
-    const FVizRenderGraph* graph, FVizRenderGraphPassId pass_id);
-FVIZ_API const char* fviz_render_graph_resource_name(
-    const FVizRenderGraph* graph, FVizRenderGraphResourceId resource_id);
-FVIZ_API FVizResult fviz_render_graph_resource_lifetime(
-    const FVizRenderGraph* graph,
-    FVizRenderGraphResourceId resource_id,
-    FVizSize* out_first_execution,
-    FVizSize* out_last_execution);
-FVIZ_API uint32_t fviz_render_graph_resource_physical_slot(
-    const FVizRenderGraph* graph, FVizRenderGraphResourceId resource_id);
-FVIZ_API FVizRenderTarget* fviz_render_graph_physical_target(
-    FVizRenderGraph* graph, uint32_t physical_slot);
-FVIZ_API void fviz_render_graph_get_statistics(
-    const FVizRenderGraph* graph, FVizRenderGraphStatistics* out_statistics);
+FVIZ_API FVizRenderGraphPassId fviz_render_graph_execution_pass_id(const FVizRenderGraph* graph,
+                                                                   FVizSize execution_index);
+FVIZ_API FVizRenderPass* fviz_render_graph_execution_pass(const FVizRenderGraph* graph, FVizSize execution_index);
+FVIZ_API const char* fviz_render_graph_pass_name(const FVizRenderGraph* graph, FVizRenderGraphPassId pass_id);
+FVIZ_API const char* fviz_render_graph_resource_name(const FVizRenderGraph* graph,
+                                                     FVizRenderGraphResourceId resource_id);
+FVIZ_API FVizResult fviz_render_graph_resource_lifetime(const FVizRenderGraph* graph,
+                                                        FVizRenderGraphResourceId resource_id,
+                                                        FVizSize* out_first_execution, FVizSize* out_last_execution);
+FVIZ_API uint32_t fviz_render_graph_resource_physical_slot(const FVizRenderGraph* graph,
+                                                           FVizRenderGraphResourceId resource_id);
+FVIZ_API FVizRenderTarget* fviz_render_graph_physical_target(FVizRenderGraph* graph, uint32_t physical_slot);
+FVIZ_API void fviz_render_graph_get_statistics(const FVizRenderGraph* graph, FVizRenderGraphStatistics* out_statistics);
 
 FVIZ_EXTERN_C_END
 

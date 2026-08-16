@@ -11,12 +11,11 @@ static float fviz_overlay_clamp(float value, float minimum, float maximum)
     return value < minimum ? minimum : (value > maximum ? maximum : value);
 }
 
-static FVizBool fviz_overlay_intersects(
-    const FVizOverlayLayoutResult* a, const FVizOverlayLayoutResult* b)
+static FVizBool fviz_overlay_intersects(const FVizOverlayLayoutResult* a, const FVizOverlayLayoutResult* b)
 {
-    return a->x < b->x + b->width && a->x + a->width > b->x &&
-           a->y < b->y + b->height && a->y + a->height > b->y
-        ? FVIZ_TRUE : FVIZ_FALSE;
+    return a->x < b->x + b->width && a->x + a->width > b->x && a->y < b->y + b->height && a->y + a->height > b->y
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 void fviz_overlay_layout_context_initialize(FVizOverlayLayoutContext* context)
@@ -39,11 +38,8 @@ void fviz_overlay_layout_item_initialize(FVizOverlayLayoutItem* item)
     item->visible = FVIZ_TRUE;
 }
 
-FVizResult fviz_overlay_layout_resolve(
-    const FVizOverlayLayoutContext* context,
-    const FVizOverlayLayoutItem* items,
-    FVizSize item_count,
-    FVizOverlayLayoutResult* results)
+FVizResult fviz_overlay_layout_resolve(const FVizOverlayLayoutContext* context, const FVizOverlayLayoutItem* items,
+                                       FVizSize item_count, FVizOverlayLayoutResult* results)
 {
     FVizSize i;
     float safe_left;
@@ -51,12 +47,11 @@ FVizResult fviz_overlay_layout_resolve(
     float safe_right;
     float safe_top;
     if (context == NULL || context->struct_size < sizeof(*context) ||
-        (item_count != 0u && (items == NULL || results == NULL)) ||
-        !isfinite(context->window_width) || !isfinite(context->window_height) ||
-        !isfinite(context->viewport_width) || !isfinite(context->viewport_height) ||
-        !isfinite(context->content_scale) || context->window_width <= 0.0f ||
-        context->window_height <= 0.0f || context->viewport_width <= 0.0f ||
-        context->viewport_height <= 0.0f || context->content_scale <= 0.0f)
+        (item_count != 0u && (items == NULL || results == NULL)) || !isfinite(context->window_width) ||
+        !isfinite(context->window_height) || !isfinite(context->viewport_width) ||
+        !isfinite(context->viewport_height) || !isfinite(context->content_scale) || context->window_width <= 0.0f ||
+        context->window_height <= 0.0f || context->viewport_width <= 0.0f || context->viewport_height <= 0.0f ||
+        context->content_scale <= 0.0f)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "invalid overlay layout context or output storage");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -76,8 +71,8 @@ FVizResult fviz_overlay_layout_resolve(
         float right_padding;
         float top_padding;
         FVizSize previous;
-        if (item->struct_size < sizeof(*item) || !isfinite(item->width) ||
-            !isfinite(item->height) || item->width < 0.0f || item->height < 0.0f)
+        if (item->struct_size < sizeof(*item) || !isfinite(item->width) || !isfinite(item->height) ||
+            item->width < 0.0f || item->height < 0.0f)
         {
             fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "invalid overlay layout item");
             return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -109,9 +104,8 @@ FVizResult fviz_overlay_layout_resolve(
                 break;
             case FVIZ_OVERLAY_WORLD:
                 if (context->world_to_display == NULL ||
-                    context->world_to_display(
-                        item->anchor, &anchor_x, &anchor_y,
-                        context->world_to_display_user_data) == FVIZ_FALSE)
+                    context->world_to_display(item->anchor, &anchor_x, &anchor_y,
+                                              context->world_to_display_user_data) == FVIZ_FALSE)
                 {
                     result->visible = FVIZ_FALSE;
                     result->flags |= FVIZ_OVERLAY_LAYOUT_PROJECTION_FAILED;
@@ -129,9 +123,11 @@ FVizResult fviz_overlay_layout_resolve(
         result->x = anchor_x;
         result->y = anchor_y;
         if (item->horizontal_alignment == FVIZ_OVERLAY_ALIGN_CENTER) result->x -= 0.5f * result->width;
-        else if (item->horizontal_alignment == FVIZ_OVERLAY_ALIGN_RIGHT) result->x -= result->width;
+        else if (item->horizontal_alignment == FVIZ_OVERLAY_ALIGN_RIGHT)
+            result->x -= result->width;
         if (item->vertical_alignment == FVIZ_OVERLAY_ALIGN_MIDDLE) result->y -= 0.5f * result->height;
-        else if (item->vertical_alignment == FVIZ_OVERLAY_ALIGN_TOP) result->y -= result->height;
+        else if (item->vertical_alignment == FVIZ_OVERLAY_ALIGN_TOP)
+            result->y -= result->height;
         result->x += item->horizontal_alignment == FVIZ_OVERLAY_ALIGN_RIGHT ? -right_padding : left_padding;
         result->y += item->vertical_alignment == FVIZ_OVERLAY_ALIGN_TOP ? -top_padding : bottom_padding;
         for (previous = 0u; previous < i; ++previous)
@@ -143,9 +139,12 @@ FVizResult fviz_overlay_layout_resolve(
                 other->visible == FVIZ_FALSE || fviz_overlay_intersects(result, other) == FVIZ_FALSE)
                 continue;
             if (item->stack_direction == FVIZ_OVERLAY_STACK_UP) result->y = other->y + other->height + gap;
-            else if (item->stack_direction == FVIZ_OVERLAY_STACK_LEFT) result->x = other->x - result->width - gap;
-            else if (item->stack_direction == FVIZ_OVERLAY_STACK_RIGHT) result->x = other->x + other->width + gap;
-            else result->y = other->y - result->height - gap;
+            else if (item->stack_direction == FVIZ_OVERLAY_STACK_LEFT)
+                result->x = other->x - result->width - gap;
+            else if (item->stack_direction == FVIZ_OVERLAY_STACK_RIGHT)
+                result->x = other->x + other->width + gap;
+            else
+                result->y = other->y - result->height - gap;
             result->flags |= FVIZ_OVERLAY_LAYOUT_MOVED_FOR_COLLISION;
         }
         if (result->width > safe_right - safe_left || result->height > safe_top - safe_bottom)

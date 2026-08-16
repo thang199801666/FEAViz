@@ -11,20 +11,12 @@ static void fviz_renderer_widget_destroy(FVizObject* object)
     widget->window = NULL;
 }
 
-static const FVizObjectClass g_fviz_renderer_widget_class = {
-    FVIZ_TYPE_RENDERER_WIDGET,
-    "FVizRendererWidget",
-    &g_fviz_object_class,
-    fviz_renderer_widget_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_renderer_widget_class = {FVIZ_TYPE_RENDERER_WIDGET, "FVizRendererWidget",
+                                                             &g_fviz_object_class, fviz_renderer_widget_destroy, NULL};
 
-FVizResult fviz_renderer_widget_create_with_options(
-    int width,
-    int height,
-    const char* title,
-    const FVizRenderWindowOptions* options,
-    FVizRendererWidget** out_widget)
+FVizResult fviz_renderer_widget_create_with_options(int width, int height, const char* title,
+                                                    const FVizRenderWindowOptions* options,
+                                                    FVizRendererWidget** out_widget)
 {
     FVizRendererWidget* widget;
     if (out_widget == NULL)
@@ -33,11 +25,10 @@ FVizResult fviz_renderer_widget_create_with_options(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_widget = NULL;
-    widget = (FVizRendererWidget*)fviz_internal_object_allocate(
-        sizeof(FVizRendererWidget), &g_fviz_renderer_widget_class, NULL);
+    widget = (FVizRendererWidget*)fviz_internal_object_allocate(sizeof(FVizRendererWidget),
+                                                                &g_fviz_renderer_widget_class, NULL);
     if (widget == NULL) return fviz_last_error_code();
-    if (fviz_render_window_create_with_options(
-            width, height, title, options, &widget->window) != FVIZ_OK)
+    if (fviz_render_window_create_with_options(width, height, title, options, &widget->window) != FVIZ_OK)
     {
         fviz_release(widget);
         return fviz_last_error_code();
@@ -46,38 +37,30 @@ FVizResult fviz_renderer_widget_create_with_options(
     return FVIZ_OK;
 }
 
-FVizResult fviz_renderer_widget_create(
-    int width,
-    int height,
-    const char* title,
-    FVizRendererWidget** out_widget)
+FVizResult fviz_renderer_widget_create(int width, int height, const char* title, FVizRendererWidget** out_widget)
 {
     FVizRenderWindowOptions options;
     fviz_render_window_options_initialize(&options);
-    return fviz_renderer_widget_create_with_options(
-        width, height, title, &options, out_widget);
+    return fviz_renderer_widget_create_with_options(width, height, title, &options, out_widget);
 }
 
-FVizResult fviz_renderer_widget_create_attached_with_options(
-    void* host_native_handle,
-    int width,
-    int height,
-    const FVizRenderWindowOptions* options,
-    FVizRendererWidget** out_widget)
+FVizResult fviz_renderer_widget_create_attached_with_options(void* host_native_handle, int width, int height,
+                                                             const FVizRenderWindowOptions* options,
+                                                             FVizRendererWidget** out_widget)
 {
     FVizRendererWidget* widget;
     if (out_widget == NULL || host_native_handle == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
-            "attached renderer widget requires a host native handle and output");
+                                "attached renderer widget requires a host native handle and output");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_widget = NULL;
-    widget = (FVizRendererWidget*)fviz_internal_object_allocate(
-        sizeof(FVizRendererWidget), &g_fviz_renderer_widget_class, NULL);
+    widget = (FVizRendererWidget*)fviz_internal_object_allocate(sizeof(FVizRendererWidget),
+                                                                &g_fviz_renderer_widget_class, NULL);
     if (widget == NULL) return fviz_last_error_code();
-    if (fviz_render_window_create_attached_with_options(
-            host_native_handle, width, height, options, &widget->window) != FVIZ_OK)
+    if (fviz_render_window_create_attached_with_options(host_native_handle, width, height, options, &widget->window) !=
+        FVIZ_OK)
     {
         fviz_release(widget);
         return fviz_last_error_code();
@@ -86,38 +69,32 @@ FVizResult fviz_renderer_widget_create_attached_with_options(
     return FVIZ_OK;
 }
 
-FVizResult fviz_renderer_widget_create_attached(
-    void* host_native_handle,
-    int width,
-    int height,
-    FVizRendererWidget** out_widget)
+FVizResult fviz_renderer_widget_create_attached(void* host_native_handle, int width, int height,
+                                                FVizRendererWidget** out_widget)
 {
     FVizRenderWindowOptions options;
     fviz_render_window_options_initialize(&options);
-    return fviz_renderer_widget_create_attached_with_options(
-        host_native_handle, width, height, &options, out_widget);
+    return fviz_renderer_widget_create_attached_with_options(host_native_handle, width, height, &options, out_widget);
 }
 
-FVizResult fviz_renderer_widget_create_external_opengl_with_options(
-    int width,
-    int height,
-    const FVizExternalOpenGLSurface* surface,
-    const FVizRenderWindowOptions* options,
-    FVizRendererWidget** out_widget)
+FVizResult fviz_renderer_widget_create_external_opengl_with_options(int width, int height,
+                                                                    const FVizExternalOpenGLSurface* surface,
+                                                                    const FVizRenderWindowOptions* options,
+                                                                    FVizRendererWidget** out_widget)
 {
     FVizRendererWidget* widget;
     if (out_widget == NULL || surface == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
-            "external renderer widget requires a surface contract and output");
+                                "external renderer widget requires a surface contract and output");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_widget = NULL;
-    widget = (FVizRendererWidget*)fviz_internal_object_allocate(
-        sizeof(FVizRendererWidget), &g_fviz_renderer_widget_class, NULL);
+    widget = (FVizRendererWidget*)fviz_internal_object_allocate(sizeof(FVizRendererWidget),
+                                                                &g_fviz_renderer_widget_class, NULL);
     if (widget == NULL) return fviz_last_error_code();
-    if (fviz_render_window_create_external_opengl_with_options(
-            width, height, surface, options, &widget->window) != FVIZ_OK)
+    if (fviz_render_window_create_external_opengl_with_options(width, height, surface, options, &widget->window) !=
+        FVIZ_OK)
     {
         fviz_release(widget);
         return fviz_last_error_code();
@@ -126,16 +103,12 @@ FVizResult fviz_renderer_widget_create_external_opengl_with_options(
     return FVIZ_OK;
 }
 
-FVizResult fviz_renderer_widget_create_external_opengl(
-    int width,
-    int height,
-    const FVizExternalOpenGLSurface* surface,
-    FVizRendererWidget** out_widget)
+FVizResult fviz_renderer_widget_create_external_opengl(int width, int height, const FVizExternalOpenGLSurface* surface,
+                                                       FVizRendererWidget** out_widget)
 {
     FVizRenderWindowOptions options;
     fviz_render_window_options_initialize(&options);
-    return fviz_renderer_widget_create_external_opengl_with_options(
-        width, height, surface, &options, out_widget);
+    return fviz_renderer_widget_create_external_opengl_with_options(width, height, surface, &options, out_widget);
 }
 
 FVizRenderWindow* fviz_renderer_widget_window(FVizRendererWidget* widget)
@@ -153,9 +126,7 @@ FVizRenderWindowInteractor* fviz_renderer_widget_interactor(FVizRendererWidget* 
     return widget != NULL ? fviz_render_window_interactor(widget->window) : NULL;
 }
 
-FVizResult fviz_renderer_widget_set_interactor_style(
-    FVizRendererWidget* widget,
-    FVizInteractorStyle* style)
+FVizResult fviz_renderer_widget_set_interactor_style(FVizRendererWidget* widget, FVizInteractorStyle* style)
 {
     if (widget == NULL)
     {
@@ -165,13 +136,9 @@ FVizResult fviz_renderer_widget_set_interactor_style(
     return fviz_render_window_interactor_set_style(fviz_renderer_widget_interactor(widget), style);
 }
 
-FVizResult fviz_renderer_widget_add_observer(
-    FVizRendererWidget* widget,
-    FVizInteractionEventType event_type,
-    int priority,
-    FVizInteractorEventCallbackFn callback,
-    void* user_data,
-    FVizObserverId* out_observer_id)
+FVizResult fviz_renderer_widget_add_observer(FVizRendererWidget* widget, FVizInteractionEventType event_type,
+                                             int priority, FVizInteractorEventCallbackFn callback, void* user_data,
+                                             FVizObserverId* out_observer_id)
 {
     if (widget == NULL)
     {
@@ -179,26 +146,18 @@ FVizResult fviz_renderer_widget_add_observer(
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "widget must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    return fviz_render_window_interactor_add_observer(
-        fviz_renderer_widget_interactor(widget),
-        event_type,
-        priority,
-        callback,
-        user_data,
-        out_observer_id);
+    return fviz_render_window_interactor_add_observer(fviz_renderer_widget_interactor(widget), event_type, priority,
+                                                      callback, user_data, out_observer_id);
 }
 
-FVizResult fviz_renderer_widget_remove_observer(
-    FVizRendererWidget* widget,
-    FVizObserverId observer_id)
+FVizResult fviz_renderer_widget_remove_observer(FVizRendererWidget* widget, FVizObserverId observer_id)
 {
     if (widget == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "widget must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    return fviz_render_window_interactor_remove_observer(
-        fviz_renderer_widget_interactor(widget), observer_id);
+    return fviz_render_window_interactor_remove_observer(fviz_renderer_widget_interactor(widget), observer_id);
 }
 
 FVizResult fviz_renderer_widget_add_actor(FVizRendererWidget* widget, FVizActor* actor)

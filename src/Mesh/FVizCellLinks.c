@@ -26,18 +26,10 @@ static void fviz_cell_links_destroy(FVizObject* object)
     links->offsets = NULL;
 }
 
-static const FVizObjectClass g_fviz_cell_links_class = {
-    FVIZ_TYPE_CELL_LINKS,
-    "FVizCellLinks",
-    &g_fviz_object_class,
-    fviz_cell_links_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_cell_links_class = {FVIZ_TYPE_CELL_LINKS, "FVizCellLinks", &g_fviz_object_class,
+                                                        fviz_cell_links_destroy, NULL};
 
-FVizResult fviz_cell_links_build(
-    const FVizCellArray* cells,
-    FVizSize point_count,
-    FVizCellLinks** out_links)
+FVizResult fviz_cell_links_build(const FVizCellArray* cells, FVizSize point_count, FVizCellLinks** out_links)
 {
     FVizCellLinks* links = NULL;
     FVizSize* cursor = NULL;
@@ -52,12 +44,10 @@ FVizResult fviz_cell_links_build(
     }
     *out_links = NULL;
     if (fviz_cell_array_validate(cells, point_count) != FVIZ_OK) return fviz_last_error_code();
-    if (point_count == (FVizSize)-1 ||
-        fviz_size_multiply(point_count + 1u, sizeof(FVizSize), &offset_bytes) != FVIZ_OK)
+    if (point_count == (FVizSize)-1 || fviz_size_multiply(point_count + 1u, sizeof(FVizSize), &offset_bytes) != FVIZ_OK)
         return FVIZ_ERROR_OVERFLOW;
 
-    links = (FVizCellLinks*)fviz_internal_object_allocate(
-        sizeof(*links), &g_fviz_cell_links_class, NULL);
+    links = (FVizCellLinks*)fviz_internal_object_allocate(sizeof(*links), &g_fviz_cell_links_class, NULL);
     if (links == NULL) return fviz_last_error_code();
     links->point_count = point_count;
     links->cell_count = fviz_cell_array_count(cells);
@@ -163,10 +153,7 @@ FVizSize fviz_cell_links_cell_count_for_point(const FVizCellLinks* links, FVizId
     return links->offsets[(FVizSize)point_id + 1u] - links->offsets[(FVizSize)point_id];
 }
 
-const FVizId* fviz_cell_links_cells_for_point(
-    const FVizCellLinks* links,
-    FVizId point_id,
-    FVizSize* out_count)
+const FVizId* fviz_cell_links_cells_for_point(const FVizCellLinks* links, FVizId point_id, FVizSize* out_count)
 {
     FVizSize count = 0u;
     if (out_count != NULL) *out_count = 0u;

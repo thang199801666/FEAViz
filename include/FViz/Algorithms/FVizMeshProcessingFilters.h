@@ -28,7 +28,8 @@ FVIZ_API double fviz_smooth_poly_data_filter_relaxation_factor(const FVizSmoothP
 FVIZ_API void fviz_smooth_poly_data_filter_set_boundary_smoothing(FVizSmoothPolyDataFilter* filter, FVizBool enabled);
 FVIZ_API FVizBool fviz_smooth_poly_data_filter_boundary_smoothing(const FVizSmoothPolyDataFilter* filter);
 FVIZ_API FVizResult fviz_smooth_poly_data_filter_set_input_data(FVizSmoothPolyDataFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_smooth_poly_data_filter_set_input_connection(FVizSmoothPolyDataFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_smooth_poly_data_filter_set_input_connection(FVizSmoothPolyDataFilter* filter,
+                                                                      FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_smooth_poly_data_filter_algorithm(FVizSmoothPolyDataFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_smooth_poly_data_filter_output_port(FVizSmoothPolyDataFilter* filter);
 FVIZ_API FVizPolyData* fviz_smooth_poly_data_filter_output(FVizSmoothPolyDataFilter* filter);
@@ -36,10 +37,13 @@ FVIZ_API FVizResult fviz_smooth_poly_data_filter_update(FVizSmoothPolyDataFilter
 
 /* Fast deterministic vertex-clustering decimator. Target reduction is in [0, 0.99]. */
 FVIZ_API FVizResult fviz_decimate_poly_data_filter_create(FVizDecimatePolyDataFilter** out_filter);
-FVIZ_API FVizResult fviz_decimate_poly_data_filter_set_target_reduction(FVizDecimatePolyDataFilter* filter, double reduction);
+FVIZ_API FVizResult fviz_decimate_poly_data_filter_set_target_reduction(FVizDecimatePolyDataFilter* filter,
+                                                                        double reduction);
 FVIZ_API double fviz_decimate_poly_data_filter_target_reduction(const FVizDecimatePolyDataFilter* filter);
-FVIZ_API FVizResult fviz_decimate_poly_data_filter_set_input_data(FVizDecimatePolyDataFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_decimate_poly_data_filter_set_input_connection(FVizDecimatePolyDataFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_decimate_poly_data_filter_set_input_data(FVizDecimatePolyDataFilter* filter,
+                                                                  FVizPolyData* input);
+FVIZ_API FVizResult fviz_decimate_poly_data_filter_set_input_connection(FVizDecimatePolyDataFilter* filter,
+                                                                        FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_decimate_poly_data_filter_algorithm(FVizDecimatePolyDataFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_decimate_poly_data_filter_output_port(FVizDecimatePolyDataFilter* filter);
 FVIZ_API FVizPolyData* fviz_decimate_poly_data_filter_output(FVizDecimatePolyDataFilter* filter);
@@ -56,7 +60,8 @@ FVIZ_API FVizBool fviz_clip_poly_data_filter_inside_out(const FVizClipPolyDataFi
 FVIZ_API void fviz_clip_poly_data_filter_set_generate_cap(FVizClipPolyDataFilter* filter, FVizBool enabled);
 FVIZ_API FVizBool fviz_clip_poly_data_filter_generate_cap(const FVizClipPolyDataFilter* filter);
 FVIZ_API FVizResult fviz_clip_poly_data_filter_set_input_data(FVizClipPolyDataFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_clip_poly_data_filter_set_input_connection(FVizClipPolyDataFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_clip_poly_data_filter_set_input_connection(FVizClipPolyDataFilter* filter,
+                                                                    FVizAlgorithmOutput* input);
 FVIZ_API FVizAlgorithm* fviz_clip_poly_data_filter_algorithm(FVizClipPolyDataFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_clip_poly_data_filter_output_port(FVizClipPolyDataFilter* filter);
 FVIZ_API FVizPolyData* fviz_clip_poly_data_filter_output(FVizClipPolyDataFilter* filter);

@@ -8,13 +8,8 @@
 
 static void fviz_buffer_destroy(FVizObject* object);
 
-static const FVizObjectClass g_fviz_buffer_class = {
-    FVIZ_TYPE_BUFFER,
-    "FVizBuffer",
-    &g_fviz_object_class,
-    fviz_buffer_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_buffer_class = {FVIZ_TYPE_BUFFER, "FVizBuffer", &g_fviz_object_class,
+                                                    fviz_buffer_destroy, NULL};
 
 static void fviz_buffer_destroy(FVizObject* object)
 {
@@ -98,12 +93,8 @@ FVizResult fviz_buffer_create_copy(const void* data, FVizSize size, FVizBuffer**
     return result;
 }
 
-FVizResult fviz_buffer_wrap(
-    void* data,
-    FVizSize size,
-    FVizBufferReleaseFn release_fn,
-    void* user_data,
-    FVizBuffer** out_buffer)
+FVizResult fviz_buffer_wrap(void* data, FVizSize size, FVizBufferReleaseFn release_fn, void* user_data,
+                            FVizBuffer** out_buffer)
 {
     FVizBuffer* buffer;
     FVizResult result;

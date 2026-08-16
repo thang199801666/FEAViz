@@ -135,22 +135,12 @@ typedef struct FVizExpressionEvaluation
 
 static void fviz_expression_destroy(FVizObject* object);
 
-static const FVizObjectClass g_fviz_expression_class = {
-    FVIZ_TYPE_EXPRESSION,
-    "FVizExpression",
-    &g_fviz_object_class,
-    fviz_expression_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_expression_class = {FVIZ_TYPE_EXPRESSION, "FVizExpression", &g_fviz_object_class,
+                                                        fviz_expression_destroy, NULL};
 
 static void fviz_expression_cache_destroy(FVizObject* object);
 static const FVizObjectClass g_fviz_expression_cache_class = {
-    FVIZ_TYPE_EXPRESSION_CACHE,
-    "FVizExpressionCache",
-    &g_fviz_object_class,
-    fviz_expression_cache_destroy,
-    NULL
-};
+    FVIZ_TYPE_EXPRESSION_CACHE, "FVizExpressionCache", &g_fviz_object_class, fviz_expression_cache_destroy, NULL};
 
 static void fviz_expression_destroy(FVizObject* object)
 {
@@ -163,8 +153,7 @@ static void fviz_expression_destroy(FVizObject* object)
     fviz_free(expression->source);
 }
 
-static void fviz_expression_parser_fail(
-    FVizExpressionParser* parser, const char* message)
+static void fviz_expression_parser_fail(FVizExpressionParser* parser, const char* message)
 {
     if (parser->failed != FVIZ_FALSE) return;
     parser->failed = FVIZ_TRUE;
@@ -174,25 +163,23 @@ static void fviz_expression_parser_fail(
 
 static void fviz_expression_skip_space(FVizExpressionParser* parser)
 {
-    while (isspace((unsigned char)*parser->cursor) != 0) ++parser->cursor;
+    while (isspace((unsigned char)*parser->cursor) != 0)
+        ++parser->cursor;
 }
 
-static int fviz_expression_add_node(
-    FVizExpressionParser* parser, const FVizExpressionNode* node)
+static int fviz_expression_add_node(FVizExpressionParser* parser, const FVizExpressionNode* node)
 {
     FVizExpression* expression = parser->expression;
     if (expression->node_count == expression->node_capacity)
     {
-        const FVizSize capacity = expression->node_capacity == 0u
-            ? 32u : expression->node_capacity * 2u;
+        const FVizSize capacity = expression->node_capacity == 0u ? 32u : expression->node_capacity * 2u;
         FVizExpressionNode* nodes;
         if (capacity > 4096u)
         {
             fviz_expression_parser_fail(parser, "expression is too complex");
             return -1;
         }
-        nodes = (FVizExpressionNode*)fviz_realloc(
-            expression->nodes, capacity * sizeof(*nodes));
+        nodes = (FVizExpressionNode*)fviz_realloc(expression->nodes, capacity * sizeof(*nodes));
         if (nodes == NULL)
         {
             fviz_expression_parser_fail(parser, "expression allocation failed");
@@ -205,8 +192,7 @@ static int fviz_expression_add_node(
     return (int)expression->node_count++;
 }
 
-static int fviz_expression_variable(
-    FVizExpressionParser* parser, const char* name, FVizSize length)
+static int fviz_expression_variable(FVizExpressionParser* parser, const char* name, FVizSize length)
 {
     FVizExpression* expression = parser->expression;
     FVizSize index;
@@ -218,16 +204,14 @@ static int fviz_expression_variable(
     }
     if (expression->variable_count == expression->variable_capacity)
     {
-        const FVizSize capacity = expression->variable_capacity == 0u
-            ? 8u : expression->variable_capacity * 2u;
+        const FVizSize capacity = expression->variable_capacity == 0u ? 8u : expression->variable_capacity * 2u;
         char** names;
         if (capacity > 256u)
         {
             fviz_expression_parser_fail(parser, "expression has too many variables");
             return -1;
         }
-        names = (char**)fviz_realloc(
-            expression->variable_names, capacity * sizeof(*names));
+        names = (char**)fviz_realloc(expression->variable_names, capacity * sizeof(*names));
         if (names == NULL)
         {
             fviz_expression_parser_fail(parser, "expression allocation failed");
@@ -236,8 +220,7 @@ static int fviz_expression_variable(
         expression->variable_names = names;
         expression->variable_capacity = capacity;
     }
-    expression->variable_names[expression->variable_count] =
-        (char*)fviz_alloc(length + 1u);
+    expression->variable_names[expression->variable_count] = (char*)fviz_alloc(length + 1u);
     if (expression->variable_names[expression->variable_count] == NULL)
     {
         fviz_expression_parser_fail(parser, "expression allocation failed");
@@ -250,15 +233,16 @@ static int fviz_expression_variable(
 
 static int fviz_expression_parse_conditional(FVizExpressionParser* parser);
 
-static FVizBool fviz_expression_function(
-    const char* name,
-    FVizSize length,
-    FVizExpressionFunction* out_function,
-    uint32_t* out_arity)
+static FVizBool fviz_expression_function(const char* name, FVizSize length, FVizExpressionFunction* out_function,
+                                         uint32_t* out_arity)
 {
-#define FVIZ_FUNCTION(text, value, arity) \
-    if (length == sizeof(text) - 1u && strncmp(name, text, length) == 0) \
-    { *out_function = value; *out_arity = arity; return FVIZ_TRUE; }
+#define FVIZ_FUNCTION(text, value, arity)                                                                              \
+    if (length == sizeof(text) - 1u && strncmp(name, text, length) == 0)                                               \
+    {                                                                                                                  \
+        *out_function = value;                                                                                         \
+        *out_arity = arity;                                                                                            \
+        return FVIZ_TRUE;                                                                                              \
+    }
     FVIZ_FUNCTION("abs", FVIZ_EXPR_ABS, 1u)
     FVIZ_FUNCTION("sqrt", FVIZ_EXPR_SQRT, 1u)
     FVIZ_FUNCTION("exp", FVIZ_EXPR_EXP, 1u)
@@ -299,8 +283,7 @@ static int fviz_expression_parse_primary(FVizExpressionParser* parser)
         ++parser->cursor;
         result = fviz_expression_parse_conditional(parser);
         fviz_expression_skip_space(parser);
-        if (*parser->cursor != ')')
-            fviz_expression_parser_fail(parser, "expected ')'");
+        if (*parser->cursor != ')') fviz_expression_parser_fail(parser, "expected ')'");
         else
             ++parser->cursor;
         return result;
@@ -354,20 +337,16 @@ static int fviz_expression_parse_primary(FVizExpressionParser* parser)
                     ++parser->cursor;
                 }
             }
-            if (*parser->cursor != ')')
-                fviz_expression_parser_fail(parser, "expected ')' after function arguments");
+            if (*parser->cursor != ')') fviz_expression_parser_fail(parser, "expected ')' after function arguments");
             else
                 ++parser->cursor;
-            if (count != arity)
-                fviz_expression_parser_fail(parser, "expression function arity mismatch");
+            if (count != arity) fviz_expression_parser_fail(parser, "expression function arity mismatch");
             node.kind = FVIZ_EXPR_FUNCTION;
             node.function = function;
             node.child_count = count;
-            return parser->failed == FVIZ_FALSE
-                ? fviz_expression_add_node(parser, &node) : -1;
+            return parser->failed == FVIZ_FALSE ? fviz_expression_add_node(parser, &node) : -1;
         }
-        if ((length == 2u && strncmp(name, "pi", 2u) == 0) ||
-            (length == 1u && *name == 'e'))
+        if ((length == 2u && strncmp(name, "pi", 2u) == 0) || (length == 1u && *name == 'e'))
         {
             node.kind = FVIZ_EXPR_CONSTANT;
             node.constant = length == 2u ? 3.14159265358979323846 : 2.71828182845904523536;
@@ -376,17 +355,19 @@ static int fviz_expression_parse_primary(FVizExpressionParser* parser)
         node.kind = FVIZ_EXPR_VARIABLE;
         result = fviz_expression_variable(parser, name, length);
         node.variable = result >= 0 ? (uint32_t)result : 0u;
-        result = parser->failed == FVIZ_FALSE
-            ? fviz_expression_add_node(parser, &node) : -1;
+        result = parser->failed == FVIZ_FALSE ? fviz_expression_add_node(parser, &node) : -1;
         fviz_expression_skip_space(parser);
         if (*parser->cursor == '.')
         {
             uint32_t component;
             ++parser->cursor;
             if (*parser->cursor == 'x') component = 0u;
-            else if (*parser->cursor == 'y') component = 1u;
-            else if (*parser->cursor == 'z') component = 2u;
-            else if (*parser->cursor == 'w') component = 3u;
+            else if (*parser->cursor == 'y')
+                component = 1u;
+            else if (*parser->cursor == 'z')
+                component = 2u;
+            else if (*parser->cursor == 'w')
+                component = 3u;
             else
             {
                 fviz_expression_parser_fail(parser, "unknown vector component");
@@ -514,12 +495,18 @@ static int fviz_expression_parse_compare(FVizExpressionParser* parser)
         FVizExpressionNodeKind kind;
         fviz_expression_skip_space(parser);
         if (strncmp(parser->cursor, "==", 2u) == 0) kind = FVIZ_EXPR_EQUAL;
-        else if (strncmp(parser->cursor, "!=", 2u) == 0) kind = FVIZ_EXPR_NOT_EQUAL;
-        else if (strncmp(parser->cursor, "<=", 2u) == 0) kind = FVIZ_EXPR_LESS_EQUAL;
-        else if (strncmp(parser->cursor, ">=", 2u) == 0) kind = FVIZ_EXPR_GREATER_EQUAL;
-        else if (*parser->cursor == '<') kind = FVIZ_EXPR_LESS;
-        else if (*parser->cursor == '>') kind = FVIZ_EXPR_GREATER;
-        else break;
+        else if (strncmp(parser->cursor, "!=", 2u) == 0)
+            kind = FVIZ_EXPR_NOT_EQUAL;
+        else if (strncmp(parser->cursor, "<=", 2u) == 0)
+            kind = FVIZ_EXPR_LESS_EQUAL;
+        else if (strncmp(parser->cursor, ">=", 2u) == 0)
+            kind = FVIZ_EXPR_GREATER_EQUAL;
+        else if (*parser->cursor == '<')
+            kind = FVIZ_EXPR_LESS;
+        else if (*parser->cursor == '>')
+            kind = FVIZ_EXPR_GREATER;
+        else
+            break;
         parser->cursor += (kind == FVIZ_EXPR_LESS || kind == FVIZ_EXPR_GREATER) ? 1 : 2;
         (void)memset(&node, 0, sizeof(node));
         node.kind = kind;
@@ -570,20 +557,18 @@ void fviz_expression_binding_initialize(FVizExpressionBinding* binding)
     binding->association = FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED;
 }
 
-FVizResult fviz_expression_compile_with_diagnostic(
-    const char* source, FVizExpression** out_expression, FVizSize* out_error_offset)
+FVizResult fviz_expression_compile_with_diagnostic(const char* source, FVizExpression** out_expression,
+                                                   FVizSize* out_error_offset)
 {
     FVizExpression* expression;
     FVizExpressionParser parser;
     FVizSize length;
     if (out_error_offset != NULL) *out_error_offset = 0u;
-    if (out_expression == NULL || source == NULL || *source == '\0')
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (out_expression == NULL || source == NULL || *source == '\0') return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_expression = NULL;
     length = (FVizSize)strlen(source);
     if (length > 65536u) return FVIZ_ERROR_INVALID_ARGUMENT;
-    expression = (FVizExpression*)fviz_internal_object_allocate(
-        sizeof(*expression), &g_fviz_expression_class, NULL);
+    expression = (FVizExpression*)fviz_internal_object_allocate(sizeof(*expression), &g_fviz_expression_class, NULL);
     if (expression == NULL) return fviz_last_error_code();
     expression->source = (char*)fviz_alloc(length + 1u);
     if (expression->source == NULL)
@@ -603,9 +588,8 @@ FVizResult fviz_expression_compile_with_diagnostic(
     if (parser.failed != FVIZ_FALSE || expression->root < 0)
     {
         if (out_error_offset != NULL) *out_error_offset = expression->error_offset;
-        fviz_internal_set_error(
-            FVIZ_ERROR_INVALID_ARGUMENT,
-            parser.message != NULL ? parser.message : "invalid expression");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                parser.message != NULL ? parser.message : "invalid expression");
         fviz_release(expression);
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
@@ -613,8 +597,7 @@ FVizResult fviz_expression_compile_with_diagnostic(
     return FVIZ_OK;
 }
 
-FVizResult fviz_expression_compile(
-    const char* source, FVizExpression** out_expression)
+FVizResult fviz_expression_compile(const char* source, FVizExpression** out_expression)
 {
     return fviz_expression_compile_with_diagnostic(source, out_expression, NULL);
 }
@@ -634,24 +617,24 @@ FVizSize fviz_expression_variable_count(const FVizExpression* expression)
     return expression != NULL ? expression->variable_count : 0u;
 }
 
-const char* fviz_expression_variable_name(
-    const FVizExpression* expression, FVizSize index)
+const char* fviz_expression_variable_name(const FVizExpression* expression, FVizSize index)
 {
-    return expression != NULL && index < expression->variable_count
-        ? expression->variable_names[index] : NULL;
+    return expression != NULL && index < expression->variable_count ? expression->variable_names[index] : NULL;
 }
 
-static double fviz_expression_read(
-    const FVizExpressionResolvedBinding* binding,
-    FVizSize tuple,
-    uint32_t component)
+static double fviz_expression_read(const FVizExpressionResolvedBinding* binding, FVizSize tuple, uint32_t component)
 {
-    const unsigned char* pointer = binding->data + tuple * binding->stride +
-        (FVizSize)component * fviz_data_type_size(binding->type);
+    const unsigned char* pointer =
+        binding->data + tuple * binding->stride + (FVizSize)component * fviz_data_type_size(binding->type);
     switch (binding->type)
     {
-#define FVIZ_EXPR_READ(type_value, c_type) \
-        case type_value: { c_type value; (void)memcpy(&value, pointer, sizeof(value)); return (double)value; }
+#define FVIZ_EXPR_READ(type_value, c_type)                                                                             \
+    case type_value:                                                                                                   \
+        {                                                                                                              \
+            c_type value;                                                                                              \
+            (void)memcpy(&value, pointer, sizeof(value));                                                              \
+            return (double)value;                                                                                      \
+        }
         FVIZ_EXPR_READ(FVIZ_DATA_INT8, int8_t)
         FVIZ_EXPR_READ(FVIZ_DATA_UINT8, uint8_t)
         FVIZ_EXPR_READ(FVIZ_DATA_INT16, int16_t)
@@ -663,25 +646,26 @@ static double fviz_expression_read(
         FVIZ_EXPR_READ(FVIZ_DATA_FLOAT32, float)
         FVIZ_EXPR_READ(FVIZ_DATA_FLOAT64, double)
 #undef FVIZ_EXPR_READ
-        default: return 0.0;
+        default:
+            return 0.0;
     }
 }
 
-static FVizResult fviz_expression_broadcast_components(
-    uint32_t left, uint32_t right, uint32_t* out_components)
+static FVizResult fviz_expression_broadcast_components(uint32_t left, uint32_t right, uint32_t* out_components)
 {
     if (left == right) *out_components = left;
-    else if (left == 1u) *out_components = right;
-    else if (right == 1u) *out_components = left;
-    else return FVIZ_ERROR_INVALID_ARGUMENT;
+    else if (left == 1u)
+        *out_components = right;
+    else if (right == 1u)
+        *out_components = left;
+    else
+        return FVIZ_ERROR_INVALID_ARGUMENT;
     return FVIZ_OK;
 }
 
-static FVizResult fviz_expression_node_shape(
-    const FVizExpression* expression,
-    const FVizExpressionResolvedBinding* bindings,
-    int node_index,
-    uint32_t* out_components)
+static FVizResult fviz_expression_node_shape(const FVizExpression* expression,
+                                             const FVizExpressionResolvedBinding* bindings, int node_index,
+                                             uint32_t* out_components)
 {
     const FVizExpressionNode* node = &expression->nodes[node_index];
     uint32_t a = 1u;
@@ -694,8 +678,7 @@ static FVizResult fviz_expression_node_shape(
         *out_components = bindings[node->variable].components;
     else if (node->kind == FVIZ_EXPR_COMPONENT)
     {
-        if (fviz_expression_node_shape(expression, bindings, node->child[0], &a) != FVIZ_OK ||
-            node->component >= a)
+        if (fviz_expression_node_shape(expression, bindings, node->child[0], &a) != FVIZ_OK || node->component >= a)
             return FVIZ_ERROR_INVALID_ARGUMENT;
         *out_components = 1u;
     }
@@ -713,8 +696,7 @@ static FVizResult fviz_expression_node_shape(
         if (fviz_expression_node_shape(expression, bindings, node->child[0], &a) != FVIZ_OK ||
             fviz_expression_node_shape(expression, bindings, node->child[1], &b) != FVIZ_OK ||
             fviz_expression_node_shape(expression, bindings, node->child[2], &c) != FVIZ_OK ||
-            fviz_expression_broadcast_components(b, c, out_components) != FVIZ_OK ||
-            (a != 1u && a != *out_components))
+            fviz_expression_broadcast_components(b, c, out_components) != FVIZ_OK || (a != 1u && a != *out_components))
             return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     else
@@ -722,29 +704,36 @@ static FVizResult fviz_expression_node_shape(
         for (index = 0u; index < node->child_count; ++index)
         {
             uint32_t shape;
-            if (fviz_expression_node_shape(
-                    expression, bindings, node->child[index], &shape) != FVIZ_OK)
+            if (fviz_expression_node_shape(expression, bindings, node->child[index], &shape) != FVIZ_OK)
                 return FVIZ_ERROR_INVALID_ARGUMENT;
             if (index == 0u) a = shape;
-            else if (index == 1u) b = shape;
-            else if (index == 2u) c = shape;
-            else if (index == 3u) d = shape;
+            else if (index == 1u)
+                b = shape;
+            else if (index == 2u)
+                c = shape;
+            else if (index == 3u)
+                d = shape;
         }
         switch (node->function)
         {
-            case FVIZ_EXPR_MAG: *out_components = 1u; break;
+            case FVIZ_EXPR_MAG:
+                *out_components = 1u;
+                break;
             case FVIZ_EXPR_CROSS:
                 if (a != 3u || b != 3u) return FVIZ_ERROR_INVALID_ARGUMENT;
-                *out_components = 3u; break;
-            case FVIZ_EXPR_VEC2: case FVIZ_EXPR_VEC3: case FVIZ_EXPR_VEC4:
-                if (a != 1u || b != 1u ||
-                    (node->child_count > 2u && c != 1u) ||
-                    (node->child_count > 3u && d != 1u))
+                *out_components = 3u;
+                break;
+            case FVIZ_EXPR_VEC2:
+            case FVIZ_EXPR_VEC3:
+            case FVIZ_EXPR_VEC4:
+                if (a != 1u || b != 1u || (node->child_count > 2u && c != 1u) || (node->child_count > 3u && d != 1u))
                     return FVIZ_ERROR_INVALID_ARGUMENT;
-                *out_components = node->child_count; break;
+                *out_components = node->child_count;
+                break;
             case FVIZ_EXPR_DOT:
                 if (a != b) return FVIZ_ERROR_INVALID_ARGUMENT;
-                *out_components = 1u; break;
+                *out_components = 1u;
+                break;
             case FVIZ_EXPR_CLAMP:
                 if (fviz_expression_broadcast_components(a, b, out_components) != FVIZ_OK ||
                     fviz_expression_broadcast_components(*out_components, c, out_components) != FVIZ_OK)
@@ -755,39 +744,51 @@ static FVizResult fviz_expression_node_shape(
                     (a != 1u && a != *out_components))
                     return FVIZ_ERROR_INVALID_ARGUMENT;
                 break;
-            case FVIZ_EXPR_MIN: case FVIZ_EXPR_MAX: case FVIZ_EXPR_POW:
+            case FVIZ_EXPR_MIN:
+            case FVIZ_EXPR_MAX:
+            case FVIZ_EXPR_POW:
                 return fviz_expression_broadcast_components(a, b, out_components);
-            default: *out_components = a; break;
+            default:
+                *out_components = a;
+                break;
         }
     }
-    return *out_components <= FVIZ_EXPRESSION_MAX_COMPONENTS
-        ? FVIZ_OK : FVIZ_ERROR_NOT_SUPPORTED;
+    return *out_components <= FVIZ_EXPRESSION_MAX_COMPONENTS ? FVIZ_OK : FVIZ_ERROR_NOT_SUPPORTED;
 }
 
-static double fviz_expression_unary(
-    FVizExpressionFunction function, double value)
+static double fviz_expression_unary(FVizExpressionFunction function, double value)
 {
     switch (function)
     {
-        case FVIZ_EXPR_ABS: return fabs(value);
-        case FVIZ_EXPR_SQRT: return sqrt(value);
-        case FVIZ_EXPR_EXP: return exp(value);
-        case FVIZ_EXPR_LOG: return log(value);
-        case FVIZ_EXPR_LOG10: return log10(value);
-        case FVIZ_EXPR_SIN: return sin(value);
-        case FVIZ_EXPR_COS: return cos(value);
-        case FVIZ_EXPR_TAN: return tan(value);
-        case FVIZ_EXPR_FLOOR: return floor(value);
-        case FVIZ_EXPR_CEIL: return ceil(value);
-        case FVIZ_EXPR_ROUND: return round(value);
-        default: return value;
+        case FVIZ_EXPR_ABS:
+            return fabs(value);
+        case FVIZ_EXPR_SQRT:
+            return sqrt(value);
+        case FVIZ_EXPR_EXP:
+            return exp(value);
+        case FVIZ_EXPR_LOG:
+            return log(value);
+        case FVIZ_EXPR_LOG10:
+            return log10(value);
+        case FVIZ_EXPR_SIN:
+            return sin(value);
+        case FVIZ_EXPR_COS:
+            return cos(value);
+        case FVIZ_EXPR_TAN:
+            return tan(value);
+        case FVIZ_EXPR_FLOOR:
+            return floor(value);
+        case FVIZ_EXPR_CEIL:
+            return ceil(value);
+        case FVIZ_EXPR_ROUND:
+            return round(value);
+        default:
+            return value;
     }
 }
 
-static FVizExpressionValue fviz_expression_eval_node(
-    const FVizExpressionEvaluation* evaluation,
-    int node_index,
-    FVizSize tuple)
+static FVizExpressionValue fviz_expression_eval_node(const FVizExpressionEvaluation* evaluation, int node_index,
+                                                     FVizSize tuple)
 {
     const FVizExpressionNode* node = &evaluation->expression->nodes[node_index];
     FVizExpressionValue result;
@@ -805,8 +806,7 @@ static FVizExpressionValue fviz_expression_eval_node(
     }
     if (node->kind == FVIZ_EXPR_VARIABLE)
     {
-        const FVizExpressionResolvedBinding* binding =
-            &evaluation->bindings[node->variable];
+        const FVizExpressionResolvedBinding* binding = &evaluation->bindings[node->variable];
         result.components = binding->components;
         for (index = 0u; index < result.components; ++index)
             result.value[index] = fviz_expression_read(binding, tuple, index);
@@ -821,7 +821,8 @@ static FVizExpressionValue fviz_expression_eval_node(
     }
     if (node->kind == FVIZ_EXPR_NEGATE)
     {
-        for (index = 0u; index < a.components; ++index) a.value[index] = -a.value[index];
+        for (index = 0u; index < a.components; ++index)
+            a.value[index] = -a.value[index];
         return a;
     }
     if (node->kind >= FVIZ_EXPR_ADD && node->kind <= FVIZ_EXPR_GREATER_EQUAL)
@@ -833,16 +834,26 @@ static FVizExpressionValue fviz_expression_eval_node(
             const double av = a.value[a.components == 1u ? 0u : index];
             const double bv = b.value[b.components == 1u ? 0u : index];
             if (node->kind == FVIZ_EXPR_ADD) result.value[index] = av + bv;
-            else if (node->kind == FVIZ_EXPR_SUBTRACT) result.value[index] = av - bv;
-            else if (node->kind == FVIZ_EXPR_MULTIPLY) result.value[index] = av * bv;
-            else if (node->kind == FVIZ_EXPR_DIVIDE) result.value[index] = av / bv;
-            else if (node->kind == FVIZ_EXPR_POWER) result.value[index] = pow(av, bv);
-            else if (node->kind == FVIZ_EXPR_EQUAL) result.value[index] = av == bv ? 1.0 : 0.0;
-            else if (node->kind == FVIZ_EXPR_NOT_EQUAL) result.value[index] = av != bv ? 1.0 : 0.0;
-            else if (node->kind == FVIZ_EXPR_LESS) result.value[index] = av < bv ? 1.0 : 0.0;
-            else if (node->kind == FVIZ_EXPR_LESS_EQUAL) result.value[index] = av <= bv ? 1.0 : 0.0;
-            else if (node->kind == FVIZ_EXPR_GREATER) result.value[index] = av > bv ? 1.0 : 0.0;
-            else result.value[index] = av >= bv ? 1.0 : 0.0;
+            else if (node->kind == FVIZ_EXPR_SUBTRACT)
+                result.value[index] = av - bv;
+            else if (node->kind == FVIZ_EXPR_MULTIPLY)
+                result.value[index] = av * bv;
+            else if (node->kind == FVIZ_EXPR_DIVIDE)
+                result.value[index] = av / bv;
+            else if (node->kind == FVIZ_EXPR_POWER)
+                result.value[index] = pow(av, bv);
+            else if (node->kind == FVIZ_EXPR_EQUAL)
+                result.value[index] = av == bv ? 1.0 : 0.0;
+            else if (node->kind == FVIZ_EXPR_NOT_EQUAL)
+                result.value[index] = av != bv ? 1.0 : 0.0;
+            else if (node->kind == FVIZ_EXPR_LESS)
+                result.value[index] = av < bv ? 1.0 : 0.0;
+            else if (node->kind == FVIZ_EXPR_LESS_EQUAL)
+                result.value[index] = av <= bv ? 1.0 : 0.0;
+            else if (node->kind == FVIZ_EXPR_GREATER)
+                result.value[index] = av > bv ? 1.0 : 0.0;
+            else
+                result.value[index] = av >= bv ? 1.0 : 0.0;
         }
         return result;
     }
@@ -854,21 +865,20 @@ static FVizExpressionValue fviz_expression_eval_node(
         for (index = 0u; index < result.components; ++index)
         {
             const double condition = a.value[a.components == 1u ? 0u : index];
-            result.value[index] = condition != 0.0
-                ? b.value[b.components == 1u ? 0u : index]
-                : c.value[c.components == 1u ? 0u : index];
+            result.value[index] =
+                condition != 0.0 ? b.value[b.components == 1u ? 0u : index] : c.value[c.components == 1u ? 0u : index];
         }
         return result;
     }
-    if (node->child_count > 1u)
-        b = fviz_expression_eval_node(evaluation, node->child[1], tuple);
-    else (void)memset(&b, 0, sizeof(b));
-    if (node->child_count > 2u)
-        c = fviz_expression_eval_node(evaluation, node->child[2], tuple);
-    else (void)memset(&c, 0, sizeof(c));
-    if (node->child_count > 3u)
-        d = fviz_expression_eval_node(evaluation, node->child[3], tuple);
-    else (void)memset(&d, 0, sizeof(d));
+    if (node->child_count > 1u) b = fviz_expression_eval_node(evaluation, node->child[1], tuple);
+    else
+        (void)memset(&b, 0, sizeof(b));
+    if (node->child_count > 2u) c = fviz_expression_eval_node(evaluation, node->child[2], tuple);
+    else
+        (void)memset(&c, 0, sizeof(c));
+    if (node->child_count > 3u) d = fviz_expression_eval_node(evaluation, node->child[3], tuple);
+    else
+        (void)memset(&d, 0, sizeof(d));
     if (node->function == FVIZ_EXPR_MAG || node->function == FVIZ_EXPR_NORMALIZE)
     {
         double magnitude = 0.0;
@@ -903,7 +913,8 @@ static FVizExpressionValue fviz_expression_eval_node(
     else if (node->function >= FVIZ_EXPR_VEC2 && node->function <= FVIZ_EXPR_VEC4)
     {
         result.components = node->child_count;
-        result.value[0] = a.value[0]; result.value[1] = b.value[0];
+        result.value[0] = a.value[0];
+        result.value[1] = b.value[0];
         if (result.components > 2u) result.value[2] = c.value[0];
         if (result.components > 3u) result.value[3] = d.value[0];
     }
@@ -927,22 +938,21 @@ static FVizExpressionValue fviz_expression_eval_node(
             for (index = 0u; index < result.components; ++index)
             {
                 const double condition = a.value[a.components == 1u ? 0u : index];
-                result.value[index] = condition != 0.0
-                    ? b.value[b.components == 1u ? 0u : index]
-                    : c.value[c.components == 1u ? 0u : index];
+                result.value[index] = condition != 0.0 ? b.value[b.components == 1u ? 0u : index]
+                                                       : c.value[c.components == 1u ? 0u : index];
             }
         }
     }
-    else if (node->function == FVIZ_EXPR_MIN || node->function == FVIZ_EXPR_MAX ||
-             node->function == FVIZ_EXPR_POW)
+    else if (node->function == FVIZ_EXPR_MIN || node->function == FVIZ_EXPR_MAX || node->function == FVIZ_EXPR_POW)
     {
         (void)fviz_expression_broadcast_components(a.components, b.components, &result.components);
         for (index = 0u; index < result.components; ++index)
         {
             const double av = a.value[a.components == 1u ? 0u : index];
             const double bv = b.value[b.components == 1u ? 0u : index];
-            result.value[index] = node->function == FVIZ_EXPR_MIN ? (av < bv ? av : bv) :
-                (node->function == FVIZ_EXPR_MAX ? (av > bv ? av : bv) : pow(av, bv));
+            result.value[index] = node->function == FVIZ_EXPR_MIN
+                                      ? (av < bv ? av : bv)
+                                      : (node->function == FVIZ_EXPR_MAX ? (av > bv ? av : bv) : pow(av, bv));
         }
     }
     else
@@ -954,15 +964,13 @@ static FVizExpressionValue fviz_expression_eval_node(
     return result;
 }
 
-static void fviz_expression_evaluate_range(
-    FVizSize begin, FVizSize end, void* user_data)
+static void fviz_expression_evaluate_range(FVizSize begin, FVizSize end, void* user_data)
 {
     FVizExpressionEvaluation* evaluation = (FVizExpressionEvaluation*)user_data;
     FVizSize tuple;
     for (tuple = begin; tuple < end; ++tuple)
     {
-        FVizExpressionValue value = fviz_expression_eval_node(
-            evaluation, evaluation->expression->root, tuple);
+        FVizExpressionValue value = fviz_expression_eval_node(evaluation, evaluation->expression->root, tuple);
         uint32_t component;
         for (component = 0u; component < value.components; ++component)
         {
@@ -979,12 +987,9 @@ static void fviz_expression_evaluate_range(
     }
 }
 
-FVizResult fviz_expression_evaluate(
-    const FVizExpression* expression,
-    const FVizExpressionBinding* bindings,
-    FVizSize binding_count,
-    const FVizExpressionOptions* options,
-    FVizDataArray** out_array)
+FVizResult fviz_expression_evaluate(const FVizExpression* expression, const FVizExpressionBinding* bindings,
+                                    FVizSize binding_count, const FVizExpressionOptions* options,
+                                    FVizDataArray** out_array)
 {
     FVizExpressionOptions defaults;
     FVizExpressionResolvedBinding* resolved = NULL;
@@ -992,25 +997,21 @@ FVizResult fviz_expression_evaluate(
     FVizDataArray* output = NULL;
     FVizSize tuple_count = 0u;
     FVizSize variable;
-    FVizExpressionAssociation common_association =
-        FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED;
+    FVizExpressionAssociation common_association = FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED;
     uint32_t output_components = 0u;
     FVizResult result;
-    if (out_array == NULL || expression == NULL ||
-        (expression->variable_count > 0u && bindings == NULL))
+    if (out_array == NULL || expression == NULL || (expression->variable_count > 0u && bindings == NULL))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_array = NULL;
     fviz_expression_options_initialize(&defaults);
     if (options == NULL) options = &defaults;
     if ((options->struct_size != 0u && options->struct_size < sizeof(*options)) ||
         options->non_finite_policy < FVIZ_EXPRESSION_NON_FINITE_PROPAGATE ||
-        options->non_finite_policy > FVIZ_EXPRESSION_NON_FINITE_ERROR ||
-        !isfinite(options->non_finite_replacement))
+        options->non_finite_policy > FVIZ_EXPRESSION_NON_FINITE_ERROR || !isfinite(options->non_finite_replacement))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     if (expression->variable_count > 0u)
     {
-        resolved = (FVizExpressionResolvedBinding*)fviz_alloc(
-            expression->variable_count * sizeof(*resolved));
+        resolved = (FVizExpressionResolvedBinding*)fviz_alloc(expression->variable_count * sizeof(*resolved));
         if (resolved == NULL) return fviz_last_error_code();
     }
     for (variable = 0u; variable < expression->variable_count; ++variable)
@@ -1022,10 +1023,9 @@ FVizResult fviz_expression_evaluate(
             if (bindings[binding].name != NULL &&
                 strcmp(bindings[binding].name, expression->variable_names[variable]) == 0)
             {
-                const FVizExpressionAssociation association =
-                    bindings[binding].struct_size == 0u
-                    ? FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED
-                    : bindings[binding].association;
+                const FVizExpressionAssociation association = bindings[binding].struct_size == 0u
+                                                                  ? FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED
+                                                                  : bindings[binding].association;
                 array = bindings[binding].array;
                 if (bindings[binding].struct_size != 0u &&
                     bindings[binding].struct_size < sizeof(FVizExpressionBinding))
@@ -1033,21 +1033,16 @@ FVizResult fviz_expression_evaluate(
                     fviz_free(resolved);
                     return FVIZ_ERROR_INVALID_ARGUMENT;
                 }
-                if (association !=
-                    FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED)
+                if (association != FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED)
                 {
-                    if (association <
-                            FVIZ_EXPRESSION_ASSOCIATION_POINTS ||
-                        association >
-                            FVIZ_EXPRESSION_ASSOCIATION_FIELD ||
-                        (common_association !=
-                            FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED &&
+                    if (association < FVIZ_EXPRESSION_ASSOCIATION_POINTS ||
+                        association > FVIZ_EXPRESSION_ASSOCIATION_FIELD ||
+                        (common_association != FVIZ_EXPRESSION_ASSOCIATION_UNSPECIFIED &&
                          common_association != association))
                     {
                         fviz_free(resolved);
-                        fviz_internal_set_error(
-                            FVIZ_ERROR_INVALID_ARGUMENT,
-                            "expression bindings have incompatible associations");
+                        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                                "expression bindings have incompatible associations");
                         return FVIZ_ERROR_INVALID_ARGUMENT;
                     }
                     common_association = association;
@@ -1076,8 +1071,7 @@ FVizResult fviz_expression_evaluate(
     }
     /* Constant expressions produce one tuple so they remain directly useful. */
     if (expression->variable_count == 0u) tuple_count = 1u;
-    result = fviz_expression_node_shape(
-        expression, resolved, expression->root, &output_components);
+    result = fviz_expression_node_shape(expression, resolved, expression->root, &output_components);
     if (result != FVIZ_OK)
     {
         fviz_free(resolved);
@@ -1099,8 +1093,7 @@ FVizResult fviz_expression_evaluate(
     evaluation.options = *options;
     if (tuple_count >= options->parallel_threshold && options->parallel_threshold != 0u &&
         options->non_finite_policy != FVIZ_EXPRESSION_NON_FINITE_ERROR)
-        result = fviz_parallel_for(
-            0u, tuple_count, 4096u, fviz_expression_evaluate_range, &evaluation);
+        result = fviz_parallel_for(0u, tuple_count, 4096u, fviz_expression_evaluate_range, &evaluation);
     else
     {
         fviz_expression_evaluate_range(0u, tuple_count, &evaluation);
@@ -1127,8 +1120,7 @@ void fviz_expression_cache_clear(FVizExpressionCache* cache)
     if (cache == NULL || cache->entries == NULL) return;
     for (index = 0u; index < fviz_array_count(cache->entries); ++index)
     {
-        FVizExpressionCacheEntry* entry = (FVizExpressionCacheEntry*)
-            fviz_array_at(cache->entries, index);
+        FVizExpressionCacheEntry* entry = (FVizExpressionCacheEntry*)fviz_array_at(cache->entries, index);
         fviz_free(entry->source);
         fviz_release(entry->expression);
     }
@@ -1143,14 +1135,12 @@ static void fviz_expression_cache_destroy(FVizObject* object)
     fviz_release(cache->entries);
 }
 
-FVizResult fviz_expression_cache_create(
-    FVizSize capacity, FVizExpressionCache** out_cache)
+FVizResult fviz_expression_cache_create(FVizSize capacity, FVizExpressionCache** out_cache)
 {
     FVizExpressionCache* cache;
     if (out_cache == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_cache = NULL;
-    cache = (FVizExpressionCache*)fviz_internal_object_allocate(
-        sizeof(*cache), &g_fviz_expression_cache_class, NULL);
+    cache = (FVizExpressionCache*)fviz_internal_object_allocate(sizeof(*cache), &g_fviz_expression_cache_class, NULL);
     if (cache == NULL) return fviz_last_error_code();
     cache->capacity = capacity;
     if (fviz_array_create(sizeof(FVizExpressionCacheEntry), &cache->entries) != FVIZ_OK)
@@ -1162,21 +1152,16 @@ FVizResult fviz_expression_cache_create(
     return FVIZ_OK;
 }
 
-FVizResult fviz_expression_cache_get(
-    FVizExpressionCache* cache,
-    const char* source,
-    FVizExpression** out_expression)
+FVizResult fviz_expression_cache_get(FVizExpressionCache* cache, const char* source, FVizExpression** out_expression)
 {
     FVizSize index;
     FVizExpression* compiled = NULL;
     FVizExpressionCacheEntry entry;
-    if (cache == NULL || source == NULL || out_expression == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (cache == NULL || source == NULL || out_expression == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_expression = NULL;
     for (index = 0u; index < fviz_array_count(cache->entries); ++index)
     {
-        FVizExpressionCacheEntry* current = (FVizExpressionCacheEntry*)
-            fviz_array_at(cache->entries, index);
+        FVizExpressionCacheEntry* current = (FVizExpressionCacheEntry*)fviz_array_at(cache->entries, index);
         if (strcmp(current->source, source) == 0)
         {
             current->last_use = ++cache->use_serial;
@@ -1194,17 +1179,18 @@ FVizResult fviz_expression_cache_get(
     {
         FVizSize oldest = 0u;
         uint64_t oldest_use = UINT64_MAX;
-        FVizExpressionCacheEntry* entries = (FVizExpressionCacheEntry*)
-            fviz_array_data(cache->entries);
+        FVizExpressionCacheEntry* entries = (FVizExpressionCacheEntry*)fviz_array_data(cache->entries);
         const FVizSize count = fviz_array_count(cache->entries);
         for (index = 0u; index < count; ++index)
             if (entries[index].last_use < oldest_use)
-            { oldest = index; oldest_use = entries[index].last_use; }
+            {
+                oldest = index;
+                oldest_use = entries[index].last_use;
+            }
         fviz_free(entries[oldest].source);
         fviz_release(entries[oldest].expression);
         if (oldest + 1u < count)
-            (void)memmove(&entries[oldest], &entries[oldest + 1u],
-                (size_t)(count - oldest - 1u) * sizeof(*entries));
+            (void)memmove(&entries[oldest], &entries[oldest + 1u], (size_t)(count - oldest - 1u) * sizeof(*entries));
         (void)fviz_array_resize(cache->entries, count - 1u);
     }
     entry.source = (char*)fviz_alloc((FVizSize)strlen(source) + 1u);

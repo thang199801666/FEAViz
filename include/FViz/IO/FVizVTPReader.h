@@ -19,10 +19,8 @@ typedef struct FVizVTPReaderOptions
 
 FVIZ_API void fviz_vtp_reader_options_initialize(FVizVTPReaderOptions* options);
 FVIZ_API FVizResult fviz_vtp_read(const char* file_path, FVizPolyData** out_poly_data);
-FVIZ_API FVizResult fviz_vtp_read_with_options(
-    const char* file_path,
-    const FVizVTPReaderOptions* options,
-    FVizPolyData** out_poly_data);
+FVIZ_API FVizResult fviz_vtp_read_with_options(const char* file_path, const FVizVTPReaderOptions* options,
+                                               FVizPolyData** out_poly_data);
 
 FVIZ_EXTERN_C_END
 

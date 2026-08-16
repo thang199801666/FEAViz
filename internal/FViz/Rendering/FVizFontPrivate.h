@@ -3,6 +3,7 @@
 #include <FViz/Core/FVizObjectPrivate.h>
 #include <FViz/Core/FVizString.h>
 #include <FViz/Rendering/FVizFont.h>
+
 struct FVizFont
 {
     FVizObject base;

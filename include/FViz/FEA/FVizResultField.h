@@ -51,8 +51,7 @@ typedef enum FVizFEAInvariant
 } FVizFEAInvariant;
 
 typedef uint64_t FVizFEAInvariantMask;
-#define FVIZ_FEA_INVARIANT_BIT(invariant_value) \
-    (UINT64_C(1) << (uint32_t)(invariant_value))
+#define FVIZ_FEA_INVARIANT_BIT(invariant_value) (UINT64_C(1) << (uint32_t)(invariant_value))
 
 typedef struct FVizFEAFieldBlockDescriptor
 {
@@ -71,33 +70,22 @@ typedef struct FVizFEAFieldBlockDescriptor
 } FVizFEAFieldBlockDescriptor;
 
 FVIZ_FEA_API void fviz_fea_field_block_descriptor_initialize(FVizFEAFieldBlockDescriptor* descriptor);
-FVIZ_FEA_API FVizResult fviz_fea_field_create(
-    const char* name,
-    const char* description,
-    FVizFEAFieldType field_type,
-    FVizFEAField** out_field);
+FVIZ_FEA_API FVizResult fviz_fea_field_create(const char* name, const char* description, FVizFEAFieldType field_type,
+                                              FVizFEAField** out_field);
 FVIZ_FEA_API const char* fviz_fea_field_name(const FVizFEAField* field);
 FVIZ_FEA_API const char* fviz_fea_field_description(const FVizFEAField* field);
 FVIZ_FEA_API FVizFEAFieldType fviz_fea_field_type(const FVizFEAField* field);
-FVIZ_FEA_API FVizResult fviz_fea_field_set_component_labels(
-    FVizFEAField* field,
-    const char* const* labels,
-    FVizSize label_count);
+FVIZ_FEA_API FVizResult fviz_fea_field_set_component_labels(FVizFEAField* field, const char* const* labels,
+                                                            FVizSize label_count);
 FVIZ_FEA_API FVizSize fviz_fea_field_component_count(const FVizFEAField* field);
 FVIZ_FEA_API const char* fviz_fea_field_component_label(const FVizFEAField* field, FVizSize component);
-FVIZ_FEA_API FVizResult fviz_fea_field_find_component(
-    const FVizFEAField* field,
-    const char* label,
-    FVizSize* out_component);
+FVIZ_FEA_API FVizResult fviz_fea_field_find_component(const FVizFEAField* field, const char* label,
+                                                      FVizSize* out_component);
 FVIZ_FEA_API FVizFEAInvariantMask fviz_fea_field_valid_invariants(const FVizFEAField* field);
-FVIZ_FEA_API FVizResult fviz_fea_field_set_valid_invariants(
-    FVizFEAField* field,
-    FVizFEAInvariantMask invariants);
+FVIZ_FEA_API FVizResult fviz_fea_field_set_valid_invariants(FVizFEAField* field, FVizFEAInvariantMask invariants);
 FVIZ_FEA_API FVizSize fviz_fea_field_block_count(const FVizFEAField* field);
-FVIZ_FEA_API FVizResult fviz_fea_field_add_block(
-    FVizFEAField* field,
-    const FVizFEAFieldBlockDescriptor* descriptor,
-    FVizSize* out_block_index);
+FVIZ_FEA_API FVizResult fviz_fea_field_add_block(FVizFEAField* field, const FVizFEAFieldBlockDescriptor* descriptor,
+                                                 FVizSize* out_block_index);
 FVIZ_FEA_API FVizResult fviz_fea_field_remove_block(FVizFEAField* field, FVizSize block_index);
 FVIZ_FEA_API const char* fviz_fea_field_block_instance_name(const FVizFEAField* field, FVizSize block_index);
 FVIZ_FEA_API FVizFEAResultPosition fviz_fea_field_block_position(const FVizFEAField* field, FVizSize block_index);
@@ -114,16 +102,10 @@ FVIZ_FEA_API const char* fviz_fea_invariant_name(FVizFEAInvariant invariant);
 
 /* Creates a Float64 scalar array for one component or invariant. The returned
  * array is newly owned by the caller. These functions never modify the field. */
-FVIZ_FEA_API FVizResult fviz_fea_field_evaluate_component(
-    const FVizFEAField* field,
-    FVizSize block_index,
-    FVizSize component,
-    FVizDataArray** out_values);
-FVIZ_FEA_API FVizResult fviz_fea_field_evaluate_invariant(
-    const FVizFEAField* field,
-    FVizSize block_index,
-    FVizFEAInvariant invariant,
-    FVizDataArray** out_values);
+FVIZ_FEA_API FVizResult fviz_fea_field_evaluate_component(const FVizFEAField* field, FVizSize block_index,
+                                                          FVizSize component, FVizDataArray** out_values);
+FVIZ_FEA_API FVizResult fviz_fea_field_evaluate_invariant(const FVizFEAField* field, FVizSize block_index,
+                                                          FVizFEAInvariant invariant, FVizDataArray** out_values);
 
 FVIZ_EXTERN_C_END
 

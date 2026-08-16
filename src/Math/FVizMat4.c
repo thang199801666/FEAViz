@@ -81,10 +81,8 @@ FVizMat4 fviz_mat4_multiply(FVizMat4 a, FVizMat4 b)
         for (row = 0; row < 4; ++row)
         {
             result.m[column * 4 + row] =
-                a.m[0 * 4 + row] * b.m[column * 4 + 0] +
-                a.m[1 * 4 + row] * b.m[column * 4 + 1] +
-                a.m[2 * 4 + row] * b.m[column * 4 + 2] +
-                a.m[3 * 4 + row] * b.m[column * 4 + 3];
+                a.m[0 * 4 + row] * b.m[column * 4 + 0] + a.m[1 * 4 + row] * b.m[column * 4 + 1] +
+                a.m[2 * 4 + row] * b.m[column * 4 + 2] + a.m[3 * 4 + row] * b.m[column * 4 + 3];
         }
     }
     return result;

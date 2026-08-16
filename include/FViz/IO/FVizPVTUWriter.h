@@ -20,10 +20,8 @@ FVIZ_API void fviz_pvtu_writer_options_initialize(FVizPVTUWriterOptions* options
  * file names are derived from the manifest basename as
  * <stem>_pieceNNNNN.vtu and referenced relatively from the manifest. Every
  * partition must be an UnstructuredGrid. */
-FVIZ_API FVizResult fviz_pvtu_write(
-    const char* file_path,
-    const FVizPartitionedDataSet* data_set,
-    const FVizPVTUWriterOptions* options);
+FVIZ_API FVizResult fviz_pvtu_write(const char* file_path, const FVizPartitionedDataSet* data_set,
+                                    const FVizPVTUWriterOptions* options);
 
 FVIZ_EXTERN_C_END
 

@@ -111,11 +111,7 @@ static void* fviz_default_allocate(void* user_data, FVizSize size, FVizSize alig
     return (void*)aligned_address;
 }
 
-static void fviz_default_deallocate(
-    void* user_data,
-    void* memory,
-    FVizSize size,
-    FVizSize alignment)
+static void fviz_default_deallocate(void* user_data, void* memory, FVizSize size, FVizSize alignment)
 {
     FVizAllocationHeader* header;
 
@@ -131,7 +127,8 @@ static void fviz_default_deallocate(
     header = (FVizAllocationHeader*)((uintptr_t)memory - sizeof(FVizAllocationHeader));
     if (header->magic != FVIZ_ALLOCATION_MAGIC)
     {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "memory was not allocated by the FEAViz default allocator");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                "memory was not allocated by the FEAViz default allocator");
         return;
     }
 
@@ -139,12 +136,8 @@ static void fviz_default_deallocate(
     free(header->raw_memory);
 }
 
-static void* fviz_default_reallocate(
-    void* user_data,
-    void* memory,
-    FVizSize old_size,
-    FVizSize new_size,
-    FVizSize alignment)
+static void* fviz_default_reallocate(void* user_data, void* memory, FVizSize old_size, FVizSize new_size,
+                                     FVizSize alignment)
 {
     FVizAllocationHeader* old_header;
     FVizSize copy_size;
@@ -167,7 +160,8 @@ static void* fviz_default_reallocate(
     old_header = (FVizAllocationHeader*)((uintptr_t)memory - sizeof(FVizAllocationHeader));
     if (old_header->magic != FVIZ_ALLOCATION_MAGIC)
     {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "memory was not allocated by the FEAViz default allocator");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                "memory was not allocated by the FEAViz default allocator");
         return NULL;
     }
 
@@ -205,15 +199,11 @@ FVizBool fviz_allocator_is_valid(const FVizAllocator* allocator)
         return FVIZ_FALSE;
     }
 
-    return (allocator->allocate != NULL && allocator->reallocate != NULL && allocator->deallocate != NULL)
-        ? FVIZ_TRUE
-        : FVIZ_FALSE;
+    return (allocator->allocate != NULL && allocator->reallocate != NULL && allocator->deallocate != NULL) ? FVIZ_TRUE
+                                                                                                           : FVIZ_FALSE;
 }
 
-void* fviz_allocator_allocate(
-    const FVizAllocator* allocator,
-    FVizSize size,
-    FVizSize alignment)
+void* fviz_allocator_allocate(const FVizAllocator* allocator, FVizSize size, FVizSize alignment)
 {
     if (fviz_allocator_is_valid(allocator) == FVIZ_FALSE)
     {
@@ -231,12 +221,8 @@ void* fviz_allocator_allocate(
     }
 }
 
-void* fviz_allocator_reallocate(
-    const FVizAllocator* allocator,
-    void* memory,
-    FVizSize old_size,
-    FVizSize new_size,
-    FVizSize alignment)
+void* fviz_allocator_reallocate(const FVizAllocator* allocator, void* memory, FVizSize old_size, FVizSize new_size,
+                                FVizSize alignment)
 {
     if (fviz_allocator_is_valid(allocator) == FVIZ_FALSE)
     {
@@ -245,12 +231,7 @@ void* fviz_allocator_reallocate(
     }
 
     {
-        void* reallocated = allocator->reallocate(
-            allocator->user_data,
-            memory,
-            old_size,
-            new_size,
-            alignment);
+        void* reallocated = allocator->reallocate(allocator->user_data, memory, old_size, new_size, alignment);
         if (reallocated == NULL && new_size != 0u && allocator->reallocate != fviz_default_reallocate)
         {
             fviz_internal_set_error(FVIZ_ERROR_OUT_OF_MEMORY, "custom allocator failed to reallocate memory");
@@ -259,11 +240,7 @@ void* fviz_allocator_reallocate(
     }
 }
 
-void fviz_allocator_deallocate(
-    const FVizAllocator* allocator,
-    void* memory,
-    FVizSize size,
-    FVizSize alignment)
+void fviz_allocator_deallocate(const FVizAllocator* allocator, void* memory, FVizSize size, FVizSize alignment)
 {
     if (memory == NULL)
     {

@@ -35,25 +35,16 @@ typedef struct FVizRenderPassContext
     void* backend_context;
 } FVizRenderPassContext;
 
-typedef FVizResult (*FVizRenderPassExecuteFn)(
-    FVizRenderPass* pass,
-    FVizRenderer* renderer,
-    const FVizRenderPassContext* context,
-    void* user_data);
+typedef FVizResult (*FVizRenderPassExecuteFn)(FVizRenderPass* pass, FVizRenderer* renderer,
+                                              const FVizRenderPassContext* context, void* user_data);
 typedef void (*FVizRenderPassDestroyFn)(void* user_data);
 
-FVIZ_API FVizResult fviz_render_pass_create(
-    FVizRenderPassStage stage,
-    FVizRenderPassExecuteFn execute,
-    void* user_data,
-    FVizRenderPassDestroyFn destroy_user_data,
-    FVizRenderPass** out_pass);
+FVIZ_API FVizResult fviz_render_pass_create(FVizRenderPassStage stage, FVizRenderPassExecuteFn execute, void* user_data,
+                                            FVizRenderPassDestroyFn destroy_user_data, FVizRenderPass** out_pass);
 FVIZ_API FVizRenderPassStage fviz_render_pass_stage(const FVizRenderPass* pass);
 FVIZ_API FVizBool fviz_render_pass_is_custom(const FVizRenderPass* pass);
-FVIZ_API FVizResult fviz_render_pass_execute(
-    FVizRenderPass* pass,
-    FVizRenderer* renderer,
-    const FVizRenderPassContext* context);
+FVIZ_API FVizResult fviz_render_pass_execute(FVizRenderPass* pass, FVizRenderer* renderer,
+                                             const FVizRenderPassContext* context);
 
 FVIZ_EXTERN_C_END
 

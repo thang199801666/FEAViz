@@ -15,12 +15,8 @@ typedef void (*FVizBufferReleaseFn)(void* data, FVizSize size, void* user_data);
 
 FVIZ_API FVizResult fviz_buffer_create(FVizSize size, FVizBuffer** out_buffer);
 FVIZ_API FVizResult fviz_buffer_create_copy(const void* data, FVizSize size, FVizBuffer** out_buffer);
-FVIZ_API FVizResult fviz_buffer_wrap(
-    void* data,
-    FVizSize size,
-    FVizBufferReleaseFn release_fn,
-    void* user_data,
-    FVizBuffer** out_buffer);
+FVIZ_API FVizResult fviz_buffer_wrap(void* data, FVizSize size, FVizBufferReleaseFn release_fn, void* user_data,
+                                     FVizBuffer** out_buffer);
 FVIZ_API void* fviz_buffer_data(FVizBuffer* buffer);
 FVIZ_API const void* fviz_buffer_const_data(const FVizBuffer* buffer);
 FVIZ_API FVizSize fviz_buffer_size(const FVizBuffer* buffer);

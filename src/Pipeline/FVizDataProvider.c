@@ -66,8 +66,8 @@ static void fviz_data_provider_unlock(FVizDataProvider* provider)
 #endif
 }
 
-static FVizBool fviz_data_provider_request_equal(
-    const FVizDataProviderEntry* entry, const FVizDataProviderRequest* request)
+static FVizBool fviz_data_provider_request_equal(const FVizDataProviderEntry* entry,
+                                                 const FVizDataProviderRequest* request)
 {
     const FVizPipelineRequestInfo* a = &entry->request;
     const FVizPipelineRequestInfo* b = &request->pipeline;
@@ -75,10 +75,11 @@ static FVizBool fviz_data_provider_request_equal(
     if (entry->resource_key != request->resource_key || a->type != b->type ||
         a->requested_output_port != b->requested_output_port || a->piece != b->piece ||
         a->number_of_pieces != b->number_of_pieces || a->ghost_levels != b->ghost_levels ||
-        a->has_extent != b->has_extent || a->has_time != b->has_time ||
-        a->time != b->time || a->flags != b->flags) return FVIZ_FALSE;
+        a->has_extent != b->has_extent || a->has_time != b->has_time || a->time != b->time || a->flags != b->flags)
+        return FVIZ_FALSE;
     if (a->has_extent != FVIZ_FALSE)
-        for (i = 0u; i < 6u; ++i) if (a->extent[i] != b->extent[i]) return FVIZ_FALSE;
+        for (i = 0u; i < 6u; ++i)
+            if (a->extent[i] != b->extent[i]) return FVIZ_FALSE;
     return FVIZ_TRUE;
 }
 
@@ -87,11 +88,12 @@ static void fviz_data_provider_remove(FVizDataProvider* provider, FVizSize index
     if (provider == NULL || index >= provider->entry_count) return;
     if (provider->entries[index].bytes <= provider->statistics.resident_bytes)
         provider->statistics.resident_bytes -= provider->entries[index].bytes;
-    else provider->statistics.resident_bytes = 0u;
+    else
+        provider->statistics.resident_bytes = 0u;
     fviz_release(provider->entries[index].data);
     if (index + 1u < provider->entry_count)
         memmove(&provider->entries[index], &provider->entries[index + 1u],
-            (provider->entry_count - index - 1u) * sizeof(*provider->entries));
+                (provider->entry_count - index - 1u) * sizeof(*provider->entries));
     --provider->entry_count;
     provider->statistics.resident_entries = provider->entry_count;
 }
@@ -105,12 +107,14 @@ void fviz_data_provider_request_initialize(FVizDataProviderRequest* request)
     request->pipeline.type = FVIZ_PIPELINE_REQUEST_DATA;
     request->allow_cache = FVIZ_TRUE;
 }
+
 void fviz_data_provider_callbacks_initialize(FVizDataProviderCallbacks* callbacks)
 {
     if (callbacks == NULL) return;
     memset(callbacks, 0, sizeof(*callbacks));
     callbacks->struct_size = (uint32_t)sizeof(*callbacks);
 }
+
 void fviz_data_provider_options_initialize(FVizDataProviderOptions* options)
 {
     if (options == NULL) return;
@@ -119,9 +123,8 @@ void fviz_data_provider_options_initialize(FVizDataProviderOptions* options)
     options->cache_entry_capacity = 16u;
 }
 
-FVizResult fviz_data_provider_create(
-    const FVizDataProviderCallbacks* callbacks, void* user_data,
-    const FVizDataProviderOptions* options, FVizDataProvider** out_provider)
+FVizResult fviz_data_provider_create(const FVizDataProviderCallbacks* callbacks, void* user_data,
+                                     const FVizDataProviderOptions* options, FVizDataProvider** out_provider)
 {
     FVizDataProviderOptions defaults;
     FVizDataProvider* provider;
@@ -132,8 +135,8 @@ FVizResult fviz_data_provider_create(
         fviz_data_provider_options_initialize(&defaults);
         options = &defaults;
     }
-    if (callbacks == NULL || callbacks->struct_size < sizeof(*callbacks) ||
-        callbacks->fetch == NULL || options->struct_size < sizeof(*options) ||
+    if (callbacks == NULL || callbacks->struct_size < sizeof(*callbacks) || callbacks->fetch == NULL ||
+        options->struct_size < sizeof(*options) ||
         options->cache_entry_capacity > (FVizSize)-1 / sizeof(FVizDataProviderEntry))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     provider = (FVizDataProvider*)fviz_alloc(sizeof(*provider));
@@ -143,7 +146,10 @@ FVizResult fviz_data_provider_create(
     InitializeCriticalSection(&provider->mutex);
 #else
     if (pthread_mutex_init(&provider->mutex, NULL) != 0)
-    { fviz_free(provider); return FVIZ_ERROR_INTERNAL; }
+    {
+        fviz_free(provider);
+        return FVIZ_ERROR_INTERNAL;
+    }
 #endif
     provider->references.value = 1u;
     provider->callbacks = *callbacks;
@@ -152,8 +158,8 @@ FVizResult fviz_data_provider_create(
     provider->statistics.struct_size = (uint32_t)sizeof(provider->statistics);
     if (options->cache_entry_capacity != 0u)
     {
-        provider->entries = (FVizDataProviderEntry*)fviz_alloc(
-            options->cache_entry_capacity * sizeof(*provider->entries));
+        provider->entries =
+            (FVizDataProviderEntry*)fviz_alloc(options->cache_entry_capacity * sizeof(*provider->entries));
         if (provider->entries == NULL)
         {
 #if defined(_WIN32)
@@ -172,7 +178,8 @@ FVizResult fviz_data_provider_create(
 static void fviz_data_provider_clear_cache_unlocked(FVizDataProvider* provider)
 {
     if (provider == NULL) return;
-    while (provider->entry_count != 0u) fviz_data_provider_remove(provider, provider->entry_count - 1u);
+    while (provider->entry_count != 0u)
+        fviz_data_provider_remove(provider, provider->entry_count - 1u);
 }
 
 static void fviz_data_provider_release(FVizDataProvider* provider)
@@ -203,9 +210,8 @@ void fviz_data_provider_clear_cache(FVizDataProvider* provider)
     fviz_data_provider_unlock(provider);
 }
 
-static FVizResult fviz_data_provider_fetch_unlocked(
-    FVizDataProvider* provider, const FVizDataProviderRequest* request,
-    FVizDataObject** out_data)
+static FVizResult fviz_data_provider_fetch_unlocked(FVizDataProvider* provider, const FVizDataProviderRequest* request,
+                                                    FVizDataObject** out_data)
 {
     FVizSize i;
     FVizDataObject* data = NULL;
@@ -214,7 +220,8 @@ static FVizResult fviz_data_provider_fetch_unlocked(
     if (out_data == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_data = NULL;
     if (provider == NULL || request == NULL || request->struct_size < sizeof(*request) ||
-        request->pipeline.struct_size < sizeof(request->pipeline)) return FVIZ_ERROR_INVALID_ARGUMENT;
+        request->pipeline.struct_size < sizeof(request->pipeline))
+        return FVIZ_ERROR_INVALID_ARGUMENT;
     ++provider->statistics.requests;
     if (request->pipeline.cancellation != NULL &&
         fviz_cancellation_token_is_cancelled(request->pipeline.cancellation) != FVIZ_FALSE)
@@ -233,13 +240,16 @@ static FVizResult fviz_data_provider_fetch_unlocked(
     {
         if (request->pipeline.cancellation != NULL &&
             fviz_cancellation_token_is_cancelled(request->pipeline.cancellation) != FVIZ_FALSE)
-        { result = FVIZ_ERROR_CANCELLED; break; }
+        {
+            result = FVIZ_ERROR_CANCELLED;
+            break;
+        }
         ++provider->statistics.fetch_attempts;
         result = provider->callbacks.fetch(request, provider->user_data, &data);
         if (result == FVIZ_OK) break;
-        fviz_release(data); data = NULL;
-        if ((result != FVIZ_ERROR_IO && result != FVIZ_ERROR_BUSY) ||
-            attempt == provider->options.retry_count) break;
+        fviz_release(data);
+        data = NULL;
+        if ((result != FVIZ_ERROR_IO && result != FVIZ_ERROR_BUSY) || attempt == provider->options.retry_count) break;
         ++provider->statistics.retries;
     }
     if (result != FVIZ_OK)
@@ -276,7 +286,10 @@ static FVizResult fviz_data_provider_fetch_unlocked(
             provider->entries[provider->entry_count].bytes = bytes;
             provider->entries[provider->entry_count].last_use = ++provider->use_serial;
             if (provider->entries[provider->entry_count].data == NULL)
-            { fviz_release(data); return fviz_last_error_code(); }
+            {
+                fviz_release(data);
+                return fviz_last_error_code();
+            }
             ++provider->entry_count;
             provider->statistics.resident_entries = provider->entry_count;
             provider->statistics.resident_bytes += bytes;
@@ -286,9 +299,8 @@ static FVizResult fviz_data_provider_fetch_unlocked(
     return FVIZ_OK;
 }
 
-FVizResult fviz_data_provider_fetch(
-    FVizDataProvider* provider, const FVizDataProviderRequest* request,
-    FVizDataObject** out_data)
+FVizResult fviz_data_provider_fetch(FVizDataProvider* provider, const FVizDataProviderRequest* request,
+                                    FVizDataObject** out_data)
 {
     FVizResult result;
     if (provider == NULL)
@@ -302,8 +314,7 @@ FVizResult fviz_data_provider_fetch(
     return result;
 }
 
-static FVizResult fviz_data_provider_async_run(
-    FVizCancellationToken* cancellation, void* user_data, void** out_value)
+static FVizResult fviz_data_provider_async_run(FVizCancellationToken* cancellation, void* user_data, void** out_value)
 {
     FVizDataProviderAsyncTask* task = (FVizDataProviderAsyncTask*)user_data;
     FVizDataObject* data = NULL;
@@ -311,7 +322,8 @@ static FVizResult fviz_data_provider_async_run(
     task->request.pipeline.cancellation = cancellation;
     result = fviz_data_provider_fetch(task->provider, &task->request, &data);
     if (result == FVIZ_OK) *out_value = data;
-    else fviz_release(data);
+    else
+        fviz_release(data);
     return result;
 }
 
@@ -323,16 +335,14 @@ static void fviz_data_provider_async_task_destroy(void* user_data)
     fviz_free(task);
 }
 
-FVizResult fviz_data_provider_fetch_async(
-    FVizDataProvider* provider, const FVizDataProviderRequest* request,
-    FVizExecutor* executor, int priority, FVizFuture** out_future)
+FVizResult fviz_data_provider_fetch_async(FVizDataProvider* provider, const FVizDataProviderRequest* request,
+                                          FVizExecutor* executor, int priority, FVizFuture** out_future)
 {
     FVizDataProviderAsyncTask* task;
     FVizResult result;
     if (out_future == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_future = NULL;
-    if (provider == NULL || request == NULL || executor == NULL ||
-        request->struct_size < sizeof(*request) ||
+    if (provider == NULL || request == NULL || executor == NULL || request->struct_size < sizeof(*request) ||
         request->pipeline.struct_size < sizeof(request->pipeline))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     task = (FVizDataProviderAsyncTask*)fviz_alloc(sizeof(*task));
@@ -340,15 +350,14 @@ FVizResult fviz_data_provider_fetch_async(
     task->provider = provider;
     task->request = *request;
     (void)fviz_atomic_u32_fetch_add(&provider->references, 1u);
-    result = fviz_executor_submit(executor, priority, fviz_data_provider_async_run,
-        task, fviz_data_provider_async_task_destroy, (FVizTaskValueDestroyFn)fviz_release,
-        out_future);
+    result =
+        fviz_executor_submit(executor, priority, fviz_data_provider_async_run, task,
+                             fviz_data_provider_async_task_destroy, (FVizTaskValueDestroyFn)fviz_release, out_future);
     if (result != FVIZ_OK) fviz_data_provider_async_task_destroy(task);
     return result;
 }
 
-void fviz_data_provider_get_statistics(
-    const FVizDataProvider* provider, FVizDataProviderStatistics* out_statistics)
+void fviz_data_provider_get_statistics(const FVizDataProvider* provider, FVizDataProviderStatistics* out_statistics)
 {
     if (out_statistics == NULL) return;
     memset(out_statistics, 0, sizeof(*out_statistics));

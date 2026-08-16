@@ -12,17 +12,28 @@ static const char* fviz_vtp_type_name(FVizDataType type)
 {
     switch (type)
     {
-        case FVIZ_DATA_INT8: return "Int8";
-        case FVIZ_DATA_UINT8: return "UInt8";
-        case FVIZ_DATA_INT16: return "Int16";
-        case FVIZ_DATA_UINT16: return "UInt16";
-        case FVIZ_DATA_INT32: return "Int32";
-        case FVIZ_DATA_UINT32: return "UInt32";
-        case FVIZ_DATA_INT64: return "Int64";
-        case FVIZ_DATA_UINT64: return "UInt64";
-        case FVIZ_DATA_FLOAT32: return "Float32";
-        case FVIZ_DATA_FLOAT64: return "Float64";
-        default: return NULL;
+        case FVIZ_DATA_INT8:
+            return "Int8";
+        case FVIZ_DATA_UINT8:
+            return "UInt8";
+        case FVIZ_DATA_INT16:
+            return "Int16";
+        case FVIZ_DATA_UINT16:
+            return "UInt16";
+        case FVIZ_DATA_INT32:
+            return "Int32";
+        case FVIZ_DATA_UINT32:
+            return "UInt32";
+        case FVIZ_DATA_INT64:
+            return "Int64";
+        case FVIZ_DATA_UINT64:
+            return "UInt64";
+        case FVIZ_DATA_FLOAT32:
+            return "Float32";
+        case FVIZ_DATA_FLOAT64:
+            return "Float64";
+        default:
+            return NULL;
     }
 }
 
@@ -34,12 +45,23 @@ static FVizBool fviz_vtp_write_xml_escaped(FILE* file, const char* text)
         const char* replacement = NULL;
         switch (*cursor)
         {
-            case '&': replacement = "&amp;"; break;
-            case '<': replacement = "&lt;"; break;
-            case '>': replacement = "&gt;"; break;
-            case '"': replacement = "&quot;"; break;
-            case '\'': replacement = "&apos;"; break;
-            default: break;
+            case '&':
+                replacement = "&amp;";
+                break;
+            case '<':
+                replacement = "&lt;";
+                break;
+            case '>':
+                replacement = "&gt;";
+                break;
+            case '"':
+                replacement = "&quot;";
+                break;
+            case '\'':
+                replacement = "&apos;";
+                break;
+            default:
+                break;
         }
         if (replacement != NULL)
         {
@@ -56,21 +78,43 @@ static void fviz_vtp_write_scalar(FILE* file, const void* tuple, FVizDataType ty
 {
     switch (type)
     {
-        case FVIZ_DATA_INT8: (void)fprintf(file, "%" PRId8, ((const int8_t*)tuple)[component]); break;
-        case FVIZ_DATA_UINT8: (void)fprintf(file, "%" PRIu8, ((const uint8_t*)tuple)[component]); break;
-        case FVIZ_DATA_INT16: (void)fprintf(file, "%" PRId16, ((const int16_t*)tuple)[component]); break;
-        case FVIZ_DATA_UINT16: (void)fprintf(file, "%" PRIu16, ((const uint16_t*)tuple)[component]); break;
-        case FVIZ_DATA_INT32: (void)fprintf(file, "%" PRId32, ((const int32_t*)tuple)[component]); break;
-        case FVIZ_DATA_UINT32: (void)fprintf(file, "%" PRIu32, ((const uint32_t*)tuple)[component]); break;
-        case FVIZ_DATA_INT64: (void)fprintf(file, "%" PRId64, ((const int64_t*)tuple)[component]); break;
-        case FVIZ_DATA_UINT64: (void)fprintf(file, "%" PRIu64, ((const uint64_t*)tuple)[component]); break;
-        case FVIZ_DATA_FLOAT32: (void)fprintf(file, "%.9g", (double)((const float*)tuple)[component]); break;
-        case FVIZ_DATA_FLOAT64: (void)fprintf(file, "%.17g", ((const double*)tuple)[component]); break;
-        default: break;
+        case FVIZ_DATA_INT8:
+            (void)fprintf(file, "%" PRId8, ((const int8_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_UINT8:
+            (void)fprintf(file, "%" PRIu8, ((const uint8_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_INT16:
+            (void)fprintf(file, "%" PRId16, ((const int16_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_UINT16:
+            (void)fprintf(file, "%" PRIu16, ((const uint16_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_INT32:
+            (void)fprintf(file, "%" PRId32, ((const int32_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_UINT32:
+            (void)fprintf(file, "%" PRIu32, ((const uint32_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_INT64:
+            (void)fprintf(file, "%" PRId64, ((const int64_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_UINT64:
+            (void)fprintf(file, "%" PRIu64, ((const uint64_t*)tuple)[component]);
+            break;
+        case FVIZ_DATA_FLOAT32:
+            (void)fprintf(file, "%.9g", (double)((const float*)tuple)[component]);
+            break;
+        case FVIZ_DATA_FLOAT64:
+            (void)fprintf(file, "%.17g", ((const double*)tuple)[component]);
+            break;
+        default:
+            break;
     }
 }
 
-static FVizBool fviz_vtp_write_array(FILE* file, const char* indentation, const char* name, const FVizDataArray* array, FVizBool include_tuple_count)
+static FVizBool fviz_vtp_write_array(FILE* file, const char* indentation, const char* name, const FVizDataArray* array,
+                                     FVizBool include_tuple_count)
 {
     const char* type_name = fviz_vtp_type_name(fviz_data_array_type(array));
     const uint32_t components = fviz_data_array_components(array);
@@ -79,7 +123,8 @@ static FVizBool fviz_vtp_write_array(FILE* file, const char* indentation, const 
     if (fprintf(file, "%s<DataArray type=\"%s\" Name=\"", indentation, type_name) < 0 ||
         fviz_vtp_write_xml_escaped(file, name) == FVIZ_FALSE ||
         fprintf(file, "\" NumberOfComponents=\"%u\"", components) < 0 ||
-        (include_tuple_count && fprintf(file, " NumberOfTuples=\"%zu\"", (size_t)fviz_data_array_tuple_count(array)) < 0) ||
+        (include_tuple_count &&
+         fprintf(file, " NumberOfTuples=\"%zu\"", (size_t)fviz_data_array_tuple_count(array)) < 0) ||
         fprintf(file, " format=\"ascii\">\n%s  ", indentation) < 0)
         return FVIZ_FALSE;
     for (tuple_index = 0u; tuple_index < fviz_data_array_tuple_count(array); ++tuple_index)
@@ -95,10 +140,11 @@ static FVizBool fviz_vtp_write_array(FILE* file, const char* indentation, const 
     return fprintf(file, "\n%s</DataArray>\n", indentation) >= 0 ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizBool fviz_vtp_write_attributes(FILE* file, const char* indentation, const char* section_name, const FVizAttributeSet* set)
+static FVizBool fviz_vtp_write_attributes(FILE* file, const char* indentation, const char* section_name,
+                                          const FVizAttributeSet* set)
 {
-    static const char* role_names[FVIZ_ATTRIBUTE_ROLE_COUNT] = {
-        "Scalars", "Vectors", "Normals", "Tensors", "GlobalIds"};
+    static const char* role_names[FVIZ_ATTRIBUTE_ROLE_COUNT] = {"Scalars", "Vectors", "Normals", "Tensors",
+                                                                "GlobalIds"};
     FVizSize i;
     if (fprintf(file, "%s<%s", indentation, section_name) < 0) return FVIZ_FALSE;
     for (i = 0u; i < FVIZ_ATTRIBUTE_ROLE_COUNT; ++i)
@@ -106,20 +152,21 @@ static FVizBool fviz_vtp_write_attributes(FILE* file, const char* indentation, c
         const char* active = fviz_attribute_set_active_name(set, (FVizAttributeRole)i);
         if (active != NULL)
         {
-            if (fprintf(file, " %s=\"", role_names[i]) < 0 ||
-                fviz_vtp_write_xml_escaped(file, active) == FVIZ_FALSE || fputc('"', file) == EOF)
+            if (fprintf(file, " %s=\"", role_names[i]) < 0 || fviz_vtp_write_xml_escaped(file, active) == FVIZ_FALSE ||
+                fputc('"', file) == EOF)
                 return FVIZ_FALSE;
         }
     }
     if (fputs(">\n", file) == EOF) return FVIZ_FALSE;
     for (i = 0u; i < fviz_attribute_set_count(set); ++i)
-        {
-            char array_indentation[32];
-            if (snprintf(array_indentation, sizeof(array_indentation), "%s  ", indentation) < 0) return FVIZ_FALSE;
-            if (fviz_vtp_write_array(file, array_indentation, fviz_attribute_set_name_at(set, i),
-                    fviz_attribute_set_const_array_at(set, i), strcmp(section_name, "FieldData") == 0 ? FVIZ_TRUE : FVIZ_FALSE) == FVIZ_FALSE)
-                return FVIZ_FALSE;
-        }
+    {
+        char array_indentation[32];
+        if (snprintf(array_indentation, sizeof(array_indentation), "%s  ", indentation) < 0) return FVIZ_FALSE;
+        if (fviz_vtp_write_array(file, array_indentation, fviz_attribute_set_name_at(set, i),
+                                 fviz_attribute_set_const_array_at(set, i),
+                                 strcmp(section_name, "FieldData") == 0 ? FVIZ_TRUE : FVIZ_FALSE) == FVIZ_FALSE)
+            return FVIZ_FALSE;
+    }
     return fprintf(file, "%s</%s>\n", indentation, section_name) >= 0 ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
@@ -136,10 +183,11 @@ static FVizBool fviz_vtp_write_cell_section(FILE* file, const char* name, const 
         FVizSize j;
         if (fviz_cell_array_cell_view(cells, i, &view) != FVIZ_OK) return FVIZ_FALSE;
         for (j = 0u; j < view.point_count; ++j)
-            if (fprintf(file, "%" PRIu64 " ", (uint64_t)fviz_cell_view_point_id(&view, j)) < 0)
-                return FVIZ_FALSE;
+            if (fprintf(file, "%" PRIu64 " ", (uint64_t)fviz_cell_view_point_id(&view, j)) < 0) return FVIZ_FALSE;
     }
-    if (fputs("\n        </DataArray>\n        <DataArray type=\"UInt64\" Name=\"offsets\" format=\"ascii\">\n          ", file) == EOF)
+    if (fputs(
+            "\n        </DataArray>\n        <DataArray type=\"UInt64\" Name=\"offsets\" format=\"ascii\">\n          ",
+            file) == EOF)
         return FVIZ_FALSE;
     for (i = 0u; i < fviz_cell_array_count(cells); ++i)
     {
@@ -186,21 +234,24 @@ FVizResult fviz_vtp_write(const char* file_path, const FVizPolyData* poly_data, 
         fviz_internal_set_error(FVIZ_ERROR_IO, "failed to open VTP output file");
         return FVIZ_ERROR_IO;
     }
-    if (fprintf(file,
-            "<?xml version=\"1.0\"?>\n"
-            "<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\">\n"
-            "  <PolyData>\n") < 0 ||
-        fviz_vtp_write_attributes(file, "    ", "FieldData", fviz_poly_data_const_field_data(poly_data)) == FVIZ_FALSE ||
+    if (fprintf(file, "<?xml version=\"1.0\"?>\n"
+                      "<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\">\n"
+                      "  <PolyData>\n") < 0 ||
+        fviz_vtp_write_attributes(file, "    ", "FieldData", fviz_poly_data_const_field_data(poly_data)) ==
+            FVIZ_FALSE ||
         fprintf(file,
-            "    <Piece NumberOfPoints=\"%zu\" NumberOfVerts=\"%zu\" NumberOfLines=\"%zu\" NumberOfStrips=\"%zu\" NumberOfPolys=\"%zu\">\n",
-            (size_t)fviz_poly_data_point_count(poly_data),
-            (size_t)fviz_poly_data_vert_cell_count(poly_data),
-            (size_t)fviz_poly_data_line_cell_count(poly_data),
-            (size_t)fviz_poly_data_strip_cell_count(poly_data),
-            (size_t)fviz_poly_data_poly_cell_count(poly_data)) < 0 ||
-        fviz_vtp_write_attributes(file, "      ", "PointData", fviz_poly_data_const_point_data(poly_data)) == FVIZ_FALSE ||
-        fviz_vtp_write_attributes(file, "      ", "CellData", fviz_poly_data_const_cell_data(poly_data)) == FVIZ_FALSE ||
-        fputs("      <Points>\n        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n          ", file) == EOF)
+                "    <Piece NumberOfPoints=\"%zu\" NumberOfVerts=\"%zu\" NumberOfLines=\"%zu\" NumberOfStrips=\"%zu\" "
+                "NumberOfPolys=\"%zu\">\n",
+                (size_t)fviz_poly_data_point_count(poly_data), (size_t)fviz_poly_data_vert_cell_count(poly_data),
+                (size_t)fviz_poly_data_line_cell_count(poly_data), (size_t)fviz_poly_data_strip_cell_count(poly_data),
+                (size_t)fviz_poly_data_poly_cell_count(poly_data)) < 0 ||
+        fviz_vtp_write_attributes(file, "      ", "PointData", fviz_poly_data_const_point_data(poly_data)) ==
+            FVIZ_FALSE ||
+        fviz_vtp_write_attributes(file, "      ", "CellData", fviz_poly_data_const_cell_data(poly_data)) ==
+            FVIZ_FALSE ||
+        fputs("      <Points>\n        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n        "
+              "  ",
+              file) == EOF)
         goto io_fail;
     for (i = 0u; i < fviz_poly_data_point_count(poly_data); ++i)
     {

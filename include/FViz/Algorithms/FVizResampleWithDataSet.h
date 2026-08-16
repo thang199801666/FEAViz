@@ -19,9 +19,12 @@ typedef struct FVizResampleWithDataSet FVizResampleWithDataSet;
  * 0.27 supports ImageData directly and UnstructuredGrid through the accelerated probe path. */
 FVIZ_API FVizResult fviz_resample_with_data_set_create(FVizResampleWithDataSet** out_filter);
 FVIZ_API FVizResult fviz_resample_with_data_set_set_input_data(FVizResampleWithDataSet* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_resample_with_data_set_set_input_connection(FVizResampleWithDataSet* filter, FVizAlgorithmOutput* input);
-FVIZ_API FVizResult fviz_resample_with_data_set_set_source_data(FVizResampleWithDataSet* filter, FVizDataObject* source);
-FVIZ_API FVizResult fviz_resample_with_data_set_set_source_connection(FVizResampleWithDataSet* filter, FVizAlgorithmOutput* source);
+FVIZ_API FVizResult fviz_resample_with_data_set_set_input_connection(FVizResampleWithDataSet* filter,
+                                                                     FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_resample_with_data_set_set_source_data(FVizResampleWithDataSet* filter,
+                                                                FVizDataObject* source);
+FVIZ_API FVizResult fviz_resample_with_data_set_set_source_connection(FVizResampleWithDataSet* filter,
+                                                                      FVizAlgorithmOutput* source);
 FVIZ_API FVizAlgorithm* fviz_resample_with_data_set_algorithm(FVizResampleWithDataSet* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_resample_with_data_set_output_port(FVizResampleWithDataSet* filter);
 FVIZ_API FVizPolyData* fviz_resample_with_data_set_output(FVizResampleWithDataSet* filter);

@@ -80,42 +80,20 @@ struct FVizAlgorithm
 
 extern const FVizObjectClass g_fviz_algorithm_class;
 
-FVizResult fviz_internal_algorithm_initialize(
-    FVizAlgorithm* algorithm,
-    uint32_t input_port_count,
-    uint32_t output_port_count,
-    FVizAlgorithmExecuteFn execute);
+FVizResult fviz_internal_algorithm_initialize(FVizAlgorithm* algorithm, uint32_t input_port_count,
+                                              uint32_t output_port_count, FVizAlgorithmExecuteFn execute);
 void fviz_internal_algorithm_deinitialize(FVizAlgorithm* algorithm);
-FVizResult fviz_internal_algorithm_configure_input_port(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizTypeId data_type,
-    FVizBool optional,
-    FVizBool repeatable);
-FVizResult fviz_internal_algorithm_configure_output_port(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizTypeId data_type);
-FVizDataObject* fviz_internal_algorithm_resolved_input(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    uint32_t connection);
-FVizResult fviz_internal_algorithm_set_output_data(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizDataObject* data_object);
+FVizResult fviz_internal_algorithm_configure_input_port(FVizAlgorithm* algorithm, uint32_t port, FVizTypeId data_type,
+                                                        FVizBool optional, FVizBool repeatable);
+FVizResult fviz_internal_algorithm_configure_output_port(FVizAlgorithm* algorithm, uint32_t port, FVizTypeId data_type);
+FVizDataObject* fviz_internal_algorithm_resolved_input(FVizAlgorithm* algorithm, uint32_t port, uint32_t connection);
+FVizResult fviz_internal_algorithm_set_output_data(FVizAlgorithm* algorithm, uint32_t port,
+                                                   FVizDataObject* data_object);
 FVizResult fviz_internal_algorithm_update_now(FVizAlgorithm* algorithm);
-FVizResult fviz_internal_algorithm_map_input_request(
-    FVizAlgorithm* algorithm,
-    uint32_t input_port,
-    uint32_t connection,
-    const FVizPipelineRequestInfo* downstream_request,
-    FVizPipelineRequestInfo* upstream_request);
-FVizResult fviz_internal_algorithm_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    FVizMTime input_mtime,
-    uint64_t request_key,
-    FVizBool* out_executed);
+FVizResult fviz_internal_algorithm_map_input_request(FVizAlgorithm* algorithm, uint32_t input_port, uint32_t connection,
+                                                     const FVizPipelineRequestInfo* downstream_request,
+                                                     FVizPipelineRequestInfo* upstream_request);
+FVizResult fviz_internal_algorithm_process_request(FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request,
+                                                   FVizMTime input_mtime, uint64_t request_key, FVizBool* out_executed);
 
 #endif /* FVIZ_INTERNAL_PIPELINE_ALGORITHM_PRIVATE_H */

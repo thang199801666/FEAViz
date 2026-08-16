@@ -12,12 +12,8 @@
 static void fviz_temporal_data_set_destroy(FVizObject* object);
 static FVizMTime fviz_temporal_data_set_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_temporal_data_set_class = {
-    FVIZ_TYPE_TEMPORAL_DATA_SET,
-    "FVizTemporalDataSet",
-    &g_fviz_data_object_class,
-    fviz_temporal_data_set_destroy,
-    fviz_temporal_data_set_mtime
-};
+    FVIZ_TYPE_TEMPORAL_DATA_SET, "FVizTemporalDataSet", &g_fviz_data_object_class, fviz_temporal_data_set_destroy,
+    fviz_temporal_data_set_mtime};
 
 static FVizMTime fviz_temporal_data_set_mtime(const FVizObject* object)
 {
@@ -26,8 +22,8 @@ static FVizMTime fviz_temporal_data_set_mtime(const FVizObject* object)
     return fviz_internal_object_local_mtime(object);
 }
 
-static FVizBool fviz_temporal_child_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_temporal_child_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                             void* client_data)
 {
     FVizTemporalDataSet* data_set = (FVizTemporalDataSet*)client_data;
     (void)caller;
@@ -37,14 +33,12 @@ static FVizBool fviz_temporal_child_modified(
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_temporal_entry_observe(
-    FVizTemporalDataSet* data_set, FVizTemporalEntry* entry)
+static FVizResult fviz_temporal_entry_observe(FVizTemporalDataSet* data_set, FVizTemporalEntry* entry)
 {
     if (data_set == NULL || entry == NULL || entry->data == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     entry->data_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
-    return fviz_object_add_observer(
-        (FVizObject*)entry->data, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_temporal_child_modified, data_set, &entry->data_modified_tag);
+    return fviz_object_add_observer((FVizObject*)entry->data, FVIZ_EVENT_MODIFIED, 0.0f, fviz_temporal_child_modified,
+                                    data_set, &entry->data_modified_tag);
 }
 
 static void fviz_temporal_entry_release(FVizTemporalEntry* entry)
@@ -74,8 +68,8 @@ FVizResult fviz_temporal_data_set_create(FVizTemporalDataSet** out_data_set)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_data_set = NULL;
-    data_set = (FVizTemporalDataSet*)fviz_internal_object_allocate(
-        sizeof(*data_set), &g_fviz_temporal_data_set_class, NULL);
+    data_set =
+        (FVizTemporalDataSet*)fviz_internal_object_allocate(sizeof(*data_set), &g_fviz_temporal_data_set_class, NULL);
     if (data_set == NULL) return fviz_last_error_code();
     if (fviz_array_create(sizeof(FVizTemporalEntry), &data_set->steps) != FVIZ_OK)
     {
@@ -109,8 +103,7 @@ static FVizSize fviz_temporal_lower_bound(const FVizTemporalDataSet* data_set, d
     {
         const FVizSize step = count / 2u;
         const FVizSize index = first + step;
-        const FVizTemporalEntry* entry =
-            (const FVizTemporalEntry*)fviz_array_const_at(data_set->steps, index);
+        const FVizTemporalEntry* entry = (const FVizTemporalEntry*)fviz_array_const_at(data_set->steps, index);
         if (entry->time < time)
         {
             first = index + 1u;
@@ -122,19 +115,15 @@ static FVizSize fviz_temporal_lower_bound(const FVizTemporalDataSet* data_set, d
     return first;
 }
 
-FVizResult fviz_temporal_data_set_add_step(
-    FVizTemporalDataSet* data_set,
-    double time,
-    FVizDataObject* data,
-    FVizSize* out_index)
+FVizResult fviz_temporal_data_set_add_step(FVizTemporalDataSet* data_set, double time, FVizDataObject* data,
+                                           FVizSize* out_index)
 {
     FVizSize index;
     FVizSize count;
     FVizTemporalEntry* entries;
     FVizDataObject* retained;
     if (out_index != NULL) *out_index = 0u;
-    if (data_set == NULL || data == NULL || !isfinite(time) ||
-        fviz_data_object_is_data_object(data) == FVIZ_FALSE)
+    if (data_set == NULL || data == NULL || !isfinite(time) || fviz_data_object_is_data_object(data) == FVIZ_FALSE)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "temporal step requires finite time and data object");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -143,8 +132,7 @@ FVizResult fviz_temporal_data_set_add_step(
     count = fviz_temporal_data_set_step_count(data_set);
     if (index < count)
     {
-        const FVizTemporalEntry* existing =
-            (const FVizTemporalEntry*)fviz_array_const_at(data_set->steps, index);
+        const FVizTemporalEntry* existing = (const FVizTemporalEntry*)fviz_array_const_at(data_set->steps, index);
         if (existing->time == time)
         {
             fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "temporal dataset already contains this time step");
@@ -159,9 +147,7 @@ FVizResult fviz_temporal_data_set_add_step(
         return fviz_last_error_code();
     }
     entries = (FVizTemporalEntry*)fviz_array_data(data_set->steps);
-    if (index < count)
-        (void)memmove(&entries[index + 1u], &entries[index],
-            (size_t)(count - index) * sizeof(*entries));
+    if (index < count) (void)memmove(&entries[index + 1u], &entries[index], (size_t)(count - index) * sizeof(*entries));
     (void)memset(&entries[index], 0, sizeof(entries[index]));
     entries[index].time = time;
     entries[index].data = retained;
@@ -170,8 +156,7 @@ FVizResult fviz_temporal_data_set_add_step(
     {
         fviz_release(retained);
         if (index < count)
-            (void)memmove(&entries[index], &entries[index + 1u],
-                (size_t)(count - index) * sizeof(*entries));
+            (void)memmove(&entries[index], &entries[index + 1u], (size_t)(count - index) * sizeof(*entries));
         (void)fviz_array_resize(data_set->steps, count);
         return fviz_last_error_code();
     }
@@ -180,17 +165,13 @@ FVizResult fviz_temporal_data_set_add_step(
     return FVIZ_OK;
 }
 
-FVizResult fviz_temporal_data_set_set_step(
-    FVizTemporalDataSet* data_set,
-    FVizSize index,
-    double time,
-    FVizDataObject* data)
+FVizResult fviz_temporal_data_set_set_step(FVizTemporalDataSet* data_set, FVizSize index, double time,
+                                           FVizDataObject* data)
 {
     FVizTemporalEntry* entry;
     FVizDataObject* retained;
     FVizSize count;
-    if (data_set == NULL || data == NULL || !isfinite(time) ||
-        index >= fviz_temporal_data_set_step_count(data_set) ||
+    if (data_set == NULL || data == NULL || !isfinite(time) || index >= fviz_temporal_data_set_step_count(data_set) ||
         fviz_data_object_is_data_object(data) == FVIZ_FALSE)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "temporal step index, time or data is invalid");
@@ -225,12 +206,8 @@ FVizResult fviz_temporal_data_set_set_step(
     return FVIZ_OK;
 }
 
-FVizResult fviz_temporal_data_set_append_steps(
-    FVizTemporalDataSet* data_set,
-    const double* times,
-    FVizDataObject* const* data,
-    FVizSize count,
-    FVizSize* out_first_index)
+FVizResult fviz_temporal_data_set_append_steps(FVizTemporalDataSet* data_set, const double* times,
+                                               FVizDataObject* const* data, FVizSize count, FVizSize* out_first_index)
 {
     FVizSize old_count;
     FVizSize i;
@@ -246,13 +223,12 @@ FVizResult fviz_temporal_data_set_append_steps(
     if (count == 0u) return FVIZ_OK;
     for (i = 0u; i < count; ++i)
     {
-        if (!isfinite(times[i]) || data[i] == NULL ||
-            fviz_data_object_is_data_object(data[i]) == FVIZ_FALSE ||
+        if (!isfinite(times[i]) || data[i] == NULL || fviz_data_object_is_data_object(data[i]) == FVIZ_FALSE ||
             (i > 0u && times[i] <= times[i - 1u]) ||
-            (i == 0u && old_count > 0u &&
-             times[i] <= fviz_temporal_data_set_time(data_set, old_count - 1u)))
+            (i == 0u && old_count > 0u && times[i] <= fviz_temporal_data_set_time(data_set, old_count - 1u)))
         {
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            fviz_internal_set_error(
+                FVIZ_ERROR_INVALID_ARGUMENT,
                 "temporal batch times must be finite, strictly increasing, and newer than existing steps");
             return FVIZ_ERROR_INVALID_ARGUMENT;
         }
@@ -307,10 +283,8 @@ const FVizDataObject* fviz_temporal_data_set_const_data(const FVizTemporalDataSe
     return entry != NULL ? entry->data : NULL;
 }
 
-FVizResult fviz_temporal_data_set_time_range(
-    const FVizTemporalDataSet* data_set,
-    double* out_minimum,
-    double* out_maximum)
+FVizResult fviz_temporal_data_set_time_range(const FVizTemporalDataSet* data_set, double* out_minimum,
+                                             double* out_maximum)
 {
     const FVizSize count = fviz_temporal_data_set_step_count(data_set);
     if (out_minimum != NULL) *out_minimum = 0.0;
@@ -325,10 +299,7 @@ FVizResult fviz_temporal_data_set_time_range(
     return FVIZ_OK;
 }
 
-FVizResult fviz_temporal_data_set_find_nearest(
-    const FVizTemporalDataSet* data_set,
-    double time,
-    FVizSize* out_index)
+FVizResult fviz_temporal_data_set_find_nearest(const FVizTemporalDataSet* data_set, double time, FVizSize* out_index)
 {
     FVizSize index;
     FVizSize count;
@@ -336,12 +307,14 @@ FVizResult fviz_temporal_data_set_find_nearest(
     if (data_set == NULL || out_index == NULL || !isfinite(time) ||
         (count = fviz_temporal_data_set_step_count(data_set)) == 0u)
     {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "nearest-time query requires finite time and non-empty dataset");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                "nearest-time query requires finite time and non-empty dataset");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     index = fviz_temporal_lower_bound(data_set, time);
     if (index == 0u) *out_index = 0u;
-    else if (index >= count) *out_index = count - 1u;
+    else if (index >= count)
+        *out_index = count - 1u;
     else
     {
         const double before = fviz_temporal_data_set_time(data_set, index - 1u);
@@ -351,24 +324,19 @@ FVizResult fviz_temporal_data_set_find_nearest(
     return FVIZ_OK;
 }
 
-FVizResult fviz_temporal_data_set_find_bracket(
-    const FVizTemporalDataSet* data_set,
-    double time,
-    FVizSize* out_lower_index,
-    FVizSize* out_upper_index,
-    double* out_alpha)
+FVizResult fviz_temporal_data_set_find_bracket(const FVizTemporalDataSet* data_set, double time,
+                                               FVizSize* out_lower_index, FVizSize* out_upper_index, double* out_alpha)
 {
     FVizSize count;
     FVizSize upper;
     if (out_lower_index != NULL) *out_lower_index = 0u;
     if (out_upper_index != NULL) *out_upper_index = 0u;
     if (out_alpha != NULL) *out_alpha = 0.0;
-    if (data_set == NULL || out_lower_index == NULL || out_upper_index == NULL ||
-        out_alpha == NULL || !isfinite(time) ||
-        (count = fviz_temporal_data_set_step_count(data_set)) == 0u)
+    if (data_set == NULL || out_lower_index == NULL || out_upper_index == NULL || out_alpha == NULL ||
+        !isfinite(time) || (count = fviz_temporal_data_set_step_count(data_set)) == 0u)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
-            "temporal bracket query requires finite time and a non-empty dataset");
+                                "temporal bracket query requires finite time and a non-empty dataset");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     upper = fviz_temporal_lower_bound(data_set, time);
@@ -394,7 +362,8 @@ FVizResult fviz_temporal_data_set_find_bracket(
         const double upper_time = fviz_temporal_data_set_time(data_set, upper);
         *out_alpha = (time - lower_time) / (upper_time - lower_time);
         if (*out_alpha < 0.0) *out_alpha = 0.0;
-        else if (*out_alpha > 1.0) *out_alpha = 1.0;
+        else if (*out_alpha > 1.0)
+            *out_alpha = 1.0;
     }
     return FVIZ_OK;
 }
@@ -412,8 +381,7 @@ FVizResult fviz_temporal_data_set_remove_step(FVizTemporalDataSet* data_set, FVi
     entries = (FVizTemporalEntry*)fviz_array_data(data_set->steps);
     fviz_temporal_entry_release(&entries[index]);
     if (index + 1u < count)
-        (void)memmove(&entries[index], &entries[index + 1u],
-            (size_t)(count - index - 1u) * sizeof(*entries));
+        (void)memmove(&entries[index], &entries[index + 1u], (size_t)(count - index - 1u) * sizeof(*entries));
     if (fviz_array_resize(data_set->steps, count - 1u) != FVIZ_OK) return fviz_last_error_code();
     fviz_object_modified((FVizObject*)data_set);
     return FVIZ_OK;
@@ -447,13 +415,13 @@ FVizResult fviz_temporal_data_set_validate(const FVizTemporalDataSet* data_set)
     }
     for (i = 0u; i < fviz_temporal_data_set_step_count(data_set); ++i)
     {
-        const FVizTemporalEntry* entry =
-            (const FVizTemporalEntry*)fviz_array_const_at(data_set->steps, i);
+        const FVizTemporalEntry* entry = (const FVizTemporalEntry*)fviz_array_const_at(data_set->steps, i);
         if (entry == NULL || !isfinite(entry->time) || entry->data == NULL ||
             fviz_data_object_is_data_object(entry->data) == FVIZ_FALSE ||
             (i > 0u && entry->time <= fviz_temporal_data_set_time(data_set, i - 1u)))
         {
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "temporal dataset is not strictly ordered or contains invalid data");
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+                                    "temporal dataset is not strictly ordered or contains invalid data");
             return FVIZ_ERROR_INVALID_STATE;
         }
     }

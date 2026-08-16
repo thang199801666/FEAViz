@@ -31,25 +31,21 @@ FVIZ_API FVizSize fviz_structured_grid_point_count(const FVizStructuredGrid* gri
 FVIZ_API FVizSize fviz_structured_grid_cell_count(const FVizStructuredGrid* grid);
 FVIZ_API FVizCellType fviz_structured_grid_cell_type(const FVizStructuredGrid* grid);
 
-FVIZ_API FVizResult fviz_structured_grid_set_points(
-    FVizStructuredGrid* grid, const FVizVec3* points, FVizSize point_count);
-FVIZ_API FVizResult fviz_structured_grid_set_point(
-    FVizStructuredGrid* grid, FVizSize point_id, FVizVec3 point);
+FVIZ_API FVizResult fviz_structured_grid_set_points(FVizStructuredGrid* grid, const FVizVec3* points,
+                                                    FVizSize point_count);
+FVIZ_API FVizResult fviz_structured_grid_set_point(FVizStructuredGrid* grid, FVizSize point_id, FVizVec3 point);
 FVIZ_API const FVizVec3* fviz_structured_grid_points(const FVizStructuredGrid* grid);
-FVIZ_API FVizResult fviz_structured_grid_point(
-    const FVizStructuredGrid* grid, FVizId point_id, FVizVec3* out_point);
+FVIZ_API FVizResult fviz_structured_grid_point(const FVizStructuredGrid* grid, FVizId point_id, FVizVec3* out_point);
 FVIZ_API FVizBounds fviz_structured_grid_bounds(const FVizStructuredGrid* grid);
 
-FVIZ_API FVizResult fviz_structured_grid_point_id(
-    const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k, FVizId* out_point_id);
-FVIZ_API FVizResult fviz_structured_grid_point_ijk(
-    const FVizStructuredGrid* grid, FVizId point_id, int64_t out_ijk[3]);
-FVIZ_API FVizResult fviz_structured_grid_cell_id(
-    const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k, FVizId* out_cell_id);
-FVIZ_API FVizResult fviz_structured_grid_cell_ijk(
-    const FVizStructuredGrid* grid, FVizId cell_id, int64_t out_ijk[3]);
-FVIZ_API FVizResult fviz_structured_grid_cell_point_ids(
-    const FVizStructuredGrid* grid, FVizId cell_id, FVizId out_point_ids[8], uint32_t* out_point_count);
+FVIZ_API FVizResult fviz_structured_grid_point_id(const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k,
+                                                  FVizId* out_point_id);
+FVIZ_API FVizResult fviz_structured_grid_point_ijk(const FVizStructuredGrid* grid, FVizId point_id, int64_t out_ijk[3]);
+FVIZ_API FVizResult fviz_structured_grid_cell_id(const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k,
+                                                 FVizId* out_cell_id);
+FVIZ_API FVizResult fviz_structured_grid_cell_ijk(const FVizStructuredGrid* grid, FVizId cell_id, int64_t out_ijk[3]);
+FVIZ_API FVizResult fviz_structured_grid_cell_point_ids(const FVizStructuredGrid* grid, FVizId cell_id,
+                                                        FVizId out_point_ids[8], uint32_t* out_point_count);
 
 FVIZ_API FVizAttributeSet* fviz_structured_grid_point_data(FVizStructuredGrid* grid);
 FVIZ_API FVizAttributeSet* fviz_structured_grid_cell_data(FVizStructuredGrid* grid);

@@ -23,8 +23,7 @@ static void fviz_render_graph_release_passes(FVizRenderGraph* graph)
     if (graph == NULL || graph->passes == NULL) return;
     for (i = 0u; i < fviz_array_count(graph->passes); ++i)
     {
-        FVizRenderGraphPassRecord* record =
-            (FVizRenderGraphPassRecord*)fviz_array_at(graph->passes, i);
+        FVizRenderGraphPassRecord* record = (FVizRenderGraphPassRecord*)fviz_array_at(graph->passes, i);
         fviz_release(record->name);
         fviz_release(record->pass);
         fviz_release(record->dependencies);
@@ -39,8 +38,7 @@ static void fviz_render_graph_release_resources(FVizRenderGraph* graph)
     if (graph == NULL || graph->resources == NULL) return;
     for (i = 0u; i < fviz_array_count(graph->resources); ++i)
     {
-        FVizRenderGraphResourceRecord* record =
-            (FVizRenderGraphResourceRecord*)fviz_array_at(graph->resources, i);
+        FVizRenderGraphResourceRecord* record = (FVizRenderGraphResourceRecord*)fviz_array_at(graph->resources, i);
         fviz_release(record->name);
     }
     fviz_array_clear(graph->resources);
@@ -67,13 +65,8 @@ static void fviz_render_graph_destroy(FVizObject* object)
     fviz_release(graph->physical_targets);
 }
 
-static const FVizObjectClass g_fviz_render_graph_class = {
-    FVIZ_TYPE_RENDER_GRAPH,
-    "FVizRenderGraph",
-    &g_fviz_object_class,
-    fviz_render_graph_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_render_graph_class = {FVIZ_TYPE_RENDER_GRAPH, "FVizRenderGraph",
+                                                          &g_fviz_object_class, fviz_render_graph_destroy, NULL};
 
 void fviz_render_graph_resource_desc_initialize(FVizRenderGraphResourceDesc* desc)
 {
@@ -97,8 +90,7 @@ FVizResult fviz_render_graph_create(FVizRenderGraph** out_graph)
     FVizRenderGraph* graph;
     if (out_graph == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_graph = NULL;
-    graph = (FVizRenderGraph*)fviz_internal_object_allocate(
-        sizeof(*graph), &g_fviz_render_graph_class, NULL);
+    graph = (FVizRenderGraph*)fviz_internal_object_allocate(sizeof(*graph), &g_fviz_render_graph_class, NULL);
     if (graph == NULL) return fviz_last_error_code();
     if (fviz_array_create(sizeof(FVizRenderGraphPassRecord), &graph->passes) != FVIZ_OK ||
         fviz_array_create(sizeof(FVizRenderGraphResourceRecord), &graph->resources) != FVIZ_OK ||
@@ -136,31 +128,29 @@ void fviz_render_graph_clear(FVizRenderGraph* graph)
     graph->statistics.resource_count = 0u;
 }
 
-static FVizBool fviz_render_graph_valid_pass_id(
-    const FVizRenderGraph* graph, FVizRenderGraphPassId id)
+static FVizBool fviz_render_graph_valid_pass_id(const FVizRenderGraph* graph, FVizRenderGraphPassId id)
 {
     return graph != NULL && id != FVIZ_RENDER_GRAPH_PASS_ID_INVALID &&
-        id <= (FVizRenderGraphPassId)fviz_array_count(graph->passes)
-        ? FVIZ_TRUE : FVIZ_FALSE;
+                   id <= (FVizRenderGraphPassId)fviz_array_count(graph->passes)
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
-static FVizBool fviz_render_graph_valid_resource_id(
-    const FVizRenderGraph* graph, FVizRenderGraphResourceId id)
+static FVizBool fviz_render_graph_valid_resource_id(const FVizRenderGraph* graph, FVizRenderGraphResourceId id)
 {
     return graph != NULL && id != FVIZ_RENDER_GRAPH_RESOURCE_ID_INVALID &&
-        id <= (FVizRenderGraphResourceId)fviz_array_count(graph->resources)
-        ? FVIZ_TRUE : FVIZ_FALSE;
+                   id <= (FVizRenderGraphResourceId)fviz_array_count(graph->resources)
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
-FVizResult fviz_render_graph_add_resource(
-    FVizRenderGraph* graph,
-    const FVizRenderGraphResourceDesc* desc,
-    FVizRenderGraphResourceId* out_resource_id)
+FVizResult fviz_render_graph_add_resource(FVizRenderGraph* graph, const FVizRenderGraphResourceDesc* desc,
+                                          FVizRenderGraphResourceId* out_resource_id)
 {
     FVizRenderGraphResourceRecord record;
     FVizResult result;
-    if (graph == NULL || desc == NULL || out_resource_id == NULL ||
-        desc->struct_size < sizeof(*desc) || desc->name == NULL || desc->name[0] == '\0')
+    if (graph == NULL || desc == NULL || out_resource_id == NULL || desc->struct_size < sizeof(*desc) ||
+        desc->name == NULL || desc->name[0] == '\0')
         return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_resource_id = FVIZ_RENDER_GRAPH_RESOURCE_ID_INVALID;
     result = fviz_render_target_desc_validate(&desc->target);
@@ -187,11 +177,8 @@ FVizResult fviz_render_graph_add_resource(
     return FVIZ_OK;
 }
 
-FVizResult fviz_render_graph_add_pass(
-    FVizRenderGraph* graph,
-    const char* name,
-    FVizRenderPass* pass,
-    FVizRenderGraphPassId* out_pass_id)
+FVizResult fviz_render_graph_add_pass(FVizRenderGraph* graph, const char* name, FVizRenderPass* pass,
+                                      FVizRenderGraphPassId* out_pass_id)
 {
     FVizRenderGraphPassRecord record;
     FVizResult result;
@@ -201,8 +188,7 @@ FVizResult fviz_render_graph_add_pass(
     (void)memset(&record, 0, sizeof(record));
     if (fviz_string_create_from(name, &record.name) != FVIZ_OK ||
         fviz_array_create(sizeof(FVizRenderGraphPassId), &record.dependencies) != FVIZ_OK ||
-        fviz_array_create(sizeof(FVizRenderGraphUseRecord), &record.uses) != FVIZ_OK ||
-        fviz_retain(pass) == NULL)
+        fviz_array_create(sizeof(FVizRenderGraphUseRecord), &record.uses) != FVIZ_OK || fviz_retain(pass) == NULL)
     {
         fviz_release(record.name);
         fviz_release(record.dependencies);
@@ -225,10 +211,8 @@ FVizResult fviz_render_graph_add_pass(
     return FVIZ_OK;
 }
 
-FVizResult fviz_render_graph_add_dependency(
-    FVizRenderGraph* graph,
-    FVizRenderGraphPassId before,
-    FVizRenderGraphPassId after)
+FVizResult fviz_render_graph_add_dependency(FVizRenderGraph* graph, FVizRenderGraphPassId before,
+                                            FVizRenderGraphPassId after)
 {
     FVizRenderGraphPassRecord* record;
     FVizSize i;
@@ -237,19 +221,14 @@ FVizResult fviz_render_graph_add_dependency(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     record = (FVizRenderGraphPassRecord*)fviz_array_at(graph->passes, (FVizSize)(after - 1u));
     for (i = 0u; i < fviz_array_count(record->dependencies); ++i)
-        if (*(const FVizRenderGraphPassId*)fviz_array_const_at(record->dependencies, i) == before)
-            return FVIZ_OK;
-    if (fviz_array_push(record->dependencies, &before) != FVIZ_OK)
-        return fviz_last_error_code();
+        if (*(const FVizRenderGraphPassId*)fviz_array_const_at(record->dependencies, i) == before) return FVIZ_OK;
+    if (fviz_array_push(record->dependencies, &before) != FVIZ_OK) return fviz_last_error_code();
     fviz_render_graph_invalidate(graph);
     return FVIZ_OK;
 }
 
-FVizResult fviz_render_graph_use_resource(
-    FVizRenderGraph* graph,
-    FVizRenderGraphPassId pass_id,
-    FVizRenderGraphResourceId resource_id,
-    FVizRenderGraphAccess access)
+FVizResult fviz_render_graph_use_resource(FVizRenderGraph* graph, FVizRenderGraphPassId pass_id,
+                                          FVizRenderGraphResourceId resource_id, FVizRenderGraphAccess access)
 {
     FVizRenderGraphPassRecord* record;
     FVizSize i;
@@ -262,8 +241,7 @@ FVizResult fviz_render_graph_use_resource(
     record = (FVizRenderGraphPassRecord*)fviz_array_at(graph->passes, (FVizSize)(pass_id - 1u));
     for (i = 0u; i < fviz_array_count(record->uses); ++i)
     {
-        FVizRenderGraphUseRecord* existing =
-            (FVizRenderGraphUseRecord*)fviz_array_at(record->uses, i);
+        FVizRenderGraphUseRecord* existing = (FVizRenderGraphUseRecord*)fviz_array_at(record->uses, i);
         if (existing->resource_id == resource_id)
         {
             existing->access = (FVizRenderGraphAccess)(existing->access | access);
@@ -278,47 +256,44 @@ FVizResult fviz_render_graph_use_resource(
     return FVIZ_OK;
 }
 
-static FVizBool fviz_render_target_desc_equal(
-    const FVizRenderTargetDesc* a, const FVizRenderTargetDesc* b)
+static FVizBool fviz_render_target_desc_equal(const FVizRenderTargetDesc* a, const FVizRenderTargetDesc* b)
 {
     uint32_t i;
     if (a->width != b->width || a->height != b->height || a->samples != b->samples ||
-        a->attachment_count != b->attachment_count) return FVIZ_FALSE;
+        a->attachment_count != b->attachment_count)
+        return FVIZ_FALSE;
     for (i = 0u; i < a->attachment_count; ++i)
     {
         if (a->attachments[i].point != b->attachments[i].point ||
             a->attachments[i].format != b->attachments[i].format ||
-            a->attachments[i].sampled != b->attachments[i].sampled) return FVIZ_FALSE;
+            a->attachments[i].sampled != b->attachments[i].sampled)
+            return FVIZ_FALSE;
     }
     return FVIZ_TRUE;
 }
 
-static FVizResult fviz_render_graph_add_edge(
-    uint8_t* edges, uint32_t* indegrees, FVizSize count,
-    FVizSize before, FVizSize after, uint32_t* edge_count)
+static FVizResult fviz_render_graph_add_edge(uint8_t* edges, uint32_t* indegrees, FVizSize count, FVizSize before,
+                                             FVizSize after, uint32_t* edge_count)
 {
     if (before >= count || after >= count || before == after) return FVIZ_ERROR_INVALID_STATE;
     if (edges[before * count + after] == 0u)
     {
         edges[before * count + after] = 1u;
-        if (indegrees[after] == UINT32_MAX || *edge_count == UINT32_MAX)
-            return FVIZ_ERROR_OVERFLOW;
+        if (indegrees[after] == UINT32_MAX || *edge_count == UINT32_MAX) return FVIZ_ERROR_OVERFLOW;
         ++indegrees[after];
         ++(*edge_count);
     }
     return FVIZ_OK;
 }
 
-static FVizBool fviz_render_graph_pass_uses_resource(
-    const FVizRenderGraphPassRecord* pass,
-    FVizRenderGraphResourceId resource_id,
-    FVizRenderGraphAccess* out_access)
+static FVizBool fviz_render_graph_pass_uses_resource(const FVizRenderGraphPassRecord* pass,
+                                                     FVizRenderGraphResourceId resource_id,
+                                                     FVizRenderGraphAccess* out_access)
 {
     FVizSize i;
     for (i = 0u; i < fviz_array_count(pass->uses); ++i)
     {
-        const FVizRenderGraphUseRecord* use =
-            (const FVizRenderGraphUseRecord*)fviz_array_const_at(pass->uses, i);
+        const FVizRenderGraphUseRecord* use = (const FVizRenderGraphUseRecord*)fviz_array_const_at(pass->uses, i);
         if (use->resource_id == resource_id)
         {
             if (out_access != NULL) *out_access = use->access;
@@ -328,8 +303,8 @@ static FVizBool fviz_render_graph_pass_uses_resource(
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_render_graph_compile_edges(
-    FVizRenderGraph* graph, uint8_t* edges, uint32_t* indegrees, uint32_t* edge_count)
+static FVizResult fviz_render_graph_compile_edges(FVizRenderGraph* graph, uint8_t* edges, uint32_t* indegrees,
+                                                  uint32_t* edge_count)
 {
     const FVizSize pass_count = fviz_array_count(graph->passes);
     const FVizSize resource_count = fviz_array_count(graph->resources);
@@ -337,17 +312,15 @@ static FVizResult fviz_render_graph_compile_edges(
     FVizSize j;
     for (i = 0u; i < pass_count; ++i)
     {
-        const FVizRenderGraphPassRecord* pass =
-            (const FVizRenderGraphPassRecord*)fviz_array_const_at(graph->passes, i);
+        const FVizRenderGraphPassRecord* pass = (const FVizRenderGraphPassRecord*)fviz_array_const_at(graph->passes, i);
         for (j = 0u; j < fviz_array_count(pass->dependencies); ++j)
         {
             const FVizRenderGraphPassId dependency =
                 *(const FVizRenderGraphPassId*)fviz_array_const_at(pass->dependencies, j);
             FVizResult result;
-            if (fviz_render_graph_valid_pass_id(graph, dependency) == FVIZ_FALSE)
-                return FVIZ_ERROR_INVALID_STATE;
-            result = fviz_render_graph_add_edge(
-                edges, indegrees, pass_count, (FVizSize)(dependency - 1u), i, edge_count);
+            if (fviz_render_graph_valid_pass_id(graph, dependency) == FVIZ_FALSE) return FVIZ_ERROR_INVALID_STATE;
+            result =
+                fviz_render_graph_add_edge(edges, indegrees, pass_count, (FVizSize)(dependency - 1u), i, edge_count);
             if (result != FVIZ_OK) return result;
         }
     }
@@ -363,12 +336,11 @@ static FVizResult fviz_render_graph_compile_edges(
                 (const FVizRenderGraphPassRecord*)fviz_array_const_at(graph->passes, j);
             FVizRenderGraphAccess current_access;
             FVizSize previous;
-            if (fviz_render_graph_pass_uses_resource(current, resource_id, &current_access) == FVIZ_FALSE)
-                continue;
+            if (fviz_render_graph_pass_uses_resource(current, resource_id, &current_access) == FVIZ_FALSE) continue;
             if ((current_access & FVIZ_RENDER_GRAPH_READ) != 0 && initialized == FVIZ_FALSE)
             {
                 fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
-                    "render graph reads an internal resource before its first write");
+                                        "render graph reads an internal resource before its first write");
                 return FVIZ_ERROR_INVALID_STATE;
             }
             for (previous = 0u; previous < j; ++previous)
@@ -380,8 +352,8 @@ static FVizResult fviz_render_graph_compile_edges(
                     (((prior_access & FVIZ_RENDER_GRAPH_WRITE) != 0) ||
                      ((current_access & FVIZ_RENDER_GRAPH_WRITE) != 0)))
                 {
-                    FVizResult result = fviz_render_graph_add_edge(
-                        edges, indegrees, pass_count, previous, j, edge_count);
+                    FVizResult result =
+                        fviz_render_graph_add_edge(edges, indegrees, pass_count, previous, j, edge_count);
                     if (result != FVIZ_OK) return result;
                 }
             }
@@ -391,8 +363,7 @@ static FVizResult fviz_render_graph_compile_edges(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_render_graph_sort(
-    FVizRenderGraph* graph, const uint8_t* edges, uint32_t* indegrees)
+static FVizResult fviz_render_graph_sort(FVizRenderGraph* graph, const uint8_t* edges, uint32_t* indegrees)
 {
     const FVizSize count = fviz_array_count(graph->passes);
     uint8_t* emitted;
@@ -461,8 +432,7 @@ static FVizResult fviz_render_graph_compute_lifetimes(FVizRenderGraph* graph)
             const FVizRenderGraphUseRecord* use =
                 (const FVizRenderGraphUseRecord*)fviz_array_const_at(pass->uses, use_index);
             FVizRenderGraphResourceRecord* resource =
-                (FVizRenderGraphResourceRecord*)fviz_array_at(
-                    graph->resources, (FVizSize)(use->resource_id - 1u));
+                (FVizRenderGraphResourceRecord*)fviz_array_at(graph->resources, (FVizSize)(use->resource_id - 1u));
             if (resource->first_execution == SIZE_MAX) resource->first_execution = execution;
             resource->last_execution = execution;
         }
@@ -492,14 +462,13 @@ static FVizResult fviz_render_graph_allocate_targets(FVizRenderGraph* graph)
         {
             if (UINT64_MAX - graph->statistics.logical_transient_bytes < bytes)
                 graph->statistics.logical_transient_bytes = UINT64_MAX;
-            else graph->statistics.logical_transient_bytes += bytes;
+            else
+                graph->statistics.logical_transient_bytes += bytes;
         }
         for (slot_index = 0u; slot_index < fviz_array_count(slots); ++slot_index)
         {
-            FVizRenderGraphPhysicalSlot* slot =
-                (FVizRenderGraphPhysicalSlot*)fviz_array_at(slots, slot_index);
-            if (resource->transient_resource != FVIZ_FALSE &&
-                slot->last_execution < resource->first_execution &&
+            FVizRenderGraphPhysicalSlot* slot = (FVizRenderGraphPhysicalSlot*)fviz_array_at(slots, slot_index);
+            if (resource->transient_resource != FVIZ_FALSE && slot->last_execution < resource->first_execution &&
                 fviz_render_target_desc_equal(&slot->desc, &resource->target) != FVIZ_FALSE)
             {
                 resource->physical_slot = slot->slot;
@@ -527,7 +496,8 @@ static FVizResult fviz_render_graph_allocate_targets(FVizRenderGraph* graph)
             if (result != FVIZ_OK) break;
             if (UINT64_MAX - graph->statistics.peak_physical_target_bytes < bytes)
                 graph->statistics.peak_physical_target_bytes = UINT64_MAX;
-            else graph->statistics.peak_physical_target_bytes += bytes;
+            else
+                graph->statistics.peak_physical_target_bytes += bytes;
         }
     }
     fviz_release(slots);
@@ -574,8 +544,7 @@ FVizResult fviz_render_graph_compile(FVizRenderGraph* graph)
     graph->statistics.resource_count = (uint32_t)fviz_array_count(graph->resources);
     graph->statistics.dependency_edge_count = edge_count;
     graph->statistics.physical_target_count = (uint32_t)fviz_array_count(graph->physical_targets);
-    if (graph->statistics.compile_generation != UINT64_MAX)
-        ++graph->statistics.compile_generation;
+    if (graph->statistics.compile_generation != UINT64_MAX) ++graph->statistics.compile_generation;
     graph->statistics.compiled = FVIZ_TRUE;
     return FVIZ_OK;
 }
@@ -587,89 +556,81 @@ FVizBool fviz_render_graph_is_compiled(const FVizRenderGraph* graph)
 
 FVizSize fviz_render_graph_execution_count(const FVizRenderGraph* graph)
 {
-    return graph != NULL && graph->statistics.compiled != FVIZ_FALSE
-        ? fviz_array_count(graph->execution_order) : 0u;
+    return graph != NULL && graph->statistics.compiled != FVIZ_FALSE ? fviz_array_count(graph->execution_order) : 0u;
 }
 
-FVizRenderGraphPassId fviz_render_graph_execution_pass_id(
-    const FVizRenderGraph* graph, FVizSize execution_index)
+FVizRenderGraphPassId fviz_render_graph_execution_pass_id(const FVizRenderGraph* graph, FVizSize execution_index)
 {
-    const FVizRenderGraphPassId* id = graph != NULL && graph->statistics.compiled != FVIZ_FALSE
-        ? (const FVizRenderGraphPassId*)fviz_array_const_at(graph->execution_order, execution_index)
-        : NULL;
+    const FVizRenderGraphPassId* id =
+        graph != NULL && graph->statistics.compiled != FVIZ_FALSE
+            ? (const FVizRenderGraphPassId*)fviz_array_const_at(graph->execution_order, execution_index)
+            : NULL;
     return id != NULL ? *id : FVIZ_RENDER_GRAPH_PASS_ID_INVALID;
 }
 
-FVizRenderPass* fviz_render_graph_execution_pass(
-    const FVizRenderGraph* graph, FVizSize execution_index)
+FVizRenderPass* fviz_render_graph_execution_pass(const FVizRenderGraph* graph, FVizSize execution_index)
 {
-    const FVizRenderGraphPassId id =
-        fviz_render_graph_execution_pass_id(graph, execution_index);
-    const FVizRenderGraphPassRecord* record = id != FVIZ_RENDER_GRAPH_PASS_ID_INVALID
-        ? (const FVizRenderGraphPassRecord*)fviz_array_const_at(
-            graph->passes, (FVizSize)(id - 1u)) : NULL;
+    const FVizRenderGraphPassId id = fviz_render_graph_execution_pass_id(graph, execution_index);
+    const FVizRenderGraphPassRecord* record =
+        id != FVIZ_RENDER_GRAPH_PASS_ID_INVALID
+            ? (const FVizRenderGraphPassRecord*)fviz_array_const_at(graph->passes, (FVizSize)(id - 1u))
+            : NULL;
     return record != NULL ? record->pass : NULL;
 }
 
-const char* fviz_render_graph_pass_name(
-    const FVizRenderGraph* graph, FVizRenderGraphPassId pass_id)
+const char* fviz_render_graph_pass_name(const FVizRenderGraph* graph, FVizRenderGraphPassId pass_id)
 {
     const FVizRenderGraphPassRecord* record =
         fviz_render_graph_valid_pass_id(graph, pass_id) != FVIZ_FALSE
-        ? (const FVizRenderGraphPassRecord*)fviz_array_const_at(
-            graph->passes, (FVizSize)(pass_id - 1u)) : NULL;
+            ? (const FVizRenderGraphPassRecord*)fviz_array_const_at(graph->passes, (FVizSize)(pass_id - 1u))
+            : NULL;
     return record != NULL ? fviz_string_c_str(record->name) : NULL;
 }
 
-const char* fviz_render_graph_resource_name(
-    const FVizRenderGraph* graph, FVizRenderGraphResourceId resource_id)
+const char* fviz_render_graph_resource_name(const FVizRenderGraph* graph, FVizRenderGraphResourceId resource_id)
 {
     const FVizRenderGraphResourceRecord* record =
         fviz_render_graph_valid_resource_id(graph, resource_id) != FVIZ_FALSE
-        ? (const FVizRenderGraphResourceRecord*)fviz_array_const_at(
-            graph->resources, (FVizSize)(resource_id - 1u)) : NULL;
+            ? (const FVizRenderGraphResourceRecord*)fviz_array_const_at(graph->resources, (FVizSize)(resource_id - 1u))
+            : NULL;
     return record != NULL ? fviz_string_c_str(record->name) : NULL;
 }
 
-FVizResult fviz_render_graph_resource_lifetime(
-    const FVizRenderGraph* graph,
-    FVizRenderGraphResourceId resource_id,
-    FVizSize* out_first_execution,
-    FVizSize* out_last_execution)
+FVizResult fviz_render_graph_resource_lifetime(const FVizRenderGraph* graph, FVizRenderGraphResourceId resource_id,
+                                               FVizSize* out_first_execution, FVizSize* out_last_execution)
 {
     const FVizRenderGraphResourceRecord* resource;
-    if (fviz_render_graph_valid_resource_id(graph, resource_id) == FVIZ_FALSE ||
-        out_first_execution == NULL || out_last_execution == NULL ||
-        graph->statistics.compiled == FVIZ_FALSE) return FVIZ_ERROR_INVALID_ARGUMENT;
-    resource = (const FVizRenderGraphResourceRecord*)fviz_array_const_at(
-        graph->resources, (FVizSize)(resource_id - 1u));
+    if (fviz_render_graph_valid_resource_id(graph, resource_id) == FVIZ_FALSE || out_first_execution == NULL ||
+        out_last_execution == NULL || graph->statistics.compiled == FVIZ_FALSE)
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    resource =
+        (const FVizRenderGraphResourceRecord*)fviz_array_const_at(graph->resources, (FVizSize)(resource_id - 1u));
     if (resource->first_execution == SIZE_MAX) return FVIZ_ERROR_NOT_FOUND;
     *out_first_execution = resource->first_execution;
     *out_last_execution = resource->last_execution;
     return FVIZ_OK;
 }
 
-uint32_t fviz_render_graph_resource_physical_slot(
-    const FVizRenderGraph* graph, FVizRenderGraphResourceId resource_id)
+uint32_t fviz_render_graph_resource_physical_slot(const FVizRenderGraph* graph, FVizRenderGraphResourceId resource_id)
 {
     const FVizRenderGraphResourceRecord* resource =
         fviz_render_graph_valid_resource_id(graph, resource_id) != FVIZ_FALSE &&
-        graph->statistics.compiled != FVIZ_FALSE
-        ? (const FVizRenderGraphResourceRecord*)fviz_array_const_at(
-            graph->resources, (FVizSize)(resource_id - 1u)) : NULL;
+                graph->statistics.compiled != FVIZ_FALSE
+            ? (const FVizRenderGraphResourceRecord*)fviz_array_const_at(graph->resources, (FVizSize)(resource_id - 1u))
+            : NULL;
     return resource != NULL ? resource->physical_slot : FVIZ_RENDER_GRAPH_PHYSICAL_SLOT_INVALID;
 }
 
-FVizRenderTarget* fviz_render_graph_physical_target(
-    FVizRenderGraph* graph, uint32_t physical_slot)
+FVizRenderTarget* fviz_render_graph_physical_target(FVizRenderGraph* graph, uint32_t physical_slot)
 {
-    FVizRenderTarget** target = graph != NULL && graph->statistics.compiled != FVIZ_FALSE
-        ? (FVizRenderTarget**)fviz_array_at(graph->physical_targets, (FVizSize)physical_slot) : NULL;
+    FVizRenderTarget** target =
+        graph != NULL && graph->statistics.compiled != FVIZ_FALSE
+            ? (FVizRenderTarget**)fviz_array_at(graph->physical_targets, (FVizSize)physical_slot)
+            : NULL;
     return target != NULL ? *target : NULL;
 }
 
-void fviz_render_graph_get_statistics(
-    const FVizRenderGraph* graph, FVizRenderGraphStatistics* out_statistics)
+void fviz_render_graph_get_statistics(const FVizRenderGraph* graph, FVizRenderGraphStatistics* out_statistics)
 {
     if (out_statistics == NULL) return;
     fviz_render_graph_statistics_initialize(out_statistics);

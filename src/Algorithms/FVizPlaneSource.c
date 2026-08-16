@@ -25,20 +25,16 @@ static void fviz_plane_source_destroy(FVizObject* object)
     source->algorithm = NULL;
 }
 
-static const FVizObjectClass g_fviz_plane_source_class = {
-    FVIZ_TYPE_PLANE_SOURCE, "FVizPlaneSource", &g_fviz_object_class,
-    fviz_plane_source_destroy, NULL
-};
+static const FVizObjectClass g_fviz_plane_source_class = {FVIZ_TYPE_PLANE_SOURCE, "FVizPlaneSource",
+                                                          &g_fviz_object_class, fviz_plane_source_destroy, NULL};
 
 static FVizMTime fviz_plane_source_state_mtime(const void* state)
 {
     return fviz_object_mtime((const FVizObject*)state);
 }
 
-static FVizResult fviz_plane_source_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_plane_source_process_request(FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request,
+                                                    void* state)
 {
     FVizPlaneSource* source = (FVizPlaneSource*)state;
     FVizPolyData* output = NULL;
@@ -80,9 +76,8 @@ static FVizResult fviz_plane_source_process_request(
         for (x = 0u; x <= source->x_resolution; ++x)
         {
             const float u = (float)x / (float)source->x_resolution;
-            points[(FVizSize)y * x_points + x] = fviz_vec3_add(
-                source->origin,
-                fviz_vec3_add(fviz_vec3_scale(axis1, u), fviz_vec3_scale(axis2, v)));
+            points[(FVizSize)y * x_points + x] =
+                fviz_vec3_add(source->origin, fviz_vec3_add(fviz_vec3_scale(axis1, u), fviz_vec3_scale(axis2, v)));
         }
     }
     for (y = 0u; y < source->y_resolution; ++y)
@@ -131,8 +126,7 @@ FVizResult fviz_plane_source_create(FVizPlaneSource** out_source)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_source = NULL;
-    source = (FVizPlaneSource*)fviz_internal_object_allocate(
-        sizeof(*source), &g_fviz_plane_source_class, NULL);
+    source = (FVizPlaneSource*)fviz_internal_object_allocate(sizeof(*source), &g_fviz_plane_source_class, NULL);
     if (source == NULL) return fviz_last_error_code();
     source->origin = fviz_vec3(-0.5f, -0.5f, 0.0f);
     source->point1 = fviz_vec3(0.5f, -0.5f, 0.0f);
@@ -159,26 +153,29 @@ void fviz_plane_source_set_origin(FVizPlaneSource* source, FVizVec3 origin)
     source->origin = origin;
     fviz_object_modified((FVizObject*)source);
 }
+
 void fviz_plane_source_set_point1(FVizPlaneSource* source, FVizVec3 point1)
 {
     if (source == NULL) return;
     source->point1 = point1;
     fviz_object_modified((FVizObject*)source);
 }
+
 void fviz_plane_source_set_point2(FVizPlaneSource* source, FVizVec3 point2)
 {
     if (source == NULL) return;
     source->point2 = point2;
     fviz_object_modified((FVizObject*)source);
 }
+
 FVizResult fviz_plane_source_set_resolution(FVizPlaneSource* source, uint32_t x_resolution, uint32_t y_resolution)
 {
     const uint64_t x_points = (uint64_t)x_resolution + 1u;
     const uint64_t y_points = (uint64_t)y_resolution + 1u;
-    if (source == NULL || x_resolution == 0u || y_resolution == 0u ||
-        x_points > (uint64_t)UINT32_MAX / y_points)
+    if (source == NULL || x_resolution == 0u || y_resolution == 0u || x_points > (uint64_t)UINT32_MAX / y_points)
     {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "plane resolution is invalid or exceeds 32-bit topology capacity");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                "plane resolution is invalid or exceeds 32-bit topology capacity");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     source->x_resolution = x_resolution;
@@ -186,12 +183,48 @@ FVizResult fviz_plane_source_set_resolution(FVizPlaneSource* source, uint32_t x_
     fviz_object_modified((FVizObject*)source);
     return FVIZ_OK;
 }
-FVizVec3 fviz_plane_source_origin(const FVizPlaneSource* source) { return source != NULL ? source->origin : fviz_vec3(0,0,0); }
-FVizVec3 fviz_plane_source_point1(const FVizPlaneSource* source) { return source != NULL ? source->point1 : fviz_vec3(0,0,0); }
-FVizVec3 fviz_plane_source_point2(const FVizPlaneSource* source) { return source != NULL ? source->point2 : fviz_vec3(0,0,0); }
-uint32_t fviz_plane_source_x_resolution(const FVizPlaneSource* source) { return source != NULL ? source->x_resolution : 0u; }
-uint32_t fviz_plane_source_y_resolution(const FVizPlaneSource* source) { return source != NULL ? source->y_resolution : 0u; }
-FVizAlgorithm* fviz_plane_source_algorithm(FVizPlaneSource* source) { return source != NULL ? source->algorithm : NULL; }
-FVizAlgorithmOutput* fviz_plane_source_output_port(FVizPlaneSource* source) { return source != NULL ? fviz_algorithm_output_port(source->algorithm, 0u) : NULL; }
-FVizPolyData* fviz_plane_source_output(FVizPlaneSource* source) { return source != NULL ? (FVizPolyData*)fviz_algorithm_output_data(source->algorithm, 0u) : NULL; }
-FVizResult fviz_plane_source_update(FVizPlaneSource* source) { return source != NULL ? fviz_algorithm_update(source->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT; }
+
+FVizVec3 fviz_plane_source_origin(const FVizPlaneSource* source)
+{
+    return source != NULL ? source->origin : fviz_vec3(0, 0, 0);
+}
+
+FVizVec3 fviz_plane_source_point1(const FVizPlaneSource* source)
+{
+    return source != NULL ? source->point1 : fviz_vec3(0, 0, 0);
+}
+
+FVizVec3 fviz_plane_source_point2(const FVizPlaneSource* source)
+{
+    return source != NULL ? source->point2 : fviz_vec3(0, 0, 0);
+}
+
+uint32_t fviz_plane_source_x_resolution(const FVizPlaneSource* source)
+{
+    return source != NULL ? source->x_resolution : 0u;
+}
+
+uint32_t fviz_plane_source_y_resolution(const FVizPlaneSource* source)
+{
+    return source != NULL ? source->y_resolution : 0u;
+}
+
+FVizAlgorithm* fviz_plane_source_algorithm(FVizPlaneSource* source)
+{
+    return source != NULL ? source->algorithm : NULL;
+}
+
+FVizAlgorithmOutput* fviz_plane_source_output_port(FVizPlaneSource* source)
+{
+    return source != NULL ? fviz_algorithm_output_port(source->algorithm, 0u) : NULL;
+}
+
+FVizPolyData* fviz_plane_source_output(FVizPlaneSource* source)
+{
+    return source != NULL ? (FVizPolyData*)fviz_algorithm_output_data(source->algorithm, 0u) : NULL;
+}
+
+FVizResult fviz_plane_source_update(FVizPlaneSource* source)
+{
+    return source != NULL ? fviz_algorithm_update(source->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
+}

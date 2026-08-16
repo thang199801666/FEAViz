@@ -10,12 +10,28 @@
 #include <FViz/Rendering/FVizFontPrivate.h>
 
 #define FVIZ_FONT_CACHE_CAPACITY 8u
-typedef struct FVizFontCacheEntry { FVizFont* font; char family[64]; float pixel_size; } FVizFontCacheEntry;
+
+typedef struct FVizFontCacheEntry
+{
+    FVizFont* font;
+    char family[64];
+    float pixel_size;
+} FVizFontCacheEntry;
+
 static FVizFontCacheEntry g_fviz_font_cache[FVIZ_FONT_CACHE_CAPACITY];
 static FVizSpinLock g_fviz_font_cache_lock = {0};
 static uint32_t g_fviz_font_cache_next = 0u;
 #define FVIZ_FILE_FONT_CACHE_CAPACITY 4u
-typedef struct FVizFileFontCacheEntry { FVizFont* font; char path[260]; char family[64]; float pixel_size; uint64_t file_stamp; } FVizFileFontCacheEntry;
+
+typedef struct FVizFileFontCacheEntry
+{
+    FVizFont* font;
+    char path[260];
+    char family[64];
+    float pixel_size;
+    uint64_t file_stamp;
+} FVizFileFontCacheEntry;
+
 static FVizFileFontCacheEntry g_fviz_file_font_cache[FVIZ_FILE_FONT_CACHE_CAPACITY];
 static uint32_t g_fviz_file_font_cache_next = 0u;
 
@@ -35,10 +51,9 @@ static uint64_t fviz_font_file_stamp(const char* path)
 }
 
 static void fviz_font_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_font_class = {
-    FVIZ_TYPE_FONT, "FVizFont", &g_fviz_object_class,
-    fviz_font_destroy, NULL
-};
+static const FVizObjectClass g_fviz_font_class = {FVIZ_TYPE_FONT, "FVizFont", &g_fviz_object_class, fviz_font_destroy,
+                                                  NULL};
+
 static void fviz_font_destroy(FVizObject* object)
 {
     FVizFont* font = (FVizFont*)object;
@@ -47,6 +62,7 @@ static void fviz_font_destroy(FVizObject* object)
     font->family = NULL;
     font->atlas = NULL;
 }
+
 FVizResult fviz_font_create_from_atlas(const char* family, FVizFontAtlas* atlas, FVizFont** out_font)
 {
     FVizFont* font;
@@ -101,8 +117,7 @@ FVizResult fviz_font_create_system(const char* family, float pixel_size, FVizFon
         uint32_t i;
         for (i = 0u; i < FVIZ_FONT_CACHE_CAPACITY; ++i)
         {
-            if (g_fviz_font_cache[i].font != NULL &&
-                g_fviz_font_cache[i].pixel_size == pixel_size &&
+            if (g_fviz_font_cache[i].font != NULL && g_fviz_font_cache[i].pixel_size == pixel_size &&
                 strcmp(g_fviz_font_cache[i].family, family) == 0)
             {
                 cached = (FVizFont*)fviz_retain(g_fviz_font_cache[i].font);
@@ -114,7 +129,11 @@ FVizResult fviz_font_create_system(const char* family, float pixel_size, FVizFon
         }
     }
     result = fviz_font_atlas_create_system(family, pixel_size, &atlas);
-    if (result != FVIZ_OK) { fviz_spin_unlock(&g_fviz_font_cache_lock); return result; }
+    if (result != FVIZ_OK)
+    {
+        fviz_spin_unlock(&g_fviz_font_cache_lock);
+        return result;
+    }
     result = fviz_font_create_from_atlas(family, atlas, out_font);
     fviz_release(atlas);
     if (result == FVIZ_OK)
@@ -122,8 +141,7 @@ FVizResult fviz_font_create_system(const char* family, float pixel_size, FVizFon
         const uint32_t slot = g_fviz_font_cache_next++ % FVIZ_FONT_CACHE_CAPACITY;
         fviz_release(g_fviz_font_cache[slot].font);
         g_fviz_font_cache[slot].font = (FVizFont*)fviz_retain(*out_font);
-        (void)strncpy(g_fviz_font_cache[slot].family, family,
-            sizeof(g_fviz_font_cache[slot].family) - 1u);
+        (void)strncpy(g_fviz_font_cache[slot].family, family, sizeof(g_fviz_font_cache[slot].family) - 1u);
         g_fviz_font_cache[slot].family[sizeof(g_fviz_font_cache[slot].family) - 1u] = '\0';
         g_fviz_font_cache[slot].pixel_size = pixel_size;
     }
@@ -131,15 +149,13 @@ FVizResult fviz_font_create_system(const char* family, float pixel_size, FVizFon
     return result;
 }
 
-FVizResult fviz_font_create_from_file(
-    const char* file_path, const char* family, float pixel_size, FVizFont** out_font)
+FVizResult fviz_font_create_from_file(const char* file_path, const char* family, float pixel_size, FVizFont** out_font)
 {
     FVizFontAtlas* atlas = NULL;
     FVizFont* cached;
     uint64_t file_stamp;
     FVizResult result;
-    if (file_path == NULL || family == NULL || out_font == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (file_path == NULL || family == NULL || out_font == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     file_stamp = fviz_font_file_stamp(file_path);
     *out_font = NULL;
     fviz_spin_lock(&g_fviz_font_cache_lock);
@@ -147,8 +163,7 @@ FVizResult fviz_font_create_from_file(
         uint32_t i;
         for (i = 0u; i < FVIZ_FILE_FONT_CACHE_CAPACITY; ++i)
         {
-            if (g_fviz_file_font_cache[i].font != NULL &&
-                g_fviz_file_font_cache[i].pixel_size == pixel_size &&
+            if (g_fviz_file_font_cache[i].font != NULL && g_fviz_file_font_cache[i].pixel_size == pixel_size &&
                 g_fviz_file_font_cache[i].file_stamp == file_stamp &&
                 strcmp(g_fviz_file_font_cache[i].path, file_path) == 0 &&
                 strcmp(g_fviz_file_font_cache[i].family, family) == 0)
@@ -162,7 +177,11 @@ FVizResult fviz_font_create_from_file(
         }
     }
     result = fviz_font_atlas_create_from_file(file_path, family, pixel_size, &atlas);
-    if (result != FVIZ_OK) { fviz_spin_unlock(&g_fviz_font_cache_lock); return result; }
+    if (result != FVIZ_OK)
+    {
+        fviz_spin_unlock(&g_fviz_font_cache_lock);
+        return result;
+    }
     result = fviz_font_create_from_atlas(family, atlas, out_font);
     fviz_release(atlas);
     if (result == FVIZ_OK)
@@ -170,11 +189,9 @@ FVizResult fviz_font_create_from_file(
         const uint32_t slot = g_fviz_file_font_cache_next++ % FVIZ_FILE_FONT_CACHE_CAPACITY;
         fviz_release(g_fviz_file_font_cache[slot].font);
         g_fviz_file_font_cache[slot].font = (FVizFont*)fviz_retain(*out_font);
-        (void)strncpy(g_fviz_file_font_cache[slot].path, file_path,
-            sizeof(g_fviz_file_font_cache[slot].path) - 1u);
+        (void)strncpy(g_fviz_file_font_cache[slot].path, file_path, sizeof(g_fviz_file_font_cache[slot].path) - 1u);
         g_fviz_file_font_cache[slot].path[sizeof(g_fviz_file_font_cache[slot].path) - 1u] = '\0';
-        (void)strncpy(g_fviz_file_font_cache[slot].family, family,
-            sizeof(g_fviz_file_font_cache[slot].family) - 1u);
+        (void)strncpy(g_fviz_file_font_cache[slot].family, family, sizeof(g_fviz_file_font_cache[slot].family) - 1u);
         g_fviz_file_font_cache[slot].family[sizeof(g_fviz_file_font_cache[slot].family) - 1u] = '\0';
         g_fviz_file_font_cache[slot].pixel_size = pixel_size;
         g_fviz_file_font_cache[slot].file_stamp = file_stamp;
@@ -201,12 +218,22 @@ void fviz_font_cache_clear(void)
     g_fviz_file_font_cache_next = 0u;
     fviz_spin_unlock(&g_fviz_font_cache_lock);
 }
+
 const char* fviz_font_family(const FVizFont* font)
 {
     return font != NULL && font->family != NULL ? fviz_string_c_str(font->family) : "";
 }
-FVizFontAtlas* fviz_font_atlas(FVizFont* font) { return font != NULL ? font->atlas : NULL; }
-const FVizFontAtlas* fviz_font_const_atlas(const FVizFont* font) { return font != NULL ? font->atlas : NULL; }
+
+FVizFontAtlas* fviz_font_atlas(FVizFont* font)
+{
+    return font != NULL ? font->atlas : NULL;
+}
+
+const FVizFontAtlas* fviz_font_const_atlas(const FVizFont* font)
+{
+    return font != NULL ? font->atlas : NULL;
+}
+
 float fviz_font_nominal_pixel_size(const FVizFont* font)
 {
     return font != NULL ? fviz_font_atlas_nominal_pixel_size(font->atlas) : 0.0f;

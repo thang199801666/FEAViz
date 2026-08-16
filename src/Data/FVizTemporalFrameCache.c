@@ -116,13 +116,9 @@ static void fviz_temporal_cache_unlock(FVizTemporalFrameCache* cache)
 static void fviz_temporal_frame_cache_destroy(FVizObject* object);
 static void fviz_temporal_frame_cache_clear_unlocked(FVizTemporalFrameCache* cache);
 
-static const FVizObjectClass g_fviz_temporal_frame_cache_class = {
-    FVIZ_TYPE_TEMPORAL_FRAME_CACHE,
-    "FVizTemporalFrameCache",
-    &g_fviz_object_class,
-    fviz_temporal_frame_cache_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_temporal_frame_cache_class = {FVIZ_TYPE_TEMPORAL_FRAME_CACHE,
+                                                                  "FVizTemporalFrameCache", &g_fviz_object_class,
+                                                                  fviz_temporal_frame_cache_destroy, NULL};
 
 static void fviz_temporal_frame_entry_release(FVizTemporalFrameEntry* entry)
 {
@@ -148,8 +144,7 @@ static void fviz_temporal_frame_cache_destroy(FVizObject* object)
     }
 }
 
-void fviz_temporal_frame_cache_options_initialize(
-    FVizTemporalFrameCacheOptions* options)
+void fviz_temporal_frame_cache_options_initialize(FVizTemporalFrameCacheOptions* options)
 {
     if (options == NULL) return;
     (void)memset(options, 0, sizeof(*options));
@@ -157,16 +152,14 @@ void fviz_temporal_frame_cache_options_initialize(
     options->frame_capacity = 3u;
 }
 
-FVizResult fviz_temporal_frame_cache_create(
-    FVizTemporalFrameLoaderFn loader,
-    void* user_data,
-    FVizTemporalFrameCache** out_cache)
+FVizResult fviz_temporal_frame_cache_create(FVizTemporalFrameLoaderFn loader, void* user_data,
+                                            FVizTemporalFrameCache** out_cache)
 {
     FVizTemporalFrameCache* cache;
     if (loader == NULL || out_cache == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_cache = NULL;
-    cache = (FVizTemporalFrameCache*)fviz_internal_object_allocate(
-        sizeof(*cache), &g_fviz_temporal_frame_cache_class, NULL);
+    cache = (FVizTemporalFrameCache*)fviz_internal_object_allocate(sizeof(*cache), &g_fviz_temporal_frame_cache_class,
+                                                                   NULL);
     if (cache == NULL) return fviz_last_error_code();
     cache->loader = loader;
     cache->user_data = user_data;
@@ -204,52 +197,45 @@ FVizResult fviz_temporal_frame_cache_create(
     return FVIZ_OK;
 }
 
-static FVizSize fviz_temporal_frame_cache_find(
-    const FVizTemporalFrameCache* cache, FVizId key)
+static FVizSize fviz_temporal_frame_cache_find(const FVizTemporalFrameCache* cache, FVizId key)
 {
     FVizSize index;
     for (index = 0u; index < fviz_array_count(cache->entries); ++index)
     {
-        const FVizTemporalFrameEntry* entry = (const FVizTemporalFrameEntry*)
-            fviz_array_const_at(cache->entries, index);
+        const FVizTemporalFrameEntry* entry = (const FVizTemporalFrameEntry*)fviz_array_const_at(cache->entries, index);
         if (entry->key == key) return index;
     }
     return SIZE_MAX;
 }
 
-static void fviz_temporal_frame_cache_remove_at(
-    FVizTemporalFrameCache* cache, FVizSize index, FVizBool eviction)
+static void fviz_temporal_frame_cache_remove_at(FVizTemporalFrameCache* cache, FVizSize index, FVizBool eviction)
 {
-    FVizTemporalFrameEntry* entries =
-        (FVizTemporalFrameEntry*)fviz_array_data(cache->entries);
+    FVizTemporalFrameEntry* entries = (FVizTemporalFrameEntry*)fviz_array_data(cache->entries);
     const FVizSize count = fviz_array_count(cache->entries);
     if (index >= count) return;
-    if (cache->statistics.bytes >= entries[index].bytes)
-        cache->statistics.bytes -= entries[index].bytes;
-    else cache->statistics.bytes = 0u;
+    if (cache->statistics.bytes >= entries[index].bytes) cache->statistics.bytes -= entries[index].bytes;
+    else
+        cache->statistics.bytes = 0u;
     fviz_temporal_frame_entry_release(&entries[index]);
     if (index + 1u < count)
-        (void)memmove(&entries[index], &entries[index + 1u],
-            (size_t)(count - index - 1u) * sizeof(*entries));
+        (void)memmove(&entries[index], &entries[index + 1u], (size_t)(count - index - 1u) * sizeof(*entries));
     (void)fviz_array_resize(cache->entries, count - 1u);
-    if (eviction != FVIZ_FALSE && cache->statistics.evictions != UINT64_MAX)
-        ++cache->statistics.evictions;
+    if (eviction != FVIZ_FALSE && cache->statistics.evictions != UINT64_MAX) ++cache->statistics.evictions;
     cache->statistics.entries = fviz_array_count(cache->entries);
 }
 
 static void fviz_temporal_frame_cache_enforce_budget(FVizTemporalFrameCache* cache)
 {
     while (fviz_array_count(cache->entries) > cache->options.frame_capacity ||
-           (cache->options.byte_capacity != 0u &&
-            cache->statistics.bytes > cache->options.byte_capacity))
+           (cache->options.byte_capacity != 0u && cache->statistics.bytes > cache->options.byte_capacity))
     {
         FVizSize index;
         FVizSize oldest = 0u;
         uint64_t oldest_use = UINT64_MAX;
         for (index = 0u; index < fviz_array_count(cache->entries); ++index)
         {
-            const FVizTemporalFrameEntry* entry = (const FVizTemporalFrameEntry*)
-                fviz_array_const_at(cache->entries, index);
+            const FVizTemporalFrameEntry* entry =
+                (const FVizTemporalFrameEntry*)fviz_array_const_at(cache->entries, index);
             if (entry->last_use < oldest_use)
             {
                 oldest = index;
@@ -261,12 +247,10 @@ static void fviz_temporal_frame_cache_enforce_budget(FVizTemporalFrameCache* cac
     }
 }
 
-FVizResult fviz_temporal_frame_cache_set_options(
-    FVizTemporalFrameCache* cache,
-    const FVizTemporalFrameCacheOptions* options)
+FVizResult fviz_temporal_frame_cache_set_options(FVizTemporalFrameCache* cache,
+                                                 const FVizTemporalFrameCacheOptions* options)
 {
-    if (cache == NULL || options == NULL ||
-        (options->struct_size != 0u && options->struct_size < sizeof(*options)))
+    if (cache == NULL || options == NULL || (options->struct_size != 0u && options->struct_size < sizeof(*options)))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     fviz_temporal_cache_lock(cache);
     cache->options = *options;
@@ -279,9 +263,8 @@ FVizResult fviz_temporal_frame_cache_set_options(
     return FVIZ_OK;
 }
 
-void fviz_temporal_frame_cache_get_options(
-    const FVizTemporalFrameCache* cache,
-    FVizTemporalFrameCacheOptions* out_options)
+void fviz_temporal_frame_cache_get_options(const FVizTemporalFrameCache* cache,
+                                           FVizTemporalFrameCacheOptions* out_options)
 {
     if (out_options == NULL) return;
     fviz_temporal_frame_cache_options_initialize(out_options);
@@ -293,11 +276,9 @@ void fviz_temporal_frame_cache_get_options(
     }
 }
 
-static FVizResult fviz_temporal_frame_cache_get_unlocked(
-    FVizTemporalFrameCache* cache,
-    FVizId frame_key,
-    FVizCancellationToken* cancellation,
-    FVizDataObject** out_frame)
+static FVizResult fviz_temporal_frame_cache_get_unlocked(FVizTemporalFrameCache* cache, FVizId frame_key,
+                                                         FVizCancellationToken* cancellation,
+                                                         FVizDataObject** out_frame)
 {
     FVizSize index;
     FVizDataObject* frame = NULL;
@@ -306,14 +287,12 @@ static FVizResult fviz_temporal_frame_cache_get_unlocked(
     FVizResult result;
     if (cache == NULL || out_frame == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_frame = NULL;
-    if (cancellation != NULL &&
-        fviz_cancellation_token_is_cancelled(cancellation) != FVIZ_FALSE)
+    if (cancellation != NULL && fviz_cancellation_token_is_cancelled(cancellation) != FVIZ_FALSE)
         return FVIZ_ERROR_CANCELLED;
     index = fviz_temporal_frame_cache_find(cache, frame_key);
     if (index != SIZE_MAX)
     {
-        FVizTemporalFrameEntry* cached = (FVizTemporalFrameEntry*)
-            fviz_array_at(cache->entries, index);
+        FVizTemporalFrameEntry* cached = (FVizTemporalFrameEntry*)fviz_array_at(cache->entries, index);
         cached->last_use = ++cache->use_serial;
         if (cache->statistics.hits != UINT64_MAX) ++cache->statistics.hits;
         *out_frame = (FVizDataObject*)fviz_retain(cached->frame);
@@ -321,12 +300,10 @@ static FVizResult fviz_temporal_frame_cache_get_unlocked(
     }
     if (cache->statistics.misses != UINT64_MAX) ++cache->statistics.misses;
     result = cache->loader(frame_key, cancellation, cache->user_data, &frame);
-    if (result != FVIZ_OK || frame == NULL ||
-        fviz_data_object_is_data_object(frame) == FVIZ_FALSE)
+    if (result != FVIZ_OK || frame == NULL || fviz_data_object_is_data_object(frame) == FVIZ_FALSE)
     {
         fviz_release(frame);
-        if (cache->statistics.load_failures != UINT64_MAX)
-            ++cache->statistics.load_failures;
+        if (cache->statistics.load_failures != UINT64_MAX) ++cache->statistics.load_failures;
         return result != FVIZ_OK ? result : FVIZ_ERROR_INVALID_STATE;
     }
     if (cache->statistics.loads != UINT64_MAX) ++cache->statistics.loads;
@@ -335,8 +312,7 @@ static FVizResult fviz_temporal_frame_cache_get_unlocked(
     if (cache->options.frame_capacity == 0u ||
         (cache->options.byte_capacity != 0u && bytes > cache->options.byte_capacity))
     {
-        if (cache->statistics.oversize_skips != UINT64_MAX)
-            ++cache->statistics.oversize_skips;
+        if (cache->statistics.oversize_skips != UINT64_MAX) ++cache->statistics.oversize_skips;
         return FVIZ_OK;
     }
     entry.key = frame_key;
@@ -360,27 +336,22 @@ static FVizResult fviz_temporal_frame_cache_get_unlocked(
     return FVIZ_OK;
 }
 
-FVizResult fviz_temporal_frame_cache_get(
-    FVizTemporalFrameCache* cache,
-    FVizId frame_key,
-    FVizCancellationToken* cancellation,
-    FVizDataObject** out_frame)
+FVizResult fviz_temporal_frame_cache_get(FVizTemporalFrameCache* cache, FVizId frame_key,
+                                         FVizCancellationToken* cancellation, FVizDataObject** out_frame)
 {
     FVizResult result;
     if (cache == NULL || out_frame == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     fviz_temporal_cache_lock(cache);
-    result = fviz_temporal_frame_cache_get_unlocked(
-        cache, frame_key, cancellation, out_frame);
+    result = fviz_temporal_frame_cache_get_unlocked(cache, frame_key, cancellation, out_frame);
     fviz_temporal_cache_unlock(cache);
     return result;
 }
 
-static FVizResult fviz_temporal_frame_future_task(
-    FVizCancellationToken* cancellation, void* user_data, void** out_value)
+static FVizResult fviz_temporal_frame_future_task(FVizCancellationToken* cancellation, void* user_data,
+                                                  void** out_value)
 {
     FVizTemporalAsyncTask* task = (FVizTemporalAsyncTask*)user_data;
-    return fviz_temporal_frame_cache_get(
-        task->cache, task->frame_key, cancellation, (FVizDataObject**)out_value);
+    return fviz_temporal_frame_cache_get(task->cache, task->frame_key, cancellation, (FVizDataObject**)out_value);
 }
 
 static void fviz_temporal_async_task_destroy(void* user_data)
@@ -391,10 +362,8 @@ static void fviz_temporal_async_task_destroy(void* user_data)
     fviz_free(task);
 }
 
-FVizResult fviz_temporal_frame_cache_request_async(
-    FVizTemporalFrameCache* cache,
-    FVizId frame_key,
-    FVizTemporalFrameFuture** out_future)
+FVizResult fviz_temporal_frame_cache_request_async(FVizTemporalFrameCache* cache, FVizId frame_key,
+                                                   FVizTemporalFrameFuture** out_future)
 {
     FVizTemporalFrameFuture* future;
     FVizTemporalAsyncTask* task;
@@ -413,10 +382,8 @@ FVizResult fviz_temporal_frame_cache_request_async(
     task->cache = (FVizTemporalFrameCache*)fviz_retain(cache);
     task->frame_key = frame_key;
     if (future->cache == NULL || task->cache == NULL ||
-        fviz_executor_submit(
-            cache->executor, 0, fviz_temporal_frame_future_task,
-            task, fviz_temporal_async_task_destroy, fviz_release,
-            &future->task) != FVIZ_OK)
+        fviz_executor_submit(cache->executor, 0, fviz_temporal_frame_future_task, task,
+                             fviz_temporal_async_task_destroy, fviz_release, &future->task) != FVIZ_OK)
     {
         if (future->task == NULL) fviz_temporal_async_task_destroy(task);
         fviz_release(future->cache);
@@ -437,8 +404,7 @@ FVizBool fviz_temporal_frame_future_ready(const FVizTemporalFrameFuture* future)
     return future != NULL ? fviz_future_ready(future->task) : FVIZ_FALSE;
 }
 
-FVizResult fviz_temporal_frame_future_wait(
-    FVizTemporalFrameFuture* future, FVizDataObject** out_frame)
+FVizResult fviz_temporal_frame_future_wait(FVizTemporalFrameFuture* future, FVizDataObject** out_frame)
 {
     if (future == NULL || out_frame == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_frame = NULL;
@@ -451,7 +417,8 @@ FVizResult fviz_temporal_frame_future_wait(
         void* value = NULL;
         const FVizResult take_result = fviz_future_take_value(future->task, &value);
         if (take_result == FVIZ_OK) future->frame = (FVizDataObject*)value;
-        else if (take_result != FVIZ_ERROR_NOT_FOUND) return take_result;
+        else if (take_result != FVIZ_ERROR_NOT_FOUND)
+            return take_result;
     }
     if (future->frame != NULL)
     {
@@ -513,8 +480,7 @@ typedef struct FVizTemporalPrefetchTask
 
 static void fviz_temporal_prefetch_task_destroy(void* user_data);
 
-static FVizResult fviz_temporal_prefetch_run(
-    FVizCancellationToken* cancellation, void* user_data, void** out_value)
+static FVizResult fviz_temporal_prefetch_run(FVizCancellationToken* cancellation, void* user_data, void** out_value)
 {
     FVizTemporalPrefetchTask* task = (FVizTemporalPrefetchTask*)user_data;
     FVizTemporalPrefetchQueue* queue = task->queue;
@@ -532,8 +498,7 @@ static FVizResult fviz_temporal_prefetch_run(
      * current drain is stale (cancel() or a direction reversal): drop it, but
      * if fresh work has already been queued by the reversal, reset the token
      * and continue as the new generation. */
-    cancelled = queue->cancellation != NULL &&
-        fviz_cancellation_token_is_cancelled(queue->cancellation) != FVIZ_FALSE;
+    cancelled = queue->cancellation != NULL && fviz_cancellation_token_is_cancelled(queue->cancellation) != FVIZ_FALSE;
     if (cancelled != FVIZ_FALSE && queue->stopping == FVIZ_FALSE && queue->count > 0u)
     {
         if (queue->cancellation != NULL) fviz_cancellation_token_reset(queue->cancellation);
@@ -555,11 +520,10 @@ static FVizResult fviz_temporal_prefetch_run(
     work = queue->entries[best];
     if (best + 1u < queue->count)
         (void)memmove(&queue->entries[best], &queue->entries[best + 1u],
-            (size_t)(queue->count - best - 1u) * sizeof(*queue->entries));
+                      (size_t)(queue->count - best - 1u) * sizeof(*queue->entries));
     --queue->count;
     fviz_temporal_prefetch_unlock(queue);
-    (void)fviz_temporal_frame_cache_get(
-        queue->cache, work.key, queue->cancellation, &frame);
+    (void)fviz_temporal_frame_cache_get(queue->cache, work.key, queue->cancellation, &frame);
     fviz_release(frame);
 
     /* Re-submit for the next best entry if work remains. The drain always
@@ -587,9 +551,8 @@ static FVizResult fviz_temporal_prefetch_run(
         next->previous = current;
         queue->active_task = NULL;
         fviz_temporal_prefetch_unlock(queue);
-        if (fviz_executor_submit(queue->cache->executor, 0,
-                fviz_temporal_prefetch_run, next,
-                fviz_temporal_prefetch_task_destroy, NULL, &next_future) != FVIZ_OK)
+        if (fviz_executor_submit(queue->cache->executor, 0, fviz_temporal_prefetch_run, next,
+                                 fviz_temporal_prefetch_task_destroy, NULL, &next_future) != FVIZ_OK)
         {
             /* Restore ownership of the still-executing current future; it is
              * released by wait_idle/destroy. Do not destroy it here. */
@@ -624,40 +587,43 @@ static void fviz_temporal_prefetch_task_destroy(void* user_data)
     fviz_free(task);
 }
 
-FVizResult fviz_temporal_prefetch_queue_create(
-    FVizTemporalFrameCache* cache,
-    FVizSize pending_capacity,
-    FVizTemporalPrefetchQueue** out_queue)
+FVizResult fviz_temporal_prefetch_queue_create(FVizTemporalFrameCache* cache, FVizSize pending_capacity,
+                                               FVizTemporalPrefetchQueue** out_queue)
 {
     FVizTemporalPrefetchQueue* queue;
     FVizSize bytes;
-    if (cache == NULL || out_queue == NULL || pending_capacity == 0u)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (cache == NULL || out_queue == NULL || pending_capacity == 0u) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_queue = NULL;
     queue = (FVizTemporalPrefetchQueue*)fviz_alloc(sizeof(*queue));
     if (queue == NULL) return fviz_last_error_code();
     (void)memset(queue, 0, sizeof(*queue));
     if (fviz_size_multiply(pending_capacity, sizeof(*queue->entries), &bytes) != FVIZ_OK)
-    { fviz_free(queue); return fviz_last_error_code(); }
+    {
+        fviz_free(queue);
+        return fviz_last_error_code();
+    }
     queue->entries = (FVizTemporalPrefetchEntry*)fviz_alloc(bytes);
     queue->cache = (FVizTemporalFrameCache*)fviz_retain(cache);
     queue->capacity = pending_capacity;
     if (queue->entries == NULL || queue->cache == NULL ||
         fviz_cancellation_token_create(&queue->cancellation) != FVIZ_OK)
     {
-        fviz_free(queue->entries); fviz_release(queue->cache);
-        fviz_cancellation_token_destroy(queue->cancellation); fviz_free(queue);
+        fviz_free(queue->entries);
+        fviz_release(queue->cache);
+        fviz_cancellation_token_destroy(queue->cancellation);
+        fviz_free(queue);
         return fviz_last_error_code();
     }
 #if defined(_WIN32)
     InitializeCriticalSection(&queue->mutex);
     InitializeConditionVariable(&queue->condition);
 #else
-    if (pthread_mutex_init(&queue->mutex, NULL) != 0 ||
-        pthread_cond_init(&queue->condition, NULL) != 0)
+    if (pthread_mutex_init(&queue->mutex, NULL) != 0 || pthread_cond_init(&queue->condition, NULL) != 0)
     {
         fviz_cancellation_token_destroy(queue->cancellation);
-        fviz_free(queue->entries); fviz_release(queue->cache); fviz_free(queue);
+        fviz_free(queue->entries);
+        fviz_release(queue->cache);
+        fviz_free(queue);
         return FVIZ_ERROR_INTERNAL;
     }
 #endif
@@ -674,8 +640,7 @@ static FVizResult fviz_temporal_prefetch_kick(FVizTemporalPrefetchQueue* queue)
     FVizFuture* next_future = NULL;
     FVizResult result;
     fviz_temporal_prefetch_lock(queue);
-    if (queue->active != FVIZ_FALSE || queue->stopping != FVIZ_FALSE ||
-        queue->count == 0u)
+    if (queue->active != FVIZ_FALSE || queue->stopping != FVIZ_FALSE || queue->count == 0u)
     {
         fviz_temporal_prefetch_unlock(queue);
         return FVIZ_OK;
@@ -694,9 +659,8 @@ static FVizResult fviz_temporal_prefetch_kick(FVizTemporalPrefetchQueue* queue)
      * a previously cancelled token would make the first run exit immediately. */
     if (queue->cancellation != NULL) fviz_cancellation_token_reset(queue->cancellation);
     fviz_temporal_prefetch_unlock(queue);
-    result = fviz_executor_submit(queue->cache->executor, 0,
-        fviz_temporal_prefetch_run, task,
-        fviz_temporal_prefetch_task_destroy, NULL, &next_future);
+    result = fviz_executor_submit(queue->cache->executor, 0, fviz_temporal_prefetch_run, task,
+                                  fviz_temporal_prefetch_task_destroy, NULL, &next_future);
     if (result != FVIZ_OK)
     {
         fviz_temporal_prefetch_task_destroy(task);
@@ -713,8 +677,7 @@ static FVizResult fviz_temporal_prefetch_kick(FVizTemporalPrefetchQueue* queue)
     return FVIZ_OK;
 }
 
-FVizResult fviz_temporal_prefetch_queue_request(
-    FVizTemporalPrefetchQueue* queue, FVizId frame_key, int priority)
+FVizResult fviz_temporal_prefetch_queue_request(FVizTemporalPrefetchQueue* queue, FVizId frame_key, int priority)
 {
     FVizSize index;
     if (queue == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -722,8 +685,7 @@ FVizResult fviz_temporal_prefetch_queue_request(
     for (index = 0u; index < queue->count; ++index)
         if (queue->entries[index].key == frame_key)
         {
-            if (priority > queue->entries[index].priority)
-                queue->entries[index].priority = priority;
+            if (priority > queue->entries[index].priority) queue->entries[index].priority = priority;
             fviz_temporal_prefetch_unlock(queue);
             return FVIZ_OK;
         }
@@ -736,7 +698,10 @@ FVizResult fviz_temporal_prefetch_queue_request(
                  queue->entries[index].serial > queue->entries[worst].serial))
                 worst = index;
         if (priority <= queue->entries[worst].priority)
-        { fviz_temporal_prefetch_unlock(queue); return FVIZ_ERROR_BUSY; }
+        {
+            fviz_temporal_prefetch_unlock(queue);
+            return FVIZ_ERROR_BUSY;
+        }
         queue->entries[worst].key = frame_key;
         queue->entries[worst].priority = priority;
         queue->entries[worst].serial = ++queue->serial;
@@ -767,12 +732,8 @@ void fviz_temporal_prefetch_queue_cancel(FVizTemporalPrefetchQueue* queue)
     fviz_temporal_prefetch_unlock(queue);
 }
 
-FVizResult fviz_temporal_prefetch_queue_request_window(
-    FVizTemporalPrefetchQueue* queue,
-    FVizId current_key,
-    int direction,
-    FVizSize ahead_count,
-    FVizSize behind_count)
+FVizResult fviz_temporal_prefetch_queue_request_window(FVizTemporalPrefetchQueue* queue, FVizId current_key,
+                                                       int direction, FVizSize ahead_count, FVizSize behind_count)
 {
     FVizSize distance;
     FVizResult result;
@@ -780,8 +741,7 @@ FVizResult fviz_temporal_prefetch_queue_request_window(
     const int normalized = direction < 0 ? -1 : (direction > 0 ? 1 : 0);
     if (queue == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     fviz_temporal_prefetch_lock(queue);
-    reversed = normalized != 0 && queue->direction != 0 &&
-        normalized != queue->direction ? FVIZ_TRUE : FVIZ_FALSE;
+    reversed = normalized != 0 && queue->direction != 0 && normalized != queue->direction ? FVIZ_TRUE : FVIZ_FALSE;
     if (reversed != FVIZ_FALSE)
     {
         queue->count = 0u;
@@ -797,16 +757,16 @@ FVizResult fviz_temporal_prefetch_queue_request_window(
     for (distance = 1u; distance <= ahead_count; ++distance)
     {
         FVizId key;
-        if ((normalized >= 0 && current_key > UINT64_MAX - distance) ||
-            (normalized < 0 && current_key < distance)) break;
+        if ((normalized >= 0 && current_key > UINT64_MAX - distance) || (normalized < 0 && current_key < distance))
+            break;
         key = normalized < 0 ? current_key - distance : current_key + distance;
         (void)fviz_temporal_prefetch_queue_request(queue, key, 1000000 - (int)distance);
     }
     for (distance = 1u; distance <= behind_count; ++distance)
     {
         FVizId key;
-        if ((normalized >= 0 && current_key < distance) ||
-            (normalized < 0 && current_key > UINT64_MAX - distance)) break;
+        if ((normalized >= 0 && current_key < distance) || (normalized < 0 && current_key > UINT64_MAX - distance))
+            break;
         key = normalized < 0 ? current_key + distance : current_key - distance;
         (void)fviz_temporal_prefetch_queue_request(queue, key, 500000 - (int)distance);
     }
@@ -837,8 +797,7 @@ FVizResult fviz_temporal_prefetch_queue_wait_idle(FVizTemporalPrefetchQueue* que
     return FVIZ_OK;
 }
 
-FVizSize fviz_temporal_prefetch_queue_pending_count(
-    const FVizTemporalPrefetchQueue* queue)
+FVizSize fviz_temporal_prefetch_queue_pending_count(const FVizTemporalPrefetchQueue* queue)
 {
     FVizSize count;
     if (queue == NULL) return 0u;
@@ -887,39 +846,35 @@ void fviz_temporal_prefetch_queue_destroy(FVizTemporalPrefetchQueue* queue)
     fviz_free(queue);
 }
 
-FVizResult fviz_temporal_frame_cache_prefetch(
-    FVizTemporalFrameCache* cache,
-    const FVizId* frame_keys,
-    FVizSize frame_count,
-    FVizCancellationToken* cancellation)
+FVizResult fviz_temporal_frame_cache_prefetch(FVizTemporalFrameCache* cache, const FVizId* frame_keys,
+                                              FVizSize frame_count, FVizCancellationToken* cancellation)
 {
     FVizSize index;
-    if (cache == NULL || (frame_count != 0u && frame_keys == NULL))
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (cache == NULL || (frame_count != 0u && frame_keys == NULL)) return FVIZ_ERROR_INVALID_ARGUMENT;
     for (index = 0u; index < frame_count; ++index)
     {
         FVizDataObject* frame = NULL;
         FVizResult result;
-        if (cancellation != NULL &&
-            fviz_cancellation_token_is_cancelled(cancellation) != FVIZ_FALSE)
+        if (cancellation != NULL && fviz_cancellation_token_is_cancelled(cancellation) != FVIZ_FALSE)
             return FVIZ_ERROR_CANCELLED;
-        result = fviz_temporal_frame_cache_get(
-            cache, frame_keys[index], cancellation, &frame);
+        result = fviz_temporal_frame_cache_get(cache, frame_keys[index], cancellation, &frame);
         fviz_release(frame);
         if (result != FVIZ_OK) return result;
     }
     return FVIZ_OK;
 }
 
-FVizResult fviz_temporal_frame_cache_invalidate(
-    FVizTemporalFrameCache* cache, FVizId frame_key)
+FVizResult fviz_temporal_frame_cache_invalidate(FVizTemporalFrameCache* cache, FVizId frame_key)
 {
     FVizSize index;
     if (cache == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     fviz_temporal_cache_lock(cache);
     index = fviz_temporal_frame_cache_find(cache, frame_key);
     if (index == SIZE_MAX)
-    { fviz_temporal_cache_unlock(cache); return FVIZ_ERROR_NOT_FOUND; }
+    {
+        fviz_temporal_cache_unlock(cache);
+        return FVIZ_ERROR_NOT_FOUND;
+    }
     fviz_temporal_frame_cache_remove_at(cache, index, FVIZ_FALSE);
     fviz_object_modified((FVizObject*)cache);
     fviz_temporal_cache_unlock(cache);
@@ -942,9 +897,8 @@ void fviz_temporal_frame_cache_clear(FVizTemporalFrameCache* cache)
     fviz_temporal_cache_unlock(cache);
 }
 
-void fviz_temporal_frame_cache_get_statistics(
-    const FVizTemporalFrameCache* cache,
-    FVizTemporalFrameCacheStatistics* out_statistics)
+void fviz_temporal_frame_cache_get_statistics(const FVizTemporalFrameCache* cache,
+                                              FVizTemporalFrameCacheStatistics* out_statistics)
 {
     if (out_statistics == NULL) return;
     (void)memset(out_statistics, 0, sizeof(*out_statistics));

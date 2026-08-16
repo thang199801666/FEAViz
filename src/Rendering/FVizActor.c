@@ -10,8 +10,8 @@
 static void fviz_actor_destroy(FVizObject* object);
 static FVizMTime fviz_actor_mtime(const FVizObject* object);
 
-static FVizBool fviz_actor_dependency_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_actor_dependency_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                               void* client_data)
 {
     FVizActor* actor = (FVizActor*)client_data;
     (void)caller;
@@ -36,16 +36,12 @@ static FVizResult fviz_actor_observe_dependency(FVizObject* dependency, FVizActo
     if (out_tag == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (dependency == NULL) return FVIZ_OK;
-    return fviz_object_add_observer(
-        dependency, FVIZ_EVENT_MODIFIED, 0.0f, fviz_actor_dependency_modified, actor, out_tag);
+    return fviz_object_add_observer(dependency, FVIZ_EVENT_MODIFIED, 0.0f, fviz_actor_dependency_modified, actor,
+                                    out_tag);
 }
-static const FVizObjectClass g_fviz_actor_class = {
-    FVIZ_TYPE_ACTOR,
-    "FVizActor",
-    &g_fviz_object_class,
-    fviz_actor_destroy,
-    fviz_actor_mtime
-};
+
+static const FVizObjectClass g_fviz_actor_class = {FVIZ_TYPE_ACTOR, "FVizActor", &g_fviz_object_class,
+                                                   fviz_actor_destroy, fviz_actor_mtime};
 
 static FVizMTime fviz_actor_mtime(const FVizObject* object)
 {
@@ -90,8 +86,7 @@ FVizResult fviz_actor_create(FVizActor** out_actor)
         fviz_release(actor);
         return fviz_last_error_code();
     }
-    if (fviz_actor_observe_dependency(
-            (FVizObject*)actor->mapper, actor, &actor->mapper_modified_tag) != FVIZ_OK)
+    if (fviz_actor_observe_dependency((FVizObject*)actor->mapper, actor, &actor->mapper_modified_tag) != FVIZ_OK)
     {
         fviz_release(actor);
         return fviz_last_error_code();
@@ -166,7 +161,10 @@ FVizResult fviz_actor_set_mapper(FVizActor* actor, FVizMapper* mapper)
     return FVIZ_OK;
 }
 
-FVizMapper* fviz_actor_mapper(FVizActor* actor) { return actor != NULL ? actor->mapper : NULL; }
+FVizMapper* fviz_actor_mapper(FVizActor* actor)
+{
+    return actor != NULL ? actor->mapper : NULL;
+}
 
 FVizResult fviz_actor_set_glyph_mapper(FVizActor* actor, FVizGlyphMapper* mapper)
 {
@@ -244,8 +242,7 @@ FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data)
     if (actor->glyph_mapper != NULL)
     {
         if (actor->glyph_mapper_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
-            (void)fviz_object_remove_observer(
-                (FVizObject*)actor->glyph_mapper, actor->glyph_mapper_modified_tag);
+            (void)fviz_object_remove_observer((FVizObject*)actor->glyph_mapper, actor->glyph_mapper_modified_tag);
         fviz_release(actor->glyph_mapper);
         actor->glyph_mapper = NULL;
         actor->glyph_mapper_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
@@ -253,8 +250,7 @@ FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data)
     if (actor->volume_mapper != NULL)
     {
         if (actor->volume_mapper_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
-            (void)fviz_object_remove_observer(
-                (FVizObject*)actor->volume_mapper, actor->volume_mapper_modified_tag);
+            (void)fviz_object_remove_observer((FVizObject*)actor->volume_mapper, actor->volume_mapper_modified_tag);
         fviz_release(actor->volume_mapper);
         actor->volume_mapper = NULL;
         actor->volume_mapper_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
@@ -262,8 +258,15 @@ FVizResult fviz_actor_set_poly_data(FVizActor* actor, FVizPolyData* poly_data)
     return fviz_mapper_set_poly_data(actor->mapper, poly_data);
 }
 
-FVizPolyData* fviz_actor_poly_data(FVizActor* actor) { return actor != NULL ? fviz_mapper_poly_data(actor->mapper) : NULL; }
-const FVizPolyData* fviz_actor_const_poly_data(const FVizActor* actor) { return actor != NULL ? fviz_mapper_const_poly_data(actor->mapper) : NULL; }
+FVizPolyData* fviz_actor_poly_data(FVizActor* actor)
+{
+    return actor != NULL ? fviz_mapper_poly_data(actor->mapper) : NULL;
+}
+
+const FVizPolyData* fviz_actor_const_poly_data(const FVizActor* actor)
+{
+    return actor != NULL ? fviz_mapper_const_poly_data(actor->mapper) : NULL;
+}
 
 void fviz_actor_set_color(FVizActor* actor, float red, float green, float blue)
 {
@@ -292,7 +295,11 @@ void fviz_actor_set_visible(FVizActor* actor, FVizBool visible)
         fviz_object_modified((FVizObject*)actor);
     }
 }
-FVizBool fviz_actor_is_visible(const FVizActor* actor) { return actor != NULL ? actor->visible : FVIZ_FALSE; }
+
+FVizBool fviz_actor_is_visible(const FVizActor* actor)
+{
+    return actor != NULL ? actor->visible : FVIZ_FALSE;
+}
 
 void fviz_actor_set_pickable(FVizActor* actor, FVizBool pickable)
 {
@@ -312,10 +319,9 @@ FVizBool fviz_actor_pickable(const FVizActor* actor)
 
 static FVizVec3 fviz_actor_transform_bounds_point(FVizMat4 matrix, FVizVec3 point)
 {
-    return fviz_vec3(
-        matrix.m[0] * point.x + matrix.m[4] * point.y + matrix.m[8] * point.z + matrix.m[12],
-        matrix.m[1] * point.x + matrix.m[5] * point.y + matrix.m[9] * point.z + matrix.m[13],
-        matrix.m[2] * point.x + matrix.m[6] * point.y + matrix.m[10] * point.z + matrix.m[14]);
+    return fviz_vec3(matrix.m[0] * point.x + matrix.m[4] * point.y + matrix.m[8] * point.z + matrix.m[12],
+                     matrix.m[1] * point.x + matrix.m[5] * point.y + matrix.m[9] * point.z + matrix.m[13],
+                     matrix.m[2] * point.x + matrix.m[6] * point.y + matrix.m[10] * point.z + matrix.m[14]);
 }
 
 FVizBounds fviz_actor_bounds(const FVizActor* actor)
@@ -346,8 +352,7 @@ FVizBounds fviz_actor_bounds(const FVizActor* actor)
     }
     if (actor->user_transform != NULL)
         user_transform_mtime = fviz_object_mtime((const FVizObject*)actor->user_transform);
-    if (actor->world_bounds_cache_initialized != FVIZ_FALSE &&
-        actor->world_bounds_geometry_mtime == geometry_mtime &&
+    if (actor->world_bounds_cache_initialized != FVIZ_FALSE && actor->world_bounds_geometry_mtime == geometry_mtime &&
         actor->world_bounds_user_transform_mtime == user_transform_mtime &&
         actor->world_bounds_transform_revision == actor->transform_revision)
         return actor->world_bounds_cache;
@@ -356,10 +361,9 @@ FVizBounds fviz_actor_bounds(const FVizActor* actor)
         model = fviz_actor_transform_matrix(actor);
         for (corner = 0u; corner < 8u; ++corner)
         {
-            const FVizVec3 point = fviz_vec3(
-                (corner & 1u) != 0u ? local.max.x : local.min.x,
-                (corner & 2u) != 0u ? local.max.y : local.min.y,
-                (corner & 4u) != 0u ? local.max.z : local.min.z);
+            const FVizVec3 point = fviz_vec3((corner & 1u) != 0u ? local.max.x : local.min.x,
+                                             (corner & 2u) != 0u ? local.max.y : local.min.y,
+                                             (corner & 4u) != 0u ? local.max.z : local.min.z);
             fviz_bounds_include_point(&world, fviz_actor_transform_bounds_point(model, point));
         }
     }
@@ -382,7 +386,11 @@ void fviz_actor_set_wireframe(FVizActor* actor, FVizBool enabled)
         fviz_object_modified((FVizObject*)actor);
     }
 }
-FVizBool fviz_actor_wireframe(const FVizActor* actor) { return actor != NULL ? actor->wireframe : FVIZ_FALSE; }
+
+FVizBool fviz_actor_wireframe(const FVizActor* actor)
+{
+    return actor != NULL ? actor->wireframe : FVIZ_FALSE;
+}
 
 void fviz_actor_set_opacity(FVizActor* actor, float opacity)
 {
@@ -417,18 +425,15 @@ FVizBool fviz_actor_edge_visibility(const FVizActor* actor)
 
 void fviz_actor_set_edge_color(FVizActor* actor, float red, float green, float blue)
 {
-    if (actor == NULL || (actor->edge_color[0] == red && actor->edge_color[1] == green && actor->edge_color[2] == blue)) return;
+    if (actor == NULL || (actor->edge_color[0] == red && actor->edge_color[1] == green && actor->edge_color[2] == blue))
+        return;
     actor->edge_color[0] = red;
     actor->edge_color[1] = green;
     actor->edge_color[2] = blue;
     fviz_object_modified((FVizObject*)actor);
 }
 
-void fviz_actor_get_edge_color(
-    const FVizActor* actor,
-    float* red,
-    float* green,
-    float* blue)
+void fviz_actor_get_edge_color(const FVizActor* actor, float* red, float* green, float* blue)
 {
     if (actor == NULL) return;
     if (red != NULL) *red = actor->edge_color[0];
@@ -518,15 +523,15 @@ void fviz_actor_set_line_dash(FVizActor* actor, float dash_length, float gap_len
     if (gap_length < 0.0f) gap_length = 0.0f;
     if (phase < 0.0f) phase = 0.0f;
     if (actor->line_dash_length == dash_length && actor->line_gap_length == gap_length &&
-        actor->line_dash_phase == phase) return;
+        actor->line_dash_phase == phase)
+        return;
     actor->line_dash_length = dash_length;
     actor->line_gap_length = gap_length;
     actor->line_dash_phase = phase;
     fviz_object_modified((FVizObject*)actor);
 }
 
-void fviz_actor_get_line_dash(
-    const FVizActor* actor, float* dash_length, float* gap_length, float* phase)
+void fviz_actor_get_line_dash(const FVizActor* actor, float* dash_length, float* gap_length, float* phase)
 {
     if (actor == NULL) return;
     if (dash_length != NULL) *dash_length = actor->line_dash_length;
@@ -584,8 +589,7 @@ float fviz_actor_point_size(const FVizActor* actor)
 void fviz_actor_set_point_shape(FVizActor* actor, FVizPointShape shape)
 {
     if (actor == NULL) return;
-    if (shape < FVIZ_POINT_SQUARE || shape > FVIZ_POINT_SPHERE_IMPOSTOR)
-        shape = FVIZ_POINT_CIRCLE;
+    if (shape < FVIZ_POINT_SQUARE || shape > FVIZ_POINT_SPHERE_IMPOSTOR) shape = FVIZ_POINT_CIRCLE;
     if (actor->point_shape == shape) return;
     actor->point_shape = shape;
     fviz_object_modified((FVizObject*)actor);
@@ -598,15 +602,16 @@ FVizPointShape fviz_actor_point_shape(const FVizActor* actor)
 
 void fviz_actor_set_point_color(FVizActor* actor, float red, float green, float blue)
 {
-    if (actor == NULL || (actor->point_color[0] == red && actor->point_color[1] == green && actor->point_color[2] == blue)) return;
+    if (actor == NULL ||
+        (actor->point_color[0] == red && actor->point_color[1] == green && actor->point_color[2] == blue))
+        return;
     actor->point_color[0] = red;
     actor->point_color[1] = green;
     actor->point_color[2] = blue;
     fviz_object_modified((FVizObject*)actor);
 }
 
-void fviz_actor_get_point_color(
-    const FVizActor* actor, float* red, float* green, float* blue)
+void fviz_actor_get_point_color(const FVizActor* actor, float* red, float* green, float* blue)
 {
     if (actor == NULL) return;
     if (red != NULL) *red = actor->point_color[0];
@@ -630,12 +635,7 @@ FVizBool fviz_actor_point_scalar_coloring(const FVizActor* actor)
     return actor != NULL ? actor->point_scalar_coloring : FVIZ_FALSE;
 }
 
-void fviz_actor_set_material(
-    FVizActor* actor,
-    float ambient,
-    float diffuse,
-    float specular,
-    float specular_power)
+void fviz_actor_set_material(FVizActor* actor, float ambient, float diffuse, float specular, float specular_power)
 {
     if (actor == NULL) return;
     if (ambient < 0.0f) ambient = 0.0f;
@@ -647,7 +647,8 @@ void fviz_actor_set_material(
     if (specular_power < 1.0f) specular_power = 1.0f;
     if (specular_power > 256.0f) specular_power = 256.0f;
     if (actor->ambient == ambient && actor->diffuse == diffuse && actor->specular == specular &&
-        actor->specular_power == specular_power) return;
+        actor->specular_power == specular_power)
+        return;
     actor->ambient = ambient;
     actor->diffuse = diffuse;
     actor->specular = specular;
@@ -655,12 +656,8 @@ void fviz_actor_set_material(
     fviz_object_modified((FVizObject*)actor);
 }
 
-void fviz_actor_get_material(
-    const FVizActor* actor,
-    float* ambient,
-    float* diffuse,
-    float* specular,
-    float* specular_power)
+void fviz_actor_get_material(const FVizActor* actor, float* ambient, float* diffuse, float* specular,
+                             float* specular_power)
 {
     if (actor == NULL) return;
     if (ambient != NULL) *ambient = actor->ambient;
@@ -714,7 +711,12 @@ void fviz_actor_set_position(FVizActor* actor, FVizVec3 position)
         fviz_actor_transform_modified(actor);
     }
 }
-FVizVec3 fviz_actor_position(const FVizActor* actor) { return actor != NULL ? actor->position : fviz_vec3(0.0f, 0.0f, 0.0f); }
+
+FVizVec3 fviz_actor_position(const FVizActor* actor)
+{
+    return actor != NULL ? actor->position : fviz_vec3(0.0f, 0.0f, 0.0f);
+}
+
 void fviz_actor_set_orientation(FVizActor* actor, FVizQuat orientation)
 {
     if (actor != NULL)
@@ -725,7 +727,12 @@ void fviz_actor_set_orientation(FVizActor* actor, FVizQuat orientation)
         fviz_actor_transform_modified(actor);
     }
 }
-FVizQuat fviz_actor_orientation(const FVizActor* actor) { return actor != NULL ? actor->orientation : fviz_quat_identity(); }
+
+FVizQuat fviz_actor_orientation(const FVizActor* actor)
+{
+    return actor != NULL ? actor->orientation : fviz_quat_identity();
+}
+
 void fviz_actor_set_scale(FVizActor* actor, FVizVec3 scale)
 {
     if (actor != NULL)
@@ -739,7 +746,11 @@ void fviz_actor_set_scale(FVizActor* actor, FVizVec3 scale)
         fviz_actor_transform_modified(actor);
     }
 }
-FVizVec3 fviz_actor_scale(const FVizActor* actor) { return actor != NULL ? actor->scale : fviz_vec3(1.0f, 1.0f, 1.0f); }
+
+FVizVec3 fviz_actor_scale(const FVizActor* actor)
+{
+    return actor != NULL ? actor->scale : fviz_vec3(1.0f, 1.0f, 1.0f);
+}
 
 FVizMat4 fviz_actor_transform_matrix(const FVizActor* actor)
 {
@@ -760,9 +771,8 @@ FVizMat4 fviz_actor_transform_matrix(const FVizActor* actor)
     result.m[12] = actor->position.x;
     result.m[13] = actor->position.y;
     result.m[14] = actor->position.z;
-    return actor->user_transform != NULL
-        ? fviz_mat4_multiply(fviz_transform_matrix(actor->user_transform), result)
-        : result;
+    return actor->user_transform != NULL ? fviz_mat4_multiply(fviz_transform_matrix(actor->user_transform), result)
+                                         : result;
 }
 
 FVizResult fviz_actor_set_user_transform(FVizActor* actor, FVizTransform* transform)
@@ -784,8 +794,7 @@ FVizResult fviz_actor_set_user_transform(FVizActor* actor, FVizTransform* transf
         }
     }
     if (actor->user_transform != NULL && actor->user_transform_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
-        (void)fviz_object_remove_observer(
-            (FVizObject*)actor->user_transform, actor->user_transform_modified_tag);
+        (void)fviz_object_remove_observer((FVizObject*)actor->user_transform, actor->user_transform_modified_tag);
     fviz_release(actor->user_transform);
     actor->user_transform = transform;
     actor->user_transform_modified_tag = new_tag;

@@ -39,8 +39,9 @@ FVizBool fviz_mesh_format_supported(const char* path)
 {
     const char* extension = fviz_extension(path);
     if (extension == NULL) return FVIZ_FALSE;
-    return fviz_extension_equals(extension, "obj") == FVIZ_TRUE ||
-        fviz_extension_equals(extension, "stl") == FVIZ_TRUE ? FVIZ_TRUE : FVIZ_FALSE;
+    return fviz_extension_equals(extension, "obj") == FVIZ_TRUE || fviz_extension_equals(extension, "stl") == FVIZ_TRUE
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 FVizResult fviz_mesh_read(const char* path, FVizPolyData** out_poly_data)

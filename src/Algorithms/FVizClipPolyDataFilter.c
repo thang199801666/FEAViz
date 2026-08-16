@@ -67,17 +67,11 @@ static void fviz_clip_poly_data_filter_destroy(FVizObject* object)
     filter->algorithm = NULL;
 }
 
-static const FVizObjectClass g_fviz_clip_poly_data_filter_class = {
-    FVIZ_TYPE_CLIP_POLY_DATA_FILTER,
-    "FVizClipPolyDataFilter",
-    &g_fviz_object_class,
-    fviz_clip_poly_data_filter_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_clip_poly_data_filter_class = {FVIZ_TYPE_CLIP_POLY_DATA_FILTER,
+                                                                   "FVizClipPolyDataFilter", &g_fviz_object_class,
+                                                                   fviz_clip_poly_data_filter_destroy, NULL};
 
-static FVizResult fviz_clip_copy_attribute_set(
-    const FVizAttributeSet* source,
-    FVizAttributeSet* destination)
+static FVizResult fviz_clip_copy_attribute_set(const FVizAttributeSet* source, FVizAttributeSet* destination)
 {
     FVizSize i;
     for (i = 0u; i < fviz_attribute_set_count(source); ++i)
@@ -107,7 +101,8 @@ static void fviz_clip_point_data_release(FVizClipPointData* data)
 {
     FVizSize i;
     if (data == NULL) return;
-    for (i = 0u; i < data->count; ++i) fviz_release(data->destinations[i]);
+    for (i = 0u; i < data->count; ++i)
+        fviz_release(data->destinations[i]);
     fviz_release(data->destination_scalars);
     fviz_free(data->scratch);
     fviz_free(data->destinations);
@@ -115,10 +110,7 @@ static void fviz_clip_point_data_release(FVizClipPointData* data)
     memset(data, 0, sizeof(*data));
 }
 
-static FVizResult fviz_clip_point_data_prepare(
-    const FVizPolyData* input,
-    FVizPolyData* output,
-    FVizClipPointData* data)
+static FVizResult fviz_clip_point_data_prepare(const FVizPolyData* input, FVizPolyData* output, FVizClipPointData* data)
 {
     const FVizAttributeSet* source_set = fviz_poly_data_const_point_data(input);
     FVizAttributeSet* destination_set = fviz_poly_data_point_data(output);
@@ -153,8 +145,8 @@ static FVizResult fviz_clip_point_data_prepare(
         FVizDataArray* destination_array = NULL;
         FVizAttributeRole role;
         if (fviz_data_array_tuple_count(source_array) != input_points) continue;
-        if (fviz_data_array_create(
-                fviz_data_array_type(source_array), fviz_data_array_components(source_array), &destination_array) != FVIZ_OK ||
+        if (fviz_data_array_create(fviz_data_array_type(source_array), fviz_data_array_components(source_array),
+                                   &destination_array) != FVIZ_OK ||
             fviz_data_array_reserve(destination_array, input_points) != FVIZ_OK ||
             fviz_attribute_set_add(destination_set, name, destination_array) != FVIZ_OK)
         {
@@ -178,9 +170,9 @@ static FVizResult fviz_clip_point_data_prepare(
     data->source_scalars = fviz_poly_data_const_scalars(input);
     if (data->source_scalars != NULL && fviz_data_array_tuple_count(data->source_scalars) == input_points)
     {
-        if (fviz_data_array_create(
-                fviz_data_array_type(data->source_scalars), fviz_data_array_components(data->source_scalars),
-                &data->destination_scalars) != FVIZ_OK ||
+        if (fviz_data_array_create(fviz_data_array_type(data->source_scalars),
+                                   fviz_data_array_components(data->source_scalars),
+                                   &data->destination_scalars) != FVIZ_OK ||
             fviz_data_array_reserve(data->destination_scalars, input_points) != FVIZ_OK)
         {
             fviz_clip_point_data_release(data);
@@ -209,27 +201,64 @@ static void fviz_clip_write_value(unsigned char* destination, FVizDataType type,
 {
     switch (type)
     {
-        case FVIZ_DATA_INT8: *(int8_t*)destination = (int8_t)value; break;
-        case FVIZ_DATA_UINT8: *(uint8_t*)destination = (uint8_t)value; break;
-        case FVIZ_DATA_INT16: { int16_t v = (int16_t)value; memcpy(destination, &v, sizeof(v)); break; }
-        case FVIZ_DATA_UINT16: { uint16_t v = (uint16_t)value; memcpy(destination, &v, sizeof(v)); break; }
-        case FVIZ_DATA_INT32: { int32_t v = (int32_t)value; memcpy(destination, &v, sizeof(v)); break; }
-        case FVIZ_DATA_UINT32: { uint32_t v = (uint32_t)value; memcpy(destination, &v, sizeof(v)); break; }
-        case FVIZ_DATA_INT64: { int64_t v = (int64_t)value; memcpy(destination, &v, sizeof(v)); break; }
-        case FVIZ_DATA_UINT64: { uint64_t v = (uint64_t)value; memcpy(destination, &v, sizeof(v)); break; }
-        case FVIZ_DATA_FLOAT32: { float v = (float)value; memcpy(destination, &v, sizeof(v)); break; }
-        case FVIZ_DATA_FLOAT64: memcpy(destination, &value, sizeof(value)); break;
-        default: break;
+        case FVIZ_DATA_INT8:
+            *(int8_t*)destination = (int8_t)value;
+            break;
+        case FVIZ_DATA_UINT8:
+            *(uint8_t*)destination = (uint8_t)value;
+            break;
+        case FVIZ_DATA_INT16:
+            {
+                int16_t v = (int16_t)value;
+                memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_UINT16:
+            {
+                uint16_t v = (uint16_t)value;
+                memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_INT32:
+            {
+                int32_t v = (int32_t)value;
+                memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_UINT32:
+            {
+                uint32_t v = (uint32_t)value;
+                memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_INT64:
+            {
+                int64_t v = (int64_t)value;
+                memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_UINT64:
+            {
+                uint64_t v = (uint64_t)value;
+                memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_FLOAT32:
+            {
+                float v = (float)value;
+                memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_FLOAT64:
+            memcpy(destination, &value, sizeof(value));
+            break;
+        default:
+            break;
     }
 }
 
-static FVizResult fviz_clip_append_interpolated_tuple(
-    const FVizDataArray* source,
-    FVizDataArray* destination,
-    uint32_t a,
-    uint32_t b,
-    double t,
-    unsigned char* scratch)
+static FVizResult fviz_clip_append_interpolated_tuple(const FVizDataArray* source, FVizDataArray* destination,
+                                                      uint32_t a, uint32_t b, double t, unsigned char* scratch)
 {
     const uint32_t components = fviz_data_array_components(source);
     const FVizDataType type = fviz_data_array_type(source);
@@ -251,11 +280,12 @@ static FVizResult fviz_clip_append_original_data(FVizClipPointData* data, uint32
 {
     FVizSize i;
     for (i = 0u; i < data->count; ++i)
-        if (fviz_data_array_append_tuple(
-                data->destinations[i], fviz_data_array_const_tuple(data->sources[i], source_id)) != FVIZ_OK)
+        if (fviz_data_array_append_tuple(data->destinations[i],
+                                         fviz_data_array_const_tuple(data->sources[i], source_id)) != FVIZ_OK)
             return fviz_last_error_code();
-    if (data->source_scalars != NULL && fviz_data_array_append_tuple(
-            data->destination_scalars, fviz_data_array_const_tuple(data->source_scalars, source_id)) != FVIZ_OK)
+    if (data->source_scalars != NULL &&
+        fviz_data_array_append_tuple(data->destination_scalars,
+                                     fviz_data_array_const_tuple(data->source_scalars, source_id)) != FVIZ_OK)
         return fviz_last_error_code();
     return FVIZ_OK;
 }
@@ -264,11 +294,12 @@ static FVizResult fviz_clip_append_edge_data(FVizClipPointData* data, uint32_t a
 {
     FVizSize i;
     for (i = 0u; i < data->count; ++i)
-        if (fviz_clip_append_interpolated_tuple(
-                data->sources[i], data->destinations[i], a, b, t, data->scratch) != FVIZ_OK)
+        if (fviz_clip_append_interpolated_tuple(data->sources[i], data->destinations[i], a, b, t, data->scratch) !=
+            FVIZ_OK)
             return fviz_last_error_code();
-    if (data->source_scalars != NULL && fviz_clip_append_interpolated_tuple(
-            data->source_scalars, data->destination_scalars, a, b, t, data->scratch) != FVIZ_OK)
+    if (data->source_scalars != NULL &&
+        fviz_clip_append_interpolated_tuple(data->source_scalars, data->destination_scalars, a, b, t, data->scratch) !=
+            FVIZ_OK)
         return fviz_last_error_code();
     return FVIZ_OK;
 }
@@ -280,14 +311,9 @@ static uint64_t fviz_clip_edge_key(uint32_t a, uint32_t b)
     return ((uint64_t)lo << 32u) | (uint64_t)hi;
 }
 
-static FVizResult fviz_clip_output_vertex(
-    const FVizClipVertex* vertex,
-    const FVizPolyData* input,
-    FVizPolyData* output,
-    uint32_t* original_map,
-    FVizHashMap* edge_map,
-    FVizClipPointData* point_data,
-    uint32_t* out_id)
+static FVizResult fviz_clip_output_vertex(const FVizClipVertex* vertex, const FVizPolyData* input, FVizPolyData* output,
+                                          uint32_t* original_map, FVizHashMap* edge_map, FVizClipPointData* point_data,
+                                          uint32_t* out_id)
 {
     const FVizVec3* points = fviz_poly_data_points(input);
     if (vertex->kind == FVIZ_CLIP_VERTEX_ORIGINAL)
@@ -351,11 +377,8 @@ static double fviz_clip_cross_2d(double ax, double ay, double bx, double by, dou
     return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
 }
 
-static FVizBool fviz_clip_point_in_triangle_2d(
-    double px, double py,
-    double ax, double ay,
-    double bx, double by,
-    double cx, double cy)
+static FVizBool fviz_clip_point_in_triangle_2d(double px, double py, double ax, double ay, double bx, double by,
+                                               double cx, double cy)
 {
     const double e0 = fviz_clip_cross_2d(ax, ay, bx, by, px, py);
     const double e1 = fviz_clip_cross_2d(bx, by, cx, cy, px, py);
@@ -364,15 +387,9 @@ static FVizBool fviz_clip_point_in_triangle_2d(
     return e0 >= -epsilon && e1 >= -epsilon && e2 >= -epsilon ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizResult fviz_clip_triangulate_cap_loop(
-    FVizPolyData* output,
-    const uint32_t* loop,
-    FVizSize loop_count,
-    FVizPlane plane,
-    FVizBool inside_out,
-    FVizSize* source_ids,
-    FVizSize source_capacity,
-    FVizSize* source_count)
+static FVizResult fviz_clip_triangulate_cap_loop(FVizPolyData* output, const uint32_t* loop, FVizSize loop_count,
+                                                 FVizPlane plane, FVizBool inside_out, FVizSize* source_ids,
+                                                 FVizSize source_capacity, FVizSize* source_count)
 {
     FVizVec3 normal = fviz_vec3_normalize(plane.normal);
     FVizVec3 reference;
@@ -405,8 +422,7 @@ static FVizResult fviz_clip_triangulate_cap_loop(
     for (i = 0u; i < loop_count; ++i)
     {
         const FVizSize next = (i + 1u) % loop_count;
-        area += coordinates[i * 2u] * coordinates[next * 2u + 1u] -
-                coordinates[next * 2u] * coordinates[i * 2u + 1u];
+        area += coordinates[i * 2u] * coordinates[next * 2u + 1u] - coordinates[next * 2u] * coordinates[i * 2u + 1u];
     }
     if (fabs(area) <= 1.0e-14)
     {
@@ -431,20 +447,18 @@ static FVizResult fviz_clip_triangulate_cap_loop(
             const uint32_t next = remaining[(ear + 1u) % remaining_count];
             FVizBool contains_point = FVIZ_FALSE;
             FVizSize candidate;
-            if (fviz_clip_cross_2d(
-                    coordinates[previous * 2u], coordinates[previous * 2u + 1u],
-                    coordinates[current * 2u], coordinates[current * 2u + 1u],
-                    coordinates[next * 2u], coordinates[next * 2u + 1u]) <= 1.0e-14)
+            if (fviz_clip_cross_2d(coordinates[previous * 2u], coordinates[previous * 2u + 1u],
+                                   coordinates[current * 2u], coordinates[current * 2u + 1u], coordinates[next * 2u],
+                                   coordinates[next * 2u + 1u]) <= 1.0e-14)
                 continue;
             for (candidate = 0u; candidate < remaining_count; ++candidate)
             {
                 const uint32_t point = remaining[candidate];
                 if (point == previous || point == current || point == next) continue;
-                if (fviz_clip_point_in_triangle_2d(
-                        coordinates[point * 2u], coordinates[point * 2u + 1u],
-                        coordinates[previous * 2u], coordinates[previous * 2u + 1u],
-                        coordinates[current * 2u], coordinates[current * 2u + 1u],
-                        coordinates[next * 2u], coordinates[next * 2u + 1u]) != FVIZ_FALSE)
+                if (fviz_clip_point_in_triangle_2d(coordinates[point * 2u], coordinates[point * 2u + 1u],
+                                                   coordinates[previous * 2u], coordinates[previous * 2u + 1u],
+                                                   coordinates[current * 2u], coordinates[current * 2u + 1u],
+                                                   coordinates[next * 2u], coordinates[next * 2u + 1u]) != FVIZ_FALSE)
                 {
                     contains_point = FVIZ_TRUE;
                     break;
@@ -467,8 +481,7 @@ static FVizResult fviz_clip_triangulate_cap_loop(
         }
     }
     if (*source_count >= source_capacity ||
-        fviz_poly_data_add_triangle(
-            output, loop[remaining[0]], loop[remaining[1]], loop[remaining[2]]) != FVIZ_OK)
+        fviz_poly_data_add_triangle(output, loop[remaining[0]], loop[remaining[1]], loop[remaining[2]]) != FVIZ_OK)
         goto fail;
     source_ids[(*source_count)++] = (FVizSize)-1;
     fviz_free(coordinates);
@@ -480,15 +493,9 @@ fail:
     return fviz_last_error_code();
 }
 
-static FVizResult fviz_clip_generate_caps(
-    FVizPolyData* output,
-    FVizClipSegment* segments,
-    FVizSize segment_count,
-    FVizPlane plane,
-    FVizBool inside_out,
-    FVizSize* source_ids,
-    FVizSize source_capacity,
-    FVizSize* source_count)
+static FVizResult fviz_clip_generate_caps(FVizPolyData* output, FVizClipSegment* segments, FVizSize segment_count,
+                                          FVizPlane plane, FVizBool inside_out, FVizSize* source_ids,
+                                          FVizSize source_capacity, FVizSize* source_count)
 {
     uint32_t* loop = NULL;
     FVizSize bytes;
@@ -513,7 +520,8 @@ static FVizResult fviz_clip_generate_caps(
             FVizBool found = FVIZ_FALSE;
             if (loop_count >= segment_count)
             {
-                fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "clip cap cut graph does not form simple closed loops");
+                fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+                                        "clip cap cut graph does not form simple closed loops");
                 goto fail;
             }
             loop[loop_count++] = current;
@@ -534,9 +542,8 @@ static FVizResult fviz_clip_generate_caps(
                 goto fail;
             }
         }
-        if (fviz_clip_triangulate_cap_loop(
-                output, loop, loop_count, plane, inside_out,
-                source_ids, source_capacity, source_count) != FVIZ_OK)
+        if (fviz_clip_triangulate_cap_loop(output, loop, loop_count, plane, inside_out, source_ids, source_capacity,
+                                           source_count) != FVIZ_OK)
             goto fail;
     }
     fviz_free(loop);
@@ -546,11 +553,8 @@ fail:
     return fviz_last_error_code();
 }
 
-static FVizResult fviz_clip_copy_cell_data(
-    const FVizPolyData* input,
-    FVizPolyData* output,
-    const FVizSize* source_triangles,
-    FVizSize output_triangle_count)
+static FVizResult fviz_clip_copy_cell_data(const FVizPolyData* input, FVizPolyData* output,
+                                           const FVizSize* source_triangles, FVizSize output_triangle_count)
 {
     const FVizAttributeSet* source_set = fviz_poly_data_const_cell_data(input);
     FVizAttributeSet* destination_set = fviz_poly_data_cell_data(output);
@@ -567,8 +571,8 @@ static FVizResult fviz_clip_copy_cell_data(
         FVizAttributeRole role;
         if (fviz_data_array_tuple_count(source) != source_cell_count) continue;
         if (strcmp(name, "FVizOriginalCellIds") == 0) has_original_ids = FVIZ_TRUE;
-        if (fviz_data_array_create(
-                fviz_data_array_type(source), fviz_data_array_components(source), &destination) != FVIZ_OK ||
+        if (fviz_data_array_create(fviz_data_array_type(source), fviz_data_array_components(source), &destination) !=
+                FVIZ_OK ||
             fviz_data_array_reserve(destination, output_triangle_count) != FVIZ_OK)
             goto fail;
         for (i = 0u; i < output_triangle_count; ++i)
@@ -579,8 +583,7 @@ static FVizResult fviz_clip_copy_cell_data(
                 unsigned char* zero = (unsigned char*)fviz_alloc(stride);
                 if (zero == NULL && stride != 0u) goto fail;
                 memset(zero, 0, stride);
-                if (strcmp(name, "FVizOriginalCellIds") == 0 &&
-                    fviz_data_array_type(source) == FVIZ_DATA_UINT64 &&
+                if (strcmp(name, "FVizOriginalCellIds") == 0 && fviz_data_array_type(source) == FVIZ_DATA_UINT64 &&
                     fviz_data_array_components(source) == 1u)
                     *(uint64_t*)zero = UINT64_MAX;
                 if (fviz_data_array_append_tuple(destination, zero) != FVIZ_OK)
@@ -594,7 +597,8 @@ static FVizResult fviz_clip_copy_cell_data(
             {
                 const FVizSize source_id = triangle_offset + source_triangles[i];
                 if (source_id >= source_cell_count ||
-                    fviz_data_array_append_tuple(destination, fviz_data_array_const_tuple(source, source_id)) != FVIZ_OK)
+                    fviz_data_array_append_tuple(destination, fviz_data_array_const_tuple(source, source_id)) !=
+                        FVIZ_OK)
                     goto fail;
             }
         }
@@ -607,7 +611,7 @@ static FVizResult fviz_clip_copy_cell_data(
         }
         fviz_release(destination);
         continue;
-fail:
+    fail:
         fviz_release(destination);
         return fviz_last_error_code();
     }
@@ -623,8 +627,8 @@ fail:
         }
         for (i = 0u; i < output_triangle_count; ++i)
         {
-            const uint64_t source_id = source_triangles[i] == (FVizSize)-1
-                ? UINT64_MAX : (uint64_t)(triangle_offset + source_triangles[i]);
+            const uint64_t source_id =
+                source_triangles[i] == (FVizSize)-1 ? UINT64_MAX : (uint64_t)(triangle_offset + source_triangles[i]);
             if (fviz_data_array_append_tuple(ids, &source_id) != FVIZ_OK)
             {
                 fviz_release(ids);
@@ -666,10 +670,8 @@ fail:
     return FVIZ_OK;
 }
 
-static FVizResult fviz_clip_poly_data_filter_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_clip_poly_data_filter_process_request(FVizAlgorithm* algorithm,
+                                                             const FVizPipelineRequestInfo* request, void* state)
 {
     FVizClipPolyDataFilter* filter = (FVizClipPolyDataFilter*)state;
     FVizPolyData* input;
@@ -700,8 +702,7 @@ static FVizResult fviz_clip_poly_data_filter_process_request(
     triangle_count = fviz_poly_data_triangle_count(input);
     points = fviz_poly_data_points(input);
     triangles = fviz_poly_data_triangle_indices(input);
-    if (triangle_count == 0u || triangles == NULL ||
-        fviz_poly_data_strip_cell_count(input) != 0u ||
+    if (triangle_count == 0u || triangles == NULL || fviz_poly_data_strip_cell_count(input) != 0u ||
         fviz_poly_data_poly_cell_count(input) != triangle_count)
     {
         fviz_internal_set_error(
@@ -717,7 +718,8 @@ static FVizResult fviz_clip_poly_data_filter_process_request(
     }
     if (fviz_poly_data_reserve(output, point_count, triangle_count) != FVIZ_OK ||
         fviz_clip_point_data_prepare(input, output, &point_data) != FVIZ_OK ||
-        fviz_clip_copy_attribute_set(fviz_poly_data_const_field_data(input), fviz_poly_data_field_data(output)) != FVIZ_OK)
+        fviz_clip_copy_attribute_set(fviz_poly_data_const_field_data(input), fviz_poly_data_field_data(output)) !=
+            FVIZ_OK)
         goto fail;
     if (fviz_size_multiply(point_count, sizeof(*original_map), &bytes) != FVIZ_OK) goto fail;
     original_map = (uint32_t*)fviz_alloc(bytes);
@@ -735,10 +737,9 @@ static FVizResult fviz_clip_poly_data_filter_process_request(
     for (i = 0u; i < triangle_count; ++i)
     {
         const uint32_t ids[3] = {triangles[i * 3u], triangles[i * 3u + 1u], triangles[i * 3u + 2u]};
-        const double distances[3] = {
-            (double)fviz_plane_distance_to_point(filter->plane, points[ids[0]]),
-            (double)fviz_plane_distance_to_point(filter->plane, points[ids[1]]),
-            (double)fviz_plane_distance_to_point(filter->plane, points[ids[2]])};
+        const double distances[3] = {(double)fviz_plane_distance_to_point(filter->plane, points[ids[0]]),
+                                     (double)fviz_plane_distance_to_point(filter->plane, points[ids[1]]),
+                                     (double)fviz_plane_distance_to_point(filter->plane, points[ids[2]])};
         FVizClipVertex polygon[4];
         FVizSize polygon_count = 0u;
         uint32_t edge;
@@ -754,13 +755,13 @@ static FVizResult fviz_clip_poly_data_filter_process_request(
             }
             else if (s_in != FVIZ_FALSE && e_in == FVIZ_FALSE)
             {
-                polygon[polygon_count++] = fviz_clip_intersection(
-                    ids[s_index], ids[e_index], distances[s_index], distances[e_index]);
+                polygon[polygon_count++] =
+                    fviz_clip_intersection(ids[s_index], ids[e_index], distances[s_index], distances[e_index]);
             }
             else if (s_in == FVIZ_FALSE && e_in != FVIZ_FALSE)
             {
-                polygon[polygon_count++] = fviz_clip_intersection(
-                    ids[s_index], ids[e_index], distances[s_index], distances[e_index]);
+                polygon[polygon_count++] =
+                    fviz_clip_intersection(ids[s_index], ids[e_index], distances[s_index], distances[e_index]);
                 polygon[polygon_count++] = (FVizClipVertex){FVIZ_CLIP_VERTEX_ORIGINAL, ids[e_index], ids[e_index], 0.0};
             }
         }
@@ -769,16 +770,15 @@ static FVizResult fviz_clip_poly_data_filter_process_request(
             uint32_t output_ids[4];
             FVizSize p;
             for (p = 0u; p < polygon_count; ++p)
-                if (fviz_clip_output_vertex(
-                        &polygon[p], input, output, original_map, edge_map, &point_data, &output_ids[p]) != FVIZ_OK)
+                if (fviz_clip_output_vertex(&polygon[p], input, output, original_map, edge_map, &point_data,
+                                            &output_ids[p]) != FVIZ_OK)
                     goto fail;
             if (filter->generate_cap != FVIZ_FALSE)
             {
                 uint32_t cut_ids[2];
                 FVizSize cut_count = 0u;
                 for (p = 0u; p < polygon_count; ++p)
-                    if (polygon[p].kind == FVIZ_CLIP_VERTEX_EDGE &&
-                        (cut_count == 0u || cut_ids[0] != output_ids[p]))
+                    if (polygon[p].kind == FVIZ_CLIP_VERTEX_EDGE && (cut_count == 0u || cut_ids[0] != output_ids[p]))
                     {
                         if (cut_count < 2u) cut_ids[cut_count] = output_ids[p];
                         ++cut_count;
@@ -806,9 +806,8 @@ static FVizResult fviz_clip_poly_data_filter_process_request(
         }
     }
     if (filter->generate_cap != FVIZ_FALSE &&
-        fviz_clip_generate_caps(
-            output, segments, segment_count, filter->plane, filter->inside_out,
-            source_ids, source_id_capacity, &source_id_count) != FVIZ_OK)
+        fviz_clip_generate_caps(output, segments, segment_count, filter->plane, filter->inside_out, source_ids,
+                                source_id_capacity, &source_id_count) != FVIZ_OK)
         goto fail;
     if (point_data.destination_scalars != NULL &&
         fviz_poly_data_set_scalars(output, point_data.destination_scalars) != FVIZ_OK)
@@ -845,8 +844,8 @@ FVizResult fviz_clip_poly_data_filter_create(FVizClipPolyDataFilter** out_filter
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_filter = NULL;
-    filter = (FVizClipPolyDataFilter*)fviz_internal_object_allocate(
-        sizeof(*filter), &g_fviz_clip_poly_data_filter_class, NULL);
+    filter = (FVizClipPolyDataFilter*)fviz_internal_object_allocate(sizeof(*filter),
+                                                                    &g_fviz_clip_poly_data_filter_class, NULL);
     if (filter == NULL) return fviz_last_error_code();
     filter->plane = fviz_plane_from_point_normal(fviz_vec3(0.0f, 0.0f, 0.0f), fviz_vec3(1.0f, 0.0f, 0.0f));
     filter->inside_out = FVIZ_FALSE;
@@ -856,7 +855,8 @@ FVizResult fviz_clip_poly_data_filter_create(FVizClipPolyDataFilter** out_filter
     callbacks.get_state_mtime = fviz_clip_state_mtime;
     callbacks.state_object = (FVizObject*)filter;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA, FVIZ_FALSE, FVIZ_FALSE) !=
+            FVIZ_OK ||
         fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA) != FVIZ_OK)
     {
         fviz_release(filter);
@@ -875,8 +875,8 @@ void fviz_clip_poly_data_filter_set_plane(FVizClipPolyDataFilter* filter, FVizPl
 
 FVizPlane fviz_clip_poly_data_filter_plane(const FVizClipPolyDataFilter* filter)
 {
-    return filter != NULL ? filter->plane : fviz_plane_from_point_normal(
-        fviz_vec3(0.0f, 0.0f, 0.0f), fviz_vec3(1.0f, 0.0f, 0.0f));
+    return filter != NULL ? filter->plane
+                          : fviz_plane_from_point_normal(fviz_vec3(0.0f, 0.0f, 0.0f), fviz_vec3(1.0f, 0.0f, 0.0f));
 }
 
 void fviz_clip_poly_data_filter_set_inside_out(FVizClipPolyDataFilter* filter, FVizBool inside_out)
@@ -910,13 +910,32 @@ FVizBool fviz_clip_poly_data_filter_generate_cap(const FVizClipPolyDataFilter* f
 
 FVizResult fviz_clip_poly_data_filter_set_input_data(FVizClipPolyDataFilter* filter, FVizPolyData* input)
 {
-    return filter != NULL ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input) : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
+
 FVizResult fviz_clip_poly_data_filter_set_input_connection(FVizClipPolyDataFilter* filter, FVizAlgorithmOutput* input)
 {
-    return filter != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input) : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
-FVizAlgorithm* fviz_clip_poly_data_filter_algorithm(FVizClipPolyDataFilter* filter) { return filter != NULL ? filter->algorithm : NULL; }
-FVizAlgorithmOutput* fviz_clip_poly_data_filter_output_port(FVizClipPolyDataFilter* filter) { return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL; }
-FVizPolyData* fviz_clip_poly_data_filter_output(FVizClipPolyDataFilter* filter) { return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL; }
-FVizResult fviz_clip_poly_data_filter_update(FVizClipPolyDataFilter* filter) { return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT; }
+
+FVizAlgorithm* fviz_clip_poly_data_filter_algorithm(FVizClipPolyDataFilter* filter)
+{
+    return filter != NULL ? filter->algorithm : NULL;
+}
+
+FVizAlgorithmOutput* fviz_clip_poly_data_filter_output_port(FVizClipPolyDataFilter* filter)
+{
+    return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL;
+}
+
+FVizPolyData* fviz_clip_poly_data_filter_output(FVizClipPolyDataFilter* filter)
+{
+    return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL;
+}
+
+FVizResult fviz_clip_poly_data_filter_update(FVizClipPolyDataFilter* filter)
+{
+    return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
+}

@@ -10,7 +10,8 @@
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Spatial/FVizPointLocatorPrivate.h>
 
-static FVizBool fviz_locator_component_value(const FVizDataArray* array, FVizSize index, uint32_t component, double* out_value)
+static FVizBool fviz_locator_component_value(const FVizDataArray* array, FVizSize index, uint32_t component,
+                                             double* out_value)
 {
     const void* tuple;
     if (array == NULL || out_value == NULL || component >= fviz_data_array_components(array)) return FVIZ_FALSE;
@@ -18,17 +19,38 @@ static FVizBool fviz_locator_component_value(const FVizDataArray* array, FVizSiz
     if (tuple == NULL) return FVIZ_FALSE;
     switch (fviz_data_array_type(array))
     {
-        case FVIZ_DATA_INT8: *out_value = ((const int8_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT8: *out_value = ((const uint8_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_INT16: *out_value = ((const int16_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT16: *out_value = ((const uint16_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_INT32: *out_value = ((const int32_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT32: *out_value = ((const uint32_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_INT64: *out_value = (double)((const int64_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_UINT64: *out_value = (double)((const uint64_t*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_FLOAT32: *out_value = ((const float*)tuple)[component]; return FVIZ_TRUE;
-        case FVIZ_DATA_FLOAT64: *out_value = ((const double*)tuple)[component]; return FVIZ_TRUE;
-        default: return FVIZ_FALSE;
+        case FVIZ_DATA_INT8:
+            *out_value = ((const int8_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_UINT8:
+            *out_value = ((const uint8_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_INT16:
+            *out_value = ((const int16_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_UINT16:
+            *out_value = ((const uint16_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_INT32:
+            *out_value = ((const int32_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_UINT32:
+            *out_value = ((const uint32_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_INT64:
+            *out_value = (double)((const int64_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_UINT64:
+            *out_value = (double)((const uint64_t*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_FLOAT32:
+            *out_value = ((const float*)tuple)[component];
+            return FVIZ_TRUE;
+        case FVIZ_DATA_FLOAT64:
+            *out_value = ((const double*)tuple)[component];
+            return FVIZ_TRUE;
+        default:
+            return FVIZ_FALSE;
     }
 }
 
@@ -37,31 +59,28 @@ static FVizBool fviz_locator_scalar_value(const FVizDataArray* array, FVizSize i
     return fviz_locator_component_value(array, index, 0u, out_value);
 }
 
-static const float g_fviz_hex8_signs[8][3] = {
-    {-1.0f, -1.0f, -1.0f},
-    { 1.0f, -1.0f, -1.0f},
-    { 1.0f,  1.0f, -1.0f},
-    {-1.0f,  1.0f, -1.0f},
-    {-1.0f, -1.0f,  1.0f},
-    { 1.0f, -1.0f,  1.0f},
-    { 1.0f,  1.0f,  1.0f},
-    {-1.0f,  1.0f,  1.0f}
-};
+static const float g_fviz_hex8_signs[8][3] = {{-1.0f, -1.0f, -1.0f}, {1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, -1.0f},
+                                              {-1.0f, 1.0f, -1.0f},  {-1.0f, -1.0f, 1.0f}, {1.0f, -1.0f, 1.0f},
+                                              {1.0f, 1.0f, 1.0f},    {-1.0f, 1.0f, 1.0f}};
 
 static FVizMat3 fviz_mat3_from_columns(FVizVec3 c0, FVizVec3 c1, FVizVec3 c2)
 {
     FVizMat3 m;
-    m.m[0] = c0.x; m.m[3] = c1.x; m.m[6] = c2.x;
-    m.m[1] = c0.y; m.m[4] = c1.y; m.m[7] = c2.y;
-    m.m[2] = c0.z; m.m[5] = c1.z; m.m[8] = c2.z;
+    m.m[0] = c0.x;
+    m.m[3] = c1.x;
+    m.m[6] = c2.x;
+    m.m[1] = c0.y;
+    m.m[4] = c1.y;
+    m.m[7] = c2.y;
+    m.m[2] = c0.z;
+    m.m[5] = c1.z;
+    m.m[8] = c2.z;
     return m;
 }
 
 static void fviz_point_locator_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_point_locator_class = {
-    FVIZ_TYPE_POINT_LOCATOR, "FVizPointLocator", &g_fviz_object_class,
-    fviz_point_locator_destroy, NULL
-};
+static const FVizObjectClass g_fviz_point_locator_class = {FVIZ_TYPE_POINT_LOCATOR, "FVizPointLocator",
+                                                           &g_fviz_object_class, fviz_point_locator_destroy, NULL};
 
 static void fviz_point_locator_clear_acceleration(FVizPointLocator* locator)
 {
@@ -97,7 +116,8 @@ FVizResult fviz_point_locator_create(FVizPointLocator** out_locator)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_locator = NULL;
-    locator = (FVizPointLocator*)fviz_internal_object_allocate(sizeof(FVizPointLocator), &g_fviz_point_locator_class, NULL);
+    locator =
+        (FVizPointLocator*)fviz_internal_object_allocate(sizeof(FVizPointLocator), &g_fviz_point_locator_class, NULL);
     if (locator == NULL) return fviz_last_error_code();
     locator->grid = NULL;
     locator->nodes = NULL;
@@ -114,30 +134,29 @@ FVizResult fviz_point_locator_create(FVizPointLocator** out_locator)
     return FVIZ_OK;
 }
 
-
 static FVizMTime fviz_point_locator_grid_geometry_mtime(const FVizPointLocator* locator)
 {
     FVizMTime points_mtime;
     FVizMTime cells_mtime;
     if (locator == NULL || locator->grid == NULL) return 0u;
     /* Attribute arrays intentionally do not invalidate spatial acceleration. */
-    points_mtime = fviz_object_mtime(
-        (const FVizObject*)fviz_unstructured_grid_points(locator->grid));
-    cells_mtime = fviz_object_mtime(
-        (const FVizObject*)fviz_unstructured_grid_cells(locator->grid));
+    points_mtime = fviz_object_mtime((const FVizObject*)fviz_unstructured_grid_points(locator->grid));
+    cells_mtime = fviz_object_mtime((const FVizObject*)fviz_unstructured_grid_cells(locator->grid));
     return points_mtime > cells_mtime ? points_mtime : cells_mtime;
 }
 
 static FVizMTime fviz_point_locator_points_mtime(const FVizPointLocator* locator)
 {
     return locator != NULL && locator->grid != NULL
-        ? fviz_object_mtime((const FVizObject*)fviz_unstructured_grid_points(locator->grid)) : 0u;
+               ? fviz_object_mtime((const FVizObject*)fviz_unstructured_grid_points(locator->grid))
+               : 0u;
 }
 
 static FVizMTime fviz_point_locator_cells_mtime(const FVizPointLocator* locator)
 {
     return locator != NULL && locator->grid != NULL
-        ? fviz_object_mtime((const FVizObject*)fviz_unstructured_grid_cells(locator->grid)) : 0u;
+               ? fviz_object_mtime((const FVizObject*)fviz_unstructured_grid_cells(locator->grid))
+               : 0u;
 }
 
 static void fviz_point_locator_capture_source_mtimes(FVizPointLocator* locator)
@@ -145,18 +164,19 @@ static void fviz_point_locator_capture_source_mtimes(FVizPointLocator* locator)
     if (locator == NULL) return;
     locator->build_points_mtime = fviz_point_locator_points_mtime(locator);
     locator->build_cells_mtime = fviz_point_locator_cells_mtime(locator);
-    locator->build_mtime = locator->build_points_mtime > locator->build_cells_mtime
-        ? locator->build_points_mtime : locator->build_cells_mtime;
+    locator->build_mtime = locator->build_points_mtime > locator->build_cells_mtime ? locator->build_points_mtime
+                                                                                    : locator->build_cells_mtime;
 }
 
 static FVizBool fviz_locator_bounds_contains(const FVizBounds* bounds, FVizVec3 point)
 {
     const float epsilon = 1.0e-5f;
-    return bounds != NULL && bounds->valid != FVIZ_FALSE &&
-        point.x >= bounds->min.x - epsilon && point.x <= bounds->max.x + epsilon &&
-        point.y >= bounds->min.y - epsilon && point.y <= bounds->max.y + epsilon &&
-        point.z >= bounds->min.z - epsilon && point.z <= bounds->max.z + epsilon
-        ? FVIZ_TRUE : FVIZ_FALSE;
+    return bounds != NULL && bounds->valid != FVIZ_FALSE && point.x >= bounds->min.x - epsilon &&
+                   point.x <= bounds->max.x + epsilon && point.y >= bounds->min.y - epsilon &&
+                   point.y <= bounds->max.y + epsilon && point.z >= bounds->min.z - epsilon &&
+                   point.z <= bounds->max.z + epsilon
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 static FVizResult fviz_locator_reserve_nodes(FVizPointLocator* locator, FVizSize capacity)
@@ -172,8 +192,7 @@ static FVizResult fviz_locator_reserve_nodes(FVizPointLocator* locator, FVizSize
     return FVIZ_OK;
 }
 
-static FVizResult fviz_locator_add_node(
-    FVizPointLocator* locator, const FVizPointLocatorNode* node, int32_t* out_index)
+static FVizResult fviz_locator_add_node(FVizPointLocator* locator, const FVizPointLocatorNode* node, int32_t* out_index)
 {
     if (locator->node_count >= (FVizSize)INT32_MAX)
     {
@@ -196,8 +215,7 @@ static float fviz_locator_centroid_axis(const FVizVec3* centroids, FVizSize cell
     return axis == 0 ? centroids[cell_id].x : (axis == 1 ? centroids[cell_id].y : centroids[cell_id].z);
 }
 
-static FVizSize fviz_locator_partition(
-    FVizSize* ids, FVizSize begin, FVizSize end, int axis, const FVizVec3* centroids)
+static FVizSize fviz_locator_partition(FVizSize* ids, FVizSize begin, FVizSize end, int axis, const FVizVec3* centroids)
 {
     const FVizSize pivot_id = ids[begin];
     const float pivot_value = fviz_locator_centroid_axis(centroids, pivot_id, axis);
@@ -205,8 +223,10 @@ static FVizSize fviz_locator_partition(
     FVizSize j = end - 1u;
     while (i <= j)
     {
-        while (i <= j && fviz_locator_centroid_axis(centroids, ids[i], axis) <= pivot_value) ++i;
-        while (j >= i && fviz_locator_centroid_axis(centroids, ids[j], axis) > pivot_value) --j;
+        while (i <= j && fviz_locator_centroid_axis(centroids, ids[i], axis) <= pivot_value)
+            ++i;
+        while (j >= i && fviz_locator_centroid_axis(centroids, ids[j], axis) > pivot_value)
+            --j;
         if (i < j)
         {
             const FVizSize temporary = ids[i];
@@ -219,25 +239,21 @@ static FVizSize fviz_locator_partition(
     return j;
 }
 
-static void fviz_locator_quickselect(
-    FVizSize* ids, FVizSize begin, FVizSize end, FVizSize target,
-    int axis, const FVizVec3* centroids)
+static void fviz_locator_quickselect(FVizSize* ids, FVizSize begin, FVizSize end, FVizSize target, int axis,
+                                     const FVizVec3* centroids)
 {
     while (end > begin + 1u)
     {
         const FVizSize pivot = fviz_locator_partition(ids, begin, end, axis, centroids);
         if (pivot == target) return;
         if (target < pivot) end = pivot;
-        else begin = pivot + 1u;
+        else
+            begin = pivot + 1u;
     }
 }
 
-static FVizResult fviz_locator_build_recursive(
-    FVizPointLocator* locator,
-    FVizSize begin,
-    FVizSize end,
-    uint32_t depth,
-    int32_t* out_node)
+static FVizResult fviz_locator_build_recursive(FVizPointLocator* locator, FVizSize begin, FVizSize end, uint32_t depth,
+                                               int32_t* out_node)
 {
     FVizPointLocatorNode node;
     FVizBounds bounds = fviz_bounds_empty();
@@ -252,8 +268,7 @@ static FVizResult fviz_locator_build_recursive(
     node.right = -1;
     node.begin = begin;
     node.end = end;
-    if (end - begin <= 12u || depth >= 32u)
-        return fviz_locator_add_node(locator, &node, out_node);
+    if (end - begin <= 12u || depth >= 32u) return fviz_locator_add_node(locator, &node, out_node);
     size = fviz_bounds_size(&bounds);
     axis = size.x >= size.y && size.x >= size.z ? 0 : (size.y >= size.z ? 1 : 2);
     {
@@ -274,8 +289,7 @@ static FVizResult fviz_locator_build_recursive(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_point_locator_update_cell_bounds(
-    FVizPointLocator* locator, FVizBool initialize_ids)
+static FVizResult fviz_point_locator_update_cell_bounds(FVizPointLocator* locator, FVizBool initialize_ids)
 {
     const FVizCellArray* cells = fviz_unstructured_grid_cells(locator->grid);
     const FVizVec3* points = fviz_points_data(fviz_unstructured_grid_points(locator->grid));
@@ -285,8 +299,7 @@ static FVizResult fviz_point_locator_update_cell_bounds(
     const FVizIdStorage storage = fviz_cell_array_id_storage(cells);
     const FVizSize point_count = fviz_unstructured_grid_point_count(locator->grid);
     FVizSize cell_id;
-    if (offsets == NULL || points == NULL ||
-        (storage == FVIZ_ID_STORAGE_UINT32 && ids32 == NULL) ||
+    if (offsets == NULL || points == NULL || (storage == FVIZ_ID_STORAGE_UINT32 && ids32 == NULL) ||
         (storage == FVIZ_ID_STORAGE_UINT64 && ids64 == NULL))
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "point locator connectivity storage is unavailable");
@@ -299,8 +312,7 @@ static FVizResult fviz_point_locator_update_cell_bounds(
         if (initialize_ids != FVIZ_FALSE) locator->cell_ids[cell_id] = cell_id;
         for (cursor = offsets[cell_id]; cursor < offsets[cell_id + 1u]; ++cursor)
         {
-            const FVizId point_id = storage == FVIZ_ID_STORAGE_UINT64
-                ? (FVizId)ids64[cursor] : (FVizId)ids32[cursor];
+            const FVizId point_id = storage == FVIZ_ID_STORAGE_UINT64 ? (FVizId)ids64[cursor] : (FVizId)ids32[cursor];
             if (point_id >= point_count)
             {
                 fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "point locator found invalid cell connectivity");
@@ -371,20 +383,17 @@ FVizResult fviz_point_locator_refit(FVizPointLocator* locator)
     if (fviz_unstructured_grid_validate(locator->grid) != FVIZ_OK) return fviz_last_error_code();
     if (fviz_point_locator_cells_mtime(locator) != locator->build_cells_mtime)
     {
-        fviz_internal_set_error(
-            FVIZ_ERROR_INVALID_STATE,
-            "point locator refit requires unchanged cell connectivity; call update or rebuild");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+                                "point locator refit requires unchanged cell connectivity; call update or rebuild");
         return FVIZ_ERROR_INVALID_STATE;
     }
     if (fviz_unstructured_grid_cell_count(locator->grid) != locator->cell_count)
     {
-        fviz_internal_set_error(
-            FVIZ_ERROR_INVALID_STATE,
-            "point locator refit requires an unchanged cell count; rebuild after topology growth");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+                                "point locator refit requires an unchanged cell count; rebuild after topology growth");
         return FVIZ_ERROR_INVALID_STATE;
     }
-    if (fviz_point_locator_update_cell_bounds(locator, FVIZ_FALSE) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_point_locator_update_cell_bounds(locator, FVIZ_FALSE) != FVIZ_OK) return fviz_last_error_code();
     /* Parent nodes are allocated before children, so reverse traversal updates
        children before recomputing their parent bounds. */
     for (node_index = locator->node_count; node_index > 0u; --node_index)
@@ -416,8 +425,7 @@ FVizResult fviz_point_locator_update(FVizPointLocator* locator)
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "point locator has no grid to update");
         return FVIZ_ERROR_INVALID_STATE;
     }
-    if (locator->build_cells_mtime != fviz_point_locator_cells_mtime(locator))
-        return fviz_point_locator_build(locator);
+    if (locator->build_cells_mtime != fviz_point_locator_cells_mtime(locator)) return fviz_point_locator_build(locator);
     if (locator->build_points_mtime != fviz_point_locator_points_mtime(locator))
     {
         if (locator->cell_count == 0u)
@@ -433,23 +441,24 @@ FVizResult fviz_point_locator_update(FVizPointLocator* locator)
 FVizBool fviz_point_locator_refit_required(const FVizPointLocator* locator)
 {
     return locator != NULL && locator->grid != NULL &&
-        locator->build_cells_mtime == fviz_point_locator_cells_mtime(locator) &&
-        locator->build_points_mtime != fviz_point_locator_points_mtime(locator)
-        ? FVIZ_TRUE : FVIZ_FALSE;
+                   locator->build_cells_mtime == fviz_point_locator_cells_mtime(locator) &&
+                   locator->build_points_mtime != fviz_point_locator_points_mtime(locator)
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 FVizBool fviz_point_locator_acceleration_valid(const FVizPointLocator* locator)
 {
     if (locator == NULL || locator->grid == NULL) return FVIZ_FALSE;
     return locator->build_mtime == fviz_point_locator_grid_geometry_mtime(locator) &&
-        (locator->cell_count == 0u || (locator->nodes != NULL && locator->node_count != 0u))
-        ? FVIZ_TRUE : FVIZ_FALSE;
+                   (locator->cell_count == 0u || (locator->nodes != NULL && locator->node_count != 0u))
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 FVizSize fviz_point_locator_indexed_cell_count(const FVizPointLocator* locator)
 {
-    return locator != NULL && fviz_point_locator_acceleration_valid(locator) != FVIZ_FALSE
-        ? locator->cell_count : 0u;
+    return locator != NULL && fviz_point_locator_acceleration_valid(locator) != FVIZ_FALSE ? locator->cell_count : 0u;
 }
 
 FVizResult fviz_point_locator_set_grid(FVizPointLocator* locator, const FVizUnstructuredGrid* grid)
@@ -474,24 +483,17 @@ const FVizUnstructuredGrid* fviz_point_locator_const_grid(const FVizPointLocator
     return locator != NULL ? locator->grid : NULL;
 }
 
-static FVizBool fviz_cell_barycentric_tetra(
-    const FVizVec3* p,
-    FVizVec3 query,
-    FVizVec3* out_bary)
+static FVizBool fviz_cell_barycentric_tetra(const FVizVec3* p, FVizVec3 query, FVizVec3* out_bary)
 {
     const FVizVec3 v0 = p[1];
     const FVizVec3 v1 = p[2];
     const FVizVec3 v2 = p[3];
     const FVizVec3 v3 = p[0];
-    const FVizMat3 m = fviz_mat3_from_columns(
-        fviz_vec3_sub(v0, v3),
-        fviz_vec3_sub(v1, v3),
-        fviz_vec3_sub(v2, v3));
+    const FVizMat3 m = fviz_mat3_from_columns(fviz_vec3_sub(v0, v3), fviz_vec3_sub(v1, v3), fviz_vec3_sub(v2, v3));
     const FVizMat3 inv = fviz_mat3_inverse(m);
     const FVizVec3 r = fviz_vec3_sub(query, v3);
     const FVizVec3 bary = fviz_mat3_transform_vec3(inv, r);
-    if (bary.x < -1.0e-5f || bary.y < -1.0e-5f || bary.z < -1.0e-5f ||
-        bary.x + bary.y + bary.z > 1.0f + 1.0e-5f)
+    if (bary.x < -1.0e-5f || bary.y < -1.0e-5f || bary.z < -1.0e-5f || bary.x + bary.y + bary.z > 1.0f + 1.0e-5f)
     {
         return FVIZ_FALSE;
     }
@@ -501,10 +503,7 @@ static FVizBool fviz_cell_barycentric_tetra(
     return FVIZ_TRUE;
 }
 
-static FVizBool fviz_cell_contains_hex(
-    const FVizVec3* p,
-    FVizVec3 query,
-    FVizVec3* out_parametric)
+static FVizBool fviz_cell_contains_hex(const FVizVec3* p, FVizVec3 query, FVizVec3* out_parametric)
 {
     float r = 0.0f;
     float s = 0.0f;
@@ -560,90 +559,101 @@ static FVizBool fviz_cell_contains_hex(
     return FVIZ_TRUE;
 }
 
-
-static FVizVec3 fviz_cell_map_shape(
-    FVizCellType type,const FVizVec3* points,FVizSize point_count,FVizVec3 parametric,FVizBool* out_ok)
+static FVizVec3 fviz_cell_map_shape(FVizCellType type, const FVizVec3* points, FVizSize point_count,
+                                    FVizVec3 parametric, FVizBool* out_ok)
 {
     double weights[20];
-    FVizSize count=0u,i;
-    double x=0.0,y=0.0,z=0.0;
-    if (out_ok!=NULL) *out_ok=FVIZ_FALSE;
-    if (point_count>20u || fviz_cell_type_shape_weights(type,parametric,weights,20u,&count)!=FVIZ_OK || count!=point_count)
-        return fviz_vec3(0,0,0);
-    for (i=0u;i<count;++i)
+    FVizSize count = 0u, i;
+    double x = 0.0, y = 0.0, z = 0.0;
+    if (out_ok != NULL) *out_ok = FVIZ_FALSE;
+    if (point_count > 20u || fviz_cell_type_shape_weights(type, parametric, weights, 20u, &count) != FVIZ_OK ||
+        count != point_count)
+        return fviz_vec3(0, 0, 0);
+    for (i = 0u; i < count; ++i)
     {
-        x+=weights[i]*(double)points[i].x;
-        y+=weights[i]*(double)points[i].y;
-        z+=weights[i]*(double)points[i].z;
+        x += weights[i] * (double)points[i].x;
+        y += weights[i] * (double)points[i].y;
+        z += weights[i] * (double)points[i].z;
     }
-    if (out_ok!=NULL) *out_ok=FVIZ_TRUE;
-    return fviz_vec3((float)x,(float)y,(float)z);
+    if (out_ok != NULL) *out_ok = FVIZ_TRUE;
+    return fviz_vec3((float)x, (float)y, (float)z);
 }
 
-static FVizBool fviz_cell_contains_high_order(
-    FVizCellType type,const FVizVec3* points,FVizSize point_count,FVizVec3 query,FVizVec3* out_parametric)
+static FVizBool fviz_cell_contains_high_order(FVizCellType type, const FVizVec3* points, FVizSize point_count,
+                                              FVizVec3 query, FVizVec3* out_parametric)
 {
-    FVizVec3 q = type==FVIZ_CELL_QUADRATIC_TETRA ? fviz_vec3(0.25f,0.25f,0.25f) : fviz_vec3(0,0,0);
-    const float h=1.0e-4f;
+    FVizVec3 q = type == FVIZ_CELL_QUADRATIC_TETRA ? fviz_vec3(0.25f, 0.25f, 0.25f) : fviz_vec3(0, 0, 0);
+    const float h = 1.0e-4f;
     int iteration;
-    FVizBool ok=FVIZ_FALSE;
-    for (iteration=0;iteration<20;++iteration)
+    FVizBool ok = FVIZ_FALSE;
+    for (iteration = 0; iteration < 20; ++iteration)
     {
-        FVizVec3 mapped=fviz_cell_map_shape(type,points,point_count,q,&ok);
+        FVizVec3 mapped = fviz_cell_map_shape(type, points, point_count, q, &ok);
         FVizVec3 residual;
-        FVizVec3 dr,ds,dt;
-        FVizVec3 qp,qm;
-        FVizMat3 jacobian,inv;
+        FVizVec3 dr, ds, dt;
+        FVizVec3 qp, qm;
+        FVizMat3 jacobian, inv;
         FVizVec3 delta;
         float norm;
-        if (ok==FVIZ_FALSE) return FVIZ_FALSE;
-        residual=fviz_vec3_sub(mapped,query);
-        norm=sqrtf(residual.x*residual.x+residual.y*residual.y+residual.z*residual.z);
-        if (norm<2.0e-6f) break;
-        qp=q; qm=q; qp.x+=h; qm.x-=h;
-        dr=fviz_vec3_scale(fviz_vec3_sub(fviz_cell_map_shape(type,points,point_count,qp,&ok),
-                                        fviz_cell_map_shape(type,points,point_count,qm,&ok)),0.5f/h);
-        if (ok==FVIZ_FALSE) return FVIZ_FALSE;
-        qp=q; qm=q; qp.y+=h; qm.y-=h;
-        ds=fviz_vec3_scale(fviz_vec3_sub(fviz_cell_map_shape(type,points,point_count,qp,&ok),
-                                        fviz_cell_map_shape(type,points,point_count,qm,&ok)),0.5f/h);
-        if (ok==FVIZ_FALSE) return FVIZ_FALSE;
-        qp=q; qm=q; qp.z+=h; qm.z-=h;
-        dt=fviz_vec3_scale(fviz_vec3_sub(fviz_cell_map_shape(type,points,point_count,qp,&ok),
-                                        fviz_cell_map_shape(type,points,point_count,qm,&ok)),0.5f/h);
-        if (ok==FVIZ_FALSE) return FVIZ_FALSE;
-        jacobian=fviz_mat3_from_columns(dr,ds,dt);
-        inv=fviz_mat3_inverse(jacobian);
-        delta=fviz_mat3_transform_vec3(inv,residual);
-        if (!isfinite(delta.x) || !isfinite(delta.y) || !isfinite(delta.z) ||
-            fabsf(delta.x)>4.0f || fabsf(delta.y)>4.0f || fabsf(delta.z)>4.0f) return FVIZ_FALSE;
-        q.x-=delta.x; q.y-=delta.y; q.z-=delta.z;
+        if (ok == FVIZ_FALSE) return FVIZ_FALSE;
+        residual = fviz_vec3_sub(mapped, query);
+        norm = sqrtf(residual.x * residual.x + residual.y * residual.y + residual.z * residual.z);
+        if (norm < 2.0e-6f) break;
+        qp = q;
+        qm = q;
+        qp.x += h;
+        qm.x -= h;
+        dr = fviz_vec3_scale(fviz_vec3_sub(fviz_cell_map_shape(type, points, point_count, qp, &ok),
+                                           fviz_cell_map_shape(type, points, point_count, qm, &ok)),
+                             0.5f / h);
+        if (ok == FVIZ_FALSE) return FVIZ_FALSE;
+        qp = q;
+        qm = q;
+        qp.y += h;
+        qm.y -= h;
+        ds = fviz_vec3_scale(fviz_vec3_sub(fviz_cell_map_shape(type, points, point_count, qp, &ok),
+                                           fviz_cell_map_shape(type, points, point_count, qm, &ok)),
+                             0.5f / h);
+        if (ok == FVIZ_FALSE) return FVIZ_FALSE;
+        qp = q;
+        qm = q;
+        qp.z += h;
+        qm.z -= h;
+        dt = fviz_vec3_scale(fviz_vec3_sub(fviz_cell_map_shape(type, points, point_count, qp, &ok),
+                                           fviz_cell_map_shape(type, points, point_count, qm, &ok)),
+                             0.5f / h);
+        if (ok == FVIZ_FALSE) return FVIZ_FALSE;
+        jacobian = fviz_mat3_from_columns(dr, ds, dt);
+        inv = fviz_mat3_inverse(jacobian);
+        delta = fviz_mat3_transform_vec3(inv, residual);
+        if (!isfinite(delta.x) || !isfinite(delta.y) || !isfinite(delta.z) || fabsf(delta.x) > 4.0f ||
+            fabsf(delta.y) > 4.0f || fabsf(delta.z) > 4.0f)
+            return FVIZ_FALSE;
+        q.x -= delta.x;
+        q.y -= delta.y;
+        q.z -= delta.z;
     }
     {
-        const FVizVec3 mapped=fviz_cell_map_shape(type,points,point_count,q,&ok);
-        const FVizVec3 r=fviz_vec3_sub(mapped,query);
-        const float norm=sqrtf(r.x*r.x+r.y*r.y+r.z*r.z);
-        if (ok==FVIZ_FALSE || norm>2.0e-4f) return FVIZ_FALSE;
+        const FVizVec3 mapped = fviz_cell_map_shape(type, points, point_count, q, &ok);
+        const FVizVec3 r = fviz_vec3_sub(mapped, query);
+        const float norm = sqrtf(r.x * r.x + r.y * r.y + r.z * r.z);
+        if (ok == FVIZ_FALSE || norm > 2.0e-4f) return FVIZ_FALSE;
     }
-    if (type==FVIZ_CELL_QUADRATIC_TETRA)
+    if (type == FVIZ_CELL_QUADRATIC_TETRA)
     {
-        if (q.x<-1.0e-4f || q.y<-1.0e-4f || q.z<-1.0e-4f || q.x+q.y+q.z>1.0001f) return FVIZ_FALSE;
+        if (q.x < -1.0e-4f || q.y < -1.0e-4f || q.z < -1.0e-4f || q.x + q.y + q.z > 1.0001f) return FVIZ_FALSE;
     }
     else
     {
-        if (q.x<-1.0001f || q.x>1.0001f || q.y<-1.0001f || q.y>1.0001f || q.z<-1.0001f || q.z>1.0001f)
+        if (q.x < -1.0001f || q.x > 1.0001f || q.y < -1.0001f || q.y > 1.0001f || q.z < -1.0001f || q.z > 1.0001f)
             return FVIZ_FALSE;
     }
-    *out_parametric=q;
+    *out_parametric = q;
     return FVIZ_TRUE;
 }
 
-static FVizBool fviz_cell_point_contains(
-    const FVizCellType type,
-    const FVizVec3* p,
-    FVizVec3 query,
-    FVizVec3* out_weights,
-    FVizSize* out_point_count)
+static FVizBool fviz_cell_point_contains(const FVizCellType type, const FVizVec3* p, FVizVec3 query,
+                                         FVizVec3* out_weights, FVizSize* out_point_count)
 {
     if (type == FVIZ_CELL_TETRA)
     {
@@ -668,10 +678,10 @@ static FVizBool fviz_cell_point_contains(
     if (type == FVIZ_CELL_QUADRATIC_TETRA || type == FVIZ_CELL_QUADRATIC_HEXAHEDRON)
     {
         FVizVec3 parametric;
-        const FVizSize point_count=type==FVIZ_CELL_QUADRATIC_TETRA?10u:20u;
-        if (fviz_cell_contains_high_order(type,p,point_count,query,&parametric)==FVIZ_FALSE) return FVIZ_FALSE;
-        *out_weights=parametric;
-        *out_point_count=point_count;
+        const FVizSize point_count = type == FVIZ_CELL_QUADRATIC_TETRA ? 10u : 20u;
+        if (fviz_cell_contains_high_order(type, p, point_count, query, &parametric) == FVIZ_FALSE) return FVIZ_FALSE;
+        *out_weights = parametric;
+        *out_point_count = point_count;
         return FVIZ_TRUE;
     }
     (void)p;
@@ -679,11 +689,8 @@ static FVizBool fviz_cell_point_contains(
     return FVIZ_FALSE;
 }
 
-static FVizBool fviz_point_locator_test_cell(
-    const FVizPointLocator* locator,
-    FVizSize cell_id,
-    FVizVec3 point,
-    FVizLocatedCell* out_result)
+static FVizBool fviz_point_locator_test_cell(const FVizPointLocator* locator, FVizSize cell_id, FVizVec3 point,
+                                             FVizLocatedCell* out_result)
 {
     const FVizCellArray* cells = fviz_unstructured_grid_cells(locator->grid);
     const FVizCellType type = fviz_cell_array_type(cells, cell_id);
@@ -693,16 +700,15 @@ static FVizBool fviz_point_locator_test_cell(
     FVizVec3 weights;
     FVizSize contained_point_count;
     FVizSize i;
-    if (fviz_cell_array_cell_view(cells, cell_id, &view) != FVIZ_OK ||
-        view.point_count == 0u || view.point_count > 20u) return FVIZ_FALSE;
+    if (fviz_cell_array_cell_view(cells, cell_id, &view) != FVIZ_OK || view.point_count == 0u || view.point_count > 20u)
+        return FVIZ_FALSE;
     for (i = 0u; i < view.point_count; ++i)
     {
         const FVizId point_id = fviz_cell_view_point_id(&view, i);
         if (point_id >= fviz_unstructured_grid_point_count(locator->grid)) return FVIZ_FALSE;
         p[i] = points[(FVizSize)point_id];
     }
-    if (fviz_cell_point_contains(type, p, point, &weights, &contained_point_count) == FVIZ_FALSE)
-        return FVIZ_FALSE;
+    if (fviz_cell_point_contains(type, p, point, &weights, &contained_point_count) == FVIZ_FALSE) return FVIZ_FALSE;
     out_result->point = point;
     out_result->barycentric = weights;
     out_result->cell_index = cell_id;
@@ -710,10 +716,7 @@ static FVizBool fviz_point_locator_test_cell(
     return FVIZ_TRUE;
 }
 
-FVizBool fviz_point_locator_locate_point(
-    const FVizPointLocator* locator,
-    FVizVec3 point,
-    FVizLocatedCell* out_result)
+FVizBool fviz_point_locator_locate_point(const FVizPointLocator* locator, FVizVec3 point, FVizLocatedCell* out_result)
 {
     FVizLocatedCell best = {0};
     FVizBool found = FVIZ_FALSE;
@@ -748,7 +751,8 @@ FVizBool fviz_point_locator_locate_point(
             }
             else
             {
-                if (node->right >= 0 && stack_size < sizeof(stack) / sizeof(stack[0])) stack[stack_size++] = node->right;
+                if (node->right >= 0 && stack_size < sizeof(stack) / sizeof(stack[0]))
+                    stack[stack_size++] = node->right;
                 if (node->left >= 0 && stack_size < sizeof(stack) / sizeof(stack[0])) stack[stack_size++] = node->left;
             }
         }
@@ -763,17 +767,13 @@ FVizBool fviz_point_locator_locate_point(
     {
         FVizSize cell_id;
         for (cell_id = 0u; cell_id < fviz_unstructured_grid_cell_count(locator->grid); ++cell_id)
-            if (fviz_point_locator_test_cell(locator, cell_id, point, out_result) != FVIZ_FALSE)
-                return FVIZ_TRUE;
+            if (fviz_point_locator_test_cell(locator, cell_id, point, out_result) != FVIZ_FALSE) return FVIZ_TRUE;
     }
     return FVIZ_FALSE;
 }
 
-static FVizBool fviz_interpolate_point_scalar(
-    const FVizUnstructuredGrid* grid,
-    const FVizDataArray* scalar,
-    const FVizLocatedCell* location,
-    float* out_value)
+static FVizBool fviz_interpolate_point_scalar(const FVizUnstructuredGrid* grid, const FVizDataArray* scalar,
+                                              const FVizLocatedCell* location, float* out_value)
 {
     const FVizCellArray* cells = fviz_unstructured_grid_cells((FVizUnstructuredGrid*)grid);
     const FVizCellType type = fviz_cell_array_type(cells, location->cell_index);
@@ -782,13 +782,15 @@ static FVizBool fviz_interpolate_point_scalar(
     FVizSize i;
     if (fviz_data_array_tuple_count(scalar) != fviz_unstructured_grid_point_count(grid) ||
         fviz_cell_array_cell_view(cells, location->cell_index, &view) != FVIZ_OK ||
-        view.point_count < location->point_count) return FVIZ_FALSE;
+        view.point_count < location->point_count)
+        return FVIZ_FALSE;
     for (i = 0u; i < location->point_count; ++i)
     {
         const FVizId point_id = fviz_cell_view_point_id(&view, i);
         double value = 0.0;
         if (point_id >= fviz_unstructured_grid_point_count(grid) ||
-            !fviz_locator_scalar_value(scalar, (FVizSize)point_id, &value)) return FVIZ_FALSE;
+            !fviz_locator_scalar_value(scalar, (FVizSize)point_id, &value))
+            return FVIZ_FALSE;
         values[i] = value;
     }
     {
@@ -796,18 +798,17 @@ static FVizBool fviz_interpolate_point_scalar(
         FVizSize weight_count = 0u;
         double sum = 0.0;
         if (fviz_cell_type_shape_weights(type, location->barycentric, weights, 20u, &weight_count) != FVIZ_OK ||
-            weight_count != location->point_count) return FVIZ_FALSE;
-        for (i = 0u; i < weight_count; ++i) sum += weights[i] * values[i];
+            weight_count != location->point_count)
+            return FVIZ_FALSE;
+        for (i = 0u; i < weight_count; ++i)
+            sum += weights[i] * values[i];
         *out_value = (float)sum;
         return FVIZ_TRUE;
     }
 }
 
-FVizResult fviz_point_locator_interpolate_scalar(
-    const FVizPointLocator* locator,
-    const char* scalar_name,
-    FVizVec3 point,
-    float* out_value)
+FVizResult fviz_point_locator_interpolate_scalar(const FVizPointLocator* locator, const char* scalar_name,
+                                                 FVizVec3 point, float* out_value)
 {
     FVizLocatedCell location;
     const FVizDataArray* scalar;
@@ -835,10 +836,7 @@ FVizResult fviz_point_locator_interpolate_scalar(
     return FVIZ_OK;
 }
 
-FVizVec3 fviz_point_locator_interpolate_vector(
-    const FVizPointLocator* locator,
-    const char* vector_name,
-    FVizVec3 point)
+FVizVec3 fviz_point_locator_interpolate_vector(const FVizPointLocator* locator, const char* vector_name, FVizVec3 point)
 {
     FVizLocatedCell location;
     const FVizDataArray* vectors;
@@ -850,20 +848,18 @@ FVizVec3 fviz_point_locator_interpolate_vector(
     double vx = 0.0;
     double vy = 0.0;
     double vz = 0.0;
-    if (locator == NULL || locator->grid == NULL || vector_name == NULL)
-        return fviz_vec3(0.0f, 0.0f, 0.0f);
+    if (locator == NULL || locator->grid == NULL || vector_name == NULL) return fviz_vec3(0.0f, 0.0f, 0.0f);
     vectors = fviz_attribute_set_const_get(fviz_unstructured_grid_point_data(locator->grid), vector_name);
     if (vectors == NULL || fviz_data_array_components(vectors) != 3u ||
         fviz_data_array_tuple_count(vectors) != fviz_unstructured_grid_point_count(locator->grid))
         return fviz_vec3(0.0f, 0.0f, 0.0f);
-    if (fviz_point_locator_locate_point(locator, point, &location) == FVIZ_FALSE)
-        return fviz_vec3(0.0f, 0.0f, 0.0f);
+    if (fviz_point_locator_locate_point(locator, point, &location) == FVIZ_FALSE) return fviz_vec3(0.0f, 0.0f, 0.0f);
     cells = fviz_unstructured_grid_cells(locator->grid);
     if (fviz_cell_array_cell_view(cells, location.cell_index, &view) != FVIZ_OK ||
         view.point_count < location.point_count ||
-        fviz_cell_type_shape_weights(
-            fviz_cell_array_type(cells, location.cell_index), location.barycentric,
-            weights, 20u, &weight_count) != FVIZ_OK || weight_count != location.point_count)
+        fviz_cell_type_shape_weights(fviz_cell_array_type(cells, location.cell_index), location.barycentric, weights,
+                                     20u, &weight_count) != FVIZ_OK ||
+        weight_count != location.point_count)
         return fviz_vec3(0.0f, 0.0f, 0.0f);
     for (i = 0u; i < weight_count; ++i)
     {

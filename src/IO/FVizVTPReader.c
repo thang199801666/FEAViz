@@ -44,16 +44,36 @@ static FVizBool fviz_vtp_attr_string(const char* tag, const char* attr, char* ou
         FVizSize consumed = 1u;
         if (*found == '&')
         {
-            if ((FVizSize)(end - found) >= 5u && strncmp(found, "&amp;", 5u) == 0) { decoded='&'; consumed=5u; }
-            else if ((FVizSize)(end - found) >= 4u && strncmp(found, "&lt;", 4u) == 0) { decoded='<'; consumed=4u; }
-            else if ((FVizSize)(end - found) >= 4u && strncmp(found, "&gt;", 4u) == 0) { decoded='>'; consumed=4u; }
-            else if ((FVizSize)(end - found) >= 6u && strncmp(found, "&quot;", 6u) == 0) { decoded='"'; consumed=6u; }
-            else if ((FVizSize)(end - found) >= 6u && strncmp(found, "&apos;", 6u) == 0) { decoded='\''; consumed=6u; }
+            if ((FVizSize)(end - found) >= 5u && strncmp(found, "&amp;", 5u) == 0)
+            {
+                decoded = '&';
+                consumed = 5u;
+            }
+            else if ((FVizSize)(end - found) >= 4u && strncmp(found, "&lt;", 4u) == 0)
+            {
+                decoded = '<';
+                consumed = 4u;
+            }
+            else if ((FVizSize)(end - found) >= 4u && strncmp(found, "&gt;", 4u) == 0)
+            {
+                decoded = '>';
+                consumed = 4u;
+            }
+            else if ((FVizSize)(end - found) >= 6u && strncmp(found, "&quot;", 6u) == 0)
+            {
+                decoded = '"';
+                consumed = 6u;
+            }
+            else if ((FVizSize)(end - found) >= 6u && strncmp(found, "&apos;", 6u) == 0)
+            {
+                decoded = '\'';
+                consumed = 6u;
+            }
         }
-        out[written++]=decoded;
+        out[written++] = decoded;
         found += consumed;
     }
-    out[written]='\0';
+    out[written] = '\0';
     return FVIZ_TRUE;
 }
 
@@ -84,13 +104,8 @@ static FVizDataType fviz_vtp_data_type(const char* name)
     return (FVizDataType)0;
 }
 
-static FVizBool fviz_vtp_find_data_array(
-    const char* cursor,
-    const char* end,
-    const char** out_tag,
-    const char** out_open_end,
-    const char** out_close,
-    const char** out_next)
+static FVizBool fviz_vtp_find_data_array(const char* cursor, const char* end, const char** out_tag,
+                                         const char** out_open_end, const char** out_close, const char** out_next)
 {
     const char* tag = strstr(cursor, "<DataArray");
     const char* tag_end;
@@ -115,12 +130,8 @@ static FVizBool fviz_vtp_find_data_array(
     return FVIZ_TRUE;
 }
 
-static FVizResult fviz_vtp_collect_arrays(
-    const char* section_begin,
-    const char* section_end,
-    FVizVTPArrayBlock* blocks,
-    FVizSize capacity,
-    FVizSize* out_count)
+static FVizResult fviz_vtp_collect_arrays(const char* section_begin, const char* section_end, FVizVTPArrayBlock* blocks,
+                                          FVizSize capacity, FVizSize* out_count)
 {
     const char* cursor = section_begin;
     FVizSize count = 0u;
@@ -169,13 +180,8 @@ static FVizResult fviz_vtp_collect_arrays(
     return FVIZ_OK;
 }
 
-static FVizBool fviz_vtp_find_section(
-    const char* begin,
-    const char* end,
-    const char* name,
-    const char** out_tag,
-    const char** out_content_begin,
-    const char** out_content_end)
+static FVizBool fviz_vtp_find_section(const char* begin, const char* end, const char* name, const char** out_tag,
+                                      const char** out_content_begin, const char** out_content_end)
 {
     char open_pattern[64];
     char close_pattern[64];
@@ -196,43 +202,87 @@ static FVizBool fviz_vtp_find_section(
     return FVIZ_TRUE;
 }
 
-static FVizResult fviz_vtp_store_numeric(
-    unsigned char* destination,
-    FVizDataType type,
-    double signed_or_float,
-    uint64_t unsigned_value,
-    FVizBool unsigned_kind)
+static FVizResult fviz_vtp_store_numeric(unsigned char* destination, FVizDataType type, double signed_or_float,
+                                         uint64_t unsigned_value, FVizBool unsigned_kind)
 {
     switch (type)
     {
-        case FVIZ_DATA_INT8: { const int8_t v=(int8_t)signed_or_float; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_UINT8: { const uint8_t v=(uint8_t)unsigned_value; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_INT16: { const int16_t v=(int16_t)signed_or_float; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_UINT16: { const uint16_t v=(uint16_t)unsigned_value; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_INT32: { const int32_t v=(int32_t)signed_or_float; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_UINT32: { const uint32_t v=(uint32_t)unsigned_value; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_INT64: { const int64_t v=(int64_t)signed_or_float; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_UINT64: { const uint64_t v=unsigned_value; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_FLOAT32: { const float v=(float)signed_or_float; (void)memcpy(destination,&v,sizeof(v)); break; }
-        case FVIZ_DATA_FLOAT64: { const double v=signed_or_float; (void)memcpy(destination,&v,sizeof(v)); break; }
-        default: (void)unsigned_kind; return FVIZ_ERROR_NOT_SUPPORTED;
+        case FVIZ_DATA_INT8:
+            {
+                const int8_t v = (int8_t)signed_or_float;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_UINT8:
+            {
+                const uint8_t v = (uint8_t)unsigned_value;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_INT16:
+            {
+                const int16_t v = (int16_t)signed_or_float;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_UINT16:
+            {
+                const uint16_t v = (uint16_t)unsigned_value;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_INT32:
+            {
+                const int32_t v = (int32_t)signed_or_float;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_UINT32:
+            {
+                const uint32_t v = (uint32_t)unsigned_value;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_INT64:
+            {
+                const int64_t v = (int64_t)signed_or_float;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_UINT64:
+            {
+                const uint64_t v = unsigned_value;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_FLOAT32:
+            {
+                const float v = (float)signed_or_float;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        case FVIZ_DATA_FLOAT64:
+            {
+                const double v = signed_or_float;
+                (void)memcpy(destination, &v, sizeof(v));
+                break;
+            }
+        default:
+            (void)unsigned_kind;
+            return FVIZ_ERROR_NOT_SUPPORTED;
     }
     return FVIZ_OK;
 }
 
-static FVizResult fviz_vtp_parse_attribute_arrays(
-    FVizAttributeSet* destination,
-    const char* section_tag,
-    const char* begin,
-    const char* end,
-    FVizSize expected_tuples,
-    FVizSize maximum_values)
+static FVizResult fviz_vtp_parse_attribute_arrays(FVizAttributeSet* destination, const char* section_tag,
+                                                  const char* begin, const char* end, FVizSize expected_tuples,
+                                                  FVizSize maximum_values)
 {
     FVizVTPArrayBlock blocks[128];
     FVizSize block_count = 0u;
     FVizSize i;
-    static const char* role_names[FVIZ_ATTRIBUTE_ROLE_COUNT] = {
-        "Scalars", "Vectors", "Normals", "Tensors", "GlobalIds"};
+    static const char* role_names[FVIZ_ATTRIBUTE_ROLE_COUNT] = {"Scalars", "Vectors", "Normals", "Tensors",
+                                                                "GlobalIds"};
     if (fviz_vtp_collect_arrays(begin, end, blocks, 128u, &block_count) != FVIZ_OK) return fviz_last_error_code();
     for (i = 0u; i < block_count; ++i)
     {
@@ -245,10 +295,8 @@ static FVizResult fviz_vtp_parse_attribute_arrays(
         const char* cursor = block->content_begin;
         unsigned char* raw;
         FVizSize value_index = 0u;
-        if (block->name[0] == '\0' || component_size == 0u ||
-            components == 0u || expected_tuples > maximum_values ||
-            expected_tuples > maximum_values / components ||
-            expected_tuples > (FVizSize)-1 / components)
+        if (block->name[0] == '\0' || component_size == 0u || components == 0u || expected_tuples > maximum_values ||
+            expected_tuples > maximum_values / components || expected_tuples > (FVizSize)-1 / components)
         {
             fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "VTP attribute dimensions exceed configured limits");
             return FVIZ_ERROR_OVERFLOW;
@@ -264,20 +312,24 @@ static FVizResult fviz_vtp_parse_attribute_arrays(
         while (cursor < block->content_end && value_index < value_count)
         {
             char* next = NULL;
-            while (cursor < block->content_end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+            while (cursor < block->content_end && (isspace((unsigned char)*cursor) || *cursor == ','))
+                ++cursor;
             if (cursor >= block->content_end || *cursor == '<') break;
-            if (type == FVIZ_DATA_UINT8 || type == FVIZ_DATA_UINT16 || type == FVIZ_DATA_UINT32 || type == FVIZ_DATA_UINT64)
+            if (type == FVIZ_DATA_UINT8 || type == FVIZ_DATA_UINT16 || type == FVIZ_DATA_UINT32 ||
+                type == FVIZ_DATA_UINT64)
             {
                 const uint64_t value = (uint64_t)strtoull(cursor, &next, 10);
                 if (next == cursor || next > block->content_end ||
-                    fviz_vtp_store_numeric(raw + value_index * component_size, type, (double)value, value, FVIZ_TRUE) != FVIZ_OK)
+                    fviz_vtp_store_numeric(raw + value_index * component_size, type, (double)value, value, FVIZ_TRUE) !=
+                        FVIZ_OK)
                     break;
             }
             else
             {
                 const double value = strtod(cursor, &next);
                 if (next == cursor || next > block->content_end ||
-                    fviz_vtp_store_numeric(raw + value_index * component_size, type, value, (uint64_t)value, FVIZ_FALSE) != FVIZ_OK)
+                    fviz_vtp_store_numeric(raw + value_index * component_size, type, value, (uint64_t)value,
+                                           FVIZ_FALSE) != FVIZ_OK)
                     break;
             }
             cursor = next;
@@ -308,11 +360,8 @@ static FVizResult fviz_vtp_parse_attribute_arrays(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_vtp_parse_field_arrays(
-    FVizAttributeSet* destination,
-    const char* begin,
-    const char* end,
-    FVizSize maximum_values)
+static FVizResult fviz_vtp_parse_field_arrays(FVizAttributeSet* destination, const char* begin, const char* end,
+                                              FVizSize maximum_values)
 {
     FVizVTPArrayBlock blocks[128];
     FVizSize block_count = 0u;
@@ -338,9 +387,11 @@ static FVizResult fviz_vtp_parse_field_arrays(
         while (cursor < block->content_end)
         {
             char* next = NULL;
-            while (cursor < block->content_end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+            while (cursor < block->content_end && (isspace((unsigned char)*cursor) || *cursor == ','))
+                ++cursor;
             if (cursor >= block->content_end || *cursor == '<') break;
-            if (type == FVIZ_DATA_UINT8 || type == FVIZ_DATA_UINT16 || type == FVIZ_DATA_UINT32 || type == FVIZ_DATA_UINT64)
+            if (type == FVIZ_DATA_UINT8 || type == FVIZ_DATA_UINT16 || type == FVIZ_DATA_UINT32 ||
+                type == FVIZ_DATA_UINT64)
                 (void)strtoull(cursor, &next, 10);
             else
                 (void)strtod(cursor, &next);
@@ -374,20 +425,24 @@ static FVizResult fviz_vtp_parse_field_arrays(
         while (cursor < block->content_end && value_index < value_count)
         {
             char* next = NULL;
-            while (cursor < block->content_end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+            while (cursor < block->content_end && (isspace((unsigned char)*cursor) || *cursor == ','))
+                ++cursor;
             if (cursor >= block->content_end || *cursor == '<') break;
-            if (type == FVIZ_DATA_UINT8 || type == FVIZ_DATA_UINT16 || type == FVIZ_DATA_UINT32 || type == FVIZ_DATA_UINT64)
+            if (type == FVIZ_DATA_UINT8 || type == FVIZ_DATA_UINT16 || type == FVIZ_DATA_UINT32 ||
+                type == FVIZ_DATA_UINT64)
             {
                 const uint64_t value = (uint64_t)strtoull(cursor, &next, 10);
                 if (next == cursor || next > block->content_end ||
-                    fviz_vtp_store_numeric(raw + value_index * component_size, type, (double)value, value, FVIZ_TRUE) != FVIZ_OK)
+                    fviz_vtp_store_numeric(raw + value_index * component_size, type, (double)value, value, FVIZ_TRUE) !=
+                        FVIZ_OK)
                     break;
             }
             else
             {
                 const double value = strtod(cursor, &next);
                 if (next == cursor || next > block->content_end ||
-                    fviz_vtp_store_numeric(raw + value_index * component_size, type, value, (uint64_t)value, FVIZ_FALSE) != FVIZ_OK)
+                    fviz_vtp_store_numeric(raw + value_index * component_size, type, value, (uint64_t)value,
+                                           FVIZ_FALSE) != FVIZ_OK)
                     break;
             }
             cursor = next;
@@ -405,11 +460,8 @@ static FVizResult fviz_vtp_parse_field_arrays(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_vtp_parse_points(
-    FVizPolyData* output,
-    const char* begin,
-    const char* end,
-    FVizSize expected_points)
+static FVizResult fviz_vtp_parse_points(FVizPolyData* output, const char* begin, const char* end,
+                                        FVizSize expected_points)
 {
     FVizVTPArrayBlock blocks[4];
     FVizSize block_count = 0u;
@@ -432,7 +484,8 @@ static FVizResult fviz_vtp_parse_points(
     {
         char* next = NULL;
         double value;
-        while (cursor < blocks[0].content_end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+        while (cursor < blocks[0].content_end && (isspace((unsigned char)*cursor) || *cursor == ','))
+            ++cursor;
         if (cursor >= blocks[0].content_end || *cursor == '<') break;
         value = strtod(cursor, &next);
         if (next == cursor || next > blocks[0].content_end) break;
@@ -449,14 +502,9 @@ static FVizResult fviz_vtp_parse_points(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_vtp_parse_cell_section(
-    FVizPolyData* output,
-    const char* begin,
-    const char* end,
-    FVizCellType single_type,
-    FVizCellType multiple_type,
-    FVizSize expected_cells,
-    FVizSize max_connectivity)
+static FVizResult fviz_vtp_parse_cell_section(FVizPolyData* output, const char* begin, const char* end,
+                                              FVizCellType single_type, FVizCellType multiple_type,
+                                              FVizSize expected_cells, FVizSize max_connectivity)
 {
     FVizVTPArrayBlock blocks[8];
     FVizSize block_count = 0u;
@@ -473,7 +521,8 @@ static FVizResult fviz_vtp_parse_cell_section(
     for (i = 0u; i < block_count; ++i)
     {
         if (strcmp(blocks[i].name, "connectivity") == 0) connectivity = &blocks[i];
-        else if (strcmp(blocks[i].name, "offsets") == 0) offsets = &blocks[i];
+        else if (strcmp(blocks[i].name, "offsets") == 0)
+            offsets = &blocks[i];
     }
     if (connectivity == NULL || offsets == NULL)
     {
@@ -490,14 +539,16 @@ static FVizResult fviz_vtp_parse_cell_section(
         {
             char* next = NULL;
             unsigned long long value;
-            while (cursor < connectivity->content_end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+            while (cursor < connectivity->content_end && (isspace((unsigned char)*cursor) || *cursor == ','))
+                ++cursor;
             if (cursor >= connectivity->content_end || *cursor == '<') break;
             value = strtoull(cursor, &next, 10);
             if (next == cursor || next > connectivity->content_end) break;
             ids[conn_count++] = (FVizId)value;
             cursor = next;
         }
-        while (cursor < connectivity->content_end && isspace((unsigned char)*cursor)) ++cursor;
+        while (cursor < connectivity->content_end && isspace((unsigned char)*cursor))
+            ++cursor;
         if (cursor < connectivity->content_end)
         {
             result = FVIZ_ERROR_OVERFLOW;
@@ -506,14 +557,19 @@ static FVizResult fviz_vtp_parse_cell_section(
         }
     }
     offs = (FVizSize*)fviz_alloc(expected_cells * sizeof(*offs));
-    if (offs == NULL && expected_cells != 0u) { result = fviz_last_error_code(); goto cleanup; }
+    if (offs == NULL && expected_cells != 0u)
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
     {
         const char* cursor = offsets->content_begin;
         while (cursor < offsets->content_end && offset_count < expected_cells)
         {
             char* next = NULL;
             unsigned long long value;
-            while (cursor < offsets->content_end && (isspace((unsigned char)*cursor) || *cursor == ',')) ++cursor;
+            while (cursor < offsets->content_end && (isspace((unsigned char)*cursor) || *cursor == ','))
+                ++cursor;
             if (cursor >= offsets->content_end || *cursor == '<') break;
             value = strtoull(cursor, &next, 10);
             if (next == cursor || next > offsets->content_end || value > (unsigned long long)((FVizSize)-1)) break;
@@ -542,8 +598,7 @@ static FVizResult fviz_vtp_parse_cell_section(
             }
             n = stop - start;
             type = n == 1u ? single_type : multiple_type;
-            if (single_type == FVIZ_CELL_LINE)
-                type = n == 2u ? FVIZ_CELL_LINE : FVIZ_CELL_POLY_LINE;
+            if (single_type == FVIZ_CELL_LINE) type = n == 2u ? FVIZ_CELL_LINE : FVIZ_CELL_POLY_LINE;
             else if (single_type == FVIZ_CELL_TRIANGLE)
                 type = n == 3u ? FVIZ_CELL_TRIANGLE : n == 4u ? FVIZ_CELL_QUAD : FVIZ_CELL_POLYGON;
             else if (single_type == FVIZ_CELL_TRIANGLE_STRIP)
@@ -588,10 +643,8 @@ FVizResult fviz_vtp_read(const char* file_path, FVizPolyData** out_poly_data)
     return fviz_vtp_read_with_options(file_path, &options, out_poly_data);
 }
 
-FVizResult fviz_vtp_read_with_options(
-    const char* file_path,
-    const FVizVTPReaderOptions* options,
-    FVizPolyData** out_poly_data)
+FVizResult fviz_vtp_read_with_options(const char* file_path, const FVizVTPReaderOptions* options,
+                                      FVizPolyData** out_poly_data)
 {
     FILE* file = NULL;
     long file_size_long;
@@ -607,7 +660,15 @@ FVizResult fviz_vtp_read_with_options(
     FVizSize point_count = 0u, vert_count = 0u, line_count = 0u, strip_count = 0u, poly_count = 0u;
     FVizPolyData* output = NULL;
     FVizResult result = FVIZ_OK;
-    struct Section { const char* tag; const char* begin; const char* end; } points={0}, point_data={0}, cell_data={0}, field_data={0}, verts={0}, lines={0}, strips={0}, polys={0};
+
+    struct Section
+    {
+        const char* tag;
+        const char* begin;
+        const char* end;
+    } points = {0}, point_data = {0}, cell_data = {0}, field_data = {0}, verts = {0}, lines = {0}, strips = {0},
+      polys = {0};
+
     if (out_poly_data != NULL) *out_poly_data = NULL;
     if (file_path == NULL || options == NULL || out_poly_data == NULL || options->struct_size < sizeof(*options))
     {
@@ -615,28 +676,57 @@ FVizResult fviz_vtp_read_with_options(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     file = fopen(file_path, "rb");
-    if (file == NULL) { fviz_internal_set_error(FVIZ_ERROR_IO, "failed to open VTP file"); return FVIZ_ERROR_IO; }
+    if (file == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_IO, "failed to open VTP file");
+        return FVIZ_ERROR_IO;
+    }
     if (fseek(file, 0, SEEK_END) != 0 || (file_size_long = ftell(file)) < 0 || fseek(file, 0, SEEK_SET) != 0)
-    { result = FVIZ_ERROR_IO; goto cleanup; }
+    {
+        result = FVIZ_ERROR_IO;
+        goto cleanup;
+    }
     file_size = (FVizSize)file_size_long;
     if (file_size > options->maximum_file_bytes || file_size > (FVizSize)-1 - 1u)
-    { result = FVIZ_ERROR_OVERFLOW; fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "VTP file exceeds configured size limit"); goto cleanup; }
+    {
+        result = FVIZ_ERROR_OVERFLOW;
+        fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "VTP file exceeds configured size limit");
+        goto cleanup;
+    }
     text = (char*)fviz_alloc(file_size + 1u);
-    if (text == NULL) { result = fviz_last_error_code(); goto cleanup; }
+    if (text == NULL)
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
     if (file_size != 0u && fread(text, 1u, file_size, file) != file_size)
-    { result = FVIZ_ERROR_IO; goto cleanup; }
+    {
+        result = FVIZ_ERROR_IO;
+        goto cleanup;
+    }
     text[file_size] = '\0';
     end = text + file_size;
     if (strstr(text, "<VTKFile") == NULL || strstr(text, "type=\"PolyData\"") == NULL)
-    { result = FVIZ_ERROR_PARSE; fviz_internal_set_error(FVIZ_ERROR_PARSE, "file is not VTK XML PolyData"); goto cleanup; }
+    {
+        result = FVIZ_ERROR_PARSE;
+        fviz_internal_set_error(FVIZ_ERROR_PARSE, "file is not VTK XML PolyData");
+        goto cleanup;
+    }
     poly_data = strstr(text, "<PolyData");
     if (poly_data == NULL || poly_data >= end || (poly_data_tag_end = strchr(poly_data, '>')) == NULL ||
         (poly_data_end = strstr(poly_data_tag_end, "</PolyData>")) == NULL)
-    { result = FVIZ_ERROR_PARSE; goto cleanup; }
+    {
+        result = FVIZ_ERROR_PARSE;
+        goto cleanup;
+    }
     piece = strstr(poly_data_tag_end, "<Piece");
     if (piece == NULL || piece >= poly_data_end || (piece_tag_end = strchr(piece, '>')) == NULL ||
-        piece_tag_end >= poly_data_end || (piece_end = strstr(piece_tag_end, "</Piece>")) == NULL || piece_end >= poly_data_end)
-    { result = FVIZ_ERROR_PARSE; goto cleanup; }
+        piece_tag_end >= poly_data_end || (piece_end = strstr(piece_tag_end, "</Piece>")) == NULL ||
+        piece_end >= poly_data_end)
+    {
+        result = FVIZ_ERROR_PARSE;
+        goto cleanup;
+    }
     {
         const char* next_piece = strstr(piece_end + sizeof("</Piece>") - 1u, "<Piece");
         if (next_piece != NULL && next_piece < poly_data_end)
@@ -652,32 +742,103 @@ FVizResult fviz_vtp_read_with_options(
     (void)fviz_vtp_attr_size(piece, "NumberOfStrips", &strip_count);
     (void)fviz_vtp_attr_size(piece, "NumberOfPolys", &poly_count);
     if (point_count > options->maximum_points || vert_count > options->maximum_cells ||
-        line_count > options->maximum_cells || strip_count > options->maximum_cells || poly_count > options->maximum_cells ||
-        vert_count > options->maximum_cells - (line_count <= options->maximum_cells ? line_count : options->maximum_cells) ||
-        vert_count + line_count > options->maximum_cells - (strip_count <= options->maximum_cells ? strip_count : options->maximum_cells) ||
-        vert_count + line_count + strip_count > options->maximum_cells - (poly_count <= options->maximum_cells ? poly_count : options->maximum_cells))
-    { result = FVIZ_ERROR_OVERFLOW; fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "VTP Piece exceeds configured topology limits"); goto cleanup; }
-#define FIND_SECTION(var,name) (void)fviz_vtp_find_section(piece_tag_end, piece_end, name, &var.tag, &var.begin, &var.end)
-    FIND_SECTION(points,"Points"); FIND_SECTION(point_data,"PointData"); FIND_SECTION(cell_data,"CellData");
-    (void)fviz_vtp_find_section(poly_data_tag_end, piece, "FieldData", &field_data.tag, &field_data.begin, &field_data.end);
-    FIND_SECTION(verts,"Verts"); FIND_SECTION(lines,"Lines"); FIND_SECTION(strips,"Strips"); FIND_SECTION(polys,"Polys");
+        line_count > options->maximum_cells || strip_count > options->maximum_cells ||
+        poly_count > options->maximum_cells ||
+        vert_count >
+            options->maximum_cells - (line_count <= options->maximum_cells ? line_count : options->maximum_cells) ||
+        vert_count + line_count >
+            options->maximum_cells - (strip_count <= options->maximum_cells ? strip_count : options->maximum_cells) ||
+        vert_count + line_count + strip_count >
+            options->maximum_cells - (poly_count <= options->maximum_cells ? poly_count : options->maximum_cells))
+    {
+        result = FVIZ_ERROR_OVERFLOW;
+        fviz_internal_set_error(FVIZ_ERROR_OVERFLOW, "VTP Piece exceeds configured topology limits");
+        goto cleanup;
+    }
+#define FIND_SECTION(var, name)                                                                                        \
+    (void)fviz_vtp_find_section(piece_tag_end, piece_end, name, &var.tag, &var.begin, &var.end)
+    FIND_SECTION(points, "Points");
+    FIND_SECTION(point_data, "PointData");
+    FIND_SECTION(cell_data, "CellData");
+    (void)fviz_vtp_find_section(poly_data_tag_end, piece, "FieldData", &field_data.tag, &field_data.begin,
+                                &field_data.end);
+    FIND_SECTION(verts, "Verts");
+    FIND_SECTION(lines, "Lines");
+    FIND_SECTION(strips, "Strips");
+    FIND_SECTION(polys, "Polys");
 #undef FIND_SECTION
-    if (points.begin == NULL) { result = FVIZ_ERROR_PARSE; fviz_internal_set_error(FVIZ_ERROR_PARSE, "VTP Piece has no Points section"); goto cleanup; }
+    if (points.begin == NULL)
+    {
+        result = FVIZ_ERROR_PARSE;
+        fviz_internal_set_error(FVIZ_ERROR_PARSE, "VTP Piece has no Points section");
+        goto cleanup;
+    }
     if (fviz_poly_data_create(&output) != FVIZ_OK ||
         fviz_poly_data_reserve(output, point_count, poly_count + strip_count) != FVIZ_OK ||
         fviz_vtp_parse_points(output, points.begin, points.end, point_count) != FVIZ_OK)
-    { result = fviz_last_error_code(); goto cleanup; }
-    if (vert_count > 0u && (verts.begin == NULL || fviz_vtp_parse_cell_section(output, verts.begin, verts.end, FVIZ_CELL_VERTEX, FVIZ_CELL_POLY_VERTEX, vert_count, options->maximum_connectivity_values) != FVIZ_OK)) { result=fviz_last_error_code(); goto cleanup; }
-    if (line_count > 0u && (lines.begin == NULL || fviz_vtp_parse_cell_section(output, lines.begin, lines.end, FVIZ_CELL_LINE, FVIZ_CELL_POLY_LINE, line_count, options->maximum_connectivity_values) != FVIZ_OK)) { result=fviz_last_error_code(); goto cleanup; }
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
+    if (vert_count > 0u &&
+        (verts.begin == NULL ||
+         fviz_vtp_parse_cell_section(output, verts.begin, verts.end, FVIZ_CELL_VERTEX, FVIZ_CELL_POLY_VERTEX,
+                                     vert_count, options->maximum_connectivity_values) != FVIZ_OK))
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
+    if (line_count > 0u &&
+        (lines.begin == NULL ||
+         fviz_vtp_parse_cell_section(output, lines.begin, lines.end, FVIZ_CELL_LINE, FVIZ_CELL_POLY_LINE, line_count,
+                                     options->maximum_connectivity_values) != FVIZ_OK))
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
     /* Preserve FEAViz logical cell ordering: verts, lines, polys, strips. */
-    if (poly_count > 0u && (polys.begin == NULL || fviz_vtp_parse_cell_section(output, polys.begin, polys.end, FVIZ_CELL_TRIANGLE, FVIZ_CELL_POLYGON, poly_count, options->maximum_connectivity_values) != FVIZ_OK)) { result=fviz_last_error_code(); goto cleanup; }
-    if (strip_count > 0u && (strips.begin == NULL || fviz_vtp_parse_cell_section(output, strips.begin, strips.end, FVIZ_CELL_TRIANGLE_STRIP, FVIZ_CELL_TRIANGLE_STRIP, strip_count, options->maximum_connectivity_values) != FVIZ_OK)) { result=fviz_last_error_code(); goto cleanup; }
-    if (point_data.begin != NULL && fviz_vtp_parse_attribute_arrays(fviz_poly_data_point_data(output), point_data.tag, point_data.begin, point_data.end, point_count, options->maximum_array_values) != FVIZ_OK) { result=fviz_last_error_code(); goto cleanup; }
-    if (cell_data.begin != NULL && fviz_vtp_parse_attribute_arrays(fviz_poly_data_cell_data(output), cell_data.tag, cell_data.begin, cell_data.end, fviz_poly_data_cell_count(output), options->maximum_array_values) != FVIZ_OK) { result=fviz_last_error_code(); goto cleanup; }
+    if (poly_count > 0u &&
+        (polys.begin == NULL ||
+         fviz_vtp_parse_cell_section(output, polys.begin, polys.end, FVIZ_CELL_TRIANGLE, FVIZ_CELL_POLYGON, poly_count,
+                                     options->maximum_connectivity_values) != FVIZ_OK))
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
+    if (strip_count > 0u &&
+        (strips.begin == NULL || fviz_vtp_parse_cell_section(output, strips.begin, strips.end, FVIZ_CELL_TRIANGLE_STRIP,
+                                                             FVIZ_CELL_TRIANGLE_STRIP, strip_count,
+                                                             options->maximum_connectivity_values) != FVIZ_OK))
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
+    if (point_data.begin != NULL &&
+        fviz_vtp_parse_attribute_arrays(fviz_poly_data_point_data(output), point_data.tag, point_data.begin,
+                                        point_data.end, point_count, options->maximum_array_values) != FVIZ_OK)
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
+    if (cell_data.begin != NULL &&
+        fviz_vtp_parse_attribute_arrays(fviz_poly_data_cell_data(output), cell_data.tag, cell_data.begin, cell_data.end,
+                                        fviz_poly_data_cell_count(output), options->maximum_array_values) != FVIZ_OK)
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
     if (field_data.begin != NULL &&
-        fviz_vtp_parse_field_arrays(fviz_poly_data_field_data(output), field_data.begin, field_data.end, options->maximum_array_values) != FVIZ_OK)
-    { result=fviz_last_error_code(); goto cleanup; }
-    if (fviz_poly_data_validate(output) != FVIZ_OK) { result=fviz_last_error_code(); goto cleanup; }
+        fviz_vtp_parse_field_arrays(fviz_poly_data_field_data(output), field_data.begin, field_data.end,
+                                    options->maximum_array_values) != FVIZ_OK)
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
+    if (fviz_poly_data_validate(output) != FVIZ_OK)
+    {
+        result = fviz_last_error_code();
+        goto cleanup;
+    }
     *out_poly_data = output;
     output = NULL;
 cleanup:

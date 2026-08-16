@@ -35,19 +35,12 @@ FVIZ_API FVizBool fviz_point_locator_acceleration_valid(const FVizPointLocator* 
 FVIZ_API FVizBool fviz_point_locator_refit_required(const FVizPointLocator* locator);
 FVIZ_API FVizSize fviz_point_locator_indexed_cell_count(const FVizPointLocator* locator);
 FVIZ_API const FVizUnstructuredGrid* fviz_point_locator_const_grid(const FVizPointLocator* locator);
-FVIZ_API FVizBool fviz_point_locator_locate_point(
-    const FVizPointLocator* locator,
-    FVizVec3 point,
-    FVizLocatedCell* out_result);
-FVIZ_API FVizResult fviz_point_locator_interpolate_scalar(
-    const FVizPointLocator* locator,
-    const char* scalar_name,
-    FVizVec3 point,
-    float* out_value);
-FVIZ_API FVizVec3 fviz_point_locator_interpolate_vector(
-    const FVizPointLocator* locator,
-    const char* vector_name,
-    FVizVec3 point);
+FVIZ_API FVizBool fviz_point_locator_locate_point(const FVizPointLocator* locator, FVizVec3 point,
+                                                  FVizLocatedCell* out_result);
+FVIZ_API FVizResult fviz_point_locator_interpolate_scalar(const FVizPointLocator* locator, const char* scalar_name,
+                                                          FVizVec3 point, float* out_value);
+FVIZ_API FVizVec3 fviz_point_locator_interpolate_vector(const FVizPointLocator* locator, const char* vector_name,
+                                                        FVizVec3 point);
 
 FVIZ_EXTERN_C_END
 

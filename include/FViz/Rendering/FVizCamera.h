@@ -28,7 +28,8 @@ FVIZ_API void fviz_camera_set_up(FVizCamera* camera, FVizVec3 up);
 FVIZ_API FVizVec3 fviz_camera_position(const FVizCamera* camera);
 FVIZ_API FVizVec3 fviz_camera_target(const FVizCamera* camera);
 FVIZ_API FVizVec3 fviz_camera_up(const FVizCamera* camera);
-FVIZ_API void fviz_camera_set_perspective(FVizCamera* camera, float vertical_fov_degrees, float near_plane, float far_plane);
+FVIZ_API void fviz_camera_set_perspective(FVizCamera* camera, float vertical_fov_degrees, float near_plane,
+                                          float far_plane);
 FVIZ_API void fviz_camera_set_clipping_range(FVizCamera* camera, float near_plane, float far_plane);
 FVIZ_API float fviz_camera_fov_degrees(const FVizCamera* camera);
 FVIZ_API float fviz_camera_near_plane(const FVizCamera* camera);

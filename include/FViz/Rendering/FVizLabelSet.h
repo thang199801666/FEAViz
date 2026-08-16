@@ -16,8 +16,8 @@ typedef struct FVizLabelSet3D FVizLabelSet3D;
 FVIZ_API FVizResult fviz_label_set_3d_create(FVizLabelSet3D** out_label_set);
 FVIZ_API void fviz_label_set_3d_clear(FVizLabelSet3D* label_set);
 FVIZ_API FVizResult fviz_label_set_3d_reserve(FVizLabelSet3D* label_set, FVizSize capacity);
-FVIZ_API FVizResult fviz_label_set_3d_add(
-    FVizLabelSet3D* label_set, FVizVec3 position, const char* utf8, FVizSize* out_index);
+FVIZ_API FVizResult fviz_label_set_3d_add(FVizLabelSet3D* label_set, FVizVec3 position, const char* utf8,
+                                          FVizSize* out_index);
 FVIZ_API FVizSize fviz_label_set_3d_count(const FVizLabelSet3D* label_set);
 FVIZ_API FVizVec3 fviz_label_set_3d_position_at(const FVizLabelSet3D* label_set, FVizSize index);
 FVIZ_API const char* fviz_label_set_3d_text_at(const FVizLabelSet3D* label_set, FVizSize index);

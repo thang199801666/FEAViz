@@ -47,13 +47,9 @@ static void fviz_smooth_poly_data_filter_destroy(FVizObject* object)
     filter->algorithm = NULL;
 }
 
-static const FVizObjectClass g_fviz_smooth_poly_data_filter_class = {
-    FVIZ_TYPE_SMOOTH_POLY_DATA_FILTER,
-    "FVizSmoothPolyDataFilter",
-    &g_fviz_object_class,
-    fviz_smooth_poly_data_filter_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_smooth_poly_data_filter_class = {FVIZ_TYPE_SMOOTH_POLY_DATA_FILTER,
+                                                                     "FVizSmoothPolyDataFilter", &g_fviz_object_class,
+                                                                     fviz_smooth_poly_data_filter_destroy, NULL};
 
 static uint64_t fviz_mesh_edge_key(uint32_t a, uint32_t b)
 {
@@ -69,11 +65,8 @@ static int fviz_compare_u64(const void* lhs, const void* rhs)
     return a < b ? -1 : (a > b ? 1 : 0);
 }
 
-static FVizResult fviz_smooth_build_adjacency(
-    const FVizPolyData* input,
-    FVizSize** out_offsets,
-    uint32_t** out_neighbors,
-    uint8_t** out_boundary)
+static FVizResult fviz_smooth_build_adjacency(const FVizPolyData* input, FVizSize** out_offsets,
+                                              uint32_t** out_neighbors, uint8_t** out_boundary)
 {
     const FVizSize point_count = fviz_poly_data_point_count(input);
     const FVizSize triangle_count = fviz_poly_data_triangle_count(input);
@@ -88,8 +81,7 @@ static FVizResult fviz_smooth_build_adjacency(
     FVizSize edge_count = 0u;
     FVizSize i;
     FVizSize bytes;
-    if (out_offsets == NULL || out_neighbors == NULL || out_boundary == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (out_offsets == NULL || out_neighbors == NULL || out_boundary == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_offsets = NULL;
     *out_neighbors = NULL;
     *out_boundary = NULL;
@@ -104,8 +96,8 @@ static FVizResult fviz_smooth_build_adjacency(
     degree = (FVizSize*)fviz_alloc(bytes);
     cursor = (FVizSize*)fviz_alloc(bytes);
     boundary = (uint8_t*)fviz_alloc(point_count);
-    if (point_count == (FVizSize)-1 ||
-        fviz_size_multiply(point_count + 1u, sizeof(*offsets), &bytes) != FVIZ_OK) goto overflow;
+    if (point_count == (FVizSize)-1 || fviz_size_multiply(point_count + 1u, sizeof(*offsets), &bytes) != FVIZ_OK)
+        goto overflow;
     offsets = (FVizSize*)fviz_alloc(bytes);
     if (degree == NULL || cursor == NULL || boundary == NULL || offsets == NULL) goto oom;
     memset(degree, 0, point_count * sizeof(*degree));
@@ -121,8 +113,7 @@ static FVizResult fviz_smooth_build_adjacency(
         const uint32_t b = triangles[i * 3u + 1u];
         const uint32_t c = triangles[i * 3u + 2u];
         if (a >= point_count || b >= point_count || c >= point_count) goto invalid;
-        if (degree[a] > (FVizSize)-3 || degree[b] > (FVizSize)-3 || degree[c] > (FVizSize)-3)
-            goto overflow;
+        if (degree[a] > (FVizSize)-3 || degree[b] > (FVizSize)-3 || degree[c] > (FVizSize)-3) goto overflow;
         degree[a] += 2u;
         degree[b] += 2u;
         degree[c] += 2u;
@@ -157,7 +148,8 @@ static FVizResult fviz_smooth_build_adjacency(
     for (i = 0u; i < edge_count;)
     {
         FVizSize j = i + 1u;
-        while (j < edge_count && edges[j] == edges[i]) ++j;
+        while (j < edge_count && edges[j] == edges[i])
+            ++j;
         if (j - i == 1u)
         {
             const uint32_t a = (uint32_t)(edges[i] >> 32u);
@@ -210,16 +202,13 @@ static void fviz_smooth_range(FVizSize begin, FVizSize end, void* user_data)
         for (j = start; j < finish; ++j)
             sum = fviz_vec3_add(sum, context->input[context->neighbors[j]]);
         sum = fviz_vec3_scale(sum, 1.0f / (float)(finish - start));
-        context->output[i] = fviz_vec3_add(
-            context->input[i],
-            fviz_vec3_scale(fviz_vec3_sub(sum, context->input[i]), context->relaxation));
+        context->output[i] = fviz_vec3_add(context->input[i],
+                                           fviz_vec3_scale(fviz_vec3_sub(sum, context->input[i]), context->relaxation));
     }
 }
 
-static FVizResult fviz_smooth_poly_data_filter_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_smooth_poly_data_filter_process_request(FVizAlgorithm* algorithm,
+                                                               const FVizPipelineRequestInfo* request, void* state)
 {
     FVizSmoothPolyDataFilter* filter = (FVizSmoothPolyDataFilter*)state;
     FVizPolyData* input;
@@ -243,7 +232,8 @@ static FVizResult fviz_smooth_poly_data_filter_process_request(
     if (fviz_poly_data_deep_copy(input, &output) != FVIZ_OK) goto fail;
     if (point_count == 0u || filter->iterations == 0u)
     {
-        if (fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
+        if (fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) !=
+            FVIZ_OK)
             goto fail;
         fviz_release(output);
         return FVIZ_OK;
@@ -269,8 +259,7 @@ static FVizResult fviz_smooth_poly_data_filter_process_request(
         swap = current;
         current = next;
         next = swap;
-        if (fviz_algorithm_report_progress(
-                algorithm, (double)(iteration + 1u) / (double)filter->iterations) != FVIZ_OK)
+        if (fviz_algorithm_report_progress(algorithm, (double)(iteration + 1u) / (double)filter->iterations) != FVIZ_OK)
             goto fail;
         if (fviz_algorithm_abort_requested(algorithm) != FVIZ_FALSE)
         {
@@ -280,7 +269,8 @@ static FVizResult fviz_smooth_poly_data_filter_process_request(
     }
     if (fviz_poly_data_set_points(output, current, point_count) != FVIZ_OK) goto fail;
     if (fviz_poly_data_triangle_count(output) != 0u && fviz_poly_data_compute_normals(output) != FVIZ_OK) goto fail;
-    if (fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK) goto fail;
+    if (fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
+        goto fail;
     fviz_free(next);
     fviz_free(current);
     fviz_free(boundary);
@@ -308,8 +298,8 @@ FVizResult fviz_smooth_poly_data_filter_create(FVizSmoothPolyDataFilter** out_fi
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_filter = NULL;
-    filter = (FVizSmoothPolyDataFilter*)fviz_internal_object_allocate(
-        sizeof(*filter), &g_fviz_smooth_poly_data_filter_class, NULL);
+    filter = (FVizSmoothPolyDataFilter*)fviz_internal_object_allocate(sizeof(*filter),
+                                                                      &g_fviz_smooth_poly_data_filter_class, NULL);
     if (filter == NULL) return fviz_last_error_code();
     filter->iterations = 20u;
     filter->relaxation_factor = 0.01;
@@ -319,7 +309,8 @@ FVizResult fviz_smooth_poly_data_filter_create(FVizSmoothPolyDataFilter** out_fi
     callbacks.get_state_mtime = fviz_mesh_processing_state_mtime;
     callbacks.state_object = (FVizObject*)filter;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA, FVIZ_FALSE, FVIZ_FALSE) !=
+            FVIZ_OK ||
         fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA) != FVIZ_OK)
     {
         fviz_release(filter);
@@ -386,16 +377,15 @@ FVizBool fviz_smooth_poly_data_filter_boundary_smoothing(const FVizSmoothPolyDat
 
 FVizResult fviz_smooth_poly_data_filter_set_input_data(FVizSmoothPolyDataFilter* filter, FVizPolyData* input)
 {
-    return filter != NULL
-        ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
-        : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizResult fviz_smooth_poly_data_filter_set_input_connection(FVizSmoothPolyDataFilter* filter, FVizAlgorithmOutput* input)
+FVizResult fviz_smooth_poly_data_filter_set_input_connection(FVizSmoothPolyDataFilter* filter,
+                                                             FVizAlgorithmOutput* input)
 {
-    return filter != NULL
-        ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
-        : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
 FVizAlgorithm* fviz_smooth_poly_data_filter_algorithm(FVizSmoothPolyDataFilter* filter)
@@ -445,12 +435,8 @@ static void fviz_decimate_poly_data_filter_destroy(FVizObject* object)
 }
 
 static const FVizObjectClass g_fviz_decimate_poly_data_filter_class = {
-    FVIZ_TYPE_DECIMATE_POLY_DATA_FILTER,
-    "FVizDecimatePolyDataFilter",
-    &g_fviz_object_class,
-    fviz_decimate_poly_data_filter_destroy,
-    NULL
-};
+    FVIZ_TYPE_DECIMATE_POLY_DATA_FILTER, "FVizDecimatePolyDataFilter", &g_fviz_object_class,
+    fviz_decimate_poly_data_filter_destroy, NULL};
 
 static int fviz_decimate_compare_tri(const void* lhs, const void* rhs)
 {
@@ -465,18 +451,32 @@ static int fviz_decimate_compare_tri(const void* lhs, const void* rhs)
 static void fviz_decimate_sort3(uint32_t a, uint32_t b, uint32_t c, uint32_t* k0, uint32_t* k1, uint32_t* k2)
 {
     uint32_t x = a, y = b, z = c, t;
-    if (x > y) { t = x; x = y; y = t; }
-    if (y > z) { t = y; y = z; z = t; }
-    if (x > y) { t = x; x = y; y = t; }
-    *k0 = x; *k1 = y; *k2 = z;
+    if (x > y)
+    {
+        t = x;
+        x = y;
+        y = t;
+    }
+    if (y > z)
+    {
+        t = y;
+        y = z;
+        z = t;
+    }
+    if (x > y)
+    {
+        t = x;
+        x = y;
+        y = t;
+    }
+    *k0 = x;
+    *k1 = y;
+    *k2 = z;
 }
 
-static FVizResult fviz_decimate_copy_clustered_point_data(
-    const FVizPolyData* input,
-    FVizPolyData* output,
-    const uint32_t* mapping,
-    const FVizSize* cluster_counts,
-    FVizSize cluster_count)
+static FVizResult fviz_decimate_copy_clustered_point_data(const FVizPolyData* input, FVizPolyData* output,
+                                                          const uint32_t* mapping, const FVizSize* cluster_counts,
+                                                          FVizSize cluster_count)
 {
     const FVizAttributeSet* source_set = fviz_poly_data_const_point_data(input);
     FVizSize array_index;
@@ -551,11 +551,8 @@ static FVizResult fviz_decimate_copy_clustered_point_data(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_decimate_copy_cell_data(
-    const FVizPolyData* input,
-    FVizPolyData* output,
-    const FVizSize* source_ids,
-    FVizSize output_triangle_count)
+static FVizResult fviz_decimate_copy_cell_data(const FVizPolyData* input, FVizPolyData* output,
+                                               const FVizSize* source_ids, FVizSize output_triangle_count)
 {
     const FVizAttributeSet* source_set = fviz_poly_data_const_cell_data(input);
     const FVizSize input_triangle_count = fviz_poly_data_triangle_count(input);
@@ -568,7 +565,8 @@ static FVizResult fviz_decimate_copy_cell_data(
         FVizAttributeRole role;
         FVizSize i;
         if (fviz_data_array_tuple_count(source) != input_triangle_count) continue;
-        if (fviz_data_array_create(fviz_data_array_type(source), fviz_data_array_components(source), &destination) != FVIZ_OK ||
+        if (fviz_data_array_create(fviz_data_array_type(source), fviz_data_array_components(source), &destination) !=
+                FVIZ_OK ||
             fviz_data_array_reserve(destination, output_triangle_count) != FVIZ_OK)
         {
             fviz_release(destination);
@@ -576,7 +574,8 @@ static FVizResult fviz_decimate_copy_cell_data(
         }
         for (i = 0u; i < output_triangle_count; ++i)
         {
-            if (fviz_data_array_append_tuple(destination, fviz_data_array_const_tuple(source, source_ids[i])) != FVIZ_OK)
+            if (fviz_data_array_append_tuple(destination, fviz_data_array_const_tuple(source, source_ids[i])) !=
+                FVIZ_OK)
             {
                 fviz_release(destination);
                 return fviz_last_error_code();
@@ -624,10 +623,8 @@ static FVizResult fviz_decimate_copy_cell_data(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_decimate_poly_data_filter_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_decimate_poly_data_filter_process_request(FVizAlgorithm* algorithm,
+                                                                 const FVizPipelineRequestInfo* request, void* state)
 {
     FVizDecimatePolyDataFilter* filter = (FVizDecimatePolyDataFilter*)state;
     FVizPolyData* input;
@@ -666,15 +663,15 @@ static FVizResult fviz_decimate_poly_data_filter_process_request(
     triangles = fviz_poly_data_triangle_indices(input);
     if (triangle_count == 0u || triangles == NULL)
     {
-        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "decimation requires render-ready triangles; run TriangleFilter first");
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+                                "decimation requires render-ready triangles; run TriangleFilter first");
         return FVIZ_ERROR_INVALID_STATE;
     }
     if (filter->target_reduction <= 0.0)
     {
         FVizResult result = fviz_poly_data_deep_copy(input, &output);
         if (result == FVIZ_OK)
-            result = fviz_algorithm_set_output_data(
-                algorithm, request->requested_output_port, (FVizDataObject*)output);
+            result = fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output);
         fviz_release(output);
         return result;
     }
@@ -753,12 +750,13 @@ static FVizResult fviz_decimate_poly_data_filter_process_request(
     qsort(records, record_count, sizeof(*records), fviz_decimate_compare_tri);
     for (i = 0u; i < record_count; ++i)
     {
-        if (i == 0u || records[i].k0 != records[i - 1u].k0 ||
-            records[i].k1 != records[i - 1u].k1 || records[i].k2 != records[i - 1u].k2)
+        if (i == 0u || records[i].k0 != records[i - 1u].k0 || records[i].k1 != records[i - 1u].k1 ||
+            records[i].k2 != records[i - 1u].k2)
             ++unique_count;
     }
     if (unique_count > (FVizSize)-1 / 3u ||
-        fviz_size_multiply(unique_count * 3u, sizeof(*output_triangles), &bytes) != FVIZ_OK) goto fail;
+        fviz_size_multiply(unique_count * 3u, sizeof(*output_triangles), &bytes) != FVIZ_OK)
+        goto fail;
     output_triangles = (uint32_t*)fviz_alloc(bytes);
     if (fviz_size_multiply(unique_count, sizeof(*source_ids), &bytes) != FVIZ_OK) goto fail;
     source_ids = (FVizSize*)fviz_alloc(bytes);
@@ -766,8 +764,8 @@ static FVizResult fviz_decimate_poly_data_filter_process_request(
     unique_count = 0u;
     for (i = 0u; i < record_count; ++i)
     {
-        if (i != 0u && records[i].k0 == records[i - 1u].k0 &&
-            records[i].k1 == records[i - 1u].k1 && records[i].k2 == records[i - 1u].k2)
+        if (i != 0u && records[i].k0 == records[i - 1u].k0 && records[i].k1 == records[i - 1u].k1 &&
+            records[i].k2 == records[i - 1u].k2)
             continue;
         output_triangles[unique_count * 3u + 0u] = records[i].a;
         output_triangles[unique_count * 3u + 1u] = records[i].b;
@@ -814,8 +812,8 @@ FVizResult fviz_decimate_poly_data_filter_create(FVizDecimatePolyDataFilter** ou
     FVizAlgorithmCallbacks callbacks;
     if (out_filter == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_filter = NULL;
-    filter = (FVizDecimatePolyDataFilter*)fviz_internal_object_allocate(
-        sizeof(*filter), &g_fviz_decimate_poly_data_filter_class, NULL);
+    filter = (FVizDecimatePolyDataFilter*)fviz_internal_object_allocate(sizeof(*filter),
+                                                                        &g_fviz_decimate_poly_data_filter_class, NULL);
     if (filter == NULL) return fviz_last_error_code();
     filter->target_reduction = 0.5;
     fviz_algorithm_callbacks_initialize(&callbacks);
@@ -823,7 +821,8 @@ FVizResult fviz_decimate_poly_data_filter_create(FVizDecimatePolyDataFilter** ou
     callbacks.get_state_mtime = fviz_mesh_processing_state_mtime;
     callbacks.state_object = (FVizObject*)filter;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA, FVIZ_FALSE, FVIZ_FALSE) !=
+            FVIZ_OK ||
         fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_POLY_DATA) != FVIZ_OK)
     {
         fviz_release(filter);
@@ -855,13 +854,33 @@ double fviz_decimate_poly_data_filter_target_reduction(const FVizDecimatePolyDat
 
 FVizResult fviz_decimate_poly_data_filter_set_input_data(FVizDecimatePolyDataFilter* filter, FVizPolyData* input)
 {
-    return filter != NULL ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input) : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
-FVizResult fviz_decimate_poly_data_filter_set_input_connection(FVizDecimatePolyDataFilter* filter, FVizAlgorithmOutput* input)
+
+FVizResult fviz_decimate_poly_data_filter_set_input_connection(FVizDecimatePolyDataFilter* filter,
+                                                               FVizAlgorithmOutput* input)
 {
-    return filter != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input) : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }
-FVizAlgorithm* fviz_decimate_poly_data_filter_algorithm(FVizDecimatePolyDataFilter* filter) { return filter != NULL ? filter->algorithm : NULL; }
-FVizAlgorithmOutput* fviz_decimate_poly_data_filter_output_port(FVizDecimatePolyDataFilter* filter) { return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL; }
-FVizPolyData* fviz_decimate_poly_data_filter_output(FVizDecimatePolyDataFilter* filter) { return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL; }
-FVizResult fviz_decimate_poly_data_filter_update(FVizDecimatePolyDataFilter* filter) { return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT; }
+
+FVizAlgorithm* fviz_decimate_poly_data_filter_algorithm(FVizDecimatePolyDataFilter* filter)
+{
+    return filter != NULL ? filter->algorithm : NULL;
+}
+
+FVizAlgorithmOutput* fviz_decimate_poly_data_filter_output_port(FVizDecimatePolyDataFilter* filter)
+{
+    return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL;
+}
+
+FVizPolyData* fviz_decimate_poly_data_filter_output(FVizDecimatePolyDataFilter* filter)
+{
+    return filter != NULL ? (FVizPolyData*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL;
+}
+
+FVizResult fviz_decimate_poly_data_filter_update(FVizDecimatePolyDataFilter* filter)
+{
+    return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
+}

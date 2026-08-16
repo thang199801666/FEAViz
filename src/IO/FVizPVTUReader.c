@@ -54,24 +54,18 @@ static void fviz_pvtu_reader_destroy(FVizObject* object)
     fviz_pvtu_reader_clear_manifest(reader);
 }
 
-static const FVizObjectClass g_fviz_pvtu_reader_class = {
-    FVIZ_TYPE_PVTU_READER,
-    "FVizPVTUReader",
-    &g_fviz_object_class,
-    fviz_pvtu_reader_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_pvtu_reader_class = {FVIZ_TYPE_PVTU_READER, "FVizPVTUReader", &g_fviz_object_class,
+                                                         fviz_pvtu_reader_destroy, NULL};
 
-static FVizBool fviz_pvtu_attr_string(
-    const char* tag_begin, const char* tag_end,
-    const char* attribute, char* out_value, FVizSize out_capacity)
+static FVizBool fviz_pvtu_attr_string(const char* tag_begin, const char* tag_end, const char* attribute,
+                                      char* out_value, FVizSize out_capacity)
 {
     char pattern[64];
     const char* found;
     const char* value_end;
     FVizSize length;
-    if (tag_begin == NULL || tag_end == NULL || attribute == NULL ||
-        out_value == NULL || out_capacity == 0u || tag_begin >= tag_end)
+    if (tag_begin == NULL || tag_end == NULL || attribute == NULL || out_value == NULL || out_capacity == 0u ||
+        tag_begin >= tag_end)
         return FVIZ_FALSE;
     if (snprintf(pattern, sizeof(pattern), "%s=\"", attribute) < 0) return FVIZ_FALSE;
     found = strstr(tag_begin, pattern);
@@ -93,8 +87,7 @@ static FVizBool fviz_pvtu_path_is_absolute(const char* path)
     return isalpha((unsigned char)path[0]) && path[1] == ':' ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizResult fviz_pvtu_resolve_path(
-    const char* manifest_path, const char* child_path, char** out_path)
+static FVizResult fviz_pvtu_resolve_path(const char* manifest_path, const char* child_path, char** out_path)
 {
     const char* slash_a;
     const char* slash_b;
@@ -103,8 +96,7 @@ static FVizResult fviz_pvtu_resolve_path(
     FVizSize child_length;
     FVizSize total;
     char* result;
-    if (manifest_path == NULL || child_path == NULL || out_path == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (manifest_path == NULL || child_path == NULL || out_path == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_path = NULL;
     child_length = strlen(child_path);
     if (fviz_pvtu_path_is_absolute(child_path) != FVIZ_FALSE)
@@ -119,8 +111,7 @@ static FVizResult fviz_pvtu_resolve_path(
     slash_b = strrchr(manifest_path, '\\');
     slash = slash_a != NULL && (slash_b == NULL || slash_a > slash_b) ? slash_a : slash_b;
     if (slash != NULL) prefix = (FVizSize)(slash - manifest_path) + 1u;
-    if (fviz_size_add(prefix, child_length, &total) != FVIZ_OK ||
-        fviz_size_add(total, 1u, &total) != FVIZ_OK)
+    if (fviz_size_add(prefix, child_length, &total) != FVIZ_OK || fviz_size_add(total, 1u, &total) != FVIZ_OK)
         return FVIZ_ERROR_OVERFLOW;
     result = (char*)fviz_alloc(total);
     if (result == NULL) return fviz_last_error_code();
@@ -130,15 +121,14 @@ static FVizResult fviz_pvtu_resolve_path(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_pvtu_read_text(
-    const char* file_path, FVizSize maximum_bytes, char** out_text, FVizSize* out_size)
+static FVizResult fviz_pvtu_read_text(const char* file_path, FVizSize maximum_bytes, char** out_text,
+                                      FVizSize* out_size)
 {
     FILE* file;
     long file_size_long;
     FVizSize file_size;
     char* text;
-    if (file_path == NULL || out_text == NULL || out_size == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (file_path == NULL || out_text == NULL || out_size == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_text = NULL;
     *out_size = 0u;
     file = fopen(file_path, "rb");
@@ -147,8 +137,7 @@ static FVizResult fviz_pvtu_read_text(
         fviz_internal_set_error(FVIZ_ERROR_IO, "failed to open PVTU manifest");
         return FVIZ_ERROR_IO;
     }
-    if (fseek(file, 0, SEEK_END) != 0 || (file_size_long = ftell(file)) < 0 ||
-        fseek(file, 0, SEEK_SET) != 0)
+    if (fseek(file, 0, SEEK_END) != 0 || (file_size_long = ftell(file)) < 0 || fseek(file, 0, SEEK_SET) != 0)
     {
         fclose(file);
         fviz_internal_set_error(FVIZ_ERROR_IO, "failed to determine PVTU manifest size");
@@ -223,9 +212,7 @@ void fviz_pvtu_reader_clear_cache(FVizPVTUReader* reader)
     reader->cache_clock = 0u;
 }
 
-static FVizUnstructuredGrid* fviz_pvtu_reader_cache_lookup(
-    FVizPVTUReader* reader,
-    FVizSize piece_index)
+static FVizUnstructuredGrid* fviz_pvtu_reader_cache_lookup(FVizPVTUReader* reader, FVizSize piece_index)
 {
     FVizSize i;
     if (reader == NULL || reader->cache_capacity == 0u) return NULL;
@@ -252,10 +239,8 @@ static void fviz_pvtu_reader_cache_remove(FVizPVTUReader* reader, FVizSize index
         reader->cache_bytes = 0u;
     fviz_release(reader->cache_entries[index].data);
     if (index + 1u < reader->cache_size)
-        (void)memmove(
-            &reader->cache_entries[index],
-            &reader->cache_entries[index + 1u],
-            (size_t)(reader->cache_size - index - 1u) * sizeof(*reader->cache_entries));
+        (void)memmove(&reader->cache_entries[index], &reader->cache_entries[index + 1u],
+                      (size_t)(reader->cache_size - index - 1u) * sizeof(*reader->cache_entries));
     --reader->cache_size;
 }
 
@@ -265,15 +250,11 @@ static FVizSize fviz_pvtu_reader_lru_index(const FVizPVTUReader* reader)
     FVizSize index = 0u;
     if (reader == NULL || reader->cache_size == 0u) return 0u;
     for (i = 1u; i < reader->cache_size; ++i)
-        if (reader->cache_entries[i].stamp < reader->cache_entries[index].stamp)
-            index = i;
+        if (reader->cache_entries[i].stamp < reader->cache_entries[index].stamp) index = i;
     return index;
 }
 
-static FVizResult fviz_pvtu_reader_cache_store(
-    FVizPVTUReader* reader,
-    FVizSize piece_index,
-    FVizUnstructuredGrid* data)
+static FVizResult fviz_pvtu_reader_cache_store(FVizPVTUReader* reader, FVizSize piece_index, FVizUnstructuredGrid* data)
 {
     FVizSize memory_bytes;
     FVizPVTUCacheEntry* entry;
@@ -295,10 +276,9 @@ static FVizResult fviz_pvtu_reader_cache_store(
         (void)memset(reader->cache_entries, 0, bytes);
     }
     while (reader->cache_size != 0u &&
-        (reader->cache_size >= reader->cache_capacity ||
-         (reader->cache_byte_capacity != 0u &&
-          (memory_bytes > (FVizSize)-1 - reader->cache_bytes ||
-           reader->cache_bytes + memory_bytes > reader->cache_byte_capacity))))
+           (reader->cache_size >= reader->cache_capacity ||
+            (reader->cache_byte_capacity != 0u && (memory_bytes > (FVizSize)-1 - reader->cache_bytes ||
+                                                   reader->cache_bytes + memory_bytes > reader->cache_byte_capacity))))
     {
         fviz_pvtu_reader_cache_remove(reader, fviz_pvtu_reader_lru_index(reader));
         ++reader->cache_evictions;
@@ -342,17 +322,14 @@ FVizResult fviz_pvtu_reader_create(FVizPVTUReader** out_reader)
     return fviz_pvtu_reader_create_with_options(&options, out_reader);
 }
 
-FVizResult fviz_pvtu_reader_create_with_options(
-    const FVizPVTUReaderOptions* options,
-    FVizPVTUReader** out_reader)
+FVizResult fviz_pvtu_reader_create_with_options(const FVizPVTUReaderOptions* options, FVizPVTUReader** out_reader)
 {
     FVizPVTUReader* reader;
     if (out_reader == NULL || options == NULL || options->struct_size < sizeof(*options) ||
         options->maximum_file_bytes == 0u || options->maximum_pieces == 0u)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_reader = NULL;
-    reader = (FVizPVTUReader*)fviz_internal_object_allocate(
-        sizeof(*reader), &g_fviz_pvtu_reader_class, NULL);
+    reader = (FVizPVTUReader*)fviz_internal_object_allocate(sizeof(*reader), &g_fviz_pvtu_reader_class, NULL);
     if (reader == NULL) return fviz_last_error_code();
     reader->options = *options;
     reader->cache_capacity = FVIZ_PVTU_DEFAULT_CACHE_CAPACITY;
@@ -374,10 +351,8 @@ FVizResult fviz_pvtu_reader_set_file_name(FVizPVTUReader* reader, const char* fi
     uint32_t ghost_level = 0u;
     FVizSize index = 0u;
     FVizResult result;
-    if (reader == NULL || file_path == NULL || file_path[0] == '\0')
-        return FVIZ_ERROR_INVALID_ARGUMENT;
-    result = fviz_pvtu_read_text(
-        file_path, reader->options.maximum_file_bytes, &text, &text_size);
+    if (reader == NULL || file_path == NULL || file_path[0] == '\0') return FVIZ_ERROR_INVALID_ARGUMENT;
+    result = fviz_pvtu_read_text(file_path, reader->options.maximum_file_bytes, &text, &text_size);
     if (result != FVIZ_OK) return result;
     (void)text_size;
     grid_begin = strstr(text, "<PUnstructuredGrid");
@@ -399,8 +374,7 @@ FVizResult fviz_pvtu_reader_set_file_name(FVizPVTUReader* reader, const char* fi
         {
             char* end = NULL;
             const unsigned long value = strtoul(ghost_text, &end, 10);
-            if (end != ghost_text && *end == '\0' && value <= UINT32_MAX)
-                ghost_level = (uint32_t)value;
+            if (end != ghost_text && *end == '\0' && value <= UINT32_MAX) ghost_level = (uint32_t)value;
         }
     }
     cursor = grid_begin;
@@ -449,8 +423,7 @@ FVizResult fviz_pvtu_reader_set_file_name(FVizPVTUReader* reader, const char* fi
         const char* tag_end = strchr(cursor, '>');
         char source[2048];
         if (tag_end == NULL || tag_end > grid_end ||
-            fviz_pvtu_attr_string(cursor, tag_end, "Source", source, sizeof(source)) == FVIZ_FALSE ||
-            source[0] == '\0')
+            fviz_pvtu_attr_string(cursor, tag_end, "Source", source, sizeof(source)) == FVIZ_FALSE || source[0] == '\0')
         {
             result = FVIZ_ERROR_PARSE;
             fviz_internal_set_error(FVIZ_ERROR_PARSE, "PVTU Piece is missing a valid Source attribute");
@@ -508,8 +481,7 @@ FVizSize fviz_pvtu_reader_piece_count(const FVizPVTUReader* reader)
 
 const char* fviz_pvtu_reader_piece_source(const FVizPVTUReader* reader, FVizSize piece_index)
 {
-    return reader != NULL && piece_index < reader->piece_count
-        ? reader->piece_sources[piece_index] : NULL;
+    return reader != NULL && piece_index < reader->piece_count ? reader->piece_sources[piece_index] : NULL;
 }
 
 uint32_t fviz_pvtu_reader_ghost_level(const FVizPVTUReader* reader)
@@ -517,15 +489,11 @@ uint32_t fviz_pvtu_reader_ghost_level(const FVizPVTUReader* reader)
     return reader != NULL ? reader->ghost_level : 0u;
 }
 
-FVizResult fviz_pvtu_reader_load_piece(
-    FVizPVTUReader* reader,
-    FVizSize piece_index,
-    FVizUnstructuredGrid** out_piece)
+FVizResult fviz_pvtu_reader_load_piece(FVizPVTUReader* reader, FVizSize piece_index, FVizUnstructuredGrid** out_piece)
 {
     FVizUnstructuredGrid* piece;
     FVizResult result;
-    if (reader == NULL || out_piece == NULL || reader->file_name == NULL ||
-        piece_index >= reader->piece_count)
+    if (reader == NULL || out_piece == NULL || reader->file_name == NULL || piece_index >= reader->piece_count)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_piece = NULL;
     piece = fviz_pvtu_reader_cache_lookup(reader, piece_index);
@@ -534,8 +502,7 @@ FVizResult fviz_pvtu_reader_load_piece(
         *out_piece = piece;
         return FVIZ_OK;
     }
-    result = fviz_vtu_read_with_options(
-        reader->piece_paths[piece_index], &reader->options.piece_options, &piece);
+    result = fviz_vtu_read_with_options(reader->piece_paths[piece_index], &reader->options.piece_options, &piece);
     if (result != FVIZ_OK) return result;
     result = fviz_pvtu_reader_cache_store(reader, piece_index, piece);
     if (result != FVIZ_OK)
@@ -555,15 +522,12 @@ FVizResult fviz_pvtu_reader_prefetch_piece(FVizPVTUReader* reader, FVizSize piec
     return result;
 }
 
-FVizResult fviz_pvtu_reader_materialize(
-    FVizPVTUReader* reader,
-    FVizPartitionedDataSet** out_data_set)
+FVizResult fviz_pvtu_reader_materialize(FVizPVTUReader* reader, FVizPartitionedDataSet** out_data_set)
 {
     FVizPartitionedDataSet* output = NULL;
     FVizSize i;
     FVizResult result;
-    if (reader == NULL || out_data_set == NULL || reader->file_name == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (reader == NULL || out_data_set == NULL || reader->file_name == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_data_set = NULL;
     result = fviz_partitioned_data_set_create(&output);
     if (result == FVIZ_OK) result = fviz_partitioned_data_set_reserve(output, reader->piece_count);
@@ -572,8 +536,8 @@ FVizResult fviz_pvtu_reader_materialize(
         FVizUnstructuredGrid* piece = NULL;
         result = fviz_pvtu_reader_load_piece(reader, i, &piece);
         if (result == FVIZ_OK)
-            result = fviz_partitioned_data_set_add_partition(
-                output, (FVizDataObject*)piece, reader->piece_sources[i], NULL);
+            result =
+                fviz_partitioned_data_set_add_partition(output, (FVizDataObject*)piece, reader->piece_sources[i], NULL);
         fviz_release(piece);
     }
     if (result != FVIZ_OK)
@@ -599,8 +563,7 @@ FVizSize fviz_pvtu_reader_cache_capacity(const FVizPVTUReader* reader)
     return reader != NULL ? reader->cache_capacity : 0u;
 }
 
-FVizResult fviz_pvtu_reader_set_cache_byte_capacity(
-    FVizPVTUReader* reader, FVizSize byte_capacity)
+FVizResult fviz_pvtu_reader_set_cache_byte_capacity(FVizPVTUReader* reader, FVizSize byte_capacity)
 {
     if (reader == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (reader->cache_byte_capacity == byte_capacity) return FVIZ_OK;
@@ -644,10 +607,8 @@ FVizResult fviz_pvtu_read(const char* file_path, FVizPartitionedDataSet** out_da
     return fviz_pvtu_read_with_options(file_path, &options, out_data_set);
 }
 
-FVizResult fviz_pvtu_read_with_options(
-    const char* file_path,
-    const FVizPVTUReaderOptions* options,
-    FVizPartitionedDataSet** out_data_set)
+FVizResult fviz_pvtu_read_with_options(const char* file_path, const FVizPVTUReaderOptions* options,
+                                       FVizPartitionedDataSet** out_data_set)
 {
     FVizPVTUReader* reader = NULL;
     FVizResult result = fviz_pvtu_reader_create_with_options(options, &reader);

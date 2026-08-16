@@ -26,15 +26,10 @@ FVIZ_API FVizResult fviz_data_array_create(FVizDataType type, uint32_t component
 /* Creates a zero-copy, fixed-size view over caller-provided storage. External
  * arrays never resize or append. Mutable views permit in-place writes; immutable
  * views expose data only through the const accessors. */
-FVIZ_API FVizResult fviz_data_array_create_external(
-    FVizDataType type,
-    uint32_t components,
-    void* data,
-    FVizSize tuple_count,
-    FVizDataArrayExternalFlags flags,
-    FVizDataArrayExternalReleaseCallback release_callback,
-    void* release_user_data,
-    FVizDataArray** out_array);
+FVIZ_API FVizResult fviz_data_array_create_external(FVizDataType type, uint32_t components, void* data,
+                                                    FVizSize tuple_count, FVizDataArrayExternalFlags flags,
+                                                    FVizDataArrayExternalReleaseCallback release_callback,
+                                                    void* release_user_data, FVizDataArray** out_array);
 FVIZ_API FVizBool fviz_data_array_is_external(const FVizDataArray* array);
 FVIZ_API FVizBool fviz_data_array_is_mutable(const FVizDataArray* array);
 FVIZ_API FVizDataType fviz_data_array_type(const FVizDataArray* array);
@@ -50,38 +45,25 @@ FVIZ_API FVizResult fviz_data_array_append_tuples(FVizDataArray* array, const vo
 FVIZ_API FVizResult fviz_data_array_set_tuple(FVizDataArray* array, FVizSize index, const void* tuple);
 /* Replaces an existing contiguous tuple range and emits at most one ModifiedEvent.
  * This is the preferred path for FEA frame/result updates that preserve array shape. */
-FVIZ_API FVizResult fviz_data_array_set_tuples(
-    FVizDataArray* array, FVizSize first, const void* tuples, FVizSize tuple_count);
+FVIZ_API FVizResult fviz_data_array_set_tuples(FVizDataArray* array, FVizSize first, const void* tuples,
+                                               FVizSize tuple_count);
 /* Marks a tuple range modified after writing through a mutable raw pointer.
  * Ordinary set/append/resize APIs record their dirty ranges automatically. */
-FVIZ_API FVizResult fviz_data_array_mark_dirty(
-    FVizDataArray* array, FVizSize first, FVizSize tuple_count);
+FVIZ_API FVizResult fviz_data_array_mark_dirty(FVizDataArray* array, FVizSize first, FVizSize tuple_count);
 /* Returns the union of changes newer than since_mtime. full is true when the
  * requested history is unavailable or the tuple layout changed. */
-FVIZ_API FVizResult fviz_data_array_dirty_range_since(
-    const FVizDataArray* array, FVizMTime since_mtime, FVizDirtyRange* out_range);
+FVIZ_API FVizResult fviz_data_array_dirty_range_since(const FVizDataArray* array, FVizMTime since_mtime,
+                                                      FVizDirtyRange* out_range);
 FVIZ_API void* fviz_data_array_tuple(FVizDataArray* array, FVizSize index);
 FVIZ_API const void* fviz_data_array_const_tuple(const FVizDataArray* array, FVizSize index);
-FVIZ_API FVizResult fviz_data_array_deep_copy(
-    const FVizDataArray* source,
-    FVizDataArray** out_copy);
-FVIZ_API FVizResult fviz_data_array_get_component(
-    const FVizDataArray* array,
-    FVizSize tuple_index,
-    uint32_t component,
-    double* out_value);
-FVIZ_API FVizResult fviz_data_array_set_component(
-    FVizDataArray* array,
-    FVizSize tuple_index,
-    uint32_t component,
-    double value);
+FVIZ_API FVizResult fviz_data_array_deep_copy(const FVizDataArray* source, FVizDataArray** out_copy);
+FVIZ_API FVizResult fviz_data_array_get_component(const FVizDataArray* array, FVizSize tuple_index, uint32_t component,
+                                                  double* out_value);
+FVIZ_API FVizResult fviz_data_array_set_component(FVizDataArray* array, FVizSize tuple_index, uint32_t component,
+                                                  double value);
 /* component >= 0 computes that component; component == -1 computes vector magnitude. */
-FVIZ_API FVizResult fviz_data_array_get_range(
-    const FVizDataArray* array,
-    int32_t component,
-    FVizBool ignore_non_finite,
-    double* out_minimum,
-    double* out_maximum);
+FVIZ_API FVizResult fviz_data_array_get_range(const FVizDataArray* array, int32_t component, FVizBool ignore_non_finite,
+                                              double* out_minimum, double* out_maximum);
 
 FVIZ_EXTERN_C_END
 

@@ -21,17 +21,19 @@ FVIZ_API FVizResult fviz_lookup_table_create(FVizSize table_size, FVizLookupTabl
 FVIZ_API FVizSize fviz_lookup_table_size(const FVizLookupTable* table);
 FVIZ_API void fviz_lookup_table_set_range(FVizLookupTable* table, float minimum, float maximum);
 FVIZ_API void fviz_lookup_table_get_range(const FVizLookupTable* table, float* minimum, float* maximum);
-FVIZ_API FVizResult fviz_lookup_table_set_color(FVizLookupTable* table, FVizSize index, float red, float green, float blue);
-FVIZ_API void fviz_lookup_table_get_color(const FVizLookupTable* table, FVizSize index, float* red, float* green, float* blue);
+FVIZ_API FVizResult fviz_lookup_table_set_color(FVizLookupTable* table, FVizSize index, float red, float green,
+                                                float blue);
+FVIZ_API void fviz_lookup_table_get_color(const FVizLookupTable* table, FVizSize index, float* red, float* green,
+                                          float* blue);
 FVIZ_API void fviz_lookup_table_build(FVizLookupTable* table);
 FVIZ_API FVizResult fviz_lookup_table_build_preset(FVizLookupTable* table, FVizColorMapPreset preset);
-FVIZ_API void fviz_lookup_table_set_nan_color(
-    FVizLookupTable* table, float red, float green, float blue);
-FVIZ_API void fviz_lookup_table_set_below_range_color(
-    FVizLookupTable* table, float red, float green, float blue, FVizBool enabled);
-FVIZ_API void fviz_lookup_table_set_above_range_color(
-    FVizLookupTable* table, float red, float green, float blue, FVizBool enabled);
-FVIZ_API void fviz_lookup_table_map_scalar(const FVizLookupTable* table, float value, float* red, float* green, float* blue);
+FVIZ_API void fviz_lookup_table_set_nan_color(FVizLookupTable* table, float red, float green, float blue);
+FVIZ_API void fviz_lookup_table_set_below_range_color(FVizLookupTable* table, float red, float green, float blue,
+                                                      FVizBool enabled);
+FVIZ_API void fviz_lookup_table_set_above_range_color(FVizLookupTable* table, float red, float green, float blue,
+                                                      FVizBool enabled);
+FVIZ_API void fviz_lookup_table_map_scalar(const FVizLookupTable* table, float value, float* red, float* green,
+                                           float* blue);
 
 FVIZ_EXTERN_C_END
 

@@ -16,53 +16,30 @@ static void fviz_fea_history_region_destroy(FVizObject* object);
 static void fviz_fea_frame_destroy(FVizObject* object);
 static void fviz_fea_step_destroy(FVizObject* object);
 static void fviz_fea_result_database_destroy(FVizObject* object);
+
 static FVizMTime fviz_fea_local_mtime(const FVizObject* object)
 {
     return fviz_internal_object_local_mtime(object);
 }
 
 static const FVizObjectClass g_fviz_fea_history_series_class = {
-    FVIZ_TYPE_FEA_HISTORY_SERIES,
-    "FVizFEAHistorySeries",
-    NULL,
-    fviz_fea_history_series_destroy,
-    fviz_fea_local_mtime
-};
+    FVIZ_TYPE_FEA_HISTORY_SERIES, "FVizFEAHistorySeries", NULL, fviz_fea_history_series_destroy, fviz_fea_local_mtime};
 
 static const FVizObjectClass g_fviz_fea_history_region_class = {
-    FVIZ_TYPE_FEA_HISTORY_REGION,
-    "FVizFEAHistoryRegion",
-    NULL,
-    fviz_fea_history_region_destroy,
-    fviz_fea_local_mtime
-};
+    FVIZ_TYPE_FEA_HISTORY_REGION, "FVizFEAHistoryRegion", NULL, fviz_fea_history_region_destroy, fviz_fea_local_mtime};
 
-static const FVizObjectClass g_fviz_fea_frame_class = {
-    FVIZ_TYPE_FEA_FRAME,
-    "FVizFEAFrame",
-    NULL,
-    fviz_fea_frame_destroy,
-    fviz_fea_local_mtime
-};
+static const FVizObjectClass g_fviz_fea_frame_class = {FVIZ_TYPE_FEA_FRAME, "FVizFEAFrame", NULL,
+                                                       fviz_fea_frame_destroy, fviz_fea_local_mtime};
 
-static const FVizObjectClass g_fviz_fea_step_class = {
-    FVIZ_TYPE_FEA_STEP,
-    "FVizFEAStep",
-    NULL,
-    fviz_fea_step_destroy,
-    fviz_fea_local_mtime
-};
+static const FVizObjectClass g_fviz_fea_step_class = {FVIZ_TYPE_FEA_STEP, "FVizFEAStep", NULL, fviz_fea_step_destroy,
+                                                      fviz_fea_local_mtime};
 
-static const FVizObjectClass g_fviz_fea_result_database_class = {
-    FVIZ_TYPE_FEA_RESULT_DATABASE,
-    "FVizFEAResultDatabase",
-    NULL,
-    fviz_fea_result_database_destroy,
-    fviz_fea_local_mtime
-};
+static const FVizObjectClass g_fviz_fea_result_database_class = {FVIZ_TYPE_FEA_RESULT_DATABASE, "FVizFEAResultDatabase",
+                                                                 NULL, fviz_fea_result_database_destroy,
+                                                                 fviz_fea_local_mtime};
 
-static FVizBool fviz_fea_parent_child_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_fea_parent_child_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                               void* client_data)
 {
     FVizObject* parent = (FVizObject*)client_data;
     (void)caller;
@@ -170,7 +147,8 @@ static void fviz_fea_step_destroy(FVizObject* object)
             fviz_fea_observed_frame_release((FVizFEAObservedFrame*)fviz_array_at(step->frames, i));
     if (step->history_regions != NULL)
         for (i = 0u; i < fviz_array_count(step->history_regions); ++i)
-            fviz_fea_observed_history_region_release((FVizFEAObservedHistoryRegion*)fviz_array_at(step->history_regions, i));
+            fviz_fea_observed_history_region_release(
+                (FVizFEAObservedHistoryRegion*)fviz_array_at(step->history_regions, i));
     fviz_release(step->history_regions);
     fviz_release(step->frames);
     fviz_release(step->name);
@@ -192,16 +170,13 @@ static void fviz_fea_result_database_destroy(FVizObject* object)
     database->steps = NULL;
 }
 
-FVizResult fviz_fea_history_series_create(
-    const char* name,
-    const char* description,
-    FVizFEAHistorySeries** out_series)
+FVizResult fviz_fea_history_series_create(const char* name, const char* description, FVizFEAHistorySeries** out_series)
 {
     FVizFEAHistorySeries* series;
     if (out_series == NULL || name == NULL || name[0] == '\0') return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_series = NULL;
-    series = (FVizFEAHistorySeries*)fviz_internal_object_allocate(
-        sizeof(*series), &g_fviz_fea_history_series_class, NULL);
+    series =
+        (FVizFEAHistorySeries*)fviz_internal_object_allocate(sizeof(*series), &g_fviz_fea_history_series_class, NULL);
     if (series == NULL) return fviz_last_error_code();
     if (fviz_string_create_from(name, &series->name) != FVIZ_OK ||
         fviz_string_create_from(description != NULL ? description : "", &series->description) != FVIZ_OK ||
@@ -234,8 +209,7 @@ FVizResult fviz_fea_history_series_reserve(FVizFEAHistorySeries* series, FVizSiz
     return series != NULL ? fviz_array_reserve(series->samples, count) : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizResult fviz_fea_history_series_append(
-    FVizFEAHistorySeries* series, double frame_value, double value)
+FVizResult fviz_fea_history_series_append(FVizFEAHistorySeries* series, double frame_value, double value)
 {
     FVizFEAHistorySample sample;
     FVizSize count;
@@ -243,10 +217,12 @@ FVizResult fviz_fea_history_series_append(
     count = fviz_fea_history_series_count(series);
     if (count != 0u)
     {
-        const FVizFEAHistorySample* last = (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, count - 1u);
+        const FVizFEAHistorySample* last =
+            (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, count - 1u);
         if (last != NULL && frame_value < last->frame_value)
         {
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "FEA history samples must be appended in nondecreasing frame-value order");
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                    "FEA history samples must be appended in nondecreasing frame-value order");
             return FVIZ_ERROR_INVALID_ARGUMENT;
         }
     }
@@ -257,8 +233,8 @@ FVizResult fviz_fea_history_series_append(
     return FVIZ_OK;
 }
 
-FVizResult fviz_fea_history_series_append_samples(
-    FVizFEAHistorySeries* series, const FVizFEAHistorySample* samples, FVizSize count)
+FVizResult fviz_fea_history_series_append_samples(FVizFEAHistorySeries* series, const FVizFEAHistorySample* samples,
+                                                  FVizSize count)
 {
     FVizSize i;
     FVizSize old_count;
@@ -268,8 +244,9 @@ FVizResult fviz_fea_history_series_append_samples(
     {
         if (!isfinite(samples[i].frame_value) || !isfinite(samples[i].value) ||
             (i > 0u && samples[i].frame_value < samples[i - 1u].frame_value) ||
-            (i == 0u && old_count != 0u && samples[i].frame_value <
-                ((const FVizFEAHistorySample*)fviz_array_const_at(series->samples, old_count - 1u))->frame_value))
+            (i == 0u && old_count != 0u &&
+             samples[i].frame_value <
+                 ((const FVizFEAHistorySample*)fviz_array_const_at(series->samples, old_count - 1u))->frame_value))
             return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     if (count == 0u) return FVIZ_OK;
@@ -278,8 +255,8 @@ FVizResult fviz_fea_history_series_append_samples(
     return FVIZ_OK;
 }
 
-FVizResult fviz_fea_history_series_sample(
-    const FVizFEAHistorySeries* series, FVizSize index, FVizFEAHistorySample* out_sample)
+FVizResult fviz_fea_history_series_sample(const FVizFEAHistorySeries* series, FVizSize index,
+                                          FVizFEAHistorySample* out_sample)
 {
     const FVizFEAHistorySample* sample;
     if (series == NULL || out_sample == NULL || index >= fviz_fea_history_series_count(series))
@@ -289,8 +266,8 @@ FVizResult fviz_fea_history_series_sample(
     return FVIZ_OK;
 }
 
-FVizResult fviz_fea_history_series_interpolate(
-    const FVizFEAHistorySeries* series, double frame_value, double* out_value)
+FVizResult fviz_fea_history_series_interpolate(const FVizFEAHistorySeries* series, double frame_value,
+                                               double* out_value)
 {
     FVizSize count;
     FVizSize lo;
@@ -300,37 +277,46 @@ FVizResult fviz_fea_history_series_interpolate(
     if (count == 0u) return FVIZ_ERROR_NOT_FOUND;
     {
         const FVizFEAHistorySample* first = (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, 0u);
-        const FVizFEAHistorySample* last = (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, count - 1u);
-        if (frame_value <= first->frame_value) { *out_value = first->value; return FVIZ_OK; }
-        if (frame_value >= last->frame_value) { *out_value = last->value; return FVIZ_OK; }
+        const FVizFEAHistorySample* last =
+            (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, count - 1u);
+        if (frame_value <= first->frame_value)
+        {
+            *out_value = first->value;
+            return FVIZ_OK;
+        }
+        if (frame_value >= last->frame_value)
+        {
+            *out_value = last->value;
+            return FVIZ_OK;
+        }
     }
-    lo = 0u; hi = count - 1u;
+    lo = 0u;
+    hi = count - 1u;
     while (hi - lo > 1u)
     {
         const FVizSize mid = lo + (hi - lo) / 2u;
         const FVizFEAHistorySample* sample = (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, mid);
-        if (sample->frame_value <= frame_value) lo = mid; else hi = mid;
+        if (sample->frame_value <= frame_value) lo = mid;
+        else
+            hi = mid;
     }
     {
         const FVizFEAHistorySample* a = (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, lo);
         const FVizFEAHistorySample* b = (const FVizFEAHistorySample*)fviz_array_const_at(series->samples, hi);
-        const double alpha = b->frame_value != a->frame_value ?
-            (frame_value - a->frame_value) / (b->frame_value - a->frame_value) : 0.0;
+        const double alpha =
+            b->frame_value != a->frame_value ? (frame_value - a->frame_value) / (b->frame_value - a->frame_value) : 0.0;
         *out_value = a->value + alpha * (b->value - a->value);
     }
     return FVIZ_OK;
 }
 
-FVizResult fviz_fea_history_region_create(
-    const char* name,
-    const char* description,
-    FVizFEAHistoryRegion** out_region)
+FVizResult fviz_fea_history_region_create(const char* name, const char* description, FVizFEAHistoryRegion** out_region)
 {
     FVizFEAHistoryRegion* region;
     if (out_region == NULL || name == NULL || name[0] == '\0') return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_region = NULL;
-    region = (FVizFEAHistoryRegion*)fviz_internal_object_allocate(
-        sizeof(*region), &g_fviz_fea_history_region_class, NULL);
+    region =
+        (FVizFEAHistoryRegion*)fviz_internal_object_allocate(sizeof(*region), &g_fviz_fea_history_region_class, NULL);
     if (region == NULL) return fviz_last_error_code();
     if (fviz_string_create_from(name, &region->name) != FVIZ_OK ||
         fviz_string_create_from(description != NULL ? description : "", &region->description) != FVIZ_OK ||
@@ -364,7 +350,8 @@ static FVizSize fviz_fea_history_region_find_series_index(const FVizFEAHistoryRe
     if (region == NULL || name == NULL) return (FVizSize)-1;
     for (i = 0u; i < fviz_fea_history_region_series_count(region); ++i)
     {
-        const FVizFEAObservedHistorySeries* entry = (const FVizFEAObservedHistorySeries*)fviz_array_const_at(region->series, i);
+        const FVizFEAObservedHistorySeries* entry =
+            (const FVizFEAObservedHistorySeries*)fviz_array_const_at(region->series, i);
         if (entry != NULL && entry->series != NULL && strcmp(fviz_fea_history_series_name(entry->series), name) == 0)
             return i;
     }
@@ -381,8 +368,8 @@ FVizResult fviz_fea_history_region_add_series(FVizFEAHistoryRegion* region, FViz
     entry.modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     entry.series = (FVizFEAHistorySeries*)fviz_retain(series);
     if (entry.series == NULL) return fviz_last_error_code();
-    if (fviz_object_add_observer((FVizObject*)entry.series, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_fea_parent_child_modified, region, &entry.modified_tag) != FVIZ_OK ||
+    if (fviz_object_add_observer((FVizObject*)entry.series, FVIZ_EVENT_MODIFIED, 0.0f, fviz_fea_parent_child_modified,
+                                 region, &entry.modified_tag) != FVIZ_OK ||
         fviz_array_push(region->series, &entry) != FVIZ_OK)
     {
         fviz_fea_observed_history_series_release(&entry);
@@ -409,14 +396,17 @@ const FVizFEAHistorySeries* fviz_fea_history_region_const_series(const FVizFEAHi
 FVizFEAHistorySeries* fviz_fea_history_region_series_at(FVizFEAHistoryRegion* region, FVizSize index)
 {
     FVizFEAObservedHistorySeries* entry = region != NULL && index < fviz_fea_history_region_series_count(region)
-        ? (FVizFEAObservedHistorySeries*)fviz_array_at(region->series, index) : NULL;
+                                              ? (FVizFEAObservedHistorySeries*)fviz_array_at(region->series, index)
+                                              : NULL;
     return entry != NULL ? entry->series : NULL;
 }
 
 const FVizFEAHistorySeries* fviz_fea_history_region_const_series_at(const FVizFEAHistoryRegion* region, FVizSize index)
 {
-    const FVizFEAObservedHistorySeries* entry = region != NULL && index < fviz_fea_history_region_series_count(region)
-        ? (const FVizFEAObservedHistorySeries*)fviz_array_const_at(region->series, index) : NULL;
+    const FVizFEAObservedHistorySeries* entry =
+        region != NULL && index < fviz_fea_history_region_series_count(region)
+            ? (const FVizFEAObservedHistorySeries*)fviz_array_const_at(region->series, index)
+            : NULL;
     return entry != NULL ? entry->series : NULL;
 }
 
@@ -454,15 +444,36 @@ FVizResult fviz_fea_frame_create(const FVizFEAFrameInfo* info, FVizFEAFrame** ou
     return FVIZ_OK;
 }
 
-int64_t fviz_fea_frame_id(const FVizFEAFrame* frame) { return frame != NULL ? frame->frame_id : 0; }
-int64_t fviz_fea_frame_increment_number(const FVizFEAFrame* frame) { return frame != NULL ? frame->increment_number : 0; }
-double fviz_fea_frame_value(const FVizFEAFrame* frame) { return frame != NULL ? frame->frame_value : 0.0; }
-double fviz_fea_frame_frequency(const FVizFEAFrame* frame) { return frame != NULL ? frame->frequency : 0.0; }
-int64_t fviz_fea_frame_mode(const FVizFEAFrame* frame) { return frame != NULL ? frame->mode : 0; }
+int64_t fviz_fea_frame_id(const FVizFEAFrame* frame)
+{
+    return frame != NULL ? frame->frame_id : 0;
+}
+
+int64_t fviz_fea_frame_increment_number(const FVizFEAFrame* frame)
+{
+    return frame != NULL ? frame->increment_number : 0;
+}
+
+double fviz_fea_frame_value(const FVizFEAFrame* frame)
+{
+    return frame != NULL ? frame->frame_value : 0.0;
+}
+
+double fviz_fea_frame_frequency(const FVizFEAFrame* frame)
+{
+    return frame != NULL ? frame->frequency : 0.0;
+}
+
+int64_t fviz_fea_frame_mode(const FVizFEAFrame* frame)
+{
+    return frame != NULL ? frame->mode : 0;
+}
+
 const char* fviz_fea_frame_description(const FVizFEAFrame* frame)
 {
     return frame != NULL && frame->description != NULL ? fviz_string_c_str(frame->description) : "";
 }
+
 FVizSize fviz_fea_frame_field_count(const FVizFEAFrame* frame)
 {
     return frame != NULL && frame->fields != NULL ? fviz_array_count(frame->fields) : 0u;
@@ -475,8 +486,7 @@ static FVizSize fviz_fea_frame_find_field_index(const FVizFEAFrame* frame, const
     for (i = 0u; i < fviz_fea_frame_field_count(frame); ++i)
     {
         const FVizFEAObservedField* entry = (const FVizFEAObservedField*)fviz_array_const_at(frame->fields, i);
-        if (entry != NULL && entry->field != NULL && strcmp(fviz_fea_field_name(entry->field), name) == 0)
-            return i;
+        if (entry != NULL && entry->field != NULL && strcmp(fviz_fea_field_name(entry->field), name) == 0) return i;
     }
     return (FVizSize)-1;
 }
@@ -498,8 +508,8 @@ FVizResult fviz_fea_frame_add_field(FVizFEAFrame* frame, FVizFEAField* field)
     entry.modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     entry.field = (FVizFEAField*)fviz_retain(field);
     if (entry.field == NULL) return fviz_last_error_code();
-    if (fviz_object_add_observer((FVizObject*)entry.field, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_fea_parent_child_modified, frame, &entry.modified_tag) != FVIZ_OK ||
+    if (fviz_object_add_observer((FVizObject*)entry.field, FVIZ_EVENT_MODIFIED, 0.0f, fviz_fea_parent_child_modified,
+                                 frame, &entry.modified_tag) != FVIZ_OK ||
         fviz_array_push(frame->fields, &entry) != FVIZ_OK)
     {
         fviz_fea_observed_field_release(&entry);
@@ -544,23 +554,21 @@ const FVizFEAField* fviz_fea_frame_const_field(const FVizFEAFrame* frame, const 
 FVizFEAField* fviz_fea_frame_field_at(FVizFEAFrame* frame, FVizSize index)
 {
     FVizFEAObservedField* entry = frame != NULL && index < fviz_fea_frame_field_count(frame)
-        ? (FVizFEAObservedField*)fviz_array_at(frame->fields, index) : NULL;
+                                      ? (FVizFEAObservedField*)fviz_array_at(frame->fields, index)
+                                      : NULL;
     return entry != NULL ? entry->field : NULL;
 }
 
 const FVizFEAField* fviz_fea_frame_const_field_at(const FVizFEAFrame* frame, FVizSize index)
 {
     const FVizFEAObservedField* entry = frame != NULL && index < fviz_fea_frame_field_count(frame)
-        ? (const FVizFEAObservedField*)fviz_array_const_at(frame->fields, index) : NULL;
+                                            ? (const FVizFEAObservedField*)fviz_array_const_at(frame->fields, index)
+                                            : NULL;
     return entry != NULL ? entry->field : NULL;
 }
 
-FVizResult fviz_fea_step_create(
-    const char* name,
-    const char* description,
-    FVizFEAStepDomain domain,
-    double time_period,
-    FVizFEAStep** out_step)
+FVizResult fviz_fea_step_create(const char* name, const char* description, FVizFEAStepDomain domain, double time_period,
+                                FVizFEAStep** out_step)
 {
     FVizFEAStep* step;
     if (out_step == NULL || name == NULL || name[0] == '\0' || !isfinite(time_period) || time_period < 0.0 ||
@@ -590,16 +598,27 @@ const char* fviz_fea_step_name(const FVizFEAStep* step)
 {
     return step != NULL && step->name != NULL ? fviz_string_c_str(step->name) : "";
 }
+
 const char* fviz_fea_step_description(const FVizFEAStep* step)
 {
     return step != NULL && step->description != NULL ? fviz_string_c_str(step->description) : "";
 }
-FVizFEAStepDomain fviz_fea_step_domain(const FVizFEAStep* step) { return step != NULL ? step->domain : FVIZ_FEA_STEP_TIME; }
-double fviz_fea_step_time_period(const FVizFEAStep* step) { return step != NULL ? step->time_period : 0.0; }
+
+FVizFEAStepDomain fviz_fea_step_domain(const FVizFEAStep* step)
+{
+    return step != NULL ? step->domain : FVIZ_FEA_STEP_TIME;
+}
+
+double fviz_fea_step_time_period(const FVizFEAStep* step)
+{
+    return step != NULL ? step->time_period : 0.0;
+}
+
 FVizSize fviz_fea_step_frame_count(const FVizFEAStep* step)
 {
     return step != NULL && step->frames != NULL ? fviz_array_count(step->frames) : 0u;
 }
+
 FVizResult fviz_fea_step_reserve_frames(FVizFEAStep* step, FVizSize count)
 {
     return step != NULL ? fviz_array_reserve(step->frames, count) : FVIZ_ERROR_INVALID_ARGUMENT;
@@ -617,7 +636,8 @@ FVizResult fviz_fea_step_add_frame(FVizFEAStep* step, FVizFEAFrame* frame, FVizS
         const FVizFEAFrame* last = fviz_fea_step_const_frame(step, count - 1u);
         if (last != NULL && fviz_fea_frame_value(frame) < fviz_fea_frame_value(last))
         {
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "FEA frames must be appended in nondecreasing frame-value order");
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                    "FEA frames must be appended in nondecreasing frame-value order");
             return FVIZ_ERROR_INVALID_ARGUMENT;
         }
     }
@@ -625,8 +645,8 @@ FVizResult fviz_fea_step_add_frame(FVizFEAStep* step, FVizFEAFrame* frame, FVizS
     entry.modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     entry.frame = (FVizFEAFrame*)fviz_retain(frame);
     if (entry.frame == NULL) return fviz_last_error_code();
-    if (fviz_object_add_observer((FVizObject*)entry.frame, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_fea_parent_child_modified, step, &entry.modified_tag) != FVIZ_OK ||
+    if (fviz_object_add_observer((FVizObject*)entry.frame, FVIZ_EVENT_MODIFIED, 0.0f, fviz_fea_parent_child_modified,
+                                 step, &entry.modified_tag) != FVIZ_OK ||
         fviz_array_push(step->frames, &entry) != FVIZ_OK)
     {
         fviz_fea_observed_frame_release(&entry);
@@ -655,14 +675,16 @@ FVizResult fviz_fea_step_remove_frame(FVizFEAStep* step, FVizSize index)
 FVizFEAFrame* fviz_fea_step_frame(FVizFEAStep* step, FVizSize index)
 {
     FVizFEAObservedFrame* entry = step != NULL && index < fviz_fea_step_frame_count(step)
-        ? (FVizFEAObservedFrame*)fviz_array_at(step->frames, index) : NULL;
+                                      ? (FVizFEAObservedFrame*)fviz_array_at(step->frames, index)
+                                      : NULL;
     return entry != NULL ? entry->frame : NULL;
 }
 
 const FVizFEAFrame* fviz_fea_step_const_frame(const FVizFEAStep* step, FVizSize index)
 {
     const FVizFEAObservedFrame* entry = step != NULL && index < fviz_fea_step_frame_count(step)
-        ? (const FVizFEAObservedFrame*)fviz_array_const_at(step->frames, index) : NULL;
+                                            ? (const FVizFEAObservedFrame*)fviz_array_const_at(step->frames, index)
+                                            : NULL;
     return entry != NULL ? entry->frame : NULL;
 }
 
@@ -677,7 +699,8 @@ static FVizSize fviz_fea_step_find_history_region_index(const FVizFEAStep* step,
     if (step == NULL || name == NULL) return (FVizSize)-1;
     for (i = 0u; i < fviz_fea_step_history_region_count(step); ++i)
     {
-        const FVizFEAObservedHistoryRegion* entry = (const FVizFEAObservedHistoryRegion*)fviz_array_const_at(step->history_regions, i);
+        const FVizFEAObservedHistoryRegion* entry =
+            (const FVizFEAObservedHistoryRegion*)fviz_array_const_at(step->history_regions, i);
         if (entry != NULL && entry->region != NULL && strcmp(fviz_fea_history_region_name(entry->region), name) == 0)
             return i;
     }
@@ -694,8 +717,8 @@ FVizResult fviz_fea_step_add_history_region(FVizFEAStep* step, FVizFEAHistoryReg
     entry.modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     entry.region = (FVizFEAHistoryRegion*)fviz_retain(region);
     if (entry.region == NULL) return fviz_last_error_code();
-    if (fviz_object_add_observer((FVizObject*)entry.region, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_fea_parent_child_modified, step, &entry.modified_tag) != FVIZ_OK ||
+    if (fviz_object_add_observer((FVizObject*)entry.region, FVIZ_EVENT_MODIFIED, 0.0f, fviz_fea_parent_child_modified,
+                                 step, &entry.modified_tag) != FVIZ_OK ||
         fviz_array_push(step->history_regions, &entry) != FVIZ_OK)
     {
         fviz_fea_observed_history_region_release(&entry);
@@ -721,24 +744,24 @@ const FVizFEAHistoryRegion* fviz_fea_step_const_history_region(const FVizFEAStep
 
 FVizFEAHistoryRegion* fviz_fea_step_history_region_at(FVizFEAStep* step, FVizSize index)
 {
-    FVizFEAObservedHistoryRegion* entry = step != NULL && index < fviz_fea_step_history_region_count(step)
-        ? (FVizFEAObservedHistoryRegion*)fviz_array_at(step->history_regions, index) : NULL;
+    FVizFEAObservedHistoryRegion* entry =
+        step != NULL && index < fviz_fea_step_history_region_count(step)
+            ? (FVizFEAObservedHistoryRegion*)fviz_array_at(step->history_regions, index)
+            : NULL;
     return entry != NULL ? entry->region : NULL;
 }
 
 const FVizFEAHistoryRegion* fviz_fea_step_const_history_region_at(const FVizFEAStep* step, FVizSize index)
 {
-    const FVizFEAObservedHistoryRegion* entry = step != NULL && index < fviz_fea_step_history_region_count(step)
-        ? (const FVizFEAObservedHistoryRegion*)fviz_array_const_at(step->history_regions, index) : NULL;
+    const FVizFEAObservedHistoryRegion* entry =
+        step != NULL && index < fviz_fea_step_history_region_count(step)
+            ? (const FVizFEAObservedHistoryRegion*)fviz_array_const_at(step->history_regions, index)
+            : NULL;
     return entry != NULL ? entry->region : NULL;
 }
 
-FVizResult fviz_fea_step_find_frame_value(
-    const FVizFEAStep* step,
-    double value,
-    FVizSize* out_lower,
-    FVizSize* out_upper,
-    double* out_alpha)
+FVizResult fviz_fea_step_find_frame_value(const FVizFEAStep* step, double value, FVizSize* out_lower,
+                                          FVizSize* out_upper, double* out_alpha)
 {
     FVizSize count;
     FVizSize lo;
@@ -752,11 +775,17 @@ FVizResult fviz_fea_step_find_frame_value(
     if (count == 0u) return FVIZ_ERROR_NOT_FOUND;
     if (value <= fviz_fea_frame_value(fviz_fea_step_const_frame(step, 0u)))
     {
-        *out_lower = 0u; *out_upper = 0u; *out_alpha = 0.0; return FVIZ_OK;
+        *out_lower = 0u;
+        *out_upper = 0u;
+        *out_alpha = 0.0;
+        return FVIZ_OK;
     }
     if (value >= fviz_fea_frame_value(fviz_fea_step_const_frame(step, count - 1u)))
     {
-        *out_lower = count - 1u; *out_upper = count - 1u; *out_alpha = 0.0; return FVIZ_OK;
+        *out_lower = count - 1u;
+        *out_upper = count - 1u;
+        *out_alpha = 0.0;
+        return FVIZ_OK;
     }
     lo = 0u;
     hi = count - 1u;
@@ -764,7 +793,8 @@ FVizResult fviz_fea_step_find_frame_value(
     {
         const FVizSize mid = lo + (hi - lo) / 2u;
         if (fviz_fea_frame_value(fviz_fea_step_const_frame(step, mid)) <= value) lo = mid;
-        else hi = mid;
+        else
+            hi = mid;
     }
     {
         const double a = fviz_fea_frame_value(fviz_fea_step_const_frame(step, lo));
@@ -781,8 +811,8 @@ FVizResult fviz_fea_result_database_create(FVizFEAResultDatabase** out_database)
     FVizFEAResultDatabase* database;
     if (out_database == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_database = NULL;
-    database = (FVizFEAResultDatabase*)fviz_internal_object_allocate(
-        sizeof(*database), &g_fviz_fea_result_database_class, NULL);
+    database = (FVizFEAResultDatabase*)fviz_internal_object_allocate(sizeof(*database),
+                                                                     &g_fviz_fea_result_database_class, NULL);
     if (database == NULL) return fviz_last_error_code();
     if (fviz_array_create(sizeof(FVizFEAObservedStep), &database->steps) != FVIZ_OK)
     {
@@ -805,14 +835,12 @@ static FVizSize fviz_fea_result_database_find_step_index(const FVizFEAResultData
     for (i = 0u; i < fviz_fea_result_database_step_count(database); ++i)
     {
         const FVizFEAObservedStep* entry = (const FVizFEAObservedStep*)fviz_array_const_at(database->steps, i);
-        if (entry != NULL && entry->step != NULL && strcmp(fviz_fea_step_name(entry->step), name) == 0)
-            return i;
+        if (entry != NULL && entry->step != NULL && strcmp(fviz_fea_step_name(entry->step), name) == 0) return i;
     }
     return (FVizSize)-1;
 }
 
-FVizResult fviz_fea_result_database_add_step(
-    FVizFEAResultDatabase* database, FVizFEAStep* step, FVizSize* out_index)
+FVizResult fviz_fea_result_database_add_step(FVizFEAResultDatabase* database, FVizFEAStep* step, FVizSize* out_index)
 {
     FVizFEAObservedStep entry;
     FVizSize count;
@@ -828,8 +856,8 @@ FVizResult fviz_fea_result_database_add_step(
     entry.modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     entry.step = (FVizFEAStep*)fviz_retain(step);
     if (entry.step == NULL) return fviz_last_error_code();
-    if (fviz_object_add_observer((FVizObject*)entry.step, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_fea_parent_child_modified, database, &entry.modified_tag) != FVIZ_OK ||
+    if (fviz_object_add_observer((FVizObject*)entry.step, FVIZ_EVENT_MODIFIED, 0.0f, fviz_fea_parent_child_modified,
+                                 database, &entry.modified_tag) != FVIZ_OK ||
         fviz_array_push(database->steps, &entry) != FVIZ_OK)
     {
         fviz_fea_observed_step_release(&entry);
@@ -875,13 +903,15 @@ const FVizFEAStep* fviz_fea_result_database_const_step(const FVizFEAResultDataba
 FVizFEAStep* fviz_fea_result_database_step_at(FVizFEAResultDatabase* database, FVizSize index)
 {
     FVizFEAObservedStep* entry = database != NULL && index < fviz_fea_result_database_step_count(database)
-        ? (FVizFEAObservedStep*)fviz_array_at(database->steps, index) : NULL;
+                                     ? (FVizFEAObservedStep*)fviz_array_at(database->steps, index)
+                                     : NULL;
     return entry != NULL ? entry->step : NULL;
 }
 
 const FVizFEAStep* fviz_fea_result_database_const_step_at(const FVizFEAResultDatabase* database, FVizSize index)
 {
     const FVizFEAObservedStep* entry = database != NULL && index < fviz_fea_result_database_step_count(database)
-        ? (const FVizFEAObservedStep*)fviz_array_const_at(database->steps, index) : NULL;
+                                           ? (const FVizFEAObservedStep*)fviz_array_const_at(database->steps, index)
+                                           : NULL;
     return entry != NULL ? entry->step : NULL;
 }

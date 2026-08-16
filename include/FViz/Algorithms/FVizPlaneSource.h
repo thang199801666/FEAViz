@@ -19,10 +19,8 @@ FVIZ_API FVizResult fviz_plane_source_create(FVizPlaneSource** out_source);
 FVIZ_API void fviz_plane_source_set_origin(FVizPlaneSource* source, FVizVec3 origin);
 FVIZ_API void fviz_plane_source_set_point1(FVizPlaneSource* source, FVizVec3 point1);
 FVIZ_API void fviz_plane_source_set_point2(FVizPlaneSource* source, FVizVec3 point2);
-FVIZ_API FVizResult fviz_plane_source_set_resolution(
-    FVizPlaneSource* source,
-    uint32_t x_resolution,
-    uint32_t y_resolution);
+FVIZ_API FVizResult fviz_plane_source_set_resolution(FVizPlaneSource* source, uint32_t x_resolution,
+                                                     uint32_t y_resolution);
 FVIZ_API FVizVec3 fviz_plane_source_origin(const FVizPlaneSource* source);
 FVIZ_API FVizVec3 fviz_plane_source_point1(const FVizPlaneSource* source);
 FVIZ_API FVizVec3 fviz_plane_source_point2(const FVizPlaneSource* source);

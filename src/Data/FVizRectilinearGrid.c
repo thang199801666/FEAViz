@@ -11,18 +11,18 @@
 
 static void fviz_rectilinear_grid_destroy(FVizObject* object);
 static FVizMTime fviz_rectilinear_grid_mtime(const FVizObject* object);
-static const FVizObjectClass g_fviz_rectilinear_grid_class = {
-    FVIZ_TYPE_RECTILINEAR_GRID, "FVizRectilinearGrid", &g_fviz_data_object_class,
-    fviz_rectilinear_grid_destroy, fviz_rectilinear_grid_mtime
-};
+static const FVizObjectClass g_fviz_rectilinear_grid_class = {FVIZ_TYPE_RECTILINEAR_GRID, "FVizRectilinearGrid",
+                                                              &g_fviz_data_object_class, fviz_rectilinear_grid_destroy,
+                                                              fviz_rectilinear_grid_mtime};
 
-static FVizBool fviz_rectilinear_grid_dependency_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_rectilinear_grid_dependency_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                          void* client_data)
 {
     FVizRectilinearGrid* grid = (FVizRectilinearGrid*)client_data;
-    (void)caller; (void)event_id; (void)call_data;
-    if (grid != NULL && grid->dependency_suppression == 0u)
-        fviz_object_modified((FVizObject*)grid);
+    (void)caller;
+    (void)event_id;
+    (void)call_data;
+    if (grid != NULL && grid->dependency_suppression == 0u) fviz_object_modified((FVizObject*)grid);
     return FVIZ_FALSE;
 }
 
@@ -32,8 +32,7 @@ static FVizMTime fviz_rectilinear_grid_mtime(const FVizObject* object)
     return fviz_internal_object_local_mtime(object);
 }
 
-static FVizResult fviz_rectilinear_dimensions_from_extent(
-    const int64_t extent[6], FVizSize dims[3])
+static FVizResult fviz_rectilinear_dimensions_from_extent(const int64_t extent[6], FVizSize dims[3])
 {
     uint32_t axis;
     for (axis = 0u; axis < 3u; ++axis)
@@ -57,18 +56,17 @@ static FVizResult fviz_rectilinear_dimensions_from_extent(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_rectilinear_counts(
-    const int64_t extent[6], FVizSize* out_points, FVizSize* out_cells)
+static FVizResult fviz_rectilinear_counts(const int64_t extent[6], FVizSize* out_points, FVizSize* out_cells)
 {
     FVizSize dims[3] = {0u, 0u, 0u};
     FVizSize points;
     FVizSize cells = 1u;
     uint32_t axis;
-    if (fviz_rectilinear_dimensions_from_extent(extent, dims) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_rectilinear_dimensions_from_extent(extent, dims) != FVIZ_OK) return fviz_last_error_code();
     if (dims[0] == 0u || dims[1] == 0u || dims[2] == 0u)
     {
-        *out_points = 0u; *out_cells = 0u;
+        *out_points = 0u;
+        *out_cells = 0u;
         return FVIZ_OK;
     }
     if (fviz_size_multiply(dims[0], dims[1], &points) != FVIZ_OK ||
@@ -77,16 +75,14 @@ static FVizResult fviz_rectilinear_counts(
     for (axis = 0u; axis < 3u; ++axis)
     {
         const FVizSize cell_dim = dims[axis] > 1u ? dims[axis] - 1u : 1u;
-        if (fviz_size_multiply(cells, cell_dim, &cells) != FVIZ_OK)
-            return FVIZ_ERROR_OVERFLOW;
+        if (fviz_size_multiply(cells, cell_dim, &cells) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
     }
     *out_points = points;
     *out_cells = cells;
     return FVIZ_OK;
 }
 
-static void fviz_rectilinear_cell_dimensions(
-    const FVizRectilinearGrid* grid, FVizSize cell_dims[3])
+static void fviz_rectilinear_cell_dimensions(const FVizRectilinearGrid* grid, FVizSize cell_dims[3])
 {
     FVizSize dims[3];
     uint32_t axis;
@@ -95,8 +91,7 @@ static void fviz_rectilinear_cell_dimensions(
         cell_dims[axis] = dims[axis] > 1u ? dims[axis] - 1u : (dims[axis] == 1u ? 1u : 0u);
 }
 
-static FVizResult fviz_rectilinear_validate_coordinate_array(
-    const FVizDataArray* coordinates, FVizSize expected)
+static FVizResult fviz_rectilinear_validate_coordinate_array(const FVizDataArray* coordinates, FVizSize expected)
 {
     FVizSize i;
     double previous = 0.0;
@@ -122,7 +117,7 @@ static FVizResult fviz_rectilinear_validate_coordinate_array(
             if (current == 0 || (direction != 0 && current != direction))
             {
                 fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
-                    "rectilinear coordinates must be strictly monotonic");
+                                        "rectilinear coordinates must be strictly monotonic");
                 return FVIZ_ERROR_INVALID_ARGUMENT;
             }
             direction = current;
@@ -134,10 +129,8 @@ static FVizResult fviz_rectilinear_validate_coordinate_array(
 
 static void fviz_rectilinear_detach_coordinate(FVizRectilinearGrid* grid, uint32_t axis)
 {
-    if (grid->coordinates[axis] != NULL &&
-        grid->coordinate_modified_tags[axis] != FVIZ_OBSERVER_TAG_INVALID)
-        (void)fviz_object_remove_observer(
-            (FVizObject*)grid->coordinates[axis], grid->coordinate_modified_tags[axis]);
+    if (grid->coordinates[axis] != NULL && grid->coordinate_modified_tags[axis] != FVIZ_OBSERVER_TAG_INVALID)
+        (void)fviz_object_remove_observer((FVizObject*)grid->coordinates[axis], grid->coordinate_modified_tags[axis]);
     fviz_release(grid->coordinates[axis]);
     grid->coordinates[axis] = NULL;
     grid->coordinate_modified_tags[axis] = FVIZ_OBSERVER_TAG_INVALID;
@@ -147,7 +140,8 @@ static void fviz_rectilinear_grid_destroy(FVizObject* object)
 {
     FVizRectilinearGrid* grid = (FVizRectilinearGrid*)object;
     uint32_t axis;
-    for (axis = 0u; axis < 3u; ++axis) fviz_rectilinear_detach_coordinate(grid, axis);
+    for (axis = 0u; axis < 3u; ++axis)
+        fviz_rectilinear_detach_coordinate(grid, axis);
     if (grid->data_set != NULL && grid->data_set_modified_tag != FVIZ_OBSERVER_TAG_INVALID)
         (void)fviz_object_remove_observer((FVizObject*)grid->data_set, grid->data_set_modified_tag);
     fviz_release(grid->data_set);
@@ -165,18 +159,16 @@ FVizResult fviz_rectilinear_grid_create(FVizRectilinearGrid** out_grid)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_grid = NULL;
-    grid = (FVizRectilinearGrid*)fviz_internal_object_allocate(
-        sizeof(*grid), &g_fviz_rectilinear_grid_class, NULL);
+    grid = (FVizRectilinearGrid*)fviz_internal_object_allocate(sizeof(*grid), &g_fviz_rectilinear_grid_class, NULL);
     if (grid == NULL) return fviz_last_error_code();
     (void)memcpy(grid->extent, empty_extent, sizeof(empty_extent));
     for (axis = 0u; axis < 3u; ++axis)
         grid->coordinate_modified_tags[axis] = FVIZ_OBSERVER_TAG_INVALID;
     grid->data_set_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (fviz_data_set_create(&grid->data_set) != FVIZ_OK ||
-        fviz_object_add_observer(
-            (FVizObject*)grid->data_set, FVIZ_EVENT_MODIFIED, 0.0f,
-            fviz_rectilinear_grid_dependency_modified, grid,
-            &grid->data_set_modified_tag) != FVIZ_OK)
+        fviz_object_add_observer((FVizObject*)grid->data_set, FVIZ_EVENT_MODIFIED, 0.0f,
+                                 fviz_rectilinear_grid_dependency_modified, grid,
+                                 &grid->data_set_modified_tag) != FVIZ_OK)
     {
         fviz_release(grid);
         return fviz_last_error_code();
@@ -212,8 +204,7 @@ void fviz_rectilinear_grid_clear(FVizRectilinearGrid* grid)
     if (changed != FVIZ_FALSE) fviz_object_modified((FVizObject*)grid);
 }
 
-FVizResult fviz_rectilinear_grid_set_extent(
-    FVizRectilinearGrid* grid, const int64_t extent[6])
+FVizResult fviz_rectilinear_grid_set_extent(FVizRectilinearGrid* grid, const int64_t extent[6])
 {
     FVizSize points = 0u, cells = 0u, dims[3] = {0u, 0u, 0u};
     uint32_t axis;
@@ -226,11 +217,10 @@ FVizResult fviz_rectilinear_grid_set_extent(
         fviz_rectilinear_dimensions_from_extent(extent, dims) != FVIZ_OK)
         return fviz_last_error_code();
     for (axis = 0u; axis < 3u; ++axis)
-        if (grid->coordinates[axis] != NULL &&
-            fviz_data_array_tuple_count(grid->coordinates[axis]) != dims[axis])
+        if (grid->coordinates[axis] != NULL && fviz_data_array_tuple_count(grid->coordinates[axis]) != dims[axis])
         {
             fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
-                "rectilinear extent conflicts with existing coordinate arrays");
+                                    "rectilinear extent conflicts with existing coordinate arrays");
             return FVIZ_ERROR_INVALID_STATE;
         }
     ++grid->dependency_suppression;
@@ -249,16 +239,13 @@ FVizResult fviz_rectilinear_grid_set_extent(
     return FVIZ_OK;
 }
 
-void fviz_rectilinear_grid_extent(
-    const FVizRectilinearGrid* grid, int64_t out_extent[6])
+void fviz_rectilinear_grid_extent(const FVizRectilinearGrid* grid, int64_t out_extent[6])
 {
     static const int64_t empty_extent[6] = {0, -1, 0, -1, 0, -1};
-    if (out_extent != NULL)
-        (void)memcpy(out_extent, grid != NULL ? grid->extent : empty_extent, sizeof(empty_extent));
+    if (out_extent != NULL) (void)memcpy(out_extent, grid != NULL ? grid->extent : empty_extent, sizeof(empty_extent));
 }
 
-void fviz_rectilinear_grid_dimensions(
-    const FVizRectilinearGrid* grid, FVizSize out_dimensions[3])
+void fviz_rectilinear_grid_dimensions(const FVizRectilinearGrid* grid, FVizSize out_dimensions[3])
 {
     if (out_dimensions == NULL) return;
     out_dimensions[0] = out_dimensions[1] = out_dimensions[2] = 0u;
@@ -270,29 +257,39 @@ uint32_t fviz_rectilinear_grid_dimension(const FVizRectilinearGrid* grid)
     FVizSize dims[3];
     uint32_t axis, dimension = 0u;
     fviz_rectilinear_grid_dimensions(grid, dims);
-    for (axis = 0u; axis < 3u; ++axis) if (dims[axis] > 1u) ++dimension;
+    for (axis = 0u; axis < 3u; ++axis)
+        if (dims[axis] > 1u) ++dimension;
     return dimension;
 }
 
 FVizSize fviz_rectilinear_grid_point_count(const FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_point_count(grid->data_set) : 0u; }
+{
+    return grid != NULL ? fviz_data_set_point_count(grid->data_set) : 0u;
+}
+
 FVizSize fviz_rectilinear_grid_cell_count(const FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_cell_count(grid->data_set) : 0u; }
+{
+    return grid != NULL ? fviz_data_set_cell_count(grid->data_set) : 0u;
+}
 
 FVizCellType fviz_rectilinear_grid_cell_type(const FVizRectilinearGrid* grid)
 {
     switch (fviz_rectilinear_grid_dimension(grid))
     {
-        case 0u: return fviz_rectilinear_grid_point_count(grid) != 0u ? FVIZ_CELL_VERTEX : (FVizCellType)0;
-        case 1u: return FVIZ_CELL_LINE;
-        case 2u: return FVIZ_CELL_QUAD;
-        case 3u: return FVIZ_CELL_HEXAHEDRON;
-        default: return (FVizCellType)0;
+        case 0u:
+            return fviz_rectilinear_grid_point_count(grid) != 0u ? FVIZ_CELL_VERTEX : (FVizCellType)0;
+        case 1u:
+            return FVIZ_CELL_LINE;
+        case 2u:
+            return FVIZ_CELL_QUAD;
+        case 3u:
+            return FVIZ_CELL_HEXAHEDRON;
+        default:
+            return (FVizCellType)0;
     }
 }
 
-FVizResult fviz_rectilinear_grid_set_coordinates(
-    FVizRectilinearGrid* grid, uint32_t axis, FVizDataArray* coordinates)
+FVizResult fviz_rectilinear_grid_set_coordinates(FVizRectilinearGrid* grid, uint32_t axis, FVizDataArray* coordinates)
 {
     FVizSize dims[3];
     FVizDataArray* retained;
@@ -303,14 +300,12 @@ FVizResult fviz_rectilinear_grid_set_coordinates(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     fviz_rectilinear_grid_dimensions(grid, dims);
-    if (fviz_rectilinear_validate_coordinate_array(coordinates, dims[axis]) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_rectilinear_validate_coordinate_array(coordinates, dims[axis]) != FVIZ_OK) return fviz_last_error_code();
     if (grid->coordinates[axis] == coordinates) return FVIZ_OK;
     retained = (FVizDataArray*)fviz_retain(coordinates);
     if (retained == NULL) return fviz_last_error_code();
-    if (fviz_object_add_observer(
-            (FVizObject*)retained, FVIZ_EVENT_MODIFIED, 0.0f,
-            fviz_rectilinear_grid_dependency_modified, grid, &tag) != FVIZ_OK)
+    if (fviz_object_add_observer((FVizObject*)retained, FVIZ_EVENT_MODIFIED, 0.0f,
+                                 fviz_rectilinear_grid_dependency_modified, grid, &tag) != FVIZ_OK)
     {
         fviz_release(retained);
         return fviz_last_error_code();
@@ -322,8 +317,8 @@ FVizResult fviz_rectilinear_grid_set_coordinates(
     return FVIZ_OK;
 }
 
-FVizResult fviz_rectilinear_grid_set_coordinate_values(
-    FVizRectilinearGrid* grid, uint32_t axis, const double* values, FVizSize count)
+FVizResult fviz_rectilinear_grid_set_coordinate_values(FVizRectilinearGrid* grid, uint32_t axis, const double* values,
+                                                       FVizSize count)
 {
     FVizDataArray* coordinates = NULL;
     FVizResult result;
@@ -332,8 +327,7 @@ FVizResult fviz_rectilinear_grid_set_coordinate_values(
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "rectilinear coordinate values are invalid");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    if (fviz_data_array_create(FVIZ_DATA_FLOAT64, 1u, &coordinates) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_data_array_create(FVIZ_DATA_FLOAT64, 1u, &coordinates) != FVIZ_OK) return fviz_last_error_code();
     result = fviz_data_array_append_tuples(coordinates, values, count);
     if (result == FVIZ_OK) result = fviz_rectilinear_grid_set_coordinates(grid, axis, coordinates);
     fviz_release(coordinates);
@@ -341,18 +335,22 @@ FVizResult fviz_rectilinear_grid_set_coordinate_values(
 }
 
 FVizDataArray* fviz_rectilinear_grid_coordinates(FVizRectilinearGrid* grid, uint32_t axis)
-{ return grid != NULL && axis < 3u ? grid->coordinates[axis] : NULL; }
-const FVizDataArray* fviz_rectilinear_grid_const_coordinates(
-    const FVizRectilinearGrid* grid, uint32_t axis)
-{ return grid != NULL && axis < 3u ? grid->coordinates[axis] : NULL; }
+{
+    return grid != NULL && axis < 3u ? grid->coordinates[axis] : NULL;
+}
 
-FVizResult fviz_rectilinear_grid_point_id(
-    const FVizRectilinearGrid* grid, int64_t i, int64_t j, int64_t k, FVizId* out_point_id)
+const FVizDataArray* fviz_rectilinear_grid_const_coordinates(const FVizRectilinearGrid* grid, uint32_t axis)
+{
+    return grid != NULL && axis < 3u ? grid->coordinates[axis] : NULL;
+}
+
+FVizResult fviz_rectilinear_grid_point_id(const FVizRectilinearGrid* grid, int64_t i, int64_t j, int64_t k,
+                                          FVizId* out_point_id)
 {
     FVizSize dims[3], plane, id, x, y, z;
     if (out_point_id != NULL) *out_point_id = FVIZ_INVALID_ID;
-    if (grid == NULL || out_point_id == NULL || i < grid->extent[0] || i > grid->extent[1] ||
-        j < grid->extent[2] || j > grid->extent[3] || k < grid->extent[4] || k > grid->extent[5])
+    if (grid == NULL || out_point_id == NULL || i < grid->extent[0] || i > grid->extent[1] || j < grid->extent[2] ||
+        j > grid->extent[3] || k < grid->extent[4] || k > grid->extent[5])
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "rectilinear point index is outside extent");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -361,15 +359,14 @@ FVizResult fviz_rectilinear_grid_point_id(
     x = (FVizSize)(i - grid->extent[0]);
     y = (FVizSize)(j - grid->extent[2]);
     z = (FVizSize)(k - grid->extent[4]);
-    if (fviz_size_multiply(dims[0], dims[1], &plane) != FVIZ_OK ||
-        fviz_size_multiply(z, plane, &id) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
+    if (fviz_size_multiply(dims[0], dims[1], &plane) != FVIZ_OK || fviz_size_multiply(z, plane, &id) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
     id += y * dims[0] + x;
     *out_point_id = (FVizId)id;
     return FVIZ_OK;
 }
 
-FVizResult fviz_rectilinear_grid_point_ijk(
-    const FVizRectilinearGrid* grid, FVizId point_id, int64_t out_ijk[3])
+FVizResult fviz_rectilinear_grid_point_ijk(const FVizRectilinearGrid* grid, FVizId point_id, int64_t out_ijk[3])
 {
     FVizSize dims[3], plane, id;
     if (grid == NULL || out_ijk == NULL || point_id >= (FVizId)fviz_rectilinear_grid_point_count(grid))
@@ -378,8 +375,7 @@ FVizResult fviz_rectilinear_grid_point_ijk(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     fviz_rectilinear_grid_dimensions(grid, dims);
-    if (fviz_size_multiply(dims[0], dims[1], &plane) != FVIZ_OK || plane == 0u)
-        return FVIZ_ERROR_INVALID_STATE;
+    if (fviz_size_multiply(dims[0], dims[1], &plane) != FVIZ_OK || plane == 0u) return FVIZ_ERROR_INVALID_STATE;
     id = (FVizSize)point_id;
     out_ijk[2] = grid->extent[4] + (int64_t)(id / plane);
     id %= plane;
@@ -388,22 +384,20 @@ FVizResult fviz_rectilinear_grid_point_ijk(
     return FVIZ_OK;
 }
 
-FVizResult fviz_rectilinear_grid_point(
-    const FVizRectilinearGrid* grid, FVizId point_id, FVizVec3* out_point)
+FVizResult fviz_rectilinear_grid_point(const FVizRectilinearGrid* grid, FVizId point_id, FVizVec3* out_point)
 {
     int64_t ijk[3];
     uint32_t axis;
     float values[3];
-    if (grid == NULL || out_point == NULL ||
-        fviz_rectilinear_grid_point_ijk(grid, point_id, ijk) != FVIZ_OK)
+    if (grid == NULL || out_point == NULL || fviz_rectilinear_grid_point_ijk(grid, point_id, ijk) != FVIZ_OK)
         return fviz_last_error_code();
     for (axis = 0u; axis < 3u; ++axis)
     {
         const int64_t minimum = grid->extent[axis * 2u];
         double value = 0.0;
         if (grid->coordinates[axis] == NULL ||
-            fviz_data_array_get_component(
-                grid->coordinates[axis], (FVizSize)(ijk[axis] - minimum), 0u, &value) != FVIZ_OK)
+            fviz_data_array_get_component(grid->coordinates[axis], (FVizSize)(ijk[axis] - minimum), 0u, &value) !=
+                FVIZ_OK)
         {
             fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "rectilinear coordinate array is missing");
             return FVIZ_ERROR_INVALID_STATE;
@@ -423,8 +417,7 @@ FVizBounds fviz_rectilinear_grid_bounds(const FVizRectilinearGrid* grid)
     for (axis = 0u; axis < 3u; ++axis)
     {
         if (grid->coordinates[axis] == NULL ||
-            fviz_data_array_get_range(grid->coordinates[axis], 0, FVIZ_TRUE,
-                &minimum[axis], &maximum[axis]) != FVIZ_OK)
+            fviz_data_array_get_range(grid->coordinates[axis], 0, FVIZ_TRUE, &minimum[axis], &maximum[axis]) != FVIZ_OK)
             return fviz_bounds_empty();
     }
     bounds.min = fviz_vec3((float)minimum[0], (float)minimum[1], (float)minimum[2]);
@@ -432,8 +425,8 @@ FVizBounds fviz_rectilinear_grid_bounds(const FVizRectilinearGrid* grid)
     return bounds;
 }
 
-FVizResult fviz_rectilinear_grid_cell_id(
-    const FVizRectilinearGrid* grid, int64_t i, int64_t j, int64_t k, FVizId* out_cell_id)
+FVizResult fviz_rectilinear_grid_cell_id(const FVizRectilinearGrid* grid, int64_t i, int64_t j, int64_t k,
+                                         FVizId* out_cell_id)
 {
     FVizSize cell_dims[3], x, y, z, plane, id;
     if (out_cell_id != NULL) *out_cell_id = FVIZ_INVALID_ID;
@@ -443,23 +436,25 @@ FVizResult fviz_rectilinear_grid_cell_id(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     fviz_rectilinear_cell_dimensions(grid, cell_dims);
-    if (i < grid->extent[0] || (FVizSize)(i - grid->extent[0]) >= cell_dims[0] ||
-        j < grid->extent[2] || (FVizSize)(j - grid->extent[2]) >= cell_dims[1] ||
-        k < grid->extent[4] || (FVizSize)(k - grid->extent[4]) >= cell_dims[2])
+    if (i < grid->extent[0] || (FVizSize)(i - grid->extent[0]) >= cell_dims[0] || j < grid->extent[2] ||
+        (FVizSize)(j - grid->extent[2]) >= cell_dims[1] || k < grid->extent[4] ||
+        (FVizSize)(k - grid->extent[4]) >= cell_dims[2])
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "rectilinear cell index is outside extent");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    x = (FVizSize)(i - grid->extent[0]); y = (FVizSize)(j - grid->extent[2]); z = (FVizSize)(k - grid->extent[4]);
+    x = (FVizSize)(i - grid->extent[0]);
+    y = (FVizSize)(j - grid->extent[2]);
+    z = (FVizSize)(k - grid->extent[4]);
     if (fviz_size_multiply(cell_dims[0], cell_dims[1], &plane) != FVIZ_OK ||
-        fviz_size_multiply(z, plane, &id) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
+        fviz_size_multiply(z, plane, &id) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
     id += y * cell_dims[0] + x;
     *out_cell_id = (FVizId)id;
     return FVIZ_OK;
 }
 
-FVizResult fviz_rectilinear_grid_cell_ijk(
-    const FVizRectilinearGrid* grid, FVizId cell_id, int64_t out_ijk[3])
+FVizResult fviz_rectilinear_grid_cell_ijk(const FVizRectilinearGrid* grid, FVizId cell_id, int64_t out_ijk[3])
 {
     FVizSize cell_dims[3], plane, id;
     if (grid == NULL || out_ijk == NULL || cell_id >= (FVizId)fviz_rectilinear_grid_cell_count(grid))
@@ -478,8 +473,8 @@ FVizResult fviz_rectilinear_grid_cell_ijk(
     return FVIZ_OK;
 }
 
-FVizResult fviz_rectilinear_grid_cell_point_ids(
-    const FVizRectilinearGrid* grid, FVizId cell_id, FVizId out_point_ids[8], uint32_t* out_point_count)
+FVizResult fviz_rectilinear_grid_cell_point_ids(const FVizRectilinearGrid* grid, FVizId cell_id,
+                                                FVizId out_point_ids[8], uint32_t* out_point_count)
 {
     int64_t ijk[3];
     FVizSize dims[3];
@@ -489,7 +484,8 @@ FVizResult fviz_rectilinear_grid_cell_point_ids(
         fviz_rectilinear_grid_cell_ijk(grid, cell_id, ijk) != FVIZ_OK)
         return fviz_last_error_code();
     fviz_rectilinear_grid_dimensions(grid, dims);
-    for (axis = 0u; axis < 3u; ++axis) if (dims[axis] > 1u) active[active_count++] = axis;
+    for (axis = 0u; axis < 3u; ++axis)
+        if (dims[axis] > 1u) active[active_count++] = axis;
     corner_count = 1u << active_count;
     for (corner = 0u; corner < corner_count; ++corner)
     {
@@ -497,12 +493,10 @@ FVizResult fviz_rectilinear_grid_cell_point_ids(
         uint32_t bit;
         static const uint8_t order2[4] = {0u, 1u, 3u, 2u};
         static const uint8_t order3[8] = {0u, 1u, 3u, 2u, 4u, 5u, 7u, 6u};
-        const uint32_t code = active_count == 2u ? order2[corner] :
-            (active_count == 3u ? order3[corner] : corner);
+        const uint32_t code = active_count == 2u ? order2[corner] : (active_count == 3u ? order3[corner] : corner);
         for (bit = 0u; bit < active_count; ++bit)
             if ((code & (1u << bit)) != 0u) ++pijk[active[bit]];
-        if (fviz_rectilinear_grid_point_id(
-                grid, pijk[0], pijk[1], pijk[2], &out_point_ids[corner]) != FVIZ_OK)
+        if (fviz_rectilinear_grid_point_id(grid, pijk[0], pijk[1], pijk[2], &out_point_ids[corner]) != FVIZ_OK)
             return fviz_last_error_code();
     }
     *out_point_count = corner_count;
@@ -510,17 +504,34 @@ FVizResult fviz_rectilinear_grid_cell_point_ids(
 }
 
 FVizAttributeSet* fviz_rectilinear_grid_point_data(FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL;
+}
+
 FVizAttributeSet* fviz_rectilinear_grid_cell_data(FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL;
+}
+
 FVizAttributeSet* fviz_rectilinear_grid_field_data(FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL;
+}
+
 const FVizAttributeSet* fviz_rectilinear_grid_const_point_data(const FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL;
+}
+
 const FVizAttributeSet* fviz_rectilinear_grid_const_cell_data(const FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL;
+}
+
 const FVizAttributeSet* fviz_rectilinear_grid_const_field_data(const FVizRectilinearGrid* grid)
-{ return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL;
+}
 
 FVizResult fviz_rectilinear_grid_validate(const FVizRectilinearGrid* grid)
 {

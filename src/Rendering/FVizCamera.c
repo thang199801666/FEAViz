@@ -7,13 +7,7 @@
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Rendering/FVizCameraPrivate.h>
 
-static const FVizObjectClass g_fviz_camera_class = {
-    FVIZ_TYPE_CAMERA,
-    "FVizCamera",
-    &g_fviz_object_class,
-    NULL,
-    NULL
-};
+static const FVizObjectClass g_fviz_camera_class = {FVIZ_TYPE_CAMERA, "FVizCamera", &g_fviz_object_class, NULL, NULL};
 
 static void fviz_camera_modified(FVizCamera* camera)
 {
@@ -72,9 +66,20 @@ void fviz_camera_set_up(FVizCamera* camera, FVizVec3 up)
     fviz_camera_modified(camera);
 }
 
-FVizVec3 fviz_camera_position(const FVizCamera* camera) { return camera != NULL ? camera->position : fviz_vec3(0,0,0); }
-FVizVec3 fviz_camera_target(const FVizCamera* camera) { return camera != NULL ? camera->target : fviz_vec3(0,0,0); }
-FVizVec3 fviz_camera_up(const FVizCamera* camera) { return camera != NULL ? camera->up : fviz_vec3(0,1,0); }
+FVizVec3 fviz_camera_position(const FVizCamera* camera)
+{
+    return camera != NULL ? camera->position : fviz_vec3(0, 0, 0);
+}
+
+FVizVec3 fviz_camera_target(const FVizCamera* camera)
+{
+    return camera != NULL ? camera->target : fviz_vec3(0, 0, 0);
+}
+
+FVizVec3 fviz_camera_up(const FVizCamera* camera)
+{
+    return camera != NULL ? camera->up : fviz_vec3(0, 1, 0);
+}
 
 void fviz_camera_set_perspective(FVizCamera* camera, float vertical_fov_degrees, float near_plane, float far_plane)
 {
@@ -88,8 +93,8 @@ void fviz_camera_set_perspective(FVizCamera* camera, float vertical_fov_degrees,
     if (vertical_fov_degrees > 1.0f && vertical_fov_degrees < 179.0f) new_fov = vertical_fov_degrees;
     if (near_plane > 0.0f) new_near = near_plane;
     if (far_plane > new_near) new_far = far_plane;
-    if (camera->fov_degrees == new_fov && camera->near_plane == new_near &&
-        camera->far_plane == new_far && camera->projection_mode == FVIZ_CAMERA_PERSPECTIVE)
+    if (camera->fov_degrees == new_fov && camera->near_plane == new_near && camera->far_plane == new_far &&
+        camera->projection_mode == FVIZ_CAMERA_PERSPECTIVE)
         return;
     camera->fov_degrees = new_fov;
     camera->near_plane = new_near;
@@ -108,11 +113,20 @@ void fviz_camera_set_clipping_range(FVizCamera* camera, float near_plane, float 
     fviz_camera_modified(camera);
 }
 
-float fviz_camera_fov_degrees(const FVizCamera* camera) { return camera != NULL ? camera->fov_degrees : 45.0f; }
+float fviz_camera_fov_degrees(const FVizCamera* camera)
+{
+    return camera != NULL ? camera->fov_degrees : 45.0f;
+}
 
-float fviz_camera_near_plane(const FVizCamera* camera) { return camera != NULL ? camera->near_plane : 0.0f; }
+float fviz_camera_near_plane(const FVizCamera* camera)
+{
+    return camera != NULL ? camera->near_plane : 0.0f;
+}
 
-float fviz_camera_far_plane(const FVizCamera* camera) { return camera != NULL ? camera->far_plane : 0.0f; }
+float fviz_camera_far_plane(const FVizCamera* camera)
+{
+    return camera != NULL ? camera->far_plane : 0.0f;
+}
 
 void fviz_camera_set_projection_mode(FVizCamera* camera, FVizCameraProjectionMode mode)
 {
@@ -153,13 +167,11 @@ FVizMat4 fviz_camera_projection_matrix(const FVizCamera* camera, float aspect_ra
     {
         const float half_height = camera->parallel_scale;
         const float half_width = half_height * aspect_ratio;
-        return fviz_mat4_orthographic(
-            -half_width, half_width, -half_height, half_height,
-            camera->near_plane, camera->far_plane);
+        return fviz_mat4_orthographic(-half_width, half_width, -half_height, half_height, camera->near_plane,
+                                      camera->far_plane);
     }
-    return fviz_mat4_perspective(
-        FVIZ_DEG_TO_RAD_F(camera->fov_degrees), aspect_ratio,
-        camera->near_plane, camera->far_plane);
+    return fviz_mat4_perspective(FVIZ_DEG_TO_RAD_F(camera->fov_degrees), aspect_ratio, camera->near_plane,
+                                 camera->far_plane);
 }
 
 void fviz_camera_fit_bounds(FVizCamera* camera, const FVizBounds* bounds, float padding)
@@ -173,8 +185,7 @@ void fviz_camera_fit_bounds(FVizCamera* camera, const FVizBounds* bounds, float 
     radius = fviz_bounds_radius(bounds);
     if (radius < 1.0e-4f) radius = 1.0f;
     direction = fviz_vec3_normalize(fviz_vec3_sub(camera->position, camera->target));
-    if (fviz_vec3_length(direction) < 1.0e-4f)
-        direction = fviz_vec3_normalize(fviz_vec3(1.0f, 0.7f, 1.0f));
+    if (fviz_vec3_length(direction) < 1.0e-4f) direction = fviz_vec3_normalize(fviz_vec3(1.0f, 0.7f, 1.0f));
     camera->target = fviz_bounds_center(bounds);
     if (camera->projection_mode == FVIZ_CAMERA_PARALLEL)
     {
@@ -273,18 +284,14 @@ FVizRay fviz_camera_pick_ray(const FVizCamera* camera, int width, int height, in
     if (camera->projection_mode == FVIZ_CAMERA_PARALLEL)
     {
         ray.origin = fviz_vec3_add(camera->position,
-            fviz_vec3_add(
-                fviz_vec3_scale(right, ndc_x * camera->parallel_scale * aspect),
-                fviz_vec3_scale(up, ndc_y * camera->parallel_scale)));
+                                   fviz_vec3_add(fviz_vec3_scale(right, ndc_x * camera->parallel_scale * aspect),
+                                                 fviz_vec3_scale(up, ndc_y * camera->parallel_scale)));
         ray.direction = forward;
         return ray;
     }
     half_fov = tanf(FVIZ_DEG_TO_RAD_F(camera->fov_degrees) * 0.5f);
-    direction = fviz_vec3_add(
-        forward,
-        fviz_vec3_add(
-            fviz_vec3_scale(right, ndc_x * half_fov * aspect),
-            fviz_vec3_scale(up, ndc_y * half_fov)));
+    direction = fviz_vec3_add(forward, fviz_vec3_add(fviz_vec3_scale(right, ndc_x * half_fov * aspect),
+                                                     fviz_vec3_scale(up, ndc_y * half_fov)));
     ray.origin = camera->position;
     ray.direction = fviz_vec3_normalize(direction);
     return ray;

@@ -7,8 +7,7 @@ FVizCacheKey fviz_cache_key_initialize(void)
     return UINT64_C(14695981039346656037);
 }
 
-FVizCacheKey fviz_cache_key_append_bytes(
-    FVizCacheKey key, const void* data, FVizSize size)
+FVizCacheKey fviz_cache_key_append_bytes(FVizCacheKey key, const void* data, FVizSize size)
 {
     const unsigned char* bytes = (const unsigned char*)data;
     FVizSize index;

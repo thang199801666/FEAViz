@@ -13,15 +13,11 @@
 static void fviz_partitioned_data_set_destroy(FVizObject* object);
 static FVizMTime fviz_partitioned_data_set_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_partitioned_data_set_class = {
-    FVIZ_TYPE_PARTITIONED_DATA_SET,
-    "FVizPartitionedDataSet",
-    &g_fviz_data_object_class,
-    fviz_partitioned_data_set_destroy,
-    fviz_partitioned_data_set_mtime
-};
+    FVIZ_TYPE_PARTITIONED_DATA_SET, "FVizPartitionedDataSet", &g_fviz_data_object_class,
+    fviz_partitioned_data_set_destroy, fviz_partitioned_data_set_mtime};
 
-static FVizBool fviz_partition_child_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_partition_child_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                              void* client_data)
 {
     FVizPartitionedDataSet* data_set = (FVizPartitionedDataSet*)client_data;
     (void)caller;
@@ -31,15 +27,13 @@ static FVizBool fviz_partition_child_modified(
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_partition_entry_observe(
-    FVizPartitionedDataSet* data_set, FVizPartitionEntry* entry)
+static FVizResult fviz_partition_entry_observe(FVizPartitionedDataSet* data_set, FVizPartitionEntry* entry)
 {
     if (entry == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     entry->data_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (entry->data == NULL) return FVIZ_OK;
-    return fviz_object_add_observer(
-        (FVizObject*)entry->data, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_partition_child_modified, data_set, &entry->data_modified_tag);
+    return fviz_object_add_observer((FVizObject*)entry->data, FVIZ_EVENT_MODIFIED, 0.0f, fviz_partition_child_modified,
+                                    data_set, &entry->data_modified_tag);
 }
 
 static void fviz_partition_entry_release(FVizPartitionEntry* entry)
@@ -78,8 +72,8 @@ FVizResult fviz_partitioned_data_set_create(FVizPartitionedDataSet** out_data_se
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_data_set = NULL;
-    data_set = (FVizPartitionedDataSet*)fviz_internal_object_allocate(
-        sizeof(*data_set), &g_fviz_partitioned_data_set_class, NULL);
+    data_set = (FVizPartitionedDataSet*)fviz_internal_object_allocate(sizeof(*data_set),
+                                                                      &g_fviz_partitioned_data_set_class, NULL);
     if (data_set == NULL) return fviz_last_error_code();
     if (fviz_array_create(sizeof(FVizPartitionEntry), &data_set->partitions) != FVIZ_OK)
     {
@@ -92,12 +86,10 @@ FVizResult fviz_partitioned_data_set_create(FVizPartitionedDataSet** out_data_se
 
 FVizSize fviz_partitioned_data_set_count(const FVizPartitionedDataSet* data_set)
 {
-    return data_set != NULL && data_set->partitions != NULL
-        ? fviz_array_count(data_set->partitions) : 0u;
+    return data_set != NULL && data_set->partitions != NULL ? fviz_array_count(data_set->partitions) : 0u;
 }
 
-FVizResult fviz_partitioned_data_set_reserve(
-    FVizPartitionedDataSet* data_set, FVizSize capacity)
+FVizResult fviz_partitioned_data_set_reserve(FVizPartitionedDataSet* data_set, FVizSize capacity)
 {
     if (data_set == NULL)
     {
@@ -137,17 +129,13 @@ FVizResult fviz_partitioned_data_set_resize(FVizPartitionedDataSet* data_set, FV
     return FVIZ_OK;
 }
 
-FVizResult fviz_partitioned_data_set_add_partition(
-    FVizPartitionedDataSet* data_set,
-    FVizDataObject* partition,
-    const char* name,
-    FVizSize* out_index)
+FVizResult fviz_partitioned_data_set_add_partition(FVizPartitionedDataSet* data_set, FVizDataObject* partition,
+                                                   const char* name, FVizSize* out_index)
 {
     FVizPartitionEntry entry;
     FVizSize index;
     if (out_index != NULL) *out_index = 0u;
-    if (data_set == NULL || partition == NULL ||
-        fviz_data_object_is_data_object(partition) == FVIZ_FALSE)
+    if (data_set == NULL || partition == NULL || fviz_data_object_is_data_object(partition) == FVIZ_FALSE)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "partition must be a data object");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -180,10 +168,8 @@ FVizResult fviz_partitioned_data_set_add_partition(
     return FVIZ_OK;
 }
 
-FVizResult fviz_partitioned_data_set_set_partition(
-    FVizPartitionedDataSet* data_set,
-    FVizSize index,
-    FVizDataObject* partition)
+FVizResult fviz_partitioned_data_set_set_partition(FVizPartitionedDataSet* data_set, FVizSize index,
+                                                   FVizDataObject* partition)
 {
     FVizPartitionEntry* entry;
     FVizDataObject* replacement = NULL;
@@ -234,8 +220,7 @@ FVizDataObject* fviz_partitioned_data_set_partition(FVizPartitionedDataSet* data
     return entry != NULL ? entry->data : NULL;
 }
 
-const FVizDataObject* fviz_partitioned_data_set_const_partition(
-    const FVizPartitionedDataSet* data_set, FVizSize index)
+const FVizDataObject* fviz_partitioned_data_set_const_partition(const FVizPartitionedDataSet* data_set, FVizSize index)
 {
     const FVizPartitionEntry* entry;
     if (data_set == NULL || index >= fviz_partitioned_data_set_count(data_set)) return NULL;
@@ -243,10 +228,8 @@ const FVizDataObject* fviz_partitioned_data_set_const_partition(
     return entry != NULL ? entry->data : NULL;
 }
 
-FVizResult fviz_partitioned_data_set_set_partition_name(
-    FVizPartitionedDataSet* data_set,
-    FVizSize index,
-    const char* name)
+FVizResult fviz_partitioned_data_set_set_partition_name(FVizPartitionedDataSet* data_set, FVizSize index,
+                                                        const char* name)
 {
     FVizPartitionEntry* entry;
     FVizString* replacement = NULL;
@@ -273,9 +256,7 @@ FVizResult fviz_partitioned_data_set_set_partition_name(
     return FVIZ_OK;
 }
 
-const char* fviz_partitioned_data_set_partition_name(
-    const FVizPartitionedDataSet* data_set,
-    FVizSize index)
+const char* fviz_partitioned_data_set_partition_name(const FVizPartitionedDataSet* data_set, FVizSize index)
 {
     const FVizPartitionEntry* entry;
     if (data_set == NULL || index >= fviz_partitioned_data_set_count(data_set)) return NULL;
@@ -296,8 +277,7 @@ FVizResult fviz_partitioned_data_set_remove_partition(FVizPartitionedDataSet* da
     entries = (FVizPartitionEntry*)fviz_array_data(data_set->partitions);
     fviz_partition_entry_release(&entries[index]);
     if (index + 1u < count)
-        (void)memmove(&entries[index], &entries[index + 1u],
-            (size_t)(count - index - 1u) * sizeof(*entries));
+        (void)memmove(&entries[index], &entries[index + 1u], (size_t)(count - index - 1u) * sizeof(*entries));
     if (fviz_array_resize(data_set->partitions, count - 1u) != FVIZ_OK) return fviz_last_error_code();
     fviz_object_modified((FVizObject*)data_set);
     return FVIZ_OK;
@@ -331,7 +311,8 @@ FVizResult fviz_partitioned_data_set_validate(const FVizPartitionedDataSet* data
         const FVizDataObject* partition = fviz_partitioned_data_set_const_partition(data_set, i);
         if (partition == NULL || fviz_data_object_is_data_object(partition) == FVIZ_FALSE)
         {
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "partitioned dataset contains an empty or invalid partition");
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+                                    "partitioned dataset contains an empty or invalid partition");
             return FVIZ_ERROR_INVALID_STATE;
         }
     }

@@ -64,73 +64,76 @@ typedef ptrdiff_t GLintptr;
 #define FVIZ_GL_TEXTURE_WRAP_S 0x2802
 #define FVIZ_GL_TEXTURE_WRAP_T 0x2803
 #define FVIZ_GL_CLAMP_TO_EDGE 0x812F
-typedef void (APIENTRY* FVizGLGenVertexArraysFn)(GLsizei n, GLuint* arrays);
-typedef void (APIENTRY* FVizGLBindVertexArrayFn)(GLuint array);
-typedef void (APIENTRY* FVizGLDeleteVertexArraysFn)(GLsizei n, const GLuint* arrays);
-typedef void (APIENTRY* FVizGLGenBuffersFn)(GLsizei n, GLuint* buffers);
-typedef void (APIENTRY* FVizGLBindBufferFn)(GLenum target, GLuint buffer);
-typedef void (APIENTRY* FVizGLBufferDataFn)(GLenum target, GLsizeiptr size, const void* data, GLenum usage);
-typedef void (APIENTRY* FVizGLBufferSubDataFn)(GLenum target, GLintptr offset, GLsizeiptr size, const void* data);
-typedef void (APIENTRY* FVizGLDeleteBuffersFn)(GLsizei n, const GLuint* buffers);
-typedef void (APIENTRY* FVizGLGenRenderbuffersFn)(GLsizei n, GLuint* renderbuffers);
-typedef void (APIENTRY* FVizGLBindRenderbufferFn)(GLenum target, GLuint renderbuffer);
-typedef void (APIENTRY* FVizGLRenderbufferStorageFn)(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
-typedef void (APIENTRY* FVizGLRenderbufferStorageMultisampleFn)(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height);
-typedef void (APIENTRY* FVizGLFramebufferRenderbufferFn)(GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
-typedef void (APIENTRY* FVizGLDeleteRenderbuffersFn)(GLsizei n, const GLuint* renderbuffers);
-typedef void (APIENTRY* FVizGLActiveTextureFn)(GLenum texture);
-typedef void (APIENTRY* FVizGLGenFramebuffersFn)(GLsizei n, GLuint* framebuffers);
-typedef void (APIENTRY* FVizGLBindFramebufferFn)(GLenum target, GLuint framebuffer);
-typedef void (APIENTRY* FVizGLFramebufferTexture2DFn)(
-    GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
-typedef GLenum (APIENTRY* FVizGLCheckFramebufferStatusFn)(GLenum target);
-typedef void (APIENTRY* FVizGLDeleteFramebuffersFn)(GLsizei n, const GLuint* framebuffers);
-typedef void (APIENTRY* FVizGLBlitFramebufferFn)(
-    GLint src_x0, GLint src_y0, GLint src_x1, GLint src_y1,
-    GLint dst_x0, GLint dst_y0, GLint dst_x1, GLint dst_y1,
-    GLbitfield mask, GLenum filter);
-typedef void (APIENTRY* FVizGLVertexAttribPointerFn)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void* pointer);
-typedef void (APIENTRY* FVizGLEnableVertexAttribArrayFn)(GLuint index);
-typedef void (APIENTRY* FVizGLDisableVertexAttribArrayFn)(GLuint index);
-typedef void (APIENTRY* FVizGLVertexAttribDivisorFn)(GLuint index, GLuint divisor);
-typedef void (APIENTRY* FVizGLDrawElementsInstancedFn)(GLenum mode, GLsizei count, GLenum type, const void* indices, GLsizei instancecount);
-typedef GLuint (APIENTRY* FVizGLCreateShaderFn)(GLenum type);
-typedef void (APIENTRY* FVizGLShaderSourceFn)(GLuint shader, GLsizei count, const char** string, const GLint* length);
-typedef void (APIENTRY* FVizGLCompileShaderFn)(GLuint shader);
-typedef void (APIENTRY* FVizGLGetShaderivFn)(GLuint shader, GLenum pname, GLint* params);
-typedef void (APIENTRY* FVizGLGetShaderInfoLogFn)(GLuint shader, GLsizei buf_size, GLsizei* length, char* info_log);
-typedef void (APIENTRY* FVizGLDeleteShaderFn)(GLuint shader);
-typedef GLuint (APIENTRY* FVizGLCreateProgramFn)(void);
-typedef void (APIENTRY* FVizGLAttachShaderFn)(GLuint program, GLuint shader);
-typedef void (APIENTRY* FVizGLLinkProgramFn)(GLuint program);
-typedef void (APIENTRY* FVizGLGetProgramivFn)(GLuint program, GLenum pname, GLint* params);
-typedef void (APIENTRY* FVizGLGetProgramInfoLogFn)(GLuint program, GLsizei buf_size, GLsizei* length, char* info_log);
-typedef void (APIENTRY* FVizGLDeleteProgramFn)(GLuint program);
-typedef void (APIENTRY* FVizGLUseProgramFn)(GLuint program);
-typedef GLint (APIENTRY* FVizGLGetUniformLocationFn)(GLuint program, const char* name);
-typedef void (APIENTRY* FVizGLUniformMatrix4fvFn)(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value);
-typedef void (APIENTRY* FVizGLUniformMatrix3fvFn)(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value);
-typedef void (APIENTRY* FVizGLUniform3fvFn)(GLint location, GLsizei count, const GLfloat* value);
-typedef void (APIENTRY* FVizGLUniform4fvFn)(GLint location, GLsizei count, const GLfloat* value);
-typedef void (APIENTRY* FVizGLUniform1fFn)(GLint location, GLfloat value);
-typedef void (APIENTRY* FVizGLUniform1iFn)(GLint location, GLint v0);
-typedef void (APIENTRY* FVizGLUniform1uiFn)(GLint location, GLuint v0);
-typedef void (APIENTRY* FVizGLClearBufferuivFn)(GLenum buffer, GLint drawbuffer, const GLuint* value);
-typedef void (APIENTRY* FVizGLGenQueriesFn)(GLsizei n, GLuint* ids);
-typedef void (APIENTRY* FVizGLDeleteQueriesFn)(GLsizei n, const GLuint* ids);
-typedef void (APIENTRY* FVizGLBeginQueryFn)(GLenum target, GLuint id);
-typedef void (APIENTRY* FVizGLEndQueryFn)(GLenum target);
-typedef void (APIENTRY* FVizGLGetQueryObjectivFn)(GLuint id, GLenum pname, GLint* params);
-typedef void (APIENTRY* FVizGLGetQueryObjectui64vFn)(GLuint id, GLenum pname, uint64_t* params);
-typedef void (APIENTRY* FVizGLTexImage3DFn)(
-    GLenum target, GLint level, GLint internalformat,
-    GLsizei width, GLsizei height, GLsizei depth, GLint border,
-    GLenum format, GLenum type, const void* pixels);
-typedef void (APIENTRY* FVizGLTexSubImage3DFn)(
-    GLenum target, GLint level,
-    GLint xoffset, GLint yoffset, GLint zoffset,
-    GLsizei width, GLsizei height, GLsizei depth,
-    GLenum format, GLenum type, const void* pixels);
+typedef void(APIENTRY* FVizGLGenVertexArraysFn)(GLsizei n, GLuint* arrays);
+typedef void(APIENTRY* FVizGLBindVertexArrayFn)(GLuint array);
+typedef void(APIENTRY* FVizGLDeleteVertexArraysFn)(GLsizei n, const GLuint* arrays);
+typedef void(APIENTRY* FVizGLGenBuffersFn)(GLsizei n, GLuint* buffers);
+typedef void(APIENTRY* FVizGLBindBufferFn)(GLenum target, GLuint buffer);
+typedef void(APIENTRY* FVizGLBufferDataFn)(GLenum target, GLsizeiptr size, const void* data, GLenum usage);
+typedef void(APIENTRY* FVizGLBufferSubDataFn)(GLenum target, GLintptr offset, GLsizeiptr size, const void* data);
+typedef void(APIENTRY* FVizGLDeleteBuffersFn)(GLsizei n, const GLuint* buffers);
+typedef void(APIENTRY* FVizGLGenRenderbuffersFn)(GLsizei n, GLuint* renderbuffers);
+typedef void(APIENTRY* FVizGLBindRenderbufferFn)(GLenum target, GLuint renderbuffer);
+typedef void(APIENTRY* FVizGLRenderbufferStorageFn)(GLenum target, GLenum internalformat, GLsizei width,
+                                                    GLsizei height);
+typedef void(APIENTRY* FVizGLRenderbufferStorageMultisampleFn)(GLenum target, GLsizei samples, GLenum internalformat,
+                                                               GLsizei width, GLsizei height);
+typedef void(APIENTRY* FVizGLFramebufferRenderbufferFn)(GLenum target, GLenum attachment, GLenum renderbuffertarget,
+                                                        GLuint renderbuffer);
+typedef void(APIENTRY* FVizGLDeleteRenderbuffersFn)(GLsizei n, const GLuint* renderbuffers);
+typedef void(APIENTRY* FVizGLActiveTextureFn)(GLenum texture);
+typedef void(APIENTRY* FVizGLGenFramebuffersFn)(GLsizei n, GLuint* framebuffers);
+typedef void(APIENTRY* FVizGLBindFramebufferFn)(GLenum target, GLuint framebuffer);
+typedef void(APIENTRY* FVizGLFramebufferTexture2DFn)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture,
+                                                     GLint level);
+typedef GLenum(APIENTRY* FVizGLCheckFramebufferStatusFn)(GLenum target);
+typedef void(APIENTRY* FVizGLDeleteFramebuffersFn)(GLsizei n, const GLuint* framebuffers);
+typedef void(APIENTRY* FVizGLBlitFramebufferFn)(GLint src_x0, GLint src_y0, GLint src_x1, GLint src_y1, GLint dst_x0,
+                                                GLint dst_y0, GLint dst_x1, GLint dst_y1, GLbitfield mask,
+                                                GLenum filter);
+typedef void(APIENTRY* FVizGLVertexAttribPointerFn)(GLuint index, GLint size, GLenum type, GLboolean normalized,
+                                                    GLsizei stride, const void* pointer);
+typedef void(APIENTRY* FVizGLEnableVertexAttribArrayFn)(GLuint index);
+typedef void(APIENTRY* FVizGLDisableVertexAttribArrayFn)(GLuint index);
+typedef void(APIENTRY* FVizGLVertexAttribDivisorFn)(GLuint index, GLuint divisor);
+typedef void(APIENTRY* FVizGLDrawElementsInstancedFn)(GLenum mode, GLsizei count, GLenum type, const void* indices,
+                                                      GLsizei instancecount);
+typedef GLuint(APIENTRY* FVizGLCreateShaderFn)(GLenum type);
+typedef void(APIENTRY* FVizGLShaderSourceFn)(GLuint shader, GLsizei count, const char** string, const GLint* length);
+typedef void(APIENTRY* FVizGLCompileShaderFn)(GLuint shader);
+typedef void(APIENTRY* FVizGLGetShaderivFn)(GLuint shader, GLenum pname, GLint* params);
+typedef void(APIENTRY* FVizGLGetShaderInfoLogFn)(GLuint shader, GLsizei buf_size, GLsizei* length, char* info_log);
+typedef void(APIENTRY* FVizGLDeleteShaderFn)(GLuint shader);
+typedef GLuint(APIENTRY* FVizGLCreateProgramFn)(void);
+typedef void(APIENTRY* FVizGLAttachShaderFn)(GLuint program, GLuint shader);
+typedef void(APIENTRY* FVizGLLinkProgramFn)(GLuint program);
+typedef void(APIENTRY* FVizGLGetProgramivFn)(GLuint program, GLenum pname, GLint* params);
+typedef void(APIENTRY* FVizGLGetProgramInfoLogFn)(GLuint program, GLsizei buf_size, GLsizei* length, char* info_log);
+typedef void(APIENTRY* FVizGLDeleteProgramFn)(GLuint program);
+typedef void(APIENTRY* FVizGLUseProgramFn)(GLuint program);
+typedef GLint(APIENTRY* FVizGLGetUniformLocationFn)(GLuint program, const char* name);
+typedef void(APIENTRY* FVizGLUniformMatrix4fvFn)(GLint location, GLsizei count, GLboolean transpose,
+                                                 const GLfloat* value);
+typedef void(APIENTRY* FVizGLUniformMatrix3fvFn)(GLint location, GLsizei count, GLboolean transpose,
+                                                 const GLfloat* value);
+typedef void(APIENTRY* FVizGLUniform3fvFn)(GLint location, GLsizei count, const GLfloat* value);
+typedef void(APIENTRY* FVizGLUniform4fvFn)(GLint location, GLsizei count, const GLfloat* value);
+typedef void(APIENTRY* FVizGLUniform1fFn)(GLint location, GLfloat value);
+typedef void(APIENTRY* FVizGLUniform1iFn)(GLint location, GLint v0);
+typedef void(APIENTRY* FVizGLUniform1uiFn)(GLint location, GLuint v0);
+typedef void(APIENTRY* FVizGLClearBufferuivFn)(GLenum buffer, GLint drawbuffer, const GLuint* value);
+typedef void(APIENTRY* FVizGLGenQueriesFn)(GLsizei n, GLuint* ids);
+typedef void(APIENTRY* FVizGLDeleteQueriesFn)(GLsizei n, const GLuint* ids);
+typedef void(APIENTRY* FVizGLBeginQueryFn)(GLenum target, GLuint id);
+typedef void(APIENTRY* FVizGLEndQueryFn)(GLenum target);
+typedef void(APIENTRY* FVizGLGetQueryObjectivFn)(GLuint id, GLenum pname, GLint* params);
+typedef void(APIENTRY* FVizGLGetQueryObjectui64vFn)(GLuint id, GLenum pname, uint64_t* params);
+typedef void(APIENTRY* FVizGLTexImage3DFn)(GLenum target, GLint level, GLint internalformat, GLsizei width,
+                                           GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type,
+                                           const void* pixels);
+typedef void(APIENTRY* FVizGLTexSubImage3DFn)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset,
+                                              GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type,
+                                              const void* pixels);
 
 typedef struct FVizGLFunctions
 {

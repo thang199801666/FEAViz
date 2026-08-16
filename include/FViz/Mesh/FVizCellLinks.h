@@ -14,20 +14,13 @@ typedef struct FVizCellLinks FVizCellLinks;
 
 /* Compact point-to-cell incidence in CSR form. The links are a snapshot of the
  * supplied topology and do not retain the source cell array. */
-FVIZ_API FVizResult fviz_cell_links_build(
-    const FVizCellArray* cells,
-    FVizSize point_count,
-    FVizCellLinks** out_links);
+FVIZ_API FVizResult fviz_cell_links_build(const FVizCellArray* cells, FVizSize point_count, FVizCellLinks** out_links);
 FVIZ_API FVizSize fviz_cell_links_point_count(const FVizCellLinks* links);
 FVIZ_API FVizSize fviz_cell_links_cell_count(const FVizCellLinks* links);
 FVIZ_API FVizSize fviz_cell_links_incidence_count(const FVizCellLinks* links);
-FVIZ_API FVizSize fviz_cell_links_cell_count_for_point(
-    const FVizCellLinks* links,
-    FVizId point_id);
-FVIZ_API const FVizId* fviz_cell_links_cells_for_point(
-    const FVizCellLinks* links,
-    FVizId point_id,
-    FVizSize* out_count);
+FVIZ_API FVizSize fviz_cell_links_cell_count_for_point(const FVizCellLinks* links, FVizId point_id);
+FVIZ_API const FVizId* fviz_cell_links_cells_for_point(const FVizCellLinks* links, FVizId point_id,
+                                                       FVizSize* out_count);
 
 FVIZ_EXTERN_C_END
 

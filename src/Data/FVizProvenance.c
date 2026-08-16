@@ -8,27 +8,30 @@
 
 static FVizBool fviz_provenance_integer_type(FVizDataType type)
 {
-    return type >= FVIZ_DATA_INT8 && type <= FVIZ_DATA_UINT64
-        ? FVIZ_TRUE : FVIZ_FALSE;
+    return type >= FVIZ_DATA_INT8 && type <= FVIZ_DATA_UINT64 ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizResult fviz_provenance_read(
-    const FVizDataArray* array, FVizSize tuple, FVizId* out_id)
+static FVizResult fviz_provenance_read(const FVizDataArray* array, FVizSize tuple, FVizId* out_id)
 {
     const void* value;
-    if (array == NULL || out_id == NULL ||
-        fviz_data_array_components(array) != 1u ||
+    if (array == NULL || out_id == NULL || fviz_data_array_components(array) != 1u ||
         fviz_provenance_integer_type(fviz_data_array_type(array)) == FVIZ_FALSE ||
         tuple >= fviz_data_array_tuple_count(array))
         return FVIZ_ERROR_INVALID_ARGUMENT;
     value = fviz_data_array_const_tuple(array, tuple);
     if (value == NULL) return FVIZ_ERROR_INVALID_STATE;
-#define FVIZ_PROVENANCE_SIGNED(type_value, c_type) \
-    case type_value: { const c_type item = *(const c_type*)value; \
-        if (item < 0) return FVIZ_ERROR_INVALID_ARGUMENT; \
-        *out_id = (FVizId)item; return FVIZ_OK; }
-#define FVIZ_PROVENANCE_UNSIGNED(type_value, c_type) \
-    case type_value: *out_id = (FVizId)*(const c_type*)value; return FVIZ_OK
+#define FVIZ_PROVENANCE_SIGNED(type_value, c_type)                                                                     \
+    case type_value:                                                                                                   \
+        {                                                                                                              \
+            const c_type item = *(const c_type*)value;                                                                 \
+            if (item < 0) return FVIZ_ERROR_INVALID_ARGUMENT;                                                          \
+            *out_id = (FVizId)item;                                                                                    \
+            return FVIZ_OK;                                                                                            \
+        }
+#define FVIZ_PROVENANCE_UNSIGNED(type_value, c_type)                                                                   \
+    case type_value:                                                                                                   \
+        *out_id = (FVizId) * (const c_type*)value;                                                                     \
+        return FVIZ_OK
     switch (fviz_data_array_type(array))
     {
         FVIZ_PROVENANCE_SIGNED(FVIZ_DATA_INT8, int8_t);
@@ -39,7 +42,8 @@ static FVizResult fviz_provenance_read(
         FVIZ_PROVENANCE_UNSIGNED(FVIZ_DATA_UINT32, uint32_t);
         FVIZ_PROVENANCE_SIGNED(FVIZ_DATA_INT64, int64_t);
         FVIZ_PROVENANCE_UNSIGNED(FVIZ_DATA_UINT64, uint64_t);
-        default: return FVIZ_ERROR_INVALID_ARGUMENT;
+        default:
+            return FVIZ_ERROR_INVALID_ARGUMENT;
     }
 #undef FVIZ_PROVENANCE_UNSIGNED
 #undef FVIZ_PROVENANCE_SIGNED
@@ -53,8 +57,7 @@ const char* fviz_provenance_array_name(FVizProvenanceEntity entity)
     return NULL;
 }
 
-FVizResult fviz_provenance_create_identity(
-    FVizSize tuple_count, FVizDataArray** out_ids)
+FVizResult fviz_provenance_create_identity(FVizSize tuple_count, FVizDataArray** out_ids)
 {
     FVizDataArray* ids = NULL;
     FVizSize tuple;
@@ -79,8 +82,7 @@ FVizResult fviz_provenance_create_identity(
     return FVIZ_OK;
 }
 
-FVizResult fviz_provenance_validate(
-    const FVizDataArray* ids, FVizSize expected_tuple_count)
+FVizResult fviz_provenance_validate(const FVizDataArray* ids, FVizSize expected_tuple_count)
 {
     FVizSize tuple;
     FVizId id;
@@ -89,23 +91,16 @@ FVizResult fviz_provenance_validate(
         fviz_data_array_tuple_count(ids) != expected_tuple_count)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     for (tuple = 0u; tuple < expected_tuple_count; ++tuple)
-        if (fviz_provenance_read(ids, tuple, &id) != FVIZ_OK)
-            return FVIZ_ERROR_INVALID_ARGUMENT;
+        if (fviz_provenance_read(ids, tuple, &id) != FVIZ_OK) return FVIZ_ERROR_INVALID_ARGUMENT;
     return FVIZ_OK;
 }
 
-FVizResult fviz_provenance_resolve(
-    const FVizAttributeSet* attributes,
-    FVizProvenanceEntity entity,
-    FVizSize local_id,
-    FVizId fallback,
-    FVizId* out_source_id,
-    FVizBool* out_persistent)
+FVizResult fviz_provenance_resolve(const FVizAttributeSet* attributes, FVizProvenanceEntity entity, FVizSize local_id,
+                                   FVizId fallback, FVizId* out_source_id, FVizBool* out_persistent)
 {
     const char* name = fviz_provenance_array_name(entity);
     const FVizDataArray* ids;
-    if (attributes == NULL || name == NULL || out_source_id == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (attributes == NULL || name == NULL || out_source_id == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (out_persistent != NULL) *out_persistent = FVIZ_FALSE;
     ids = fviz_attribute_set_const_get(attributes, name);
     if (ids == NULL)
@@ -122,25 +117,20 @@ FVizResult fviz_provenance_resolve(
     return FVIZ_OK;
 }
 
-FVizResult fviz_provenance_find(
-    const FVizAttributeSet* attributes,
-    FVizProvenanceEntity entity,
-    FVizId source_id,
-    FVizSize* out_local_id)
+FVizResult fviz_provenance_find(const FVizAttributeSet* attributes, FVizProvenanceEntity entity, FVizId source_id,
+                                FVizSize* out_local_id)
 {
     const char* name = fviz_provenance_array_name(entity);
     const FVizDataArray* ids;
     FVizSize tuple;
-    if (attributes == NULL || name == NULL || out_local_id == NULL ||
-        source_id == FVIZ_INVALID_ID)
+    if (attributes == NULL || name == NULL || out_local_id == NULL || source_id == FVIZ_INVALID_ID)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     ids = fviz_attribute_set_const_get(attributes, name);
     if (ids == NULL) return FVIZ_ERROR_NOT_FOUND;
     for (tuple = 0u; tuple < fviz_data_array_tuple_count(ids); ++tuple)
     {
         FVizId id;
-        if (fviz_provenance_read(ids, tuple, &id) != FVIZ_OK)
-            return FVIZ_ERROR_INVALID_STATE;
+        if (fviz_provenance_read(ids, tuple, &id) != FVIZ_OK) return FVIZ_ERROR_INVALID_STATE;
         if (id == source_id)
         {
             *out_local_id = tuple;
@@ -150,16 +140,13 @@ FVizResult fviz_provenance_find(
     return FVIZ_ERROR_NOT_FOUND;
 }
 
-FVizResult fviz_provenance_compose(
-    const FVizDataArray* upstream_ids,
-    const FVizDataArray* local_to_upstream,
-    FVizDataArray** out_ids)
+FVizResult fviz_provenance_compose(const FVizDataArray* upstream_ids, const FVizDataArray* local_to_upstream,
+                                   FVizDataArray** out_ids)
 {
     FVizDataArray* output = NULL;
     FVizSize tuple;
     if (upstream_ids == NULL || local_to_upstream == NULL || out_ids == NULL ||
-        fviz_data_array_components(upstream_ids) != 1u ||
-        fviz_data_array_components(local_to_upstream) != 1u ||
+        fviz_data_array_components(upstream_ids) != 1u || fviz_data_array_components(local_to_upstream) != 1u ||
         fviz_provenance_integer_type(fviz_data_array_type(upstream_ids)) == FVIZ_FALSE ||
         fviz_provenance_integer_type(fviz_data_array_type(local_to_upstream)) == FVIZ_FALSE)
         return FVIZ_ERROR_INVALID_ARGUMENT;

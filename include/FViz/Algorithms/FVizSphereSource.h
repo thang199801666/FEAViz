@@ -18,10 +18,8 @@ typedef struct FVizSphereSource FVizSphereSource;
 FVIZ_API FVizResult fviz_sphere_source_create(FVizSphereSource** out_source);
 FVIZ_API void fviz_sphere_source_set_center(FVizSphereSource* source, FVizVec3 center);
 FVIZ_API FVizResult fviz_sphere_source_set_radius(FVizSphereSource* source, double radius);
-FVIZ_API FVizResult fviz_sphere_source_set_resolution(
-    FVizSphereSource* source,
-    uint32_t theta_resolution,
-    uint32_t phi_resolution);
+FVIZ_API FVizResult fviz_sphere_source_set_resolution(FVizSphereSource* source, uint32_t theta_resolution,
+                                                      uint32_t phi_resolution);
 FVIZ_API FVizVec3 fviz_sphere_source_center(const FVizSphereSource* source);
 FVIZ_API double fviz_sphere_source_radius(const FVizSphereSource* source);
 FVIZ_API uint32_t fviz_sphere_source_theta_resolution(const FVizSphereSource* source);

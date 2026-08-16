@@ -51,8 +51,8 @@ typedef enum FVizOverlayLayoutFlags
     FVIZ_OVERLAY_LAYOUT_PROJECTION_FAILED = 1u << 3
 } FVizOverlayLayoutFlags;
 
-typedef FVizBool (*FVizOverlayWorldToDisplayCallback)(
-    FVizVec3 world, float* display_x, float* display_y, void* user_data);
+typedef FVizBool (*FVizOverlayWorldToDisplayCallback)(FVizVec3 world, float* display_x, float* display_y,
+                                                      void* user_data);
 
 typedef struct FVizOverlayLayoutContext
 {
@@ -103,11 +103,9 @@ typedef struct FVizOverlayLayoutResult
 
 FVIZ_API void fviz_overlay_layout_context_initialize(FVizOverlayLayoutContext* context);
 FVIZ_API void fviz_overlay_layout_item_initialize(FVizOverlayLayoutItem* item);
-FVIZ_API FVizResult fviz_overlay_layout_resolve(
-    const FVizOverlayLayoutContext* context,
-    const FVizOverlayLayoutItem* items,
-    FVizSize item_count,
-    FVizOverlayLayoutResult* results);
+FVIZ_API FVizResult fviz_overlay_layout_resolve(const FVizOverlayLayoutContext* context,
+                                                const FVizOverlayLayoutItem* items, FVizSize item_count,
+                                                FVizOverlayLayoutResult* results);
 
 FVIZ_EXTERN_C_END
 

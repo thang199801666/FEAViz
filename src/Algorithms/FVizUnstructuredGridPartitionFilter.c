@@ -27,25 +27,18 @@ static void fviz_unstructured_partition_destroy(FVizObject* object)
 }
 
 static const FVizObjectClass g_fviz_unstructured_partition_class = {
-    FVIZ_TYPE_UNSTRUCTURED_GRID_PARTITION_FILTER,
-    "FVizUnstructuredGridPartitionFilter",
-    &g_fviz_object_class,
-    fviz_unstructured_partition_destroy,
-    NULL
-};
+    FVIZ_TYPE_UNSTRUCTURED_GRID_PARTITION_FILTER, "FVizUnstructuredGridPartitionFilter", &g_fviz_object_class,
+    fviz_unstructured_partition_destroy, NULL};
 
 static FVizMTime fviz_unstructured_partition_state_mtime(const void* state)
 {
     return fviz_object_mtime((const FVizObject*)state);
 }
 
-static FVizResult fviz_unstructured_partition_map_request(
-    FVizAlgorithm* algorithm,
-    uint32_t input_port,
-    uint32_t connection,
-    const FVizPipelineRequestInfo* downstream,
-    FVizPipelineRequestInfo* upstream,
-    void* state)
+static FVizResult fviz_unstructured_partition_map_request(FVizAlgorithm* algorithm, uint32_t input_port,
+                                                          uint32_t connection,
+                                                          const FVizPipelineRequestInfo* downstream,
+                                                          FVizPipelineRequestInfo* upstream, void* state)
 {
     (void)algorithm;
     (void)connection;
@@ -55,10 +48,8 @@ static FVizResult fviz_unstructured_partition_map_request(
     return fviz_pipeline_request_set_piece(upstream, 0u, 1u, 0u);
 }
 
-static FVizResult fviz_unstructured_partition_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_unstructured_partition_process_request(FVizAlgorithm* algorithm,
+                                                              const FVizPipelineRequestInfo* request, void* state)
 {
     FVizUnstructuredGridPartitionFilter* filter = (FVizUnstructuredGridPartitionFilter*)state;
     FVizUnstructuredGrid* input;
@@ -85,8 +76,8 @@ static FVizResult fviz_unstructured_partition_process_request(
         FVizUnstructuredGrid* piece_output;
         char name[48];
         int written;
-        if (fviz_unstructured_grid_piece_filter_update_piece(
-                filter->piece_filter, piece, filter->partition_count, filter->ghost_levels) != FVIZ_OK)
+        if (fviz_unstructured_grid_piece_filter_update_piece(filter->piece_filter, piece, filter->partition_count,
+                                                             filter->ghost_levels) != FVIZ_OK)
         {
             result = fviz_last_error_code();
             goto done;
@@ -103,15 +94,13 @@ static FVizResult fviz_unstructured_partition_process_request(
             result = FVIZ_ERROR_INTERNAL;
             goto done;
         }
-        if (fviz_partitioned_data_set_add_partition(
-                output, (FVizDataObject*)piece_output, name, NULL) != FVIZ_OK)
+        if (fviz_partitioned_data_set_add_partition(output, (FVizDataObject*)piece_output, name, NULL) != FVIZ_OK)
         {
             result = fviz_last_error_code();
             goto done;
         }
     }
-    if (fviz_algorithm_set_output_data(
-            algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
+    if (fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
         result = fviz_last_error_code();
 
 done:
@@ -119,8 +108,7 @@ done:
     return result;
 }
 
-FVizResult fviz_unstructured_grid_partition_filter_create(
-    FVizUnstructuredGridPartitionFilter** out_filter)
+FVizResult fviz_unstructured_grid_partition_filter_create(FVizUnstructuredGridPartitionFilter** out_filter)
 {
     FVizUnstructuredGridPartitionFilter* filter;
     FVizAlgorithmCallbacks callbacks;
@@ -142,10 +130,9 @@ FVizResult fviz_unstructured_grid_partition_filter_create(
     callbacks.map_input_request = fviz_unstructured_partition_map_request;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
         fviz_unstructured_grid_piece_filter_create(&filter->piece_filter) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(
-            filter->algorithm, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
-        fviz_algorithm_configure_output_port(
-            filter->algorithm, 0u, FVIZ_TYPE_PARTITIONED_DATA_SET) != FVIZ_OK)
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID, FVIZ_FALSE,
+                                            FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_PARTITIONED_DATA_SET) != FVIZ_OK)
     {
         fviz_release(filter);
         return fviz_last_error_code();
@@ -154,27 +141,23 @@ FVizResult fviz_unstructured_grid_partition_filter_create(
     return FVIZ_OK;
 }
 
-FVizResult fviz_unstructured_grid_partition_filter_set_input_data(
-    FVizUnstructuredGridPartitionFilter* filter,
-    FVizUnstructuredGrid* input)
+FVizResult fviz_unstructured_grid_partition_filter_set_input_data(FVizUnstructuredGridPartitionFilter* filter,
+                                                                  FVizUnstructuredGrid* input)
 {
     return filter != NULL && input != NULL
-        ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
-        : FVIZ_ERROR_INVALID_ARGUMENT;
+               ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
+               : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizResult fviz_unstructured_grid_partition_filter_set_input_connection(
-    FVizUnstructuredGridPartitionFilter* filter,
-    FVizAlgorithmOutput* input)
+FVizResult fviz_unstructured_grid_partition_filter_set_input_connection(FVizUnstructuredGridPartitionFilter* filter,
+                                                                        FVizAlgorithmOutput* input)
 {
-    return filter != NULL && input != NULL
-        ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
-        : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL && input != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
+                                           : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizResult fviz_unstructured_grid_partition_filter_set_partition_count(
-    FVizUnstructuredGridPartitionFilter* filter,
-    uint32_t partition_count)
+FVizResult fviz_unstructured_grid_partition_filter_set_partition_count(FVizUnstructuredGridPartitionFilter* filter,
+                                                                       uint32_t partition_count)
 {
     if (filter == NULL || partition_count == 0u)
     {
@@ -187,15 +170,13 @@ FVizResult fviz_unstructured_grid_partition_filter_set_partition_count(
     return FVIZ_OK;
 }
 
-uint32_t fviz_unstructured_grid_partition_filter_partition_count(
-    const FVizUnstructuredGridPartitionFilter* filter)
+uint32_t fviz_unstructured_grid_partition_filter_partition_count(const FVizUnstructuredGridPartitionFilter* filter)
 {
     return filter != NULL ? filter->partition_count : 0u;
 }
 
-FVizResult fviz_unstructured_grid_partition_filter_set_ghost_levels(
-    FVizUnstructuredGridPartitionFilter* filter,
-    uint32_t ghost_levels)
+FVizResult fviz_unstructured_grid_partition_filter_set_ghost_levels(FVizUnstructuredGridPartitionFilter* filter,
+                                                                    uint32_t ghost_levels)
 {
     if (filter == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     if (ghost_levels > (uint32_t)UINT16_MAX) return FVIZ_ERROR_OVERFLOW;
@@ -205,34 +186,27 @@ FVizResult fviz_unstructured_grid_partition_filter_set_ghost_levels(
     return FVIZ_OK;
 }
 
-uint32_t fviz_unstructured_grid_partition_filter_ghost_levels(
-    const FVizUnstructuredGridPartitionFilter* filter)
+uint32_t fviz_unstructured_grid_partition_filter_ghost_levels(const FVizUnstructuredGridPartitionFilter* filter)
 {
     return filter != NULL ? filter->ghost_levels : 0u;
 }
 
-FVizAlgorithm* fviz_unstructured_grid_partition_filter_algorithm(
-    FVizUnstructuredGridPartitionFilter* filter)
+FVizAlgorithm* fviz_unstructured_grid_partition_filter_algorithm(FVizUnstructuredGridPartitionFilter* filter)
 {
     return filter != NULL ? filter->algorithm : NULL;
 }
 
-FVizAlgorithmOutput* fviz_unstructured_grid_partition_filter_output_port(
-    FVizUnstructuredGridPartitionFilter* filter)
+FVizAlgorithmOutput* fviz_unstructured_grid_partition_filter_output_port(FVizUnstructuredGridPartitionFilter* filter)
 {
     return filter != NULL ? fviz_algorithm_output_port(filter->algorithm, 0u) : NULL;
 }
 
-FVizPartitionedDataSet* fviz_unstructured_grid_partition_filter_output(
-    FVizUnstructuredGridPartitionFilter* filter)
+FVizPartitionedDataSet* fviz_unstructured_grid_partition_filter_output(FVizUnstructuredGridPartitionFilter* filter)
 {
-    return filter != NULL
-        ? (FVizPartitionedDataSet*)fviz_algorithm_output_data(filter->algorithm, 0u)
-        : NULL;
+    return filter != NULL ? (FVizPartitionedDataSet*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL;
 }
 
-FVizResult fviz_unstructured_grid_partition_filter_update(
-    FVizUnstructuredGridPartitionFilter* filter)
+FVizResult fviz_unstructured_grid_partition_filter_update(FVizUnstructuredGridPartitionFilter* filter)
 {
     return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
 }

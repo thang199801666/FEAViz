@@ -19,10 +19,8 @@ typedef struct FVizVTUReaderOptions
 
 FVIZ_API void fviz_vtu_reader_options_initialize(FVizVTUReaderOptions* options);
 FVIZ_API FVizResult fviz_vtu_read(const char* file_path, FVizUnstructuredGrid** out_grid);
-FVIZ_API FVizResult fviz_vtu_read_with_options(
-    const char* file_path,
-    const FVizVTUReaderOptions* options,
-    FVizUnstructuredGrid** out_grid);
+FVIZ_API FVizResult fviz_vtu_read_with_options(const char* file_path, const FVizVTUReaderOptions* options,
+                                               FVizUnstructuredGrid** out_grid);
 
 FVIZ_EXTERN_C_END
 

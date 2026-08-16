@@ -11,28 +11,18 @@
 #include <FViz/Pipeline/FVizAlgorithmPrivate.h>
 #include <FViz/Pipeline/FVizExecutivePrivate.h>
 
-const FVizObjectClass g_fviz_algorithm_class = {
-    FVIZ_TYPE_ALGORITHM,
-    "FVizAlgorithm",
-    &g_fviz_object_class,
-    NULL,
-    NULL
-};
+const FVizObjectClass g_fviz_algorithm_class = {FVIZ_TYPE_ALGORITHM, "FVizAlgorithm", &g_fviz_object_class, NULL, NULL};
 static FVizAtomicU64 g_fviz_algorithm_id_counter = {0};
 
 static void fviz_custom_algorithm_destroy(FVizObject* object);
 static FVizMTime fviz_custom_algorithm_mtime(const FVizObject* object);
 static void fviz_algorithm_unobserve_state_object(FVizAlgorithm* algorithm);
-static const FVizObjectClass g_fviz_custom_algorithm_class = {
-    FVIZ_TYPE_ALGORITHM,
-    "FVizCustomAlgorithm",
-    &g_fviz_algorithm_class,
-    fviz_custom_algorithm_destroy,
-    fviz_custom_algorithm_mtime
-};
+static const FVizObjectClass g_fviz_custom_algorithm_class = {FVIZ_TYPE_ALGORITHM, "FVizCustomAlgorithm",
+                                                              &g_fviz_algorithm_class, fviz_custom_algorithm_destroy,
+                                                              fviz_custom_algorithm_mtime};
 
-static FVizBool fviz_algorithm_state_object_event(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_algorithm_state_object_event(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                  void* client_data)
 {
     FVizAlgorithm* algorithm = (FVizAlgorithm*)client_data;
     (void)call_data;
@@ -70,13 +60,11 @@ static FVizResult fviz_algorithm_observe_state_object(FVizAlgorithm* algorithm, 
     FVizObserverTag modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     FVizObserverTag delete_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (algorithm == NULL || state_object == NULL) return FVIZ_OK;
-    if (fviz_object_add_observer(
-            state_object, FVIZ_EVENT_MODIFIED, 0.0f,
-            fviz_algorithm_state_object_event, algorithm, &modified_tag) != FVIZ_OK)
+    if (fviz_object_add_observer(state_object, FVIZ_EVENT_MODIFIED, 0.0f, fviz_algorithm_state_object_event, algorithm,
+                                 &modified_tag) != FVIZ_OK)
         return fviz_last_error_code();
-    if (fviz_object_add_observer(
-            state_object, FVIZ_EVENT_DELETE, 0.0f,
-            fviz_algorithm_state_object_event, algorithm, &delete_tag) != FVIZ_OK)
+    if (fviz_object_add_observer(state_object, FVIZ_EVENT_DELETE, 0.0f, fviz_algorithm_state_object_event, algorithm,
+                                 &delete_tag) != FVIZ_OK)
     {
         (void)fviz_object_remove_observer(state_object, modified_tag);
         return fviz_last_error_code();
@@ -91,8 +79,7 @@ static void fviz_custom_algorithm_destroy(FVizObject* object)
 {
     FVizAlgorithm* algorithm = (FVizAlgorithm*)object;
     fviz_algorithm_unobserve_state_object(algorithm);
-    if (algorithm->callbacks.destroy_state != NULL)
-        algorithm->callbacks.destroy_state(algorithm->state);
+    if (algorithm->callbacks.destroy_state != NULL) algorithm->callbacks.destroy_state(algorithm->state);
     algorithm->state = NULL;
     fviz_internal_algorithm_deinitialize(algorithm);
 }
@@ -116,16 +103,11 @@ void fviz_algorithm_callbacks_initialize(FVizAlgorithmCallbacks* callbacks)
     callbacks->struct_size = (uint32_t)sizeof(*callbacks);
 }
 
-FVizResult fviz_algorithm_create(
-    uint32_t input_port_count,
-    uint32_t output_port_count,
-    const FVizAlgorithmCallbacks* callbacks,
-    void* state,
-    FVizAlgorithm** out_algorithm)
+FVizResult fviz_algorithm_create(uint32_t input_port_count, uint32_t output_port_count,
+                                 const FVizAlgorithmCallbacks* callbacks, void* state, FVizAlgorithm** out_algorithm)
 {
     FVizAlgorithm* algorithm;
-    if (out_algorithm == NULL || callbacks == NULL ||
-        callbacks->struct_size < FVIZ_ALGORITHM_CALLBACKS_V1_SIZE ||
+    if (out_algorithm == NULL || callbacks == NULL || callbacks->struct_size < FVIZ_ALGORITHM_CALLBACKS_V1_SIZE ||
         callbacks->process_request == NULL || output_port_count == 0u)
     {
         if (out_algorithm != NULL) *out_algorithm = NULL;
@@ -133,19 +115,17 @@ FVizResult fviz_algorithm_create(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_algorithm = NULL;
-    algorithm = (FVizAlgorithm*)fviz_internal_object_allocate(
-        sizeof(FVizAlgorithm), &g_fviz_custom_algorithm_class, NULL);
+    algorithm =
+        (FVizAlgorithm*)fviz_internal_object_allocate(sizeof(FVizAlgorithm), &g_fviz_custom_algorithm_class, NULL);
     if (algorithm == NULL) return fviz_last_error_code();
     (void)memset(&algorithm->callbacks, 0, sizeof(algorithm->callbacks));
-    (void)memcpy(
-        &algorithm->callbacks, callbacks,
-        callbacks->struct_size < sizeof(FVizAlgorithmCallbacks)
-            ? callbacks->struct_size : sizeof(FVizAlgorithmCallbacks));
+    (void)memcpy(&algorithm->callbacks, callbacks,
+                 callbacks->struct_size < sizeof(FVizAlgorithmCallbacks) ? callbacks->struct_size
+                                                                         : sizeof(FVizAlgorithmCallbacks));
     algorithm->callbacks.struct_size = (uint32_t)sizeof(FVizAlgorithmCallbacks);
     algorithm->state = state;
     algorithm->custom = FVIZ_TRUE;
-    if (fviz_internal_algorithm_initialize(
-            algorithm, input_port_count, output_port_count, NULL) != FVIZ_OK ||
+    if (fviz_internal_algorithm_initialize(algorithm, input_port_count, output_port_count, NULL) != FVIZ_OK ||
         fviz_algorithm_observe_state_object(algorithm, algorithm->callbacks.state_object) != FVIZ_OK)
     {
         fviz_release(algorithm);
@@ -175,9 +155,7 @@ static FVizBool fviz_algorithm_port_accepts(FVizTypeId accepted, FVizTypeId prod
     return accepted == FVIZ_TYPE_DATA_OBJECT || accepted == produced ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizResult fviz_algorithm_validate_input_port(
-    const FVizAlgorithm* algorithm,
-    uint32_t port)
+static FVizResult fviz_algorithm_validate_input_port(const FVizAlgorithm* algorithm, uint32_t port)
 {
     if (algorithm == NULL || port >= algorithm->input_port_count)
     {
@@ -187,9 +165,7 @@ static FVizResult fviz_algorithm_validate_input_port(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_algorithm_validate_output_port(
-    const FVizAlgorithm* algorithm,
-    uint32_t port)
+static FVizResult fviz_algorithm_validate_output_port(const FVizAlgorithm* algorithm, uint32_t port)
 {
     if (algorithm == NULL || port >= algorithm->output_port_count)
     {
@@ -199,8 +175,8 @@ static FVizResult fviz_algorithm_validate_output_port(
     return FVIZ_OK;
 }
 
-static FVizBool fviz_algorithm_input_dependency_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_algorithm_input_dependency_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                         void* client_data)
 {
     FVizAlgorithm* algorithm = (FVizAlgorithm*)client_data;
     (void)caller;
@@ -214,15 +190,14 @@ static FVizBool fviz_algorithm_input_dependency_modified(
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_algorithm_observe_input_dependency(
-    FVizAlgorithm* algorithm, FVizObject* dependency, FVizObserverTag* out_tag)
+static FVizResult fviz_algorithm_observe_input_dependency(FVizAlgorithm* algorithm, FVizObject* dependency,
+                                                          FVizObserverTag* out_tag)
 {
     if (algorithm == NULL || out_tag == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (dependency == NULL) return FVIZ_OK;
-    return fviz_object_add_observer(
-        dependency, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_algorithm_input_dependency_modified, algorithm, out_tag);
+    return fviz_object_add_observer(dependency, FVIZ_EVENT_MODIFIED, 0.0f, fviz_algorithm_input_dependency_modified,
+                                    algorithm, out_tag);
 }
 
 static void fviz_algorithm_remove_input_observer(FVizObject* dependency, FVizObserverTag* tag)
@@ -237,10 +212,8 @@ static void fviz_algorithm_clear_connections(FVizAlgorithmInputPort* input_port)
     FVizSize i;
     for (i = 0u; i < fviz_array_count(input_port->connections); ++i)
     {
-        FVizAlgorithmConnection* connection =
-            (FVizAlgorithmConnection*)fviz_array_at(input_port->connections, i);
-        fviz_algorithm_remove_input_observer(
-            (FVizObject*)connection->producer, &connection->producer_modified_tag);
+        FVizAlgorithmConnection* connection = (FVizAlgorithmConnection*)fviz_array_at(input_port->connections, i);
+        fviz_algorithm_remove_input_observer((FVizObject*)connection->producer, &connection->producer_modified_tag);
         fviz_release(connection->producer);
     }
     fviz_array_clear(input_port->connections);
@@ -276,8 +249,7 @@ static FVizSize fviz_algorithm_pointer_hash(const FVizAlgorithm* algorithm)
     return (FVizSize)value;
 }
 
-static FVizResult fviz_algorithm_traversal_push(
-    FVizAlgorithmTraversal* traversal, const FVizAlgorithm* algorithm)
+static FVizResult fviz_algorithm_traversal_push(FVizAlgorithmTraversal* traversal, const FVizAlgorithm* algorithm)
 {
     if (traversal->stack_count == traversal->stack_capacity)
     {
@@ -296,14 +268,12 @@ static FVizResult fviz_algorithm_traversal_push(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_algorithm_traversal_rehash(
-    FVizAlgorithmTraversal* traversal, FVizSize new_capacity)
+static FVizResult fviz_algorithm_traversal_rehash(FVizAlgorithmTraversal* traversal, FVizSize new_capacity)
 {
     const FVizAlgorithm** table;
     FVizSize bytes;
     FVizSize i;
-    if (fviz_size_multiply(new_capacity, sizeof(*table), &bytes) != FVIZ_OK)
-        return FVIZ_ERROR_OVERFLOW;
+    if (fviz_size_multiply(new_capacity, sizeof(*table), &bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
     table = (const FVizAlgorithm**)fviz_alloc(bytes);
     if (table == NULL) return fviz_last_error_code();
     (void)memset(table, 0, (size_t)bytes);
@@ -313,7 +283,8 @@ static FVizResult fviz_algorithm_traversal_rehash(
         if (algorithm != NULL)
         {
             FVizSize slot = fviz_algorithm_pointer_hash(algorithm) & (new_capacity - 1u);
-            while (table[slot] != NULL) slot = (slot + 1u) & (new_capacity - 1u);
+            while (table[slot] != NULL)
+                slot = (slot + 1u) & (new_capacity - 1u);
             table[slot] = algorithm;
         }
     }
@@ -323,17 +294,15 @@ static FVizResult fviz_algorithm_traversal_rehash(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_algorithm_traversal_visit(
-    FVizAlgorithmTraversal* traversal, const FVizAlgorithm* algorithm, FVizBool* out_new)
+static FVizResult fviz_algorithm_traversal_visit(FVizAlgorithmTraversal* traversal, const FVizAlgorithm* algorithm,
+                                                 FVizBool* out_new)
 {
     FVizSize slot;
-    if (traversal->visited_capacity == 0u ||
-        (traversal->visited_count + 1u) * 10u >= traversal->visited_capacity * 7u)
+    if (traversal->visited_capacity == 0u || (traversal->visited_count + 1u) * 10u >= traversal->visited_capacity * 7u)
     {
         FVizSize new_capacity = traversal->visited_capacity == 0u ? 64u : traversal->visited_capacity * 2u;
         if (new_capacity < traversal->visited_capacity) return FVIZ_ERROR_OVERFLOW;
-        if (fviz_algorithm_traversal_rehash(traversal, new_capacity) != FVIZ_OK)
-            return fviz_last_error_code();
+        if (fviz_algorithm_traversal_rehash(traversal, new_capacity) != FVIZ_OK) return fviz_last_error_code();
     }
     slot = fviz_algorithm_pointer_hash(algorithm) & (traversal->visited_capacity - 1u);
     while (traversal->visited[slot] != NULL)
@@ -351,10 +320,7 @@ static FVizResult fviz_algorithm_traversal_visit(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_algorithm_reaches(
-    const FVizAlgorithm* start,
-    const FVizAlgorithm* target,
-    FVizBool* out_reaches)
+static FVizResult fviz_algorithm_reaches(const FVizAlgorithm* start, const FVizAlgorithm* target, FVizBool* out_reaches)
 {
     FVizAlgorithmTraversal traversal = {0};
     FVizResult result = FVIZ_OK;
@@ -398,15 +364,11 @@ cleanup:
     return result;
 }
 
-FVizResult fviz_internal_algorithm_initialize(
-    FVizAlgorithm* algorithm,
-    uint32_t input_port_count,
-    uint32_t output_port_count,
-    FVizAlgorithmExecuteFn execute)
+FVizResult fviz_internal_algorithm_initialize(FVizAlgorithm* algorithm, uint32_t input_port_count,
+                                              uint32_t output_port_count, FVizAlgorithmExecuteFn execute)
 {
     uint32_t i;
-    if (algorithm == NULL || output_port_count == 0u ||
-        (execute == NULL && algorithm->custom == FVIZ_FALSE))
+    if (algorithm == NULL || output_port_count == 0u || (execute == NULL && algorithm->custom == FVIZ_FALSE))
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "algorithm initialization contract is invalid");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -417,31 +379,23 @@ FVizResult fviz_internal_algorithm_initialize(
     algorithm->diagnostic_id = fviz_atomic_u64_fetch_add(&g_fviz_algorithm_id_counter, 1u) + 1u;
     if (input_port_count > 0u)
     {
-        algorithm->input_ports = (FVizAlgorithmInputPort*)fviz_alloc(
-            (FVizSize)input_port_count * sizeof(FVizAlgorithmInputPort));
+        algorithm->input_ports =
+            (FVizAlgorithmInputPort*)fviz_alloc((FVizSize)input_port_count * sizeof(FVizAlgorithmInputPort));
         if (algorithm->input_ports == NULL) goto failed;
-        (void)memset(
-            algorithm->input_ports,
-            0,
-            (size_t)input_port_count * sizeof(FVizAlgorithmInputPort));
+        (void)memset(algorithm->input_ports, 0, (size_t)input_port_count * sizeof(FVizAlgorithmInputPort));
         for (i = 0u; i < input_port_count; ++i)
         {
             algorithm->input_ports[i].info.data_type = FVIZ_TYPE_DATA_OBJECT;
-            if (fviz_array_create(
-                    sizeof(FVizAlgorithmConnection),
-                    &algorithm->input_ports[i].connections) != FVIZ_OK)
+            if (fviz_array_create(sizeof(FVizAlgorithmConnection), &algorithm->input_ports[i].connections) != FVIZ_OK)
                 goto failed;
         }
     }
-    algorithm->output_ports = (FVizAlgorithmOutputPort*)fviz_alloc(
-        (FVizSize)output_port_count * sizeof(FVizAlgorithmOutputPort));
-    algorithm->output_proxies = (FVizAlgorithmOutput*)fviz_alloc(
-        (FVizSize)output_port_count * sizeof(FVizAlgorithmOutput));
+    algorithm->output_ports =
+        (FVizAlgorithmOutputPort*)fviz_alloc((FVizSize)output_port_count * sizeof(FVizAlgorithmOutputPort));
+    algorithm->output_proxies =
+        (FVizAlgorithmOutput*)fviz_alloc((FVizSize)output_port_count * sizeof(FVizAlgorithmOutput));
     if (algorithm->output_ports == NULL || algorithm->output_proxies == NULL) goto failed;
-    (void)memset(
-        algorithm->output_ports,
-        0,
-        (size_t)output_port_count * sizeof(FVizAlgorithmOutputPort));
+    (void)memset(algorithm->output_ports, 0, (size_t)output_port_count * sizeof(FVizAlgorithmOutputPort));
     for (i = 0u; i < output_port_count; ++i)
     {
         static const int64_t empty_extent[6] = {0, -1, 0, -1, 0, -1};
@@ -450,11 +404,9 @@ FVizResult fviz_internal_algorithm_initialize(
         algorithm->output_ports[i].has_whole_extent = FVIZ_FALSE;
         algorithm->output_proxies[i].producer = algorithm;
         algorithm->output_proxies[i].port = i;
-        if (fviz_array_create(sizeof(double), &algorithm->output_ports[i].time_steps) != FVIZ_OK)
-            goto failed;
+        if (fviz_array_create(sizeof(double), &algorithm->output_ports[i].time_steps) != FVIZ_OK) goto failed;
     }
-    if (fviz_internal_executive_create(algorithm, &algorithm->executive) != FVIZ_OK)
-        goto failed;
+    if (fviz_internal_executive_create(algorithm, &algorithm->executive) != FVIZ_OK) goto failed;
     return FVIZ_OK;
 
 failed:
@@ -473,9 +425,8 @@ void fviz_internal_algorithm_deinitialize(FVizAlgorithm* algorithm)
     for (i = 0u; i < algorithm->input_port_count; ++i)
     {
         fviz_algorithm_clear_connections(&algorithm->input_ports[i]);
-        fviz_algorithm_remove_input_observer(
-            (FVizObject*)algorithm->input_ports[i].direct_data,
-            &algorithm->input_ports[i].direct_data_modified_tag);
+        fviz_algorithm_remove_input_observer((FVizObject*)algorithm->input_ports[i].direct_data,
+                                             &algorithm->input_ports[i].direct_data_modified_tag);
         fviz_release(algorithm->input_ports[i].direct_data);
         fviz_release(algorithm->input_ports[i].connections);
     }
@@ -495,12 +446,8 @@ void fviz_internal_algorithm_deinitialize(FVizAlgorithm* algorithm)
     algorithm->output_port_count = 0u;
 }
 
-FVizResult fviz_internal_algorithm_configure_input_port(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizTypeId data_type,
-    FVizBool optional,
-    FVizBool repeatable)
+FVizResult fviz_internal_algorithm_configure_input_port(FVizAlgorithm* algorithm, uint32_t port, FVizTypeId data_type,
+                                                        FVizBool optional, FVizBool repeatable)
 {
     if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK || data_type == 0u)
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -510,10 +457,7 @@ FVizResult fviz_internal_algorithm_configure_input_port(
     return FVIZ_OK;
 }
 
-FVizResult fviz_internal_algorithm_configure_output_port(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizTypeId data_type)
+FVizResult fviz_internal_algorithm_configure_output_port(FVizAlgorithm* algorithm, uint32_t port, FVizTypeId data_type)
 {
     if (fviz_algorithm_validate_output_port(algorithm, port) != FVIZ_OK || data_type == 0u)
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -521,23 +465,15 @@ FVizResult fviz_internal_algorithm_configure_output_port(
     return FVIZ_OK;
 }
 
-FVizResult fviz_algorithm_configure_input_port(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizTypeId data_type,
-    FVizBool optional,
-    FVizBool repeatable)
+FVizResult fviz_algorithm_configure_input_port(FVizAlgorithm* algorithm, uint32_t port, FVizTypeId data_type,
+                                               FVizBool optional, FVizBool repeatable)
 {
-    FVizResult result = fviz_internal_algorithm_configure_input_port(
-        algorithm, port, data_type, optional, repeatable);
+    FVizResult result = fviz_internal_algorithm_configure_input_port(algorithm, port, data_type, optional, repeatable);
     if (result == FVIZ_OK) fviz_object_modified((FVizObject*)algorithm);
     return result;
 }
 
-FVizResult fviz_algorithm_configure_output_port(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizTypeId data_type)
+FVizResult fviz_algorithm_configure_output_port(FVizAlgorithm* algorithm, uint32_t port, FVizTypeId data_type)
 {
     FVizResult result = fviz_internal_algorithm_configure_output_port(algorithm, port, data_type);
     if (result == FVIZ_OK) fviz_object_modified((FVizObject*)algorithm);
@@ -554,30 +490,24 @@ uint32_t fviz_algorithm_output_port_count(const FVizAlgorithm* algorithm)
     return algorithm != NULL ? algorithm->output_port_count : 0u;
 }
 
-FVizResult fviz_algorithm_input_port_info(
-    const FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizAlgorithmPortInfo* out_info)
+FVizResult fviz_algorithm_input_port_info(const FVizAlgorithm* algorithm, uint32_t port,
+                                          FVizAlgorithmPortInfo* out_info)
 {
     if (out_info == NULL || fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK)
     {
-        if (out_info == NULL)
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "out_info must not be NULL");
+        if (out_info == NULL) fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "out_info must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_info = algorithm->input_ports[port].info;
     return FVIZ_OK;
 }
 
-FVizResult fviz_algorithm_output_port_info(
-    const FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizAlgorithmPortInfo* out_info)
+FVizResult fviz_algorithm_output_port_info(const FVizAlgorithm* algorithm, uint32_t port,
+                                           FVizAlgorithmPortInfo* out_info)
 {
     if (out_info == NULL || fviz_algorithm_validate_output_port(algorithm, port) != FVIZ_OK)
     {
-        if (out_info == NULL)
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "out_info must not be NULL");
+        if (out_info == NULL) fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "out_info must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_info = algorithm->output_ports[port].info;
@@ -586,9 +516,7 @@ FVizResult fviz_algorithm_output_port_info(
 
 FVizAlgorithmOutput* fviz_algorithm_output_port(FVizAlgorithm* algorithm, uint32_t port)
 {
-    return algorithm != NULL && port < algorithm->output_port_count
-        ? &algorithm->output_proxies[port]
-        : NULL;
+    return algorithm != NULL && port < algorithm->output_port_count ? &algorithm->output_proxies[port] : NULL;
 }
 
 FVizAlgorithm* fviz_algorithm_output_producer(const FVizAlgorithmOutput* output)
@@ -601,39 +529,30 @@ uint32_t fviz_algorithm_output_index(const FVizAlgorithmOutput* output)
     return output != NULL ? output->port : UINT32_MAX;
 }
 
-FVizResult fviz_algorithm_set_input_data(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizDataObject* data_object)
+FVizResult fviz_algorithm_set_input_data(FVizAlgorithm* algorithm, uint32_t port, FVizDataObject* data_object)
 {
     FVizAlgorithmInputPort* input_port;
     FVizObserverTag new_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK || data_object == NULL)
     {
-        if (data_object == NULL)
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "input data must not be NULL");
+        if (data_object == NULL) fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "input data must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     input_port = &algorithm->input_ports[port];
-    if (fviz_object_is_type(
-            (const FVizObject*)data_object,
-            input_port->info.data_type) == FVIZ_FALSE)
+    if (fviz_object_is_type((const FVizObject*)data_object, input_port->info.data_type) == FVIZ_FALSE)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "input data does not satisfy the port type");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    if (data_object == input_port->direct_data &&
-        fviz_array_count(input_port->connections) == 0u) return FVIZ_OK;
+    if (data_object == input_port->direct_data && fviz_array_count(input_port->connections) == 0u) return FVIZ_OK;
     if (fviz_retain(data_object) == NULL) return fviz_last_error_code();
-    if (fviz_algorithm_observe_input_dependency(
-            algorithm, (FVizObject*)data_object, &new_tag) != FVIZ_OK)
+    if (fviz_algorithm_observe_input_dependency(algorithm, (FVizObject*)data_object, &new_tag) != FVIZ_OK)
     {
         fviz_release(data_object);
         return fviz_last_error_code();
     }
     fviz_algorithm_clear_connections(input_port);
-    fviz_algorithm_remove_input_observer(
-        (FVizObject*)input_port->direct_data, &input_port->direct_data_modified_tag);
+    fviz_algorithm_remove_input_observer((FVizObject*)input_port->direct_data, &input_port->direct_data_modified_tag);
     fviz_release(input_port->direct_data);
     input_port->direct_data = data_object;
     input_port->direct_data_modified_tag = new_tag;
@@ -642,17 +561,13 @@ FVizResult fviz_algorithm_set_input_data(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_algorithm_append_input_connection(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizAlgorithmOutput* output,
-    FVizBool replace)
+static FVizResult fviz_algorithm_append_input_connection(FVizAlgorithm* algorithm, uint32_t port,
+                                                         FVizAlgorithmOutput* output, FVizBool replace)
 {
     FVizAlgorithmInputPort* input_port;
     FVizAlgorithmConnection connection;
     FVizTypeId output_type;
-    if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK ||
-        output == NULL || output->producer == NULL ||
+    if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK || output == NULL || output->producer == NULL ||
         output->port >= output->producer->output_port_count)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "input connection is invalid");
@@ -685,8 +600,8 @@ static FVizResult fviz_algorithm_append_input_connection(
     connection.output_port = output->port;
     connection.producer_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (fviz_retain(connection.producer) == NULL) return fviz_last_error_code();
-    if (fviz_algorithm_observe_input_dependency(
-            algorithm, (FVizObject*)connection.producer, &connection.producer_modified_tag) != FVIZ_OK)
+    if (fviz_algorithm_observe_input_dependency(algorithm, (FVizObject*)connection.producer,
+                                                &connection.producer_modified_tag) != FVIZ_OK)
     {
         fviz_release(connection.producer);
         return fviz_last_error_code();
@@ -694,13 +609,11 @@ static FVizResult fviz_algorithm_append_input_connection(
     if (replace == FVIZ_TRUE) fviz_algorithm_clear_connections(input_port);
     if (fviz_array_push(input_port->connections, &connection) != FVIZ_OK)
     {
-        fviz_algorithm_remove_input_observer(
-            (FVizObject*)connection.producer, &connection.producer_modified_tag);
+        fviz_algorithm_remove_input_observer((FVizObject*)connection.producer, &connection.producer_modified_tag);
         fviz_release(connection.producer);
         return fviz_last_error_code();
     }
-    fviz_algorithm_remove_input_observer(
-        (FVizObject*)input_port->direct_data, &input_port->direct_data_modified_tag);
+    fviz_algorithm_remove_input_observer((FVizObject*)input_port->direct_data, &input_port->direct_data_modified_tag);
     fviz_release(input_port->direct_data);
     input_port->direct_data = NULL;
     algorithm->updated = FVIZ_FALSE;
@@ -708,32 +621,22 @@ static FVizResult fviz_algorithm_append_input_connection(
     return FVIZ_OK;
 }
 
-FVizResult fviz_algorithm_set_input_connection(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizAlgorithmOutput* output)
+FVizResult fviz_algorithm_set_input_connection(FVizAlgorithm* algorithm, uint32_t port, FVizAlgorithmOutput* output)
 {
     return fviz_algorithm_append_input_connection(algorithm, port, output, FVIZ_TRUE);
 }
 
-FVizResult fviz_algorithm_add_input_connection(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizAlgorithmOutput* output)
+FVizResult fviz_algorithm_add_input_connection(FVizAlgorithm* algorithm, uint32_t port, FVizAlgorithmOutput* output)
 {
     return fviz_algorithm_append_input_connection(algorithm, port, output, FVIZ_FALSE);
 }
 
-FVizResult fviz_algorithm_remove_input_connection(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    uint32_t connection_index)
+FVizResult fviz_algorithm_remove_input_connection(FVizAlgorithm* algorithm, uint32_t port, uint32_t connection_index)
 {
     FVizAlgorithmInputPort* input_port;
     FVizSize count;
     FVizAlgorithmConnection* connections;
-    if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK) return FVIZ_ERROR_INVALID_ARGUMENT;
     input_port = &algorithm->input_ports[port];
     count = fviz_array_count(input_port->connections);
     if ((FVizSize)connection_index >= count)
@@ -742,16 +645,13 @@ FVizResult fviz_algorithm_remove_input_connection(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     connections = (FVizAlgorithmConnection*)fviz_array_data(input_port->connections);
-    fviz_algorithm_remove_input_observer(
-        (FVizObject*)connections[connection_index].producer,
-        &connections[connection_index].producer_modified_tag);
+    fviz_algorithm_remove_input_observer((FVizObject*)connections[connection_index].producer,
+                                         &connections[connection_index].producer_modified_tag);
     fviz_release(connections[connection_index].producer);
     if ((FVizSize)connection_index + 1u < count)
     {
-        (void)memmove(
-            &connections[connection_index],
-            &connections[connection_index + 1u],
-            (size_t)(count - (FVizSize)connection_index - 1u) * sizeof(FVizAlgorithmConnection));
+        (void)memmove(&connections[connection_index], &connections[connection_index + 1u],
+                      (size_t)(count - (FVizSize)connection_index - 1u) * sizeof(FVizAlgorithmConnection));
     }
     (void)fviz_array_resize(input_port->connections, count - 1u);
     algorithm->updated = FVIZ_FALSE;
@@ -771,12 +671,10 @@ void fviz_algorithm_remove_all_input_connections(FVizAlgorithm* algorithm, uint3
 FVizResult fviz_algorithm_clear_input(FVizAlgorithm* algorithm, uint32_t port)
 {
     FVizAlgorithmInputPort* input_port;
-    if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (fviz_algorithm_validate_input_port(algorithm, port) != FVIZ_OK) return FVIZ_ERROR_INVALID_ARGUMENT;
     input_port = &algorithm->input_ports[port];
     fviz_algorithm_clear_connections(input_port);
-    fviz_algorithm_remove_input_observer(
-        (FVizObject*)input_port->direct_data, &input_port->direct_data_modified_tag);
+    fviz_algorithm_remove_input_observer((FVizObject*)input_port->direct_data, &input_port->direct_data_modified_tag);
     fviz_release(input_port->direct_data);
     input_port->direct_data = NULL;
     algorithm->updated = FVIZ_FALSE;
@@ -784,74 +682,52 @@ FVizResult fviz_algorithm_clear_input(FVizAlgorithm* algorithm, uint32_t port)
     return FVIZ_OK;
 }
 
-uint32_t fviz_algorithm_input_connection_count(
-    const FVizAlgorithm* algorithm,
-    uint32_t port)
+uint32_t fviz_algorithm_input_connection_count(const FVizAlgorithm* algorithm, uint32_t port)
 {
     return algorithm != NULL && port < algorithm->input_port_count
-        ? (uint32_t)fviz_array_count(algorithm->input_ports[port].connections)
-        : 0u;
+               ? (uint32_t)fviz_array_count(algorithm->input_ports[port].connections)
+               : 0u;
 }
 
-FVizAlgorithmOutput* fviz_algorithm_input_connection(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    uint32_t connection_index)
+FVizAlgorithmOutput* fviz_algorithm_input_connection(FVizAlgorithm* algorithm, uint32_t port, uint32_t connection_index)
 {
     FVizAlgorithmConnection* connection;
     if (algorithm == NULL || port >= algorithm->input_port_count ||
         (FVizSize)connection_index >= fviz_array_count(algorithm->input_ports[port].connections))
         return NULL;
-    connection = (FVizAlgorithmConnection*)fviz_array_at(
-        algorithm->input_ports[port].connections, connection_index);
+    connection = (FVizAlgorithmConnection*)fviz_array_at(algorithm->input_ports[port].connections, connection_index);
     return fviz_algorithm_output_port(connection->producer, connection->output_port);
 }
 
-FVizDataObject* fviz_internal_algorithm_resolved_input(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    uint32_t connection_index)
+FVizDataObject* fviz_internal_algorithm_resolved_input(FVizAlgorithm* algorithm, uint32_t port,
+                                                       uint32_t connection_index)
 {
     FVizAlgorithmInputPort* input_port;
     FVizAlgorithmConnection* connection;
     if (algorithm == NULL || port >= algorithm->input_port_count) return NULL;
     input_port = &algorithm->input_ports[port];
-    if (input_port->direct_data != NULL)
-        return connection_index == 0u ? input_port->direct_data : NULL;
+    if (input_port->direct_data != NULL) return connection_index == 0u ? input_port->direct_data : NULL;
     connection = (FVizAlgorithmConnection*)fviz_array_at(input_port->connections, connection_index);
-    return connection != NULL
-        ? fviz_algorithm_output_data(connection->producer, connection->output_port)
-        : NULL;
+    return connection != NULL ? fviz_algorithm_output_data(connection->producer, connection->output_port) : NULL;
 }
 
-FVizDataObject* fviz_algorithm_resolved_input(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    uint32_t connection)
+FVizDataObject* fviz_algorithm_resolved_input(FVizAlgorithm* algorithm, uint32_t port, uint32_t connection)
 {
     return fviz_internal_algorithm_resolved_input(algorithm, port, connection);
 }
 
-const FVizDataObject* fviz_algorithm_input_data(
-    const FVizAlgorithm* algorithm,
-    uint32_t port)
+const FVizDataObject* fviz_algorithm_input_data(const FVizAlgorithm* algorithm, uint32_t port)
 {
-    return (const FVizDataObject*)fviz_internal_algorithm_resolved_input(
-        (FVizAlgorithm*)algorithm, port, 0u);
+    return (const FVizDataObject*)fviz_internal_algorithm_resolved_input((FVizAlgorithm*)algorithm, port, 0u);
 }
 
-FVizResult fviz_internal_algorithm_set_output_data(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizDataObject* data_object)
+FVizResult fviz_internal_algorithm_set_output_data(FVizAlgorithm* algorithm, uint32_t port, FVizDataObject* data_object)
 {
     FVizAlgorithmOutputPort* output_port;
     if (fviz_algorithm_validate_output_port(algorithm, port) != FVIZ_OK || data_object == NULL)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     output_port = &algorithm->output_ports[port];
-    if (fviz_object_is_type(
-            (const FVizObject*)data_object,
-            output_port->info.data_type) == FVIZ_FALSE)
+    if (fviz_object_is_type((const FVizObject*)data_object, output_port->info.data_type) == FVIZ_FALSE)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "algorithm produced the wrong data type");
         return FVIZ_ERROR_INVALID_STATE;
@@ -862,10 +738,7 @@ FVizResult fviz_internal_algorithm_set_output_data(
     return FVIZ_OK;
 }
 
-FVizResult fviz_algorithm_set_output_data(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizDataObject* data_object)
+FVizResult fviz_algorithm_set_output_data(FVizAlgorithm* algorithm, uint32_t port, FVizDataObject* data_object)
 {
     return fviz_internal_algorithm_set_output_data(algorithm, port, data_object);
 }
@@ -889,21 +762,16 @@ FVizResult fviz_algorithm_report_progress(FVizAlgorithm* algorithm, double progr
         if (fviz_task_context_report_progress(algorithm->async_progress_context, progress) == FVIZ_OK)
             algorithm->async_progress_last = progress;
     }
-    if (fviz_object_invoke_event(
-            (FVizObject*)algorithm, FVIZ_EVENT_PROGRESS, &algorithm->progress) != FVIZ_FALSE)
+    if (fviz_object_invoke_event((FVizObject*)algorithm, FVIZ_EVENT_PROGRESS, &algorithm->progress) != FVIZ_FALSE)
         fviz_algorithm_request_abort(algorithm);
-    if (fviz_object_invoke_event(
-            (FVizObject*)algorithm, FVIZ_EVENT_ABORT_CHECK, &algorithm->progress) != FVIZ_FALSE)
+    if (fviz_object_invoke_event((FVizObject*)algorithm, FVIZ_EVENT_ABORT_CHECK, &algorithm->progress) != FVIZ_FALSE)
         fviz_algorithm_request_abort(algorithm);
     return fviz_algorithm_abort_requested(algorithm) == FVIZ_TRUE ? FVIZ_ERROR_BUSY : FVIZ_OK;
 }
 
-FVizResult fviz_internal_algorithm_map_input_request(
-    FVizAlgorithm* algorithm,
-    uint32_t input_port,
-    uint32_t connection,
-    const FVizPipelineRequestInfo* downstream_request,
-    FVizPipelineRequestInfo* upstream_request)
+FVizResult fviz_internal_algorithm_map_input_request(FVizAlgorithm* algorithm, uint32_t input_port, uint32_t connection,
+                                                     const FVizPipelineRequestInfo* downstream_request,
+                                                     FVizPipelineRequestInfo* upstream_request)
 {
     if (algorithm == NULL || downstream_request == NULL || upstream_request == NULL ||
         input_port >= algorithm->input_port_count)
@@ -918,8 +786,7 @@ FVizResult fviz_internal_algorithm_map_input_request(
             algorithm, input_port, connection, downstream_request, upstream_request, algorithm->state);
         if (result != FVIZ_OK) return result;
     }
-    if (upstream_request->number_of_pieces == 0u ||
-        upstream_request->piece >= upstream_request->number_of_pieces)
+    if (upstream_request->number_of_pieces == 0u || upstream_request->piece >= upstream_request->number_of_pieces)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "mapped pipeline piece request is invalid");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -939,12 +806,8 @@ FVizResult fviz_internal_algorithm_map_input_request(
     return FVIZ_OK;
 }
 
-FVizResult fviz_internal_algorithm_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    FVizMTime input_mtime,
-    uint64_t request_key,
-    FVizBool* out_executed)
+FVizResult fviz_internal_algorithm_process_request(FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request,
+                                                   FVizMTime input_mtime, uint64_t request_key, FVizBool* out_executed)
 {
     FVizAlgorithmOutputPort* output;
     FVizMTime algorithm_mtime;
@@ -963,8 +826,7 @@ FVizResult fviz_internal_algorithm_process_request(
     output = &algorithm->output_ports[request->requested_output_port];
     algorithm_mtime = fviz_object_mtime((const FVizObject*)algorithm);
     if (request->type == FVIZ_PIPELINE_REQUEST_DATA && output->updated == FVIZ_TRUE &&
-        output->last_input_mtime == input_mtime &&
-        output->last_algorithm_mtime == algorithm_mtime &&
+        output->last_input_mtime == input_mtime && output->last_algorithm_mtime == algorithm_mtime &&
         output->last_request_key == request_key)
         return FVIZ_OK;
     if (algorithm->custom == FVIZ_TRUE)
@@ -1047,8 +909,7 @@ FVizResult fviz_internal_algorithm_update_now(FVizAlgorithm* algorithm)
         }
         for (i = 0u; i < connection_count; ++i)
         {
-            FVizAlgorithmConnection* connection =
-                (FVizAlgorithmConnection*)fviz_array_at(input_port->connections, i);
+            FVizAlgorithmConnection* connection = (FVizAlgorithmConnection*)fviz_array_at(input_port->connections, i);
             result = fviz_algorithm_update(connection->producer);
             if (result != FVIZ_OK) goto done;
         }
@@ -1072,8 +933,7 @@ FVizResult fviz_internal_algorithm_update_now(FVizAlgorithm* algorithm)
         }
     }
     algorithm_mtime = fviz_object_mtime((const FVizObject*)algorithm);
-    if (algorithm->updated == FVIZ_TRUE &&
-        algorithm->last_input_mtime == input_mtime &&
+    if (algorithm->updated == FVIZ_TRUE && algorithm->last_input_mtime == input_mtime &&
         algorithm->last_algorithm_mtime == algorithm_mtime)
         goto done;
     algorithm->progress = 0.0;
@@ -1111,9 +971,8 @@ done:
 
 FVizResult fviz_algorithm_update(FVizAlgorithm* algorithm)
 {
-    return algorithm != NULL
-        ? fviz_executive_update(algorithm->executive, 0u)
-        : fviz_internal_algorithm_update_now(NULL);
+    return algorithm != NULL ? fviz_executive_update(algorithm->executive, 0u)
+                             : fviz_internal_algorithm_update_now(NULL);
 }
 
 typedef struct FVizAlgorithmAsyncUpdate
@@ -1121,9 +980,8 @@ typedef struct FVizAlgorithmAsyncUpdate
     FVizAlgorithm* algorithm;
 } FVizAlgorithmAsyncUpdate;
 
-static FVizResult fviz_algorithm_async_update_run(
-    FVizAlgorithm* algorithm, FVizCancellationToken* cancellation,
-    FVizTaskContext* context)
+static FVizResult fviz_algorithm_async_update_run(FVizAlgorithm* algorithm, FVizCancellationToken* cancellation,
+                                                  FVizTaskContext* context)
 {
     FVizPipelineRequestInfo request;
     FVizResult result;
@@ -1148,13 +1006,11 @@ static FVizResult fviz_algorithm_async_update_run(
     return result;
 }
 
-static FVizResult fviz_algorithm_async_update_context_task(
-    FVizTaskContext* context, void* user_data, void** out_value)
+static FVizResult fviz_algorithm_async_update_context_task(FVizTaskContext* context, void* user_data, void** out_value)
 {
     FVizAlgorithmAsyncUpdate* update = (FVizAlgorithmAsyncUpdate*)user_data;
     FVIZ_UNUSED(out_value);
-    return fviz_algorithm_async_update_run(
-        update->algorithm, fviz_task_context_cancellation(context), context);
+    return fviz_algorithm_async_update_run(update->algorithm, fviz_task_context_cancellation(context), context);
 }
 
 static void fviz_algorithm_async_update_destroy(void* user_data)
@@ -1165,20 +1021,18 @@ static void fviz_algorithm_async_update_destroy(void* user_data)
     fviz_free(update);
 }
 
-FVizResult fviz_algorithm_update_async(
-    FVizAlgorithm* algorithm, FVizExecutor* executor, int priority,
-    FVizFuture** out_future)
+FVizResult fviz_algorithm_update_async(FVizAlgorithm* algorithm, FVizExecutor* executor, int priority,
+                                       FVizFuture** out_future)
 {
     FVizAlgorithmAsyncUpdate* update;
-    if (algorithm == NULL || executor == NULL || out_future == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (algorithm == NULL || executor == NULL || out_future == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_future = NULL;
     update = (FVizAlgorithmAsyncUpdate*)fviz_alloc(sizeof(*update));
     if (update == NULL) return fviz_last_error_code();
     update->algorithm = (FVizAlgorithm*)fviz_retain(algorithm);
-    if (update->algorithm == NULL || fviz_executor_submit_context(
-            executor, priority, fviz_algorithm_async_update_context_task, update,
-            fviz_algorithm_async_update_destroy, NULL, out_future) != FVIZ_OK)
+    if (update->algorithm == NULL ||
+        fviz_executor_submit_context(executor, priority, fviz_algorithm_async_update_context_task, update,
+                                     fviz_algorithm_async_update_destroy, NULL, out_future) != FVIZ_OK)
     {
         if (*out_future == NULL) fviz_algorithm_async_update_destroy(update);
         return fviz_last_error_code();
@@ -1214,8 +1068,7 @@ struct FVizAlgorithmAsyncChain
     FVizSize link_count;
 };
 
-static FVizResult fviz_algorithm_chain_stage_run(
-    FVizAlgorithm* algorithm, FVizCancellationToken* cancellation)
+static FVizResult fviz_algorithm_chain_stage_run(FVizAlgorithm* algorithm, FVizCancellationToken* cancellation)
 {
     FVizPipelineRequestInfo request;
     fviz_pipeline_request_initialize(&request);
@@ -1225,17 +1078,16 @@ static FVizResult fviz_algorithm_chain_stage_run(
     return fviz_executive_update_request(algorithm->executive, &request);
 }
 
-static FVizResult fviz_algorithm_chain_first_task(
-    FVizCancellationToken* cancellation, void* user_data, void** out_value)
+static FVizResult fviz_algorithm_chain_first_task(FVizCancellationToken* cancellation, void* user_data,
+                                                  void** out_value)
 {
     FVizAlgorithmChainStage* stage = (FVizAlgorithmChainStage*)user_data;
     FVIZ_UNUSED(out_value);
     return fviz_algorithm_chain_stage_run(stage->algorithm, cancellation);
 }
 
-static FVizResult fviz_algorithm_chain_continuation(
-    FVizResult antecedent_result, FVizCancellationToken* cancellation,
-    void* user_data, void** out_value)
+static FVizResult fviz_algorithm_chain_continuation(FVizResult antecedent_result, FVizCancellationToken* cancellation,
+                                                    void* user_data, void** out_value)
 {
     FVizAlgorithmChainStage* stage = (FVizAlgorithmChainStage*)user_data;
     FVIZ_UNUSED(out_value);
@@ -1260,16 +1112,14 @@ static void fviz_algorithm_chain_stage_destroy(void* user_data)
     fviz_free(stage);
 }
 
-FVizResult fviz_algorithm_update_async_chain(
-    FVizAlgorithm** algorithms, FVizSize count,
-    FVizExecutor* executor, int priority, FVizFuture** out_future)
+FVizResult fviz_algorithm_update_async_chain(FVizAlgorithm** algorithms, FVizSize count, FVizExecutor* executor,
+                                             int priority, FVizFuture** out_future)
 {
     FVizAlgorithmAsyncChain* chain = NULL;
     FVizFuture* current = NULL;
     FVizFuture* next = NULL;
     FVizSize i;
-    if (algorithms == NULL || count == 0u || executor == NULL || out_future == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (algorithms == NULL || count == 0u || executor == NULL || out_future == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_future = NULL;
     for (i = 0u; i < count; ++i)
         if (algorithms[i] == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -1307,9 +1157,8 @@ FVizResult fviz_algorithm_update_async_chain(
         }
         if (i == 0u)
         {
-            if (fviz_executor_submit(executor, priority,
-                    fviz_algorithm_chain_first_task, stage,
-                    fviz_algorithm_chain_stage_destroy, NULL, &current) != FVIZ_OK)
+            if (fviz_executor_submit(executor, priority, fviz_algorithm_chain_first_task, stage,
+                                     fviz_algorithm_chain_stage_destroy, NULL, &current) != FVIZ_OK)
             {
                 fviz_algorithm_chain_stage_destroy(stage);
                 if (current != NULL) fviz_future_destroy(current);
@@ -1321,9 +1170,8 @@ FVizResult fviz_algorithm_update_async_chain(
         else
         {
             next = NULL;
-            if (fviz_future_then(current, executor, priority,
-                    fviz_algorithm_chain_continuation, stage,
-                    fviz_algorithm_chain_stage_destroy, NULL, &next) != FVIZ_OK)
+            if (fviz_future_then(current, executor, priority, fviz_algorithm_chain_continuation, stage,
+                                 fviz_algorithm_chain_stage_destroy, NULL, &next) != FVIZ_OK)
             {
                 fviz_algorithm_chain_stage_destroy(stage);
                 fviz_future_destroy(current);
@@ -1346,10 +1194,7 @@ FVizExecutive* fviz_algorithm_executive(FVizAlgorithm* algorithm)
     return algorithm != NULL ? algorithm->executive : NULL;
 }
 
-void fviz_algorithm_set_progress_callback(
-    FVizAlgorithm* algorithm,
-    FVizAlgorithmProgressFn callback,
-    void* user_data)
+void fviz_algorithm_set_progress_callback(FVizAlgorithm* algorithm, FVizAlgorithmProgressFn callback, void* user_data)
 {
     if (algorithm == NULL) return;
     algorithm->progress_callback = callback;
@@ -1373,25 +1218,17 @@ void fviz_algorithm_clear_abort(FVizAlgorithm* algorithm)
 
 FVizBool fviz_algorithm_abort_requested(const FVizAlgorithm* algorithm)
 {
-    return algorithm != NULL && fviz_atomic_u32_load(&algorithm->abort_requested) != 0u
-        ? FVIZ_TRUE
-        : FVIZ_FALSE;
+    return algorithm != NULL && fviz_atomic_u32_load(&algorithm->abort_requested) != 0u ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
 FVizDataObject* fviz_algorithm_output_data(FVizAlgorithm* algorithm, uint32_t port)
 {
-    return algorithm != NULL && port < algorithm->output_port_count
-        ? algorithm->output_ports[port].data
-        : NULL;
+    return algorithm != NULL && port < algorithm->output_port_count ? algorithm->output_ports[port].data : NULL;
 }
 
-const FVizDataObject* fviz_algorithm_const_output_data(
-    const FVizAlgorithm* algorithm,
-    uint32_t port)
+const FVizDataObject* fviz_algorithm_const_output_data(const FVizAlgorithm* algorithm, uint32_t port)
 {
-    return algorithm != NULL && port < algorithm->output_port_count
-        ? algorithm->output_ports[port].data
-        : NULL;
+    return algorithm != NULL && port < algorithm->output_port_count ? algorithm->output_ports[port].data : NULL;
 }
 
 FVizResult fviz_algorithm_release_output_data(FVizAlgorithm* algorithm, uint32_t port)
@@ -1430,17 +1267,12 @@ void fviz_algorithm_release_all_output_data(FVizAlgorithm* algorithm)
     algorithm->updated = FVIZ_FALSE;
 }
 
-
-FVizResult fviz_algorithm_set_output_time_steps(
-    FVizAlgorithm* algorithm,
-    uint32_t port,
-    const double* time_steps,
-    FVizSize count)
+FVizResult fviz_algorithm_set_output_time_steps(FVizAlgorithm* algorithm, uint32_t port, const double* time_steps,
+                                                FVizSize count)
 {
     FVizSize i;
     FVizAlgorithmOutputPort* output;
-    if (fviz_algorithm_validate_output_port(algorithm, port) != FVIZ_OK ||
-        (count > 0u && time_steps == NULL))
+    if (fviz_algorithm_validate_output_port(algorithm, port) != FVIZ_OK || (count > 0u && time_steps == NULL))
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "output time-step metadata is invalid");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -1449,21 +1281,18 @@ FVizResult fviz_algorithm_set_output_time_steps(
     {
         if (!isfinite(time_steps[i]) || (i > 0u && time_steps[i] <= time_steps[i - 1u]))
         {
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "output time steps must be finite and strictly increasing");
+            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+                                    "output time steps must be finite and strictly increasing");
             return FVIZ_ERROR_INVALID_ARGUMENT;
         }
     }
     output = &algorithm->output_ports[port];
     if (fviz_array_resize(output->time_steps, count) != FVIZ_OK) return fviz_last_error_code();
-    if (count > 0u)
-        (void)memcpy(fviz_array_data(output->time_steps), time_steps, (size_t)count * sizeof(double));
+    if (count > 0u) (void)memcpy(fviz_array_data(output->time_steps), time_steps, (size_t)count * sizeof(double));
     return FVIZ_OK;
 }
 
-const double* fviz_algorithm_output_time_steps(
-    const FVizAlgorithm* algorithm,
-    uint32_t port,
-    FVizSize* out_count)
+const double* fviz_algorithm_output_time_steps(const FVizAlgorithm* algorithm, uint32_t port, FVizSize* out_count)
 {
     if (out_count != NULL) *out_count = 0u;
     if (algorithm == NULL || port >= algorithm->output_port_count) return NULL;
@@ -1471,18 +1300,14 @@ const double* fviz_algorithm_output_time_steps(
     return (const double*)fviz_array_const_data(algorithm->output_ports[port].time_steps);
 }
 
-FVizResult fviz_algorithm_output_time_range(
-    const FVizAlgorithm* algorithm,
-    uint32_t port,
-    double* out_minimum,
-    double* out_maximum)
+FVizResult fviz_algorithm_output_time_range(const FVizAlgorithm* algorithm, uint32_t port, double* out_minimum,
+                                            double* out_maximum)
 {
     const double* steps;
     FVizSize count = 0u;
     if (out_minimum != NULL) *out_minimum = 0.0;
     if (out_maximum != NULL) *out_maximum = 0.0;
-    if (algorithm == NULL || port >= algorithm->output_port_count ||
-        out_minimum == NULL || out_maximum == NULL)
+    if (algorithm == NULL || port >= algorithm->output_port_count || out_minimum == NULL || out_maximum == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "output time-range query is invalid");
         return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -1497,8 +1322,8 @@ FVizResult fviz_algorithm_output_time_range(
     *out_maximum = steps[count - 1u];
     return FVIZ_OK;
 }
-FVizResult fviz_algorithm_set_output_whole_extent(
-    FVizAlgorithm* algorithm, uint32_t port, const int64_t extent[6])
+
+FVizResult fviz_algorithm_set_output_whole_extent(FVizAlgorithm* algorithm, uint32_t port, const int64_t extent[6])
 {
     FVizAlgorithmOutputPort* output;
     uint32_t axis;
@@ -1535,8 +1360,7 @@ void fviz_algorithm_clear_output_whole_extent(FVizAlgorithm* algorithm, uint32_t
     (void)memcpy(output->whole_extent, empty_extent, sizeof(empty_extent));
 }
 
-FVizBool fviz_algorithm_output_whole_extent(
-    const FVizAlgorithm* algorithm, uint32_t port, int64_t out_extent[6])
+FVizBool fviz_algorithm_output_whole_extent(const FVizAlgorithm* algorithm, uint32_t port, int64_t out_extent[6])
 {
     const FVizAlgorithmOutputPort* output;
     if (out_extent != NULL)
@@ -1544,8 +1368,7 @@ FVizBool fviz_algorithm_output_whole_extent(
         static const int64_t empty_extent[6] = {0, -1, 0, -1, 0, -1};
         (void)memcpy(out_extent, empty_extent, sizeof(empty_extent));
     }
-    if (algorithm == NULL || port >= algorithm->output_port_count || out_extent == NULL)
-        return FVIZ_FALSE;
+    if (algorithm == NULL || port >= algorithm->output_port_count || out_extent == NULL) return FVIZ_FALSE;
     output = &algorithm->output_ports[port];
     if (output->has_whole_extent == FVIZ_FALSE) return FVIZ_FALSE;
     (void)memcpy(out_extent, output->whole_extent, sizeof(output->whole_extent));

@@ -26,20 +26,16 @@ static void fviz_sphere_source_destroy(FVizObject* object)
     source->algorithm = NULL;
 }
 
-static const FVizObjectClass g_fviz_sphere_source_class = {
-    FVIZ_TYPE_SPHERE_SOURCE, "FVizSphereSource", &g_fviz_object_class,
-    fviz_sphere_source_destroy, NULL
-};
+static const FVizObjectClass g_fviz_sphere_source_class = {FVIZ_TYPE_SPHERE_SOURCE, "FVizSphereSource",
+                                                           &g_fviz_object_class, fviz_sphere_source_destroy, NULL};
 
 static FVizMTime fviz_sphere_source_state_mtime(const void* state)
 {
     return fviz_object_mtime((const FVizObject*)state);
 }
 
-static FVizResult fviz_sphere_source_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_sphere_source_process_request(FVizAlgorithm* algorithm, const FVizPipelineRequestInfo* request,
+                                                     void* state)
 {
     FVizSphereSource* source = (FVizSphereSource*)state;
     FVizPolyData* output = NULL;
@@ -80,8 +76,7 @@ static FVizResult fviz_sphere_source_process_request(
     }
     triangles = (uint32_t*)fviz_alloc(bytes);
     if (points == NULL || triangles == NULL) goto fail;
-    points[point_index++] = fviz_vec3(
-        source->center.x, source->center.y, source->center.z - (float)source->radius);
+    points[point_index++] = fviz_vec3(source->center.x, source->center.y, source->center.z - (float)source->radius);
     for (ring = 1u; ring < phi; ++ring)
     {
         const double polar = pi * (double)ring / (double)phi;
@@ -99,8 +94,7 @@ static FVizResult fviz_sphere_source_process_request(
         }
     }
     north = (uint32_t)point_index;
-    points[point_index++] = fviz_vec3(
-        source->center.x, source->center.y, source->center.z + (float)source->radius);
+    points[point_index++] = fviz_vec3(source->center.x, source->center.y, source->center.z + (float)source->radius);
     for (ring = 0u; ring < theta; ++ring)
     {
         const uint32_t next = (ring + 1u) % theta;
@@ -194,6 +188,7 @@ void fviz_sphere_source_set_center(FVizSphereSource* source, FVizVec3 center)
     source->center = center;
     fviz_object_modified((FVizObject*)source);
 }
+
 FVizResult fviz_sphere_source_set_radius(FVizSphereSource* source, double radius)
 {
     if (source == NULL || !isfinite(radius) || radius <= 0.0 || radius > FLT_MAX)
@@ -205,7 +200,9 @@ FVizResult fviz_sphere_source_set_radius(FVizSphereSource* source, double radius
     fviz_object_modified((FVizObject*)source);
     return FVIZ_OK;
 }
-FVizResult fviz_sphere_source_set_resolution(FVizSphereSource* source, uint32_t theta_resolution, uint32_t phi_resolution)
+
+FVizResult fviz_sphere_source_set_resolution(FVizSphereSource* source, uint32_t theta_resolution,
+                                             uint32_t phi_resolution)
 {
     uint64_t points;
     if (source == NULL || theta_resolution < 3u || phi_resolution < 2u)
@@ -224,11 +221,43 @@ FVizResult fviz_sphere_source_set_resolution(FVizSphereSource* source, uint32_t 
     fviz_object_modified((FVizObject*)source);
     return FVIZ_OK;
 }
-FVizVec3 fviz_sphere_source_center(const FVizSphereSource* source) { return source != NULL ? source->center : fviz_vec3(0,0,0); }
-double fviz_sphere_source_radius(const FVizSphereSource* source) { return source != NULL ? source->radius : 0.0; }
-uint32_t fviz_sphere_source_theta_resolution(const FVizSphereSource* source) { return source != NULL ? source->theta_resolution : 0u; }
-uint32_t fviz_sphere_source_phi_resolution(const FVizSphereSource* source) { return source != NULL ? source->phi_resolution : 0u; }
-FVizAlgorithm* fviz_sphere_source_algorithm(FVizSphereSource* source) { return source != NULL ? source->algorithm : NULL; }
-FVizAlgorithmOutput* fviz_sphere_source_output_port(FVizSphereSource* source) { return source != NULL ? fviz_algorithm_output_port(source->algorithm, 0u) : NULL; }
-FVizPolyData* fviz_sphere_source_output(FVizSphereSource* source) { return source != NULL ? (FVizPolyData*)fviz_algorithm_output_data(source->algorithm, 0u) : NULL; }
-FVizResult fviz_sphere_source_update(FVizSphereSource* source) { return source != NULL ? fviz_algorithm_update(source->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT; }
+
+FVizVec3 fviz_sphere_source_center(const FVizSphereSource* source)
+{
+    return source != NULL ? source->center : fviz_vec3(0, 0, 0);
+}
+
+double fviz_sphere_source_radius(const FVizSphereSource* source)
+{
+    return source != NULL ? source->radius : 0.0;
+}
+
+uint32_t fviz_sphere_source_theta_resolution(const FVizSphereSource* source)
+{
+    return source != NULL ? source->theta_resolution : 0u;
+}
+
+uint32_t fviz_sphere_source_phi_resolution(const FVizSphereSource* source)
+{
+    return source != NULL ? source->phi_resolution : 0u;
+}
+
+FVizAlgorithm* fviz_sphere_source_algorithm(FVizSphereSource* source)
+{
+    return source != NULL ? source->algorithm : NULL;
+}
+
+FVizAlgorithmOutput* fviz_sphere_source_output_port(FVizSphereSource* source)
+{
+    return source != NULL ? fviz_algorithm_output_port(source->algorithm, 0u) : NULL;
+}
+
+FVizPolyData* fviz_sphere_source_output(FVizSphereSource* source)
+{
+    return source != NULL ? (FVizPolyData*)fviz_algorithm_output_data(source->algorithm, 0u) : NULL;
+}
+
+FVizResult fviz_sphere_source_update(FVizSphereSource* source)
+{
+    return source != NULL ? fviz_algorithm_update(source->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
+}

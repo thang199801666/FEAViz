@@ -14,7 +14,8 @@ typedef struct FVizWarpVectorFilter FVizWarpVectorFilter;
 
 FVIZ_API FVizResult fviz_warp_vector_filter_create(FVizWarpVectorFilter** out_filter);
 FVIZ_API FVizResult fviz_warp_vector_filter_set_input_data(FVizWarpVectorFilter* filter, FVizPolyData* input);
-FVIZ_API FVizResult fviz_warp_vector_filter_set_input_connection(FVizWarpVectorFilter* filter, FVizAlgorithmOutput* input);
+FVIZ_API FVizResult fviz_warp_vector_filter_set_input_connection(FVizWarpVectorFilter* filter,
+                                                                 FVizAlgorithmOutput* input);
 FVIZ_API FVizResult fviz_warp_vector_filter_set_vector_name(FVizWarpVectorFilter* filter, const char* name);
 FVIZ_API const char* fviz_warp_vector_filter_vector_name(const FVizWarpVectorFilter* filter);
 FVIZ_API void fviz_warp_vector_filter_set_scale(FVizWarpVectorFilter* filter, double scale);

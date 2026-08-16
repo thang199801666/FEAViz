@@ -15,15 +15,11 @@
 static void fviz_multi_block_data_set_destroy(FVizObject* object);
 static FVizMTime fviz_multi_block_data_set_mtime(const FVizObject* object);
 static const FVizObjectClass g_fviz_multi_block_data_set_class = {
-    FVIZ_TYPE_MULTI_BLOCK_DATA_SET,
-    "FVizMultiBlockDataSet",
-    &g_fviz_data_object_class,
-    fviz_multi_block_data_set_destroy,
-    fviz_multi_block_data_set_mtime
-};
+    FVIZ_TYPE_MULTI_BLOCK_DATA_SET, "FVizMultiBlockDataSet", &g_fviz_data_object_class,
+    fviz_multi_block_data_set_destroy, fviz_multi_block_data_set_mtime};
 
-static FVizBool fviz_multi_block_child_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_multi_block_child_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                void* client_data)
 {
     FVizMultiBlockDataSet* data_set = (FVizMultiBlockDataSet*)client_data;
     (void)caller;
@@ -33,15 +29,13 @@ static FVizBool fviz_multi_block_child_modified(
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_multi_block_entry_observe(
-    FVizMultiBlockDataSet* data_set, FVizMultiBlockEntry* entry)
+static FVizResult fviz_multi_block_entry_observe(FVizMultiBlockDataSet* data_set, FVizMultiBlockEntry* entry)
 {
     if (entry == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     entry->data_modified_tag = FVIZ_OBSERVER_TAG_INVALID;
     if (entry->data == NULL) return FVIZ_OK;
-    return fviz_object_add_observer(
-        (FVizObject*)entry->data, FVIZ_EVENT_MODIFIED, 0.0f,
-        fviz_multi_block_child_modified, data_set, &entry->data_modified_tag);
+    return fviz_object_add_observer((FVizObject*)entry->data, FVIZ_EVENT_MODIFIED, 0.0f,
+                                    fviz_multi_block_child_modified, data_set, &entry->data_modified_tag);
 }
 
 static void fviz_multi_block_entry_release(FVizMultiBlockEntry* entry)
@@ -62,8 +56,7 @@ static FVizMTime fviz_multi_block_data_set_mtime(const FVizObject* object)
     return fviz_internal_object_local_mtime(object);
 }
 
-static FVizBool fviz_multi_block_would_cycle(
-    const FVizMultiBlockDataSet* target, const FVizDataObject* candidate)
+static FVizBool fviz_multi_block_would_cycle(const FVizMultiBlockDataSet* target, const FVizDataObject* candidate)
 {
     FVizArray* stack = NULL;
     FVizHashMap* visited = NULL;
@@ -149,8 +142,8 @@ FVizResult fviz_multi_block_data_set_create(FVizMultiBlockDataSet** out_data_set
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_data_set = NULL;
-    data_set = (FVizMultiBlockDataSet*)fviz_internal_object_allocate(
-        sizeof(*data_set), &g_fviz_multi_block_data_set_class, NULL);
+    data_set = (FVizMultiBlockDataSet*)fviz_internal_object_allocate(sizeof(*data_set),
+                                                                     &g_fviz_multi_block_data_set_class, NULL);
     if (data_set == NULL) return fviz_last_error_code();
     if (fviz_array_create(sizeof(FVizMultiBlockEntry), &data_set->blocks) != FVIZ_OK)
     {
@@ -203,8 +196,8 @@ FVizResult fviz_multi_block_data_set_resize(FVizMultiBlockDataSet* data_set, FVi
     return FVIZ_OK;
 }
 
-FVizResult fviz_multi_block_data_set_add_block(
-    FVizMultiBlockDataSet* data_set, FVizDataObject* block, const char* name, FVizSize* out_index)
+FVizResult fviz_multi_block_data_set_add_block(FVizMultiBlockDataSet* data_set, FVizDataObject* block, const char* name,
+                                               FVizSize* out_index)
 {
     FVizMultiBlockEntry entry;
     FVizSize index;
@@ -243,8 +236,7 @@ FVizResult fviz_multi_block_data_set_add_block(
     return FVIZ_OK;
 }
 
-FVizResult fviz_multi_block_data_set_set_block(
-    FVizMultiBlockDataSet* data_set, FVizSize index, FVizDataObject* block)
+FVizResult fviz_multi_block_data_set_set_block(FVizMultiBlockDataSet* data_set, FVizSize index, FVizDataObject* block)
 {
     FVizMultiBlockEntry* entry;
     FVizMultiBlockEntry replacement;
@@ -289,8 +281,7 @@ FVizDataObject* fviz_multi_block_data_set_block(FVizMultiBlockDataSet* data_set,
     return entry != NULL ? entry->data : NULL;
 }
 
-const FVizDataObject* fviz_multi_block_data_set_const_block(
-    const FVizMultiBlockDataSet* data_set, FVizSize index)
+const FVizDataObject* fviz_multi_block_data_set_const_block(const FVizMultiBlockDataSet* data_set, FVizSize index)
 {
     const FVizMultiBlockEntry* entry;
     if (data_set == NULL || index >= fviz_multi_block_data_set_count(data_set)) return NULL;
@@ -298,8 +289,7 @@ const FVizDataObject* fviz_multi_block_data_set_const_block(
     return entry != NULL ? entry->data : NULL;
 }
 
-FVizResult fviz_multi_block_data_set_set_block_name(
-    FVizMultiBlockDataSet* data_set, FVizSize index, const char* name)
+FVizResult fviz_multi_block_data_set_set_block_name(FVizMultiBlockDataSet* data_set, FVizSize index, const char* name)
 {
     FVizMultiBlockEntry* entry;
     FVizString* replacement = NULL;
@@ -331,8 +321,8 @@ const char* fviz_multi_block_data_set_block_name(const FVizMultiBlockDataSet* da
     return entry != NULL && entry->name != NULL ? fviz_string_c_str(entry->name) : NULL;
 }
 
-FVizBool fviz_multi_block_data_set_find_block(
-    const FVizMultiBlockDataSet* data_set, const char* name, FVizSize* out_index)
+FVizBool fviz_multi_block_data_set_find_block(const FVizMultiBlockDataSet* data_set, const char* name,
+                                              FVizSize* out_index)
 {
     FVizSize i;
     if (out_index != NULL) *out_index = 0u;
@@ -362,8 +352,7 @@ FVizResult fviz_multi_block_data_set_remove_block(FVizMultiBlockDataSet* data_se
     entries = (FVizMultiBlockEntry*)fviz_array_data(data_set->blocks);
     fviz_multi_block_entry_release(&entries[index]);
     if (index + 1u < count)
-        (void)memmove(&entries[index], &entries[index + 1u],
-            (size_t)(count - index - 1u) * sizeof(*entries));
+        (void)memmove(&entries[index], &entries[index + 1u], (size_t)(count - index - 1u) * sizeof(*entries));
     if (fviz_array_resize(data_set->blocks, count - 1u) != FVIZ_OK) return fviz_last_error_code();
     fviz_object_modified((FVizObject*)data_set);
     return FVIZ_OK;
@@ -411,12 +400,8 @@ typedef struct FVizMultiBlockVisitEntry
     FVizSize depth;
 } FVizMultiBlockVisitEntry;
 
-FVizResult fviz_multi_block_data_set_visit(
-    const FVizMultiBlockDataSet* data_set,
-    FVizBool recursive,
-    FVizBool leaves_only,
-    FVizMultiBlockVisitFn visitor,
-    void* user_data)
+FVizResult fviz_multi_block_data_set_visit(const FVizMultiBlockDataSet* data_set, FVizBool recursive,
+                                           FVizBool leaves_only, FVizMultiBlockVisitFn visitor, void* user_data)
 {
     FVizArray* stack = NULL;
     FVizSize i;
@@ -426,8 +411,7 @@ FVizResult fviz_multi_block_data_set_visit(
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "multi-block visitor arguments are invalid");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    if (fviz_array_create(sizeof(FVizMultiBlockVisitEntry), &stack) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_array_create(sizeof(FVizMultiBlockVisitEntry), &stack) != FVIZ_OK) return fviz_last_error_code();
     for (i = fviz_multi_block_data_set_count(data_set); i > 0u; --i)
     {
         FVizMultiBlockVisitEntry entry = {data_set, i - 1u, 0u};
@@ -445,9 +429,11 @@ FVizResult fviz_multi_block_data_set_visit(
         const char* name;
         const FVizBool is_composite =
             fviz_multi_block_data_set_const_block(entry.parent, entry.index) != NULL &&
-            fviz_object_is_type(
-                (const FVizObject*)fviz_multi_block_data_set_const_block(entry.parent, entry.index),
-                FVIZ_TYPE_MULTI_BLOCK_DATA_SET) != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+                    fviz_object_is_type(
+                        (const FVizObject*)fviz_multi_block_data_set_const_block(entry.parent, entry.index),
+                        FVIZ_TYPE_MULTI_BLOCK_DATA_SET) != FVIZ_FALSE
+                ? FVIZ_TRUE
+                : FVIZ_FALSE;
         if (fviz_array_resize(stack, fviz_array_count(stack) - 1u) != FVIZ_OK)
         {
             result = fviz_last_error_code();
@@ -486,28 +472,26 @@ typedef struct FVizMultiBlockLeafCounter
     FVizSize count;
 } FVizMultiBlockLeafCounter;
 
-static FVizResult fviz_multi_block_count_leaf(
-    const FVizMultiBlockDataSet* parent,
-    FVizSize index,
-    const FVizDataObject* block,
-    const char* name,
-    FVizSize depth,
-    void* user_data)
+static FVizResult fviz_multi_block_count_leaf(const FVizMultiBlockDataSet* parent, FVizSize index,
+                                              const FVizDataObject* block, const char* name, FVizSize depth,
+                                              void* user_data)
 {
     FVizMultiBlockLeafCounter* counter = (FVizMultiBlockLeafCounter*)user_data;
-    (void)parent; (void)index; (void)block; (void)name; (void)depth;
+    (void)parent;
+    (void)index;
+    (void)block;
+    (void)name;
+    (void)depth;
     ++counter->count;
     return FVIZ_OK;
 }
 
-FVizSize fviz_multi_block_data_set_leaf_count(
-    const FVizMultiBlockDataSet* data_set, FVizBool recursive)
+FVizSize fviz_multi_block_data_set_leaf_count(const FVizMultiBlockDataSet* data_set, FVizBool recursive)
 {
     FVizMultiBlockLeafCounter counter = {0u};
     if (data_set == NULL) return 0u;
-    if (fviz_multi_block_data_set_visit(
-            data_set, recursive, FVIZ_TRUE, fviz_multi_block_count_leaf, &counter) != FVIZ_OK)
+    if (fviz_multi_block_data_set_visit(data_set, recursive, FVIZ_TRUE, fviz_multi_block_count_leaf, &counter) !=
+        FVIZ_OK)
         return 0u;
     return counter.count;
 }
-

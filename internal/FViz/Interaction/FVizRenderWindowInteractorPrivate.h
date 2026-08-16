@@ -56,9 +56,8 @@ struct FVizRenderWindowInteractor
     FVizBool has_focus;
 };
 
-FVizResult fviz_internal_render_window_interactor_create(
-    FVizRenderWindow* window,
-    FVizRenderWindowInteractor** out_interactor);
+FVizResult fviz_internal_render_window_interactor_create(FVizRenderWindow* window,
+                                                         FVizRenderWindowInteractor** out_interactor);
 void fviz_internal_render_window_interactor_detach(FVizRenderWindowInteractor* interactor);
 
 #endif /* FVIZ_INTERNAL_INTERACTION_RENDER_WINDOW_INTERACTOR_PRIVATE_H */

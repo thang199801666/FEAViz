@@ -51,9 +51,7 @@ FVIZ_API void fviz_array_selection_initialize(FVizArraySelection* selection);
 
 FVIZ_API FVizResult fviz_mapper_create(FVizMapper** out_mapper);
 FVIZ_API FVizResult fviz_mapper_set_poly_data(FVizMapper* mapper, FVizPolyData* poly_data);
-FVIZ_API FVizResult fviz_mapper_set_algorithm_connection(
-    FVizMapper* mapper,
-    FVizAlgorithmOutput* output);
+FVIZ_API FVizResult fviz_mapper_set_algorithm_connection(FVizMapper* mapper, FVizAlgorithmOutput* output);
 FVIZ_API FVizAlgorithmOutput* fviz_mapper_algorithm_connection(FVizMapper* mapper);
 FVIZ_API FVizResult fviz_mapper_set_input_connection(FVizMapper* mapper, FVizFilter* producer);
 FVIZ_API FVizFilter* fviz_mapper_input_connection(FVizMapper* mapper);
@@ -68,34 +66,22 @@ FVIZ_API void fviz_mapper_set_scalar_range(FVizMapper* mapper, float minimum, fl
 FVIZ_API void fviz_mapper_get_scalar_range(const FVizMapper* mapper, float* minimum, float* maximum);
 FVIZ_API FVizBool fviz_mapper_scalar_range_valid(const FVizMapper* mapper);
 FVIZ_API void fviz_mapper_use_automatic_scalar_range(FVizMapper* mapper);
-FVIZ_API FVizResult fviz_mapper_set_array_selection(
-    FVizMapper* mapper,
-    const FVizArraySelection* selection);
-FVIZ_API FVizResult fviz_mapper_get_array_selection(
-    const FVizMapper* mapper,
-    FVizArraySelection* out_selection);
+FVIZ_API FVizResult fviz_mapper_set_array_selection(FVizMapper* mapper, const FVizArraySelection* selection);
+FVIZ_API FVizResult fviz_mapper_get_array_selection(const FVizMapper* mapper, FVizArraySelection* out_selection);
 FVIZ_API const FVizDataArray* fviz_mapper_selected_array(const FVizMapper* mapper);
-FVIZ_API void fviz_mapper_set_scalar_interpolation(
-    FVizMapper* mapper,
-    FVizScalarInterpolation interpolation);
+FVIZ_API void fviz_mapper_set_scalar_interpolation(FVizMapper* mapper, FVizScalarInterpolation interpolation);
 FVIZ_API FVizScalarInterpolation fviz_mapper_scalar_interpolation(const FVizMapper* mapper);
 FVIZ_API FVizResult fviz_mapper_set_opacity_array(FVizMapper* mapper, const char* name);
 FVIZ_API const char* fviz_mapper_opacity_array(const FVizMapper* mapper);
 FVIZ_API FVizResult fviz_mapper_add_clipping_plane(FVizMapper* mapper, FVizPlane plane);
-FVIZ_API FVizResult fviz_mapper_add_clipping_plane_with_id(
-    FVizMapper* mapper, FVizPlane plane, FVizClipPlaneId* out_id);
-FVIZ_API FVizResult fviz_mapper_update_clipping_plane(
-    FVizMapper* mapper, FVizClipPlaneId id, FVizPlane plane);
-FVIZ_API FVizResult fviz_mapper_remove_clipping_plane(
-    FVizMapper* mapper, FVizClipPlaneId id);
-FVIZ_API FVizClipPlaneId fviz_mapper_clipping_plane_id(
-    const FVizMapper* mapper, FVizSize index);
+FVIZ_API FVizResult fviz_mapper_add_clipping_plane_with_id(FVizMapper* mapper, FVizPlane plane,
+                                                           FVizClipPlaneId* out_id);
+FVIZ_API FVizResult fviz_mapper_update_clipping_plane(FVizMapper* mapper, FVizClipPlaneId id, FVizPlane plane);
+FVIZ_API FVizResult fviz_mapper_remove_clipping_plane(FVizMapper* mapper, FVizClipPlaneId id);
+FVIZ_API FVizClipPlaneId fviz_mapper_clipping_plane_id(const FVizMapper* mapper, FVizSize index);
 FVIZ_API void fviz_mapper_remove_all_clipping_planes(FVizMapper* mapper);
 FVIZ_API FVizSize fviz_mapper_clipping_plane_count(const FVizMapper* mapper);
-FVIZ_API FVizResult fviz_mapper_clipping_plane(
-    const FVizMapper* mapper,
-    FVizSize index,
-    FVizPlane* out_plane);
+FVIZ_API FVizResult fviz_mapper_clipping_plane(const FVizMapper* mapper, FVizSize index, FVizPlane* out_plane);
 /* Pinned mapper resources survive retention expiry and budget eviction until
  * explicitly unpinned or manually purged from the render window. */
 FVIZ_API void fviz_mapper_set_gpu_residency_pinned(FVizMapper* mapper, FVizBool pinned);

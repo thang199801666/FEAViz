@@ -21,28 +21,19 @@ typedef enum FVizWidgetManipulatorMode
 } FVizWidgetManipulatorMode;
 
 FVIZ_API FVizResult fviz_widget_manipulator_create(FVizWidgetManipulator** out_manipulator);
-FVIZ_API void fviz_widget_manipulator_set_mode(
-    FVizWidgetManipulator* manipulator, FVizWidgetManipulatorMode mode);
-FVIZ_API FVizWidgetManipulatorMode fviz_widget_manipulator_mode(
-    const FVizWidgetManipulator* manipulator);
+FVIZ_API void fviz_widget_manipulator_set_mode(FVizWidgetManipulator* manipulator, FVizWidgetManipulatorMode mode);
+FVIZ_API FVizWidgetManipulatorMode fviz_widget_manipulator_mode(const FVizWidgetManipulator* manipulator);
 FVIZ_API void fviz_widget_manipulator_set_origin(FVizWidgetManipulator* manipulator, FVizVec3 origin);
 FVIZ_API FVizVec3 fviz_widget_manipulator_origin(const FVizWidgetManipulator* manipulator);
 FVIZ_API FVizResult fviz_widget_manipulator_set_axis(FVizWidgetManipulator* manipulator, FVizVec3 axis);
 FVIZ_API FVizVec3 fviz_widget_manipulator_axis(const FVizWidgetManipulator* manipulator);
-FVIZ_API FVizResult fviz_widget_manipulator_set_plane_normal(
-    FVizWidgetManipulator* manipulator, FVizVec3 normal);
+FVIZ_API FVizResult fviz_widget_manipulator_set_plane_normal(FVizWidgetManipulator* manipulator, FVizVec3 normal);
 FVIZ_API FVizVec3 fviz_widget_manipulator_plane_normal(const FVizWidgetManipulator* manipulator);
-FVIZ_API FVizResult fviz_widget_manipulator_begin(
-    FVizWidgetManipulator* manipulator,
-    FVizRenderer* renderer,
-    const FVizInteractionEvent* event,
-    FVizVec3 reference_world);
-FVIZ_API FVizResult fviz_widget_manipulator_update(
-    FVizWidgetManipulator* manipulator,
-    FVizRenderer* renderer,
-    const FVizInteractionEvent* event,
-    FVizVec3* out_world,
-    FVizVec3* out_delta);
+FVIZ_API FVizResult fviz_widget_manipulator_begin(FVizWidgetManipulator* manipulator, FVizRenderer* renderer,
+                                                  const FVizInteractionEvent* event, FVizVec3 reference_world);
+FVIZ_API FVizResult fviz_widget_manipulator_update(FVizWidgetManipulator* manipulator, FVizRenderer* renderer,
+                                                   const FVizInteractionEvent* event, FVizVec3* out_world,
+                                                   FVizVec3* out_delta);
 FVIZ_API void fviz_widget_manipulator_end(FVizWidgetManipulator* manipulator);
 FVIZ_API FVizBool fviz_widget_manipulator_active(const FVizWidgetManipulator* manipulator);
 

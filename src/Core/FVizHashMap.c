@@ -12,13 +12,8 @@
 #define FVIZ_HASH_MAP_LOAD_DENOM 10u
 
 static void fviz_hash_map_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_hash_map_class = {
-    FVIZ_TYPE_HASH_MAP,
-    "FVizHashMap",
-    &g_fviz_object_class,
-    fviz_hash_map_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_hash_map_class = {FVIZ_TYPE_HASH_MAP, "FVizHashMap", &g_fviz_object_class,
+                                                      fviz_hash_map_destroy, NULL};
 
 static uint64_t fviz_hash_map_hash(FVizId key)
 {
@@ -29,12 +24,8 @@ static uint64_t fviz_hash_map_hash(FVizId key)
     return x ^ (x >> 31);
 }
 
-static FVizResult fviz_hash_map_allocate_slots(
-    const FVizAllocator* allocator,
-    FVizSize capacity,
-    FVizId** out_keys,
-    void*** out_values,
-    uint8_t** out_states)
+static FVizResult fviz_hash_map_allocate_slots(const FVizAllocator* allocator, FVizSize capacity, FVizId** out_keys,
+                                               void*** out_values, uint8_t** out_states)
 {
     FVizSize keys_bytes;
     FVizSize values_bytes;
@@ -72,12 +63,8 @@ static FVizResult fviz_hash_map_allocate_slots(
     return FVIZ_OK;
 }
 
-static void fviz_hash_map_free_slots(
-    const FVizAllocator* allocator,
-    FVizId* keys,
-    void** values,
-    uint8_t* states,
-    FVizSize capacity)
+static void fviz_hash_map_free_slots(const FVizAllocator* allocator, FVizId* keys, void** values, uint8_t* states,
+                                     FVizSize capacity)
 {
     FVizSize keys_bytes;
     FVizSize values_bytes;
@@ -93,8 +80,7 @@ static void fviz_hash_map_free_slots(
 static void fviz_hash_map_destroy(FVizObject* object)
 {
     FVizHashMap* map = (FVizHashMap*)object;
-    fviz_hash_map_free_slots(
-        &map->base.allocator, map->keys, map->values, map->states, map->capacity);
+    fviz_hash_map_free_slots(&map->base.allocator, map->keys, map->values, map->states, map->capacity);
     map->keys = NULL;
     map->values = NULL;
     map->states = NULL;
@@ -153,8 +139,15 @@ FVizResult fviz_hash_map_create(FVizHashMap** out_map)
     return fviz_hash_map_create_reserve(0u, out_map);
 }
 
-FVizSize fviz_hash_map_count(const FVizHashMap* map) { return map != NULL ? map->count : 0u; }
-FVizSize fviz_hash_map_capacity(const FVizHashMap* map) { return map != NULL ? map->capacity : 0u; }
+FVizSize fviz_hash_map_count(const FVizHashMap* map)
+{
+    return map != NULL ? map->count : 0u;
+}
+
+FVizSize fviz_hash_map_capacity(const FVizHashMap* map)
+{
+    return map != NULL ? map->capacity : 0u;
+}
 
 static FVizSize fviz_hash_map_find_slot(const FVizHashMap* map, FVizId key)
 {
@@ -238,8 +231,7 @@ FVizResult fviz_hash_map_set(FVizHashMap* map, FVizId key, void* value)
         return FVIZ_OK;
     }
     if ((slot == (FVizSize)-1 || map->states[slot] != FVIZ_HASH_MAP_SLOT_TOMBSTONE) &&
-        (map->count + map->tombstones + 1u) * FVIZ_HASH_MAP_LOAD_DENOM >=
-            map->capacity * FVIZ_HASH_MAP_MAX_LOAD)
+        (map->count + map->tombstones + 1u) * FVIZ_HASH_MAP_LOAD_DENOM >= map->capacity * FVIZ_HASH_MAP_MAX_LOAD)
     {
         FVizResult result = fviz_hash_map_grow(map);
         if (result != FVIZ_OK) return result;
@@ -303,8 +295,7 @@ FVizBool fviz_hash_map_erase(FVizHashMap* map, FVizId key)
 
 void fviz_hash_map_clear(FVizHashMap* map)
 {
-    if (map == NULL || map->capacity == 0u ||
-        (map->count == 0u && map->tombstones == 0u)) return;
+    if (map == NULL || map->capacity == 0u || (map->count == 0u && map->tombstones == 0u)) return;
     (void)memset(map->states, FVIZ_HASH_MAP_SLOT_EMPTY, map->capacity);
     map->count = 0u;
     map->tombstones = 0u;

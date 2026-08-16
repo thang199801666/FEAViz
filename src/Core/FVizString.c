@@ -8,13 +8,8 @@
 #include <FViz/Core/FVizStringPrivate.h>
 
 static void fviz_string_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_string_class = {
-    FVIZ_TYPE_STRING,
-    "FVizString",
-    &g_fviz_object_class,
-    fviz_string_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_string_class = {FVIZ_TYPE_STRING, "FVizString", &g_fviz_object_class,
+                                                    fviz_string_destroy, NULL};
 
 static void fviz_string_destroy(FVizObject* object)
 {
@@ -91,10 +86,7 @@ FVizSize fviz_string_length(const FVizString* string)
     return string != NULL ? string->length : 0u;
 }
 
-static FVizBool fviz_string_source_offset(
-    const FVizString* string,
-    const char* text,
-    FVizSize* out_offset)
+static FVizBool fviz_string_source_offset(const FVizString* string, const char* text, FVizSize* out_offset)
 {
     uintptr_t base;
     uintptr_t source;

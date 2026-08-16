@@ -17,8 +17,7 @@ FVIZ_API FVizResult fviz_scene_create(FVizScene** out_scene);
 FVIZ_API FVizResult fviz_scene_reserve(FVizScene* scene, FVizSize actor_capacity);
 FVIZ_API FVizResult fviz_scene_add_actor(FVizScene* scene, FVizActor* actor);
 /* Bulk insertion reserves storage up front and emits one scene ModifiedEvent for the batch. */
-FVIZ_API FVizResult fviz_scene_add_actors(
-    FVizScene* scene, FVizActor* const* actors, FVizSize actor_count);
+FVIZ_API FVizResult fviz_scene_add_actors(FVizScene* scene, FVizActor* const* actors, FVizSize actor_count);
 FVIZ_API FVizResult fviz_scene_remove_actor(FVizScene* scene, FVizActor* actor);
 FVIZ_API void fviz_scene_clear(FVizScene* scene);
 FVIZ_API FVizSize fviz_scene_actor_count(const FVizScene* scene);

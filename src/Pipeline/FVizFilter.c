@@ -8,6 +8,7 @@
 
 static void fviz_filter_destroy(FVizObject* object);
 static FVizMTime fviz_filter_mtime(const FVizObject* object);
+
 static void fviz_filter_copy_name(char destination[128], const char* source)
 {
     FVizSize i = 0u;
@@ -20,32 +21,20 @@ static void fviz_filter_copy_name(char destination[128], const char* source)
 }
 
 static FVizResult fviz_filter_execute_algorithm(FVizAlgorithm* algorithm);
-static const FVizObjectClass g_fviz_filter_class = {
-    FVIZ_TYPE_FILTER, "FVizFilter", &g_fviz_algorithm_class, fviz_filter_destroy, fviz_filter_mtime
-};
-static const FVizObjectClass g_fviz_threshold_filter_class = {
-    FVIZ_TYPE_THRESHOLD_FILTER, "FVizThresholdFilter", &g_fviz_filter_class,
-    fviz_filter_destroy, NULL
-};
-static const FVizObjectClass g_fviz_warp_filter_class = {
-    FVIZ_TYPE_WARP_FILTER, "FVizWarpFilter", &g_fviz_filter_class,
-    fviz_filter_destroy, NULL
-};
+static const FVizObjectClass g_fviz_filter_class = {FVIZ_TYPE_FILTER, "FVizFilter", &g_fviz_algorithm_class,
+                                                    fviz_filter_destroy, fviz_filter_mtime};
+static const FVizObjectClass g_fviz_threshold_filter_class = {FVIZ_TYPE_THRESHOLD_FILTER, "FVizThresholdFilter",
+                                                              &g_fviz_filter_class, fviz_filter_destroy, NULL};
+static const FVizObjectClass g_fviz_warp_filter_class = {FVIZ_TYPE_WARP_FILTER, "FVizWarpFilter", &g_fviz_filter_class,
+                                                         fviz_filter_destroy, NULL};
 static const FVizObjectClass g_fviz_cell_to_point_filter_class = {
-    FVIZ_TYPE_CELL_DATA_TO_POINT_FILTER, "FVizCellDataToPointFilter", &g_fviz_filter_class,
-    fviz_filter_destroy, NULL
-};
-static const FVizObjectClass g_fviz_surface_filter_class = {
-    FVIZ_TYPE_SURFACE_FILTER, "FVizSurfaceFilter", &g_fviz_filter_class,
-    fviz_filter_destroy, NULL
-};
-static const FVizObjectClass g_fviz_slice_filter_class = {
-    FVIZ_TYPE_SLICE_FILTER, "FVizSliceFilter", &g_fviz_filter_class,
-    fviz_filter_destroy, NULL
-};
+    FVIZ_TYPE_CELL_DATA_TO_POINT_FILTER, "FVizCellDataToPointFilter", &g_fviz_filter_class, fviz_filter_destroy, NULL};
+static const FVizObjectClass g_fviz_surface_filter_class = {FVIZ_TYPE_SURFACE_FILTER, "FVizSurfaceFilter",
+                                                            &g_fviz_filter_class, fviz_filter_destroy, NULL};
+static const FVizObjectClass g_fviz_slice_filter_class = {FVIZ_TYPE_SLICE_FILTER, "FVizSliceFilter",
+                                                          &g_fviz_filter_class, fviz_filter_destroy, NULL};
 static const FVizObjectClass g_fviz_transform_filter_class = {
-    FVIZ_TYPE_TRANSFORM_FILTER, "FVizTransformFilter", &g_fviz_filter_class, fviz_filter_destroy, fviz_filter_mtime
-};
+    FVIZ_TYPE_TRANSFORM_FILTER, "FVizTransformFilter", &g_fviz_filter_class, fviz_filter_destroy, fviz_filter_mtime};
 
 static FVizMTime fviz_filter_mtime(const FVizObject* object)
 {
@@ -58,9 +47,8 @@ static FVizMTime fviz_filter_mtime(const FVizObject* object)
 
 static FVizFilterOutputType fviz_filter_kind_output_type(FVizFilterKind kind)
 {
-    return kind == FVIZ_FILTER_SURFACE || kind == FVIZ_FILTER_SLICE
-        ? FVIZ_FILTER_OUTPUT_POLY_DATA
-        : FVIZ_FILTER_OUTPUT_UNSTRUCTURED_GRID;
+    return kind == FVIZ_FILTER_SURFACE || kind == FVIZ_FILTER_SLICE ? FVIZ_FILTER_OUTPUT_POLY_DATA
+                                                                    : FVIZ_FILTER_OUTPUT_UNSTRUCTURED_GRID;
 }
 
 static void fviz_filter_destroy(FVizObject* object)
@@ -71,10 +59,8 @@ static void fviz_filter_destroy(FVizObject* object)
     filter->transform = NULL;
 }
 
-static FVizResult fviz_filter_create_internal(
-    FVizFilterKind kind,
-    const FVizObjectClass* object_class,
-    FVizFilter** out_filter)
+static FVizResult fviz_filter_create_internal(FVizFilterKind kind, const FVizObjectClass* object_class,
+                                              FVizFilter** out_filter)
 {
     FVizFilter* filter;
     if (out_filter == NULL)
@@ -88,14 +74,12 @@ static FVizResult fviz_filter_create_internal(
     filter->kind = kind;
     filter->transfer_scalars = FVIZ_TRUE;
     if (fviz_internal_algorithm_initialize(&filter->base, 1u, 1u, fviz_filter_execute_algorithm) != FVIZ_OK ||
-        fviz_internal_algorithm_configure_input_port(
-            &filter->base, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
-        fviz_internal_algorithm_configure_output_port(
-            &filter->base,
-            0u,
-            fviz_filter_kind_output_type(kind) == FVIZ_FILTER_OUTPUT_POLY_DATA
-                ? FVIZ_TYPE_POLY_DATA
-                : FVIZ_TYPE_UNSTRUCTURED_GRID) != FVIZ_OK)
+        fviz_internal_algorithm_configure_input_port(&filter->base, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID, FVIZ_FALSE,
+                                                     FVIZ_FALSE) != FVIZ_OK ||
+        fviz_internal_algorithm_configure_output_port(&filter->base, 0u,
+                                                      fviz_filter_kind_output_type(kind) == FVIZ_FILTER_OUTPUT_POLY_DATA
+                                                          ? FVIZ_TYPE_POLY_DATA
+                                                          : FVIZ_TYPE_UNSTRUCTURED_GRID) != FVIZ_OK)
     {
         fviz_release(filter);
         return fviz_last_error_code();
@@ -104,10 +88,7 @@ static FVizResult fviz_filter_create_internal(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_filter_require_kind(
-    FVizFilter* filter,
-    FVizFilterKind expected,
-    const char* message)
+static FVizResult fviz_filter_require_kind(FVizFilter* filter, FVizFilterKind expected, const char* message)
 {
     if (filter == NULL || filter->kind != expected)
     {
@@ -117,11 +98,8 @@ static FVizResult fviz_filter_require_kind(
     return FVIZ_OK;
 }
 
-FVizResult fviz_threshold_filter_create(
-    const char* scalar_name,
-    double minimum,
-    double maximum,
-    FVizFilter** out_filter)
+FVizResult fviz_threshold_filter_create(const char* scalar_name, double minimum, double maximum,
+                                        FVizFilter** out_filter)
 {
     FVizFilter* filter;
     if (scalar_name == NULL || scalar_name[0] == '\0' || minimum > maximum)
@@ -138,10 +116,7 @@ FVizResult fviz_threshold_filter_create(
     return FVIZ_OK;
 }
 
-FVizResult fviz_warp_filter_create(
-    const char* vector_name,
-    double scale,
-    FVizFilter** out_filter)
+FVizResult fviz_warp_filter_create(const char* vector_name, double scale, FVizFilter** out_filter)
 {
     FVizFilter* filter;
     if (vector_name == NULL || vector_name[0] == '\0')
@@ -164,10 +139,8 @@ FVizResult fviz_cell_data_to_point_filter_create(FVizFilter** out_filter)
 
 FVizResult fviz_surface_filter_create(FVizBool transfer_scalars, FVizFilter** out_filter)
 {
-    FVizResult result = fviz_filter_create_internal(
-        FVIZ_FILTER_SURFACE, &g_fviz_surface_filter_class, out_filter);
-    if (result == FVIZ_OK)
-        (*out_filter)->transfer_scalars = transfer_scalars != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    FVizResult result = fviz_filter_create_internal(FVIZ_FILTER_SURFACE, &g_fviz_surface_filter_class, out_filter);
+    if (result == FVIZ_OK) (*out_filter)->transfer_scalars = transfer_scalars != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
     return result;
 }
 
@@ -192,8 +165,7 @@ FVizResult fviz_transform_filter_create(FVizTransform* transform, FVizFilter** o
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "transform must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    result = fviz_filter_create_internal(
-        FVIZ_FILTER_TRANSFORM, &g_fviz_transform_filter_class, out_filter);
+    result = fviz_filter_create_internal(FVIZ_FILTER_TRANSFORM, &g_fviz_transform_filter_class, out_filter);
     if (result != FVIZ_OK) return result;
     if (fviz_retain(transform) == NULL)
     {
@@ -315,8 +287,7 @@ FVizResult fviz_filter_set_input(FVizFilter* filter, const FVizUnstructuredGrid*
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "filter and input must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    return fviz_algorithm_set_input_data(
-        &filter->base, 0u, (FVizDataObject*)(FVizUnstructuredGrid*)input);
+    return fviz_algorithm_set_input_data(&filter->base, 0u, (FVizDataObject*)(FVizUnstructuredGrid*)input);
 }
 
 FVizResult fviz_filter_set_input_connection(FVizFilter* filter, FVizFilter* upstream)
@@ -326,19 +297,16 @@ FVizResult fviz_filter_set_input_connection(FVizFilter* filter, FVizFilter* upst
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "filter and upstream must not be NULL");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    return fviz_algorithm_set_input_connection(
-        &filter->base, 0u, fviz_algorithm_output_port(&upstream->base, 0u));
+    return fviz_algorithm_set_input_connection(&filter->base, 0u, fviz_algorithm_output_port(&upstream->base, 0u));
 }
 
 FVizFilter* fviz_filter_input_connection(FVizFilter* filter)
 {
-    FVizAlgorithmOutput* output = filter != NULL
-        ? fviz_algorithm_input_connection(&filter->base, 0u, 0u)
-        : NULL;
+    FVizAlgorithmOutput* output = filter != NULL ? fviz_algorithm_input_connection(&filter->base, 0u, 0u) : NULL;
     FVizAlgorithm* producer = fviz_algorithm_output_producer(output);
     return producer != NULL && fviz_object_is_type((const FVizObject*)producer, FVIZ_TYPE_FILTER)
-        ? (FVizFilter*)producer
-        : NULL;
+               ? (FVizFilter*)producer
+               : NULL;
 }
 
 FVizAlgorithm* fviz_filter_algorithm(FVizFilter* filter)
@@ -353,55 +321,51 @@ FVizAlgorithmOutput* fviz_filter_output_port(FVizFilter* filter)
 
 const FVizUnstructuredGrid* fviz_filter_const_input(const FVizFilter* filter)
 {
-    return filter != NULL
-        ? (const FVizUnstructuredGrid*)fviz_algorithm_input_data(&filter->base, 0u)
-        : NULL;
+    return filter != NULL ? (const FVizUnstructuredGrid*)fviz_algorithm_input_data(&filter->base, 0u) : NULL;
 }
 
 FVizFilterOutputType fviz_filter_output_type(const FVizFilter* filter)
 {
-    return filter != NULL
-        ? fviz_filter_kind_output_type(filter->kind)
-        : FVIZ_FILTER_OUTPUT_NONE;
+    return filter != NULL ? fviz_filter_kind_output_type(filter->kind) : FVIZ_FILTER_OUTPUT_NONE;
 }
 
 FVizUnstructuredGrid* fviz_filter_output(FVizFilter* filter)
 {
     return filter != NULL && fviz_filter_output_type(filter) == FVIZ_FILTER_OUTPUT_UNSTRUCTURED_GRID
-        ? (FVizUnstructuredGrid*)fviz_algorithm_output_data(&filter->base, 0u) : NULL;
+               ? (FVizUnstructuredGrid*)fviz_algorithm_output_data(&filter->base, 0u)
+               : NULL;
 }
 
 FVizPolyData* fviz_filter_poly_data_output(FVizFilter* filter)
 {
     return filter != NULL && fviz_filter_output_type(filter) == FVIZ_FILTER_OUTPUT_POLY_DATA
-        ? (FVizPolyData*)fviz_algorithm_output_data(&filter->base, 0u) : NULL;
+               ? (FVizPolyData*)fviz_algorithm_output_data(&filter->base, 0u)
+               : NULL;
 }
 
 static FVizResult fviz_filter_execute_algorithm(FVizAlgorithm* algorithm)
 {
     FVizFilter* filter = (FVizFilter*)algorithm;
-    FVizUnstructuredGrid* input =
-        (FVizUnstructuredGrid*)fviz_internal_algorithm_resolved_input(algorithm, 0u, 0u);
+    FVizUnstructuredGrid* input = (FVizUnstructuredGrid*)fviz_internal_algorithm_resolved_input(algorithm, 0u, 0u);
     FVizUnstructuredGrid* grid_result = NULL;
     FVizPolyData* poly_result = NULL;
     FVizResult status;
     switch (filter->kind)
     {
         case FVIZ_FILTER_THRESHOLD:
-            status = fviz_unstructured_grid_threshold_cells(
-                input, filter->scalar_name, filter->minimum, filter->maximum, &grid_result);
+            status = fviz_unstructured_grid_threshold_cells(input, filter->scalar_name, filter->minimum,
+                                                            filter->maximum, &grid_result);
             break;
         case FVIZ_FILTER_WARP:
-            status = fviz_unstructured_grid_warp_by_vector(
-                input, filter->vector_name, filter->scale, &grid_result);
+            status = fviz_unstructured_grid_warp_by_vector(input, filter->vector_name, filter->scale, &grid_result);
             break;
         case FVIZ_FILTER_CELL_TO_POINT:
             status = fviz_unstructured_grid_cell_data_to_point_data(input, &grid_result);
             break;
         case FVIZ_FILTER_SURFACE:
             status = filter->transfer_scalars == FVIZ_TRUE
-                ? fviz_unstructured_grid_extract_surface_scalars(input, &poly_result)
-                : fviz_unstructured_grid_extract_surface(input, &poly_result);
+                         ? fviz_unstructured_grid_extract_surface_scalars(input, &poly_result)
+                         : fviz_unstructured_grid_extract_surface(input, &poly_result);
             if (status == FVIZ_OK && fviz_poly_data_triangle_count(poly_result) > 0u)
                 status = fviz_poly_data_compute_normals(poly_result);
             break;
@@ -418,11 +382,7 @@ static FVizResult fviz_filter_execute_algorithm(FVizAlgorithm* algorithm)
     if (status == FVIZ_OK)
     {
         status = fviz_internal_algorithm_set_output_data(
-            algorithm,
-            0u,
-            grid_result != NULL
-                ? (FVizDataObject*)grid_result
-                : (FVizDataObject*)poly_result);
+            algorithm, 0u, grid_result != NULL ? (FVizDataObject*)grid_result : (FVizDataObject*)poly_result);
     }
     fviz_release(grid_result);
     fviz_release(poly_result);

@@ -14,13 +14,8 @@
 #include <FViz/Pipeline/FVizExecutivePrivate.h>
 
 static void fviz_executive_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_executive_class = {
-    FVIZ_TYPE_EXECUTIVE,
-    "FVizExecutive",
-    &g_fviz_object_class,
-    fviz_executive_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_executive_class = {FVIZ_TYPE_EXECUTIVE, "FVizExecutive", &g_fviz_object_class,
+                                                       fviz_executive_destroy, NULL};
 
 static FVizAtomicU64 g_fviz_transaction_counter = {0};
 
@@ -62,19 +57,20 @@ static void fviz_dot_append(FVizDotWriter* writer, const char* value)
     writer->length += length;
 }
 
-static uint64_t fviz_execution_visit_hash(
-    FVizAlgorithm* algorithm,
-    uint32_t output_port,
-    FVizMTime input_mtime,
-    FVizMTime algorithm_mtime,
-    uint64_t request_key)
+static uint64_t fviz_execution_visit_hash(FVizAlgorithm* algorithm, uint32_t output_port, FVizMTime input_mtime,
+                                          FVizMTime algorithm_mtime, uint64_t request_key)
 {
     uint64_t hash = (uint64_t)(uintptr_t)algorithm + UINT64_C(0x9E3779B97F4A7C15);
-#define FVIZ_MIX_VISIT(value) do { \
-    hash ^= (uint64_t)(value) + UINT64_C(0x9E3779B97F4A7C15) + (hash << 6) + (hash >> 2); \
-    hash ^= hash >> 30; hash *= UINT64_C(0xBF58476D1CE4E5B9); \
-    hash ^= hash >> 27; hash *= UINT64_C(0x94D049BB133111EB); hash ^= hash >> 31; \
-} while (0)
+#define FVIZ_MIX_VISIT(value)                                                                                          \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        hash ^= (uint64_t)(value) + UINT64_C(0x9E3779B97F4A7C15) + (hash << 6) + (hash >> 2);                          \
+        hash ^= hash >> 30;                                                                                            \
+        hash *= UINT64_C(0xBF58476D1CE4E5B9);                                                                          \
+        hash ^= hash >> 27;                                                                                            \
+        hash *= UINT64_C(0x94D049BB133111EB);                                                                          \
+        hash ^= hash >> 31;                                                                                            \
+    } while (0)
     FVIZ_MIX_VISIT(output_port);
     FVIZ_MIX_VISIT(input_mtime);
     FVIZ_MIX_VISIT(algorithm_mtime);
@@ -83,17 +79,14 @@ static uint64_t fviz_execution_visit_hash(
     return hash;
 }
 
-static FVizBool fviz_execution_visit_matches(
-    const FVizExecutionVisit* visit,
-    FVizAlgorithm* algorithm,
-    uint32_t output_port,
-    FVizMTime input_mtime,
-    FVizMTime algorithm_mtime,
-    uint64_t request_key)
+static FVizBool fviz_execution_visit_matches(const FVizExecutionVisit* visit, FVizAlgorithm* algorithm,
+                                             uint32_t output_port, FVizMTime input_mtime, FVizMTime algorithm_mtime,
+                                             uint64_t request_key)
 {
-    return visit->algorithm == algorithm && visit->output_port == output_port &&
-        visit->input_mtime == input_mtime && visit->algorithm_mtime == algorithm_mtime &&
-        visit->request_key == request_key ? FVIZ_TRUE : FVIZ_FALSE;
+    return visit->algorithm == algorithm && visit->output_port == output_port && visit->input_mtime == input_mtime &&
+                   visit->algorithm_mtime == algorithm_mtime && visit->request_key == request_key
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
 }
 
 static FVizResult fviz_execution_context_rehash(FVizExecutionContext* context, FVizSize new_capacity)
@@ -102,12 +95,11 @@ static FVizResult fviz_execution_context_rehash(FVizExecutionContext* context, F
     uint8_t* states;
     FVizSize slot_bytes;
     FVizSize i;
-    if (fviz_size_multiply(new_capacity, sizeof(*slots), &slot_bytes) != FVIZ_OK)
-        return FVIZ_ERROR_OVERFLOW;
+    if (fviz_size_multiply(new_capacity, sizeof(*slots), &slot_bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
     if (context->arena != NULL)
     {
-        slots = (FVizExecutionVisit*)fviz_arena_allocate(
-            context->arena, slot_bytes, (FVizSize)_Alignof(FVizExecutionVisit));
+        slots = (FVizExecutionVisit*)fviz_arena_allocate(context->arena, slot_bytes,
+                                                         (FVizSize) _Alignof(FVizExecutionVisit));
         states = (uint8_t*)fviz_arena_allocate(context->arena, new_capacity, 1u);
     }
     else
@@ -133,10 +125,11 @@ static FVizResult fviz_execution_context_rehash(FVizExecutionContext* context, F
         if (context->states == NULL || context->states[i] == 0u) continue;
         visit = context->slots[i];
         mask = new_capacity - 1u;
-        slot = (FVizSize)fviz_execution_visit_hash(
-            visit.algorithm, visit.output_port, visit.input_mtime,
-            visit.algorithm_mtime, visit.request_key) & mask;
-        while (states[slot] != 0u) slot = (slot + 1u) & mask;
+        slot = (FVizSize)fviz_execution_visit_hash(visit.algorithm, visit.output_port, visit.input_mtime,
+                                                   visit.algorithm_mtime, visit.request_key) &
+               mask;
+        while (states[slot] != 0u)
+            slot = (slot + 1u) & mask;
         slots[slot] = visit;
         states[slot] = 1u;
     }
@@ -162,38 +155,29 @@ static void fviz_execution_context_destroy(FVizExecutionContext* context)
     (void)memset(context, 0, sizeof(*context));
 }
 
-static FVizBool fviz_execution_context_contains(
-    const FVizExecutionContext* context,
-    FVizAlgorithm* algorithm,
-    uint32_t output_port,
-    FVizMTime input_mtime,
-    FVizMTime algorithm_mtime,
-    uint64_t request_key)
+static FVizBool fviz_execution_context_contains(const FVizExecutionContext* context, FVizAlgorithm* algorithm,
+                                                uint32_t output_port, FVizMTime input_mtime, FVizMTime algorithm_mtime,
+                                                uint64_t request_key)
 {
     FVizSize slot;
     FVizSize mask;
     if (context == NULL || context->capacity == 0u) return FVIZ_FALSE;
     mask = context->capacity - 1u;
-    slot = (FVizSize)fviz_execution_visit_hash(
-        algorithm, output_port, input_mtime, algorithm_mtime, request_key) & mask;
+    slot =
+        (FVizSize)fviz_execution_visit_hash(algorithm, output_port, input_mtime, algorithm_mtime, request_key) & mask;
     while (context->states[slot] != 0u)
     {
-        if (fviz_execution_visit_matches(
-                &context->slots[slot], algorithm, output_port,
-                input_mtime, algorithm_mtime, request_key) != FVIZ_FALSE)
+        if (fviz_execution_visit_matches(&context->slots[slot], algorithm, output_port, input_mtime, algorithm_mtime,
+                                         request_key) != FVIZ_FALSE)
             return FVIZ_TRUE;
         slot = (slot + 1u) & mask;
     }
     return FVIZ_FALSE;
 }
 
-static FVizResult fviz_execution_context_add(
-    FVizExecutionContext* context,
-    FVizAlgorithm* algorithm,
-    uint32_t output_port,
-    FVizMTime input_mtime,
-    FVizMTime algorithm_mtime,
-    uint64_t request_key)
+static FVizResult fviz_execution_context_add(FVizExecutionContext* context, FVizAlgorithm* algorithm,
+                                             uint32_t output_port, FVizMTime input_mtime, FVizMTime algorithm_mtime,
+                                             uint64_t request_key)
 {
     FVizSize slot;
     FVizSize mask;
@@ -203,17 +187,15 @@ static FVizResult fviz_execution_context_add(
     {
         FVizSize new_capacity = context->capacity == 0u ? 64u : context->capacity * 2u;
         if (new_capacity < context->capacity) return FVIZ_ERROR_OVERFLOW;
-        if (fviz_execution_context_rehash(context, new_capacity) != FVIZ_OK)
-            return fviz_last_error_code();
+        if (fviz_execution_context_rehash(context, new_capacity) != FVIZ_OK) return fviz_last_error_code();
     }
     mask = context->capacity - 1u;
-    slot = (FVizSize)fviz_execution_visit_hash(
-        algorithm, output_port, input_mtime, algorithm_mtime, request_key) & mask;
+    slot =
+        (FVizSize)fviz_execution_visit_hash(algorithm, output_port, input_mtime, algorithm_mtime, request_key) & mask;
     while (context->states[slot] != 0u)
     {
-        if (fviz_execution_visit_matches(
-                &context->slots[slot], algorithm, output_port,
-                input_mtime, algorithm_mtime, request_key) != FVIZ_FALSE)
+        if (fviz_execution_visit_matches(&context->slots[slot], algorithm, output_port, input_mtime, algorithm_mtime,
+                                         request_key) != FVIZ_FALSE)
             return FVIZ_OK;
         slot = (slot + 1u) & mask;
     }
@@ -233,14 +215,19 @@ static uint64_t fviz_request_hash(const FVizPipelineRequestInfo* request)
     uint64_t hash = UINT64_C(1469598103934665603);
     uint64_t time_bits = 0u;
     uint32_t i;
-#define FVIZ_HASH_VALUE(value) \
-    do { hash ^= (uint64_t)(value); hash *= UINT64_C(1099511628211); } while (0)
+#define FVIZ_HASH_VALUE(value)                                                                                         \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        hash ^= (uint64_t)(value);                                                                                     \
+        hash *= UINT64_C(1099511628211);                                                                               \
+    } while (0)
     FVIZ_HASH_VALUE(request->requested_output_port);
     FVIZ_HASH_VALUE(request->piece);
     FVIZ_HASH_VALUE(request->number_of_pieces);
     FVIZ_HASH_VALUE(request->ghost_levels);
     FVIZ_HASH_VALUE(request->has_extent);
-    for (i = 0u; i < 6u; ++i) FVIZ_HASH_VALUE((uint64_t)request->extent[i]);
+    for (i = 0u; i < 6u; ++i)
+        FVIZ_HASH_VALUE((uint64_t)request->extent[i]);
     FVIZ_HASH_VALUE(request->has_time);
     (void)memcpy(&time_bits, &request->time, sizeof(time_bits));
     FVIZ_HASH_VALUE(time_bits);
@@ -248,7 +235,6 @@ static uint64_t fviz_request_hash(const FVizPipelineRequestInfo* request)
 #undef FVIZ_HASH_VALUE
     return hash;
 }
-
 
 typedef struct FVizDotTraversal
 {
@@ -285,8 +271,7 @@ static FVizResult fviz_dot_stack_push(FVizDotTraversal* traversal, FVizAlgorithm
         FVizSize capacity = traversal->stack_capacity == 0u ? 64u : traversal->stack_capacity * 2u;
         FVizSize bytes;
         FVizAlgorithm** stack;
-        if (capacity < traversal->stack_capacity ||
-            fviz_size_multiply(capacity, sizeof(*stack), &bytes) != FVIZ_OK)
+        if (capacity < traversal->stack_capacity || fviz_size_multiply(capacity, sizeof(*stack), &bytes) != FVIZ_OK)
             return FVIZ_ERROR_OVERFLOW;
         stack = (FVizAlgorithm**)fviz_realloc(traversal->stack, bytes);
         if (stack == NULL) return FVIZ_ERROR_OUT_OF_MEMORY;
@@ -303,8 +288,7 @@ static FVizResult fviz_dot_visited_rehash(FVizDotTraversal* traversal, FVizSize 
     uint8_t* states;
     FVizSize bytes;
     FVizSize i;
-    if (fviz_size_multiply(capacity, sizeof(*visited), &bytes) != FVIZ_OK)
-        return FVIZ_ERROR_OVERFLOW;
+    if (fviz_size_multiply(capacity, sizeof(*visited), &bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
     visited = (FVizAlgorithm**)fviz_alloc(bytes);
     states = (uint8_t*)fviz_alloc(capacity);
     if (visited == NULL || states == NULL)
@@ -320,7 +304,8 @@ static FVizResult fviz_dot_visited_rehash(FVizDotTraversal* traversal, FVizSize 
         const FVizSize mask = capacity - 1u;
         if (traversal->states == NULL || traversal->states[i] == 0u) continue;
         slot = (FVizSize)fviz_dot_pointer_hash(traversal->visited[i]) & mask;
-        while (states[slot] != 0u) slot = (slot + 1u) & mask;
+        while (states[slot] != 0u)
+            slot = (slot + 1u) & mask;
         visited[slot] = traversal->visited[i];
         states[slot] = 1u;
     }
@@ -332,21 +317,17 @@ static FVizResult fviz_dot_visited_rehash(FVizDotTraversal* traversal, FVizSize 
     return FVIZ_OK;
 }
 
-static FVizResult fviz_dot_mark_visited(
-    FVizDotTraversal* traversal, FVizAlgorithm* algorithm, FVizBool* out_new)
+static FVizResult fviz_dot_mark_visited(FVizDotTraversal* traversal, FVizAlgorithm* algorithm, FVizBool* out_new)
 {
     FVizSize slot;
     FVizSize mask;
     if (out_new == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_new = FVIZ_FALSE;
-    if (traversal->visited_capacity == 0u ||
-        (traversal->visited_count + 1u) * 10u >= traversal->visited_capacity * 7u)
+    if (traversal->visited_capacity == 0u || (traversal->visited_count + 1u) * 10u >= traversal->visited_capacity * 7u)
     {
-        const FVizSize capacity = traversal->visited_capacity == 0u
-            ? 64u : traversal->visited_capacity * 2u;
+        const FVizSize capacity = traversal->visited_capacity == 0u ? 64u : traversal->visited_capacity * 2u;
         if (capacity < traversal->visited_capacity) return FVIZ_ERROR_OVERFLOW;
-        if (fviz_dot_visited_rehash(traversal, capacity) != FVIZ_OK)
-            return fviz_last_error_code();
+        if (fviz_dot_visited_rehash(traversal, capacity) != FVIZ_OK) return fviz_last_error_code();
     }
     mask = traversal->visited_capacity - 1u;
     slot = (FVizSize)fviz_dot_pointer_hash(algorithm) & mask;
@@ -381,26 +362,19 @@ static FVizResult fviz_dot_visit(FVizDotWriter* writer, FVizAlgorithm* root)
         result = fviz_dot_mark_visited(&traversal, algorithm, &is_new);
         if (result != FVIZ_OK) break;
         if (is_new == FVIZ_FALSE) continue;
-        (void)snprintf(
-            line, sizeof(line),
-            "  n%llu [label=\"%s\\nid=%llu in=%u out=%u\\nrequest=%u result=%d\\nexec=%llu cache=%llu",
-            (unsigned long long)algorithm->diagnostic_id,
-            algorithm->base.object_class->type_name,
-            (unsigned long long)algorithm->diagnostic_id,
-            algorithm->input_port_count,
-            algorithm->output_port_count,
-            (unsigned int)algorithm->executive->last_request,
-            (int)algorithm->executive->last_result,
-            (unsigned long long)algorithm->executive->execution_count,
-            (unsigned long long)algorithm->executive->cache_hit_count);
+        (void)snprintf(line, sizeof(line),
+                       "  n%llu [label=\"%s\\nid=%llu in=%u out=%u\\nrequest=%u result=%d\\nexec=%llu cache=%llu",
+                       (unsigned long long)algorithm->diagnostic_id, algorithm->base.object_class->type_name,
+                       (unsigned long long)algorithm->diagnostic_id, algorithm->input_port_count,
+                       algorithm->output_port_count, (unsigned int)algorithm->executive->last_request,
+                       (int)algorithm->executive->last_result,
+                       (unsigned long long)algorithm->executive->execution_count,
+                       (unsigned long long)algorithm->executive->cache_hit_count);
         for (port = 0u; port < algorithm->output_port_count; ++port)
         {
             FVizDataObject* data = algorithm->output_ports[port].data;
-            (void)snprintf(
-                line + strlen(line), sizeof(line) - strlen(line),
-                "\\nout%u=%llu", port,
-                (unsigned long long)(data != NULL
-                    ? fviz_object_mtime((const FVizObject*)data) : 0u));
+            (void)snprintf(line + strlen(line), sizeof(line) - strlen(line), "\\nout%u=%llu", port,
+                           (unsigned long long)(data != NULL ? fviz_object_mtime((const FVizObject*)data) : 0u));
         }
         (void)snprintf(line + strlen(line), sizeof(line) - strlen(line), "\"];\n");
         fviz_dot_append(writer, line);
@@ -410,14 +384,10 @@ static FVizResult fviz_dot_visit(FVizDotWriter* writer, FVizAlgorithm* root)
             FVizAlgorithmInputPort* input = &algorithm->input_ports[port];
             for (i = 0u; i < fviz_array_count(input->connections); ++i)
             {
-                FVizAlgorithmConnection* connection =
-                    (FVizAlgorithmConnection*)fviz_array_at(input->connections, i);
-                (void)snprintf(
-                    line, sizeof(line),
-                    "  n%llu -> n%llu [label=\"out%u -> in%u\"];\n",
-                    (unsigned long long)connection->producer->diagnostic_id,
-                    (unsigned long long)algorithm->diagnostic_id,
-                    connection->output_port, port);
+                FVizAlgorithmConnection* connection = (FVizAlgorithmConnection*)fviz_array_at(input->connections, i);
+                (void)snprintf(line, sizeof(line), "  n%llu -> n%llu [label=\"out%u -> in%u\"];\n",
+                               (unsigned long long)connection->producer->diagnostic_id,
+                               (unsigned long long)algorithm->diagnostic_id, connection->output_port, port);
                 fviz_dot_append(writer, line);
                 result = fviz_dot_stack_push(&traversal, connection->producer);
                 if (result != FVIZ_OK) break;
@@ -439,7 +409,6 @@ void fviz_pipeline_request_initialize(FVizPipelineRequestInfo* request)
     request->number_of_pieces = 1u;
 }
 
-
 FVizResult fviz_pipeline_request_set_time(FVizPipelineRequestInfo* request, double time)
 {
     if (request == NULL || !isfinite(time))
@@ -459,8 +428,8 @@ void fviz_pipeline_request_clear_time(FVizPipelineRequestInfo* request)
     request->time = 0.0;
 }
 
-FVizResult fviz_pipeline_request_set_piece(
-    FVizPipelineRequestInfo* request, uint32_t piece, uint32_t number_of_pieces, uint32_t ghost_levels)
+FVizResult fviz_pipeline_request_set_piece(FVizPipelineRequestInfo* request, uint32_t piece, uint32_t number_of_pieces,
+                                           uint32_t ghost_levels)
 {
     if (request == NULL || number_of_pieces == 0u || piece >= number_of_pieces)
     {
@@ -473,8 +442,7 @@ FVizResult fviz_pipeline_request_set_piece(
     return FVIZ_OK;
 }
 
-FVizResult fviz_pipeline_request_set_extent(
-    FVizPipelineRequestInfo* request, const int64_t extent[6])
+FVizResult fviz_pipeline_request_set_extent(FVizPipelineRequestInfo* request, const int64_t extent[6])
 {
     uint32_t axis;
     if (request == NULL || extent == NULL)
@@ -502,26 +470,26 @@ void fviz_pipeline_request_clear_extent(FVizPipelineRequestInfo* request)
     (void)memset(request->extent, 0, sizeof(request->extent));
 }
 
-static FVizResult fviz_executive_inherit_time_metadata(FVizAlgorithm* algorithm,uint32_t output_port)
+static FVizResult fviz_executive_inherit_time_metadata(FVizAlgorithm* algorithm, uint32_t output_port)
 {
     FVizAlgorithmConnection* inherited = NULL;
     uint32_t port;
-    for (port=0u;port<algorithm->input_port_count;++port)
+    for (port = 0u; port < algorithm->input_port_count; ++port)
     {
-        FVizAlgorithmInputPort* input=&algorithm->input_ports[port];
+        FVizAlgorithmInputPort* input = &algorithm->input_ports[port];
         FVizSize i;
-        for (i=0u;i<fviz_array_count(input->connections);++i)
+        for (i = 0u; i < fviz_array_count(input->connections); ++i)
         {
-            FVizAlgorithmConnection* connection=(FVizAlgorithmConnection*)fviz_array_at(input->connections,i);
-            if (inherited!=NULL) return FVIZ_OK; /* Ambiguous multi-source time domain: do not guess. */
-            inherited=connection;
+            FVizAlgorithmConnection* connection = (FVizAlgorithmConnection*)fviz_array_at(input->connections, i);
+            if (inherited != NULL) return FVIZ_OK; /* Ambiguous multi-source time domain: do not guess. */
+            inherited = connection;
         }
     }
-    if (inherited!=NULL)
+    if (inherited != NULL)
     {
-        FVizSize count=0u;
-        const double* steps=fviz_algorithm_output_time_steps(inherited->producer,inherited->output_port,&count);
-        return fviz_algorithm_set_output_time_steps(algorithm,output_port,steps,count);
+        FVizSize count = 0u;
+        const double* steps = fviz_algorithm_output_time_steps(inherited->producer, inherited->output_port, &count);
+        return fviz_algorithm_set_output_time_steps(algorithm, output_port, steps, count);
     }
     return FVIZ_OK;
 }
@@ -557,8 +525,7 @@ typedef struct FVizExecutiveFrameStack
     FVizSize capacity;
 } FVizExecutiveFrameStack;
 
-static FVizResult fviz_executive_frame_stack_reserve(
-    FVizExecutiveFrameStack* stack, FVizSize minimum_capacity)
+static FVizResult fviz_executive_frame_stack_reserve(FVizExecutiveFrameStack* stack, FVizSize minimum_capacity)
 {
     FVizExecutiveFrame* frames;
     FVizSize capacity;
@@ -574,11 +541,9 @@ static FVizResult fviz_executive_frame_stack_reserve(
         }
         capacity *= 2u;
     }
-    if (fviz_size_multiply(capacity, sizeof(*frames), &bytes) != FVIZ_OK)
-        return FVIZ_ERROR_OVERFLOW;
+    if (fviz_size_multiply(capacity, sizeof(*frames), &bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
     if (stack->arena != NULL)
-        frames = (FVizExecutiveFrame*)fviz_arena_allocate(
-            stack->arena, bytes, (FVizSize)_Alignof(FVizExecutiveFrame));
+        frames = (FVizExecutiveFrame*)fviz_arena_allocate(stack->arena, bytes, (FVizSize) _Alignof(FVizExecutiveFrame));
     else
         frames = (FVizExecutiveFrame*)fviz_alloc(bytes);
     if (frames == NULL) return fviz_last_error_code();
@@ -590,10 +555,8 @@ static FVizResult fviz_executive_frame_stack_reserve(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_executive_frame_stack_push(
-    FVizExecutiveFrameStack* stack,
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request)
+static FVizResult fviz_executive_frame_stack_push(FVizExecutiveFrameStack* stack, FVizAlgorithm* algorithm,
+                                                  const FVizPipelineRequestInfo* request)
 {
     FVizExecutiveFrame* frame;
     FVizResult result;
@@ -614,8 +577,7 @@ static void fviz_executive_frame_stack_destroy(FVizExecutiveFrameStack* stack)
     (void)memset(stack, 0, sizeof(*stack));
 }
 
-static void fviz_executive_unwind_frames(
-    FVizExecutiveFrameStack* stack, FVizResult result)
+static void fviz_executive_unwind_frames(FVizExecutiveFrameStack* stack, FVizResult result)
 {
     while (stack != NULL && stack->count != 0u)
     {
@@ -627,18 +589,12 @@ static void fviz_executive_unwind_frames(
     }
 }
 
-static FVizResult fviz_executive_execute_algorithm(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* root_request,
-    FVizExecutionContext* context,
-    FVizBool* out_root_executed)
+static FVizResult fviz_executive_execute_algorithm(FVizAlgorithm* algorithm,
+                                                   const FVizPipelineRequestInfo* root_request,
+                                                   FVizExecutionContext* context, FVizBool* out_root_executed)
 {
-    static const FVizPipelineRequest stages[] = {
-        FVIZ_PIPELINE_REQUEST_INFORMATION,
-        FVIZ_PIPELINE_REQUEST_DATA_OBJECT,
-        FVIZ_PIPELINE_REQUEST_UPDATE_EXTENT,
-        FVIZ_PIPELINE_REQUEST_DATA
-    };
+    static const FVizPipelineRequest stages[] = {FVIZ_PIPELINE_REQUEST_INFORMATION, FVIZ_PIPELINE_REQUEST_DATA_OBJECT,
+                                                 FVIZ_PIPELINE_REQUEST_UPDATE_EXTENT, FVIZ_PIPELINE_REQUEST_DATA};
     FVizExecutiveFrameStack stack;
     FVizResult result;
     FVizBool root_executed = FVIZ_FALSE;
@@ -681,18 +637,17 @@ static FVizResult fviz_executive_execute_algorithm(
             frame->request_key = fviz_request_hash(&frame->request);
             frame->algorithm_mtime = fviz_object_mtime((const FVizObject*)current);
             if (current->output_ports[frame->request.requested_output_port].updated == FVIZ_TRUE &&
-                current->output_ports[frame->request.requested_output_port].last_algorithm_mtime == frame->algorithm_mtime &&
+                current->output_ports[frame->request.requested_output_port].last_algorithm_mtime ==
+                    frame->algorithm_mtime &&
                 current->output_ports[frame->request.requested_output_port].last_request_key == frame->request_key)
             {
-                frame->input_mtime =
-                    current->output_ports[frame->request.requested_output_port].last_input_mtime;
-                if (fviz_execution_context_contains(
-                        context, current, frame->request.requested_output_port,
-                        frame->input_mtime, frame->algorithm_mtime, frame->request_key) == FVIZ_FALSE)
+                frame->input_mtime = current->output_ports[frame->request.requested_output_port].last_input_mtime;
+                if (fviz_execution_context_contains(context, current, frame->request.requested_output_port,
+                                                    frame->input_mtime, frame->algorithm_mtime,
+                                                    frame->request_key) == FVIZ_FALSE)
                 {
-                    result = fviz_execution_context_add(
-                        context, current, frame->request.requested_output_port,
-                        frame->input_mtime, frame->algorithm_mtime, frame->request_key);
+                    result = fviz_execution_context_add(context, current, frame->request.requested_output_port,
+                                                        frame->input_mtime, frame->algorithm_mtime, frame->request_key);
                     if (result != FVIZ_OK) goto failed;
                 }
                 if (stack.count == 1u) root_executed = FVIZ_FALSE;
@@ -717,11 +672,10 @@ static FVizResult fviz_executive_execute_algorithm(
                 const FVizSize connection_count = fviz_array_count(input->connections);
                 if (frame->port_initialized == FVIZ_FALSE)
                 {
-                    if (input->direct_data == NULL && connection_count == 0u &&
-                        input->info.optional == FVIZ_FALSE)
+                    if (input->direct_data == NULL && connection_count == 0u && input->info.optional == FVIZ_FALSE)
                     {
-                        fviz_internal_set_error(
-                            FVIZ_ERROR_INVALID_STATE, "required algorithm input port is not connected");
+                        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+                                                "required algorithm input port is not connected");
                         result = FVIZ_ERROR_INVALID_STATE;
                         goto failed;
                     }
@@ -735,18 +689,17 @@ static FVizResult fviz_executive_execute_algorithm(
                 }
                 if (frame->connection_index < connection_count)
                 {
-                    FVizAlgorithmConnection* connection = (FVizAlgorithmConnection*)fviz_array_at(
-                        input->connections, frame->connection_index);
+                    FVizAlgorithmConnection* connection =
+                        (FVizAlgorithmConnection*)fviz_array_at(input->connections, frame->connection_index);
                     FVizPipelineRequestInfo upstream_request;
-                    result = fviz_internal_algorithm_map_input_request(
-                        current, frame->input_port, (uint32_t)frame->connection_index,
-                        &frame->request, &upstream_request);
+                    result = fviz_internal_algorithm_map_input_request(current, frame->input_port,
+                                                                       (uint32_t)frame->connection_index,
+                                                                       &frame->request, &upstream_request);
                     if (result != FVIZ_OK) goto failed;
                     upstream_request.requested_output_port = connection->output_port;
                     upstream_request.transaction_id = frame->request.transaction_id;
                     frame->phase = FVIZ_EXEC_FRAME_AFTER_CHILD;
-                    result = fviz_executive_frame_stack_push(
-                        &stack, connection->producer, &upstream_request);
+                    result = fviz_executive_frame_stack_push(&stack, connection->producer, &upstream_request);
                     if (result != FVIZ_OK) goto failed;
                     pushed_child = FVIZ_TRUE;
                     break;
@@ -762,13 +715,12 @@ static FVizResult fviz_executive_execute_algorithm(
         if (frame->phase == FVIZ_EXEC_FRAME_AFTER_CHILD)
         {
             FVizAlgorithmInputPort* input = &current->input_ports[frame->input_port];
-            FVizDataObject* data = fviz_internal_algorithm_resolved_input(
-                current, frame->input_port, (uint32_t)frame->connection_index);
+            FVizDataObject* data =
+                fviz_internal_algorithm_resolved_input(current, frame->input_port, (uint32_t)frame->connection_index);
             (void)input;
             if (data == NULL)
             {
-                fviz_internal_set_error(
-                    FVIZ_ERROR_INVALID_STATE, "upstream algorithm produced no requested data");
+                fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "upstream algorithm produced no requested data");
                 result = FVIZ_ERROR_INVALID_STATE;
                 goto failed;
             }
@@ -786,34 +738,35 @@ static FVizResult fviz_executive_execute_algorithm(
             FVizBool will_execute;
             uint32_t stage;
             will_execute = current->output_ports[frame->request.requested_output_port].updated == FVIZ_TRUE &&
-                current->output_ports[frame->request.requested_output_port].last_input_mtime == frame->input_mtime &&
-                current->output_ports[frame->request.requested_output_port].last_algorithm_mtime == frame->algorithm_mtime &&
-                current->output_ports[frame->request.requested_output_port].last_request_key == frame->request_key
-                ? FVIZ_FALSE : FVIZ_TRUE;
-            if (fviz_execution_context_contains(
-                    context, current, frame->request.requested_output_port,
-                    frame->input_mtime, frame->algorithm_mtime, frame->request_key) != FVIZ_FALSE)
+                                   current->output_ports[frame->request.requested_output_port].last_input_mtime ==
+                                       frame->input_mtime &&
+                                   current->output_ports[frame->request.requested_output_port].last_algorithm_mtime ==
+                                       frame->algorithm_mtime &&
+                                   current->output_ports[frame->request.requested_output_port].last_request_key ==
+                                       frame->request_key
+                               ? FVIZ_FALSE
+                               : FVIZ_TRUE;
+            if (fviz_execution_context_contains(context, current, frame->request.requested_output_port,
+                                                frame->input_mtime, frame->algorithm_mtime,
+                                                frame->request_key) != FVIZ_FALSE)
             {
                 frame->executed = FVIZ_FALSE;
             }
             else if (will_execute == FVIZ_FALSE)
             {
                 frame->executed = FVIZ_FALSE;
-                result = fviz_execution_context_add(
-                    context, current, frame->request.requested_output_port,
-                    frame->input_mtime, frame->algorithm_mtime, frame->request_key);
+                result = fviz_execution_context_add(context, current, frame->request.requested_output_port,
+                                                    frame->input_mtime, frame->algorithm_mtime, frame->request_key);
                 if (result != FVIZ_OK) goto failed;
             }
             else
             {
                 frame->start_event_emitted = FVIZ_TRUE;
-                if (fviz_object_invoke_event(
-                        (FVizObject*)current, FVIZ_EVENT_START, &frame->request) != FVIZ_FALSE)
+                if (fviz_object_invoke_event((FVizObject*)current, FVIZ_EVENT_START, &frame->request) != FVIZ_FALSE)
                     fviz_algorithm_request_abort(current);
                 if (fviz_algorithm_report_progress(current, 0.0) != FVIZ_OK)
                 {
-                    fviz_internal_set_error(
-                        FVIZ_ERROR_BUSY, "pipeline update cancelled before execution");
+                    fviz_internal_set_error(FVIZ_ERROR_BUSY, "pipeline update cancelled before execution");
                     result = FVIZ_ERROR_BUSY;
                     goto failed;
                 }
@@ -823,35 +776,30 @@ static FVizResult fviz_executive_execute_algorithm(
                     if (frame->request.cancellation != NULL &&
                         fviz_cancellation_token_is_cancelled(frame->request.cancellation) != FVIZ_FALSE)
                     {
-                        fviz_internal_set_error(
-                            FVIZ_ERROR_CANCELLED, "pipeline request was cancelled during execution");
+                        fviz_internal_set_error(FVIZ_ERROR_CANCELLED,
+                                                "pipeline request was cancelled during execution");
                         result = FVIZ_ERROR_CANCELLED;
                         goto failed;
                     }
                     frame->request.type = stages[stage];
                     if (frame->request.type == FVIZ_PIPELINE_REQUEST_INFORMATION &&
-                        fviz_executive_inherit_time_metadata(
-                            current, frame->request.requested_output_port) != FVIZ_OK)
+                        fviz_executive_inherit_time_metadata(current, frame->request.requested_output_port) != FVIZ_OK)
                     {
                         result = fviz_last_error_code();
                         goto failed;
                     }
-                    result = fviz_internal_algorithm_process_request(
-                        current, &frame->request, frame->input_mtime,
-                        frame->request_key, &frame->executed);
+                    result = fviz_internal_algorithm_process_request(current, &frame->request, frame->input_mtime,
+                                                                     frame->request_key, &frame->executed);
                     if (result != FVIZ_OK) goto failed;
                 }
-                if (frame->executed != FVIZ_FALSE &&
-                    fviz_algorithm_report_progress(current, 1.0) != FVIZ_OK)
+                if (frame->executed != FVIZ_FALSE && fviz_algorithm_report_progress(current, 1.0) != FVIZ_OK)
                 {
-                    fviz_internal_set_error(
-                        FVIZ_ERROR_BUSY, "pipeline update cancelled during publication");
+                    fviz_internal_set_error(FVIZ_ERROR_BUSY, "pipeline update cancelled during publication");
                     result = FVIZ_ERROR_BUSY;
                     goto failed;
                 }
-                result = fviz_execution_context_add(
-                    context, current, frame->request.requested_output_port,
-                    frame->input_mtime, frame->algorithm_mtime, frame->request_key);
+                result = fviz_execution_context_add(context, current, frame->request.requested_output_port,
+                                                    frame->input_mtime, frame->algorithm_mtime, frame->request_key);
                 if (result != FVIZ_OK) goto failed;
             }
 
@@ -873,6 +821,7 @@ failed:
     fviz_executive_frame_stack_destroy(&stack);
     return result;
 }
+
 static void fviz_executive_destroy(FVizObject* object)
 {
     FVizExecutive* executive = (FVizExecutive*)object;
@@ -881,9 +830,7 @@ static void fviz_executive_destroy(FVizObject* object)
     executive->algorithm = NULL;
 }
 
-FVizResult fviz_internal_executive_create(
-    FVizAlgorithm* algorithm,
-    FVizExecutive** out_executive)
+FVizResult fviz_internal_executive_create(FVizAlgorithm* algorithm, FVizExecutive** out_executive)
 {
     FVizExecutive* executive;
     if (algorithm == NULL || out_executive == NULL)
@@ -892,8 +839,7 @@ FVizResult fviz_internal_executive_create(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_executive = NULL;
-    executive = (FVizExecutive*)fviz_internal_object_allocate(
-        sizeof(FVizExecutive), &g_fviz_executive_class, NULL);
+    executive = (FVizExecutive*)fviz_internal_object_allocate(sizeof(FVizExecutive), &g_fviz_executive_class, NULL);
     if (executive == NULL) return fviz_last_error_code();
     executive->algorithm = algorithm;
     executive->last_result = FVIZ_OK;
@@ -919,16 +865,14 @@ FVizResult fviz_executive_update(FVizExecutive* executive, uint32_t output_port)
     return fviz_executive_update_request(executive, &request);
 }
 
-FVizResult fviz_executive_update_request(
-    FVizExecutive* executive,
-    const FVizPipelineRequestInfo* requested)
+FVizResult fviz_executive_update_request(FVizExecutive* executive, const FVizPipelineRequestInfo* requested)
 {
     FVizPipelineRequestInfo request;
     FVizResult result;
     FVizBool executed = FVIZ_FALSE;
     FVizExecutionContext context;
-    if (executive == NULL || executive->algorithm == NULL ||
-        requested == NULL || requested->struct_size < sizeof(FVizPipelineRequestInfo) ||
+    if (executive == NULL || executive->algorithm == NULL || requested == NULL ||
+        requested->struct_size < sizeof(FVizPipelineRequestInfo) ||
         requested->requested_output_port >= executive->algorithm->output_port_count ||
         requested->number_of_pieces == 0u || requested->piece >= requested->number_of_pieces)
     {
@@ -947,8 +891,7 @@ FVizResult fviz_executive_update_request(
     executive->last_result = result;
     if (result == FVIZ_OK)
     {
-        if (executed == FVIZ_TRUE)
-            ++executive->execution_count;
+        if (executed == FVIZ_TRUE) ++executive->execution_count;
         else
             ++executive->cache_hit_count;
     }
@@ -960,11 +903,8 @@ uint64_t fviz_executive_last_transaction_id(const FVizExecutive* executive)
     return executive != NULL ? executive->last_transaction_id : 0u;
 }
 
-FVizResult fviz_executive_write_dot(
-    const FVizExecutive* executive,
-    char* text,
-    FVizSize capacity,
-    FVizSize* out_required_size)
+FVizResult fviz_executive_write_dot(const FVizExecutive* executive, char* text, FVizSize capacity,
+                                    FVizSize* out_required_size)
 {
     FVizDotWriter writer;
     if (executive == NULL || executive->algorithm == NULL || out_required_size == NULL ||
@@ -1020,9 +960,8 @@ void fviz_executive_reset_statistics(FVizExecutive* executive)
     executive->cache_hit_count = 0u;
 }
 
-FVizResult fviz_executive_update_piece(
-    FVizExecutive* executive, uint32_t output_port,
-    uint32_t piece, uint32_t number_of_pieces, uint32_t ghost_levels)
+FVizResult fviz_executive_update_piece(FVizExecutive* executive, uint32_t output_port, uint32_t piece,
+                                       uint32_t number_of_pieces, uint32_t ghost_levels)
 {
     FVizPipelineRequestInfo request;
     fviz_pipeline_request_initialize(&request);
@@ -1032,27 +971,22 @@ FVizResult fviz_executive_update_piece(
     return fviz_executive_update_request(executive, &request);
 }
 
-FVizResult fviz_executive_update_extent(
-    FVizExecutive* executive, uint32_t output_port,
-    const int64_t extent[6], uint32_t ghost_levels)
+FVizResult fviz_executive_update_extent(FVizExecutive* executive, uint32_t output_port, const int64_t extent[6],
+                                        uint32_t ghost_levels)
 {
     FVizPipelineRequestInfo request;
     fviz_pipeline_request_initialize(&request);
     request.requested_output_port = output_port;
     request.ghost_levels = ghost_levels;
-    if (fviz_pipeline_request_set_extent(&request, extent) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_pipeline_request_set_extent(&request, extent) != FVIZ_OK) return fviz_last_error_code();
     return fviz_executive_update_request(executive, &request);
 }
 
-FVizResult fviz_executive_update_time(
-    FVizExecutive* executive, uint32_t output_port, double time)
+FVizResult fviz_executive_update_time(FVizExecutive* executive, uint32_t output_port, double time)
 {
     FVizPipelineRequestInfo request;
     fviz_pipeline_request_initialize(&request);
     request.requested_output_port = output_port;
-    if (fviz_pipeline_request_set_time(&request, time) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_pipeline_request_set_time(&request, time) != FVIZ_OK) return fviz_last_error_code();
     return fviz_executive_update_request(executive, &request);
 }
-

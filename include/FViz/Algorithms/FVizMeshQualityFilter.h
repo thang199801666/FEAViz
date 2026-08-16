@@ -25,25 +25,19 @@ typedef struct FVizMeshQualityFilter FVizMeshQualityFilter;
 
 /* Computes one Float64 quality value per cell. Unsupported metric/cell combinations
  * produce NaN rather than dropping cells, preserving tuple correspondence. */
-FVIZ_API FVizResult fviz_mesh_quality_compute(
-    const FVizUnstructuredGrid* input,
-    FVizMeshQualityMetric metric,
-    FVizDataArray** out_quality);
+FVIZ_API FVizResult fviz_mesh_quality_compute(const FVizUnstructuredGrid* input, FVizMeshQualityMetric metric,
+                                              FVizDataArray** out_quality);
 FVIZ_API const char* fviz_mesh_quality_metric_name(FVizMeshQualityMetric metric);
 
 FVIZ_API FVizResult fviz_mesh_quality_filter_create(FVizMeshQualityFilter** out_filter);
-FVIZ_API FVizResult fviz_mesh_quality_filter_set_input_data(
-    FVizMeshQualityFilter* filter, FVizUnstructuredGrid* input);
-FVIZ_API FVizResult fviz_mesh_quality_filter_set_input_connection(
-    FVizMeshQualityFilter* filter, FVizAlgorithmOutput* input);
-FVIZ_API void fviz_mesh_quality_filter_set_metric(
-    FVizMeshQualityFilter* filter, FVizMeshQualityMetric metric);
+FVIZ_API FVizResult fviz_mesh_quality_filter_set_input_data(FVizMeshQualityFilter* filter, FVizUnstructuredGrid* input);
+FVIZ_API FVizResult fviz_mesh_quality_filter_set_input_connection(FVizMeshQualityFilter* filter,
+                                                                  FVizAlgorithmOutput* input);
+FVIZ_API void fviz_mesh_quality_filter_set_metric(FVizMeshQualityFilter* filter, FVizMeshQualityMetric metric);
 FVIZ_API FVizMeshQualityMetric fviz_mesh_quality_filter_metric(const FVizMeshQualityFilter* filter);
-FVIZ_API FVizResult fviz_mesh_quality_filter_set_result_name(
-    FVizMeshQualityFilter* filter, const char* name);
+FVIZ_API FVizResult fviz_mesh_quality_filter_set_result_name(FVizMeshQualityFilter* filter, const char* name);
 FVIZ_API const char* fviz_mesh_quality_filter_result_name(const FVizMeshQualityFilter* filter);
-FVIZ_API void fviz_mesh_quality_filter_set_result_as_active_scalars(
-    FVizMeshQualityFilter* filter, FVizBool enabled);
+FVIZ_API void fviz_mesh_quality_filter_set_result_as_active_scalars(FVizMeshQualityFilter* filter, FVizBool enabled);
 FVIZ_API FVizAlgorithm* fviz_mesh_quality_filter_algorithm(FVizMeshQualityFilter* filter);
 FVIZ_API FVizAlgorithmOutput* fviz_mesh_quality_filter_output_port(FVizMeshQualityFilter* filter);
 FVIZ_API FVizUnstructuredGrid* fviz_mesh_quality_filter_output(FVizMeshQualityFilter* filter);

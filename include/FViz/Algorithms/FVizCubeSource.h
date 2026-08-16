@@ -18,11 +18,8 @@ typedef struct FVizCubeSource FVizCubeSource;
 
 FVIZ_API FVizResult fviz_cube_source_create(FVizCubeSource** out_source);
 FVIZ_API void fviz_cube_source_set_center(FVizCubeSource* source, FVizVec3 center);
-FVIZ_API FVizResult fviz_cube_source_set_lengths(
-    FVizCubeSource* source,
-    double x_length,
-    double y_length,
-    double z_length);
+FVIZ_API FVizResult fviz_cube_source_set_lengths(FVizCubeSource* source, double x_length, double y_length,
+                                                 double z_length);
 FVIZ_API FVizResult fviz_cube_source_set_bounds(FVizCubeSource* source, FVizBounds bounds);
 FVIZ_API FVizVec3 fviz_cube_source_center(const FVizCubeSource* source);
 FVIZ_API double fviz_cube_source_x_length(const FVizCubeSource* source);

@@ -50,30 +50,21 @@ static void fviz_unstructured_piece_destroy(FVizObject* object)
     filter->algorithm = NULL;
 }
 
-static const FVizObjectClass g_fviz_unstructured_piece_class = {
-    FVIZ_TYPE_UNSTRUCTURED_GRID_PIECE_FILTER,
-    "FVizUnstructuredGridPieceFilter",
-    &g_fviz_object_class,
-    fviz_unstructured_piece_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_unstructured_piece_class = {FVIZ_TYPE_UNSTRUCTURED_GRID_PIECE_FILTER,
+                                                                "FVizUnstructuredGridPieceFilter", &g_fviz_object_class,
+                                                                fviz_unstructured_piece_destroy, NULL};
 
 static FVizMTime fviz_unstructured_piece_state_mtime(const void* state)
 {
     return fviz_object_mtime((const FVizObject*)state);
 }
 
-
-static FVizResult fviz_unstructured_piece_get_adjacency(
-    FVizUnstructuredGridPieceFilter* filter,
-    FVizCellArray* cells,
-    FVizSize point_count,
-    FVizCellAdjacency** out_adjacency)
+static FVizResult fviz_unstructured_piece_get_adjacency(FVizUnstructuredGridPieceFilter* filter, FVizCellArray* cells,
+                                                        FVizSize point_count, FVizCellAdjacency** out_adjacency)
 {
     const FVizMTime topology_mtime = fviz_object_mtime((const FVizObject*)cells);
     FVizCellAdjacency* built = NULL;
-    if (out_adjacency == NULL || filter == NULL || cells == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (out_adjacency == NULL || filter == NULL || cells == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_adjacency = NULL;
     if (filter->adjacency_cache != NULL && filter->adjacency_cells == cells &&
         filter->adjacency_cells_mtime == topology_mtime)
@@ -81,8 +72,7 @@ static FVizResult fviz_unstructured_piece_get_adjacency(
         *out_adjacency = filter->adjacency_cache;
         return FVIZ_OK;
     }
-    if (fviz_cell_adjacency_build(cells, point_count, &built) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_cell_adjacency_build(cells, point_count, &built) != FVIZ_OK) return fviz_last_error_code();
     fviz_release(filter->adjacency_cache);
     fviz_release(filter->adjacency_cells);
     filter->adjacency_cache = built;
@@ -92,25 +82,19 @@ static FVizResult fviz_unstructured_piece_get_adjacency(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_unstructured_piece_get_links(
-    FVizUnstructuredGridPieceFilter* filter,
-    FVizCellArray* cells,
-    FVizSize point_count,
-    FVizCellLinks** out_links)
+static FVizResult fviz_unstructured_piece_get_links(FVizUnstructuredGridPieceFilter* filter, FVizCellArray* cells,
+                                                    FVizSize point_count, FVizCellLinks** out_links)
 {
     const FVizMTime topology_mtime = fviz_object_mtime((const FVizObject*)cells);
     FVizCellLinks* built = NULL;
-    if (out_links == NULL || filter == NULL || cells == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (out_links == NULL || filter == NULL || cells == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_links = NULL;
-    if (filter->links_cache != NULL && filter->links_cells == cells &&
-        filter->links_cells_mtime == topology_mtime)
+    if (filter->links_cache != NULL && filter->links_cells == cells && filter->links_cells_mtime == topology_mtime)
     {
         *out_links = filter->links_cache;
         return FVIZ_OK;
     }
-    if (fviz_cell_links_build(cells, point_count, &built) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_cell_links_build(cells, point_count, &built) != FVIZ_OK) return fviz_last_error_code();
     fviz_release(filter->links_cache);
     fviz_release(filter->links_cells);
     filter->links_cache = built;
@@ -120,28 +104,22 @@ static FVizResult fviz_unstructured_piece_get_links(
     return FVIZ_OK;
 }
 
-static uint32_t fviz_unstructured_piece_owner_for_cell(
-    FVizSize cell_count, FVizSize cell_id, uint32_t number_of_pieces)
+static uint32_t fviz_unstructured_piece_owner_for_cell(FVizSize cell_count, FVizSize cell_id, uint32_t number_of_pieces)
 {
     const FVizSize pieces = (FVizSize)number_of_pieces;
     const FVizSize quotient = cell_count / pieces;
     const FVizSize remainder = cell_count % pieces;
     const FVizSize large_count = quotient + 1u;
     const FVizSize large_cells = large_count * remainder;
-    if (cell_id < large_cells)
-        return (uint32_t)(cell_id / large_count);
-    if (quotient == 0u)
-        return (uint32_t)cell_id;
+    if (cell_id < large_cells) return (uint32_t)(cell_id / large_count);
+    if (quotient == 0u) return (uint32_t)cell_id;
     return (uint32_t)(remainder + (cell_id - large_cells) / quotient);
 }
 
-static FVizResult fviz_unstructured_piece_get_point_owners(
-    FVizUnstructuredGridPieceFilter* filter,
-    FVizCellArray* cells,
-    FVizSize point_count,
-    FVizSize cell_count,
-    uint32_t number_of_pieces,
-    const uint32_t** out_owners)
+static FVizResult fviz_unstructured_piece_get_point_owners(FVizUnstructuredGridPieceFilter* filter,
+                                                           FVizCellArray* cells, FVizSize point_count,
+                                                           FVizSize cell_count, uint32_t number_of_pieces,
+                                                           const uint32_t** out_owners)
 {
     const FVizMTime topology_mtime = fviz_object_mtime((const FVizObject*)cells);
     FVizCellLinks* links = NULL;
@@ -152,25 +130,21 @@ static FVizResult fviz_unstructured_piece_get_point_owners(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_owners = NULL;
     if (filter->point_owner_cache != NULL && filter->links_cells == cells &&
-        filter->point_owner_cells_mtime == topology_mtime &&
-        filter->point_owner_count == point_count &&
+        filter->point_owner_cells_mtime == topology_mtime && filter->point_owner_count == point_count &&
         filter->point_owner_piece_count == number_of_pieces)
     {
         *out_owners = filter->point_owner_cache;
         return FVIZ_OK;
     }
-    if (fviz_unstructured_piece_get_links(filter, cells, point_count, &links) != FVIZ_OK)
-        return fviz_last_error_code();
-    if (fviz_size_multiply(point_count, sizeof(uint32_t), &bytes) != FVIZ_OK)
-        return FVIZ_ERROR_OVERFLOW;
+    if (fviz_unstructured_piece_get_links(filter, cells, point_count, &links) != FVIZ_OK) return fviz_last_error_code();
+    if (fviz_size_multiply(point_count, sizeof(uint32_t), &bytes) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
     owners = point_count != 0u ? (uint32_t*)fviz_alloc(bytes) : NULL;
     if (point_count != 0u && owners == NULL) return fviz_last_error_code();
     for (point_id = 0u; point_id < point_count; ++point_id)
     {
         FVizSize incident_count = 0u;
         FVizSize incident_index;
-        const FVizId* incident = fviz_cell_links_cells_for_point(
-            links, (FVizId)point_id, &incident_count);
+        const FVizId* incident = fviz_cell_links_cells_for_point(links, (FVizId)point_id, &incident_count);
         uint32_t owner = 0u;
         if (incident_count != 0u)
         {
@@ -194,8 +168,7 @@ static FVizResult fviz_unstructured_piece_get_point_owners(
     return FVIZ_OK;
 }
 
-static FVizSize fviz_unstructured_piece_boundary(
-    FVizSize count, uint32_t piece, uint32_t number_of_pieces)
+static FVizSize fviz_unstructured_piece_boundary(FVizSize count, uint32_t piece, uint32_t number_of_pieces)
 {
     const FVizSize pieces = (FVizSize)number_of_pieces;
     const FVizSize p = (FVizSize)piece;
@@ -204,13 +177,9 @@ static FVizSize fviz_unstructured_piece_boundary(
     return quotient * p + (p < remainder ? p : remainder);
 }
 
-static FVizResult fviz_unstructured_piece_map_request(
-    FVizAlgorithm* algorithm,
-    uint32_t input_port,
-    uint32_t connection,
-    const FVizPipelineRequestInfo* downstream,
-    FVizPipelineRequestInfo* upstream,
-    void* state)
+static FVizResult fviz_unstructured_piece_map_request(FVizAlgorithm* algorithm, uint32_t input_port,
+                                                      uint32_t connection, const FVizPipelineRequestInfo* downstream,
+                                                      FVizPipelineRequestInfo* upstream, void* state)
 {
     (void)algorithm;
     (void)connection;
@@ -218,14 +187,13 @@ static FVizResult fviz_unstructured_piece_map_request(
     if (input_port != 0u) return FVIZ_ERROR_INVALID_ARGUMENT;
     /* Piece materialization requires the whole upstream grid because ghost
        expansion needs topology on both sides of partition boundaries. */
-    if (downstream->number_of_pieces != 1u || downstream->piece != 0u ||
-        downstream->ghost_levels != 0u)
+    if (downstream->number_of_pieces != 1u || downstream->piece != 0u || downstream->ghost_levels != 0u)
         return fviz_pipeline_request_set_piece(upstream, 0u, 1u, 0u);
     return FVIZ_OK;
 }
 
-static FVizResult fviz_unstructured_piece_copy_field_attributes(
-    const FVizAttributeSet* source, FVizAttributeSet* destination)
+static FVizResult fviz_unstructured_piece_copy_field_attributes(const FVizAttributeSet* source,
+                                                                FVizAttributeSet* destination)
 {
     FVizSize i;
     for (i = 0u; i < fviz_attribute_set_count(source); ++i)
@@ -251,12 +219,10 @@ static FVizResult fviz_unstructured_piece_copy_field_attributes(
     return FVIZ_OK;
 }
 
-static FVizResult fviz_unstructured_piece_copy_indexed_attributes(
-    const FVizAttributeSet* source,
-    FVizAttributeSet* destination,
-    const FVizId* source_ids,
-    FVizSize output_count,
-    FVizSize expected_source_count)
+static FVizResult fviz_unstructured_piece_copy_indexed_attributes(const FVizAttributeSet* source,
+                                                                  FVizAttributeSet* destination,
+                                                                  const FVizId* source_ids, FVizSize output_count,
+                                                                  FVizSize expected_source_count)
 {
     FVizSize array_index;
     for (array_index = 0u; array_index < fviz_attribute_set_count(source); ++array_index)
@@ -267,8 +233,8 @@ static FVizResult fviz_unstructured_piece_copy_indexed_attributes(
         FVizAttributeRole role;
         FVizSize i;
         if (fviz_data_array_tuple_count(in_array) != expected_source_count) continue;
-        if (fviz_data_array_create(
-                fviz_data_array_type(in_array), fviz_data_array_components(in_array), &out_array) != FVIZ_OK ||
+        if (fviz_data_array_create(fviz_data_array_type(in_array), fviz_data_array_components(in_array), &out_array) !=
+                FVIZ_OK ||
             fviz_data_array_resize(out_array, output_count) != FVIZ_OK)
             goto fail;
         for (i = 0u; i < output_count; ++i)
@@ -288,19 +254,16 @@ static FVizResult fviz_unstructured_piece_copy_indexed_attributes(
         }
         fviz_release(out_array);
         continue;
-fail:
+    fail:
         fviz_release(out_array);
         return fviz_last_error_code();
     }
     return FVIZ_OK;
 }
 
-static FVizResult fviz_unstructured_piece_add_provenance(
-    FVizUnstructuredGrid* output,
-    const FVizId* source_point_ids,
-    FVizSize point_count,
-    const FVizId* source_cell_ids,
-    FVizSize cell_count)
+static FVizResult fviz_unstructured_piece_add_provenance(FVizUnstructuredGrid* output, const FVizId* source_point_ids,
+                                                         FVizSize point_count, const FVizId* source_cell_ids,
+                                                         FVizSize cell_count)
 {
     FVizDataArray* point_ids = NULL;
     FVizDataArray* cell_ids = NULL;
@@ -313,25 +276,18 @@ static FVizResult fviz_unstructured_piece_add_provenance(
     if (result == FVIZ_OK && cell_count != 0u)
         result = fviz_data_array_set_tuples(cell_ids, 0u, source_cell_ids, cell_count);
     if (result == FVIZ_OK)
-        result = fviz_attribute_set_add(
-            fviz_unstructured_grid_point_data(output), "FVizOriginalPointIds", point_ids);
+        result = fviz_attribute_set_add(fviz_unstructured_grid_point_data(output), "FVizOriginalPointIds", point_ids);
     if (result == FVIZ_OK)
-        result = fviz_attribute_set_add(
-            fviz_unstructured_grid_cell_data(output), "FVizOriginalCellIds", cell_ids);
+        result = fviz_attribute_set_add(fviz_unstructured_grid_cell_data(output), "FVizOriginalCellIds", cell_ids);
     fviz_release(cell_ids);
     fviz_release(point_ids);
     return result;
 }
 
-static FVizResult fviz_unstructured_piece_add_ghost_arrays(
-    FVizUnstructuredGrid* output,
-    const FVizId* source_point_ids,
-    FVizSize point_count,
-    const uint32_t* point_owners,
-    uint32_t piece,
-    uint32_t number_of_pieces,
-    const uint16_t* cell_levels,
-    FVizSize cell_count)
+static FVizResult fviz_unstructured_piece_add_ghost_arrays(FVizUnstructuredGrid* output, const FVizId* source_point_ids,
+                                                           FVizSize point_count, const uint32_t* point_owners,
+                                                           uint32_t piece, uint32_t number_of_pieces,
+                                                           const uint16_t* cell_levels, FVizSize cell_count)
 {
     FVizDataArray* point_ghosts = NULL;
     FVizDataArray* cell_ghosts = NULL;
@@ -360,8 +316,8 @@ static FVizResult fviz_unstructured_piece_add_ghost_arrays(
         point_values = (uint8_t*)fviz_alloc(point_count * sizeof(uint8_t));
         if (point_values == NULL) return fviz_last_error_code();
         for (i = 0u; i < point_count; ++i)
-            point_values[i] = point_owners[(FVizSize)source_point_ids[i]] == piece
-                ? (uint8_t)FVIZ_GHOST_NONE : (uint8_t)FVIZ_GHOST_DUPLICATE;
+            point_values[i] = point_owners[(FVizSize)source_point_ids[i]] == piece ? (uint8_t)FVIZ_GHOST_NONE
+                                                                                   : (uint8_t)FVIZ_GHOST_DUPLICATE;
     }
     if (cell_count != 0u)
     {
@@ -372,8 +328,7 @@ static FVizResult fviz_unstructured_piece_add_ghost_arrays(
             return fviz_last_error_code();
         }
         for (i = 0u; i < cell_count; ++i)
-            cell_values[i] = cell_levels[i] == 0u
-                ? (uint8_t)FVIZ_GHOST_NONE : (uint8_t)FVIZ_GHOST_DUPLICATE;
+            cell_values[i] = cell_levels[i] == 0u ? (uint8_t)FVIZ_GHOST_NONE : (uint8_t)FVIZ_GHOST_DUPLICATE;
     }
     result = fviz_data_array_create(FVIZ_DATA_UINT8, 1u, &point_ghosts);
     if (result == FVIZ_OK) result = fviz_data_array_resize(point_ghosts, point_count);
@@ -388,14 +343,12 @@ static FVizResult fviz_unstructured_piece_add_ghost_arrays(
     if (result == FVIZ_OK && cell_count != 0u)
         result = fviz_data_array_set_tuples(ghost_levels, 0u, cell_levels, cell_count);
     if (result == FVIZ_OK)
-        result = fviz_attribute_set_add(
-            fviz_unstructured_grid_point_data(output), FVIZ_GHOST_ARRAY_NAME, point_ghosts);
+        result = fviz_attribute_set_add(fviz_unstructured_grid_point_data(output), FVIZ_GHOST_ARRAY_NAME, point_ghosts);
     if (result == FVIZ_OK)
-        result = fviz_attribute_set_add(
-            fviz_unstructured_grid_cell_data(output), FVIZ_GHOST_ARRAY_NAME, cell_ghosts);
+        result = fviz_attribute_set_add(fviz_unstructured_grid_cell_data(output), FVIZ_GHOST_ARRAY_NAME, cell_ghosts);
     if (result == FVIZ_OK)
-        result = fviz_attribute_set_add(
-            fviz_unstructured_grid_cell_data(output), FVIZ_GHOST_LEVEL_ARRAY_NAME, ghost_levels);
+        result =
+            fviz_attribute_set_add(fviz_unstructured_grid_cell_data(output), FVIZ_GHOST_LEVEL_ARRAY_NAME, ghost_levels);
     fviz_free(cell_values);
     fviz_free(point_values);
     fviz_release(ghost_levels);
@@ -404,10 +357,8 @@ static FVizResult fviz_unstructured_piece_add_ghost_arrays(
     return result;
 }
 
-static FVizResult fviz_unstructured_piece_process_request(
-    FVizAlgorithm* algorithm,
-    const FVizPipelineRequestInfo* request,
-    void* state)
+static FVizResult fviz_unstructured_piece_process_request(FVizAlgorithm* algorithm,
+                                                          const FVizPipelineRequestInfo* request, void* state)
 {
     FVizUnstructuredGrid* input;
     FVizUnstructuredGrid* output = NULL;
@@ -454,10 +405,8 @@ static FVizResult fviz_unstructured_piece_process_request(
     {
         if (request->number_of_pieces == 0u || request->piece >= request->number_of_pieces)
             return FVIZ_ERROR_INVALID_ARGUMENT;
-        first_cell = fviz_unstructured_piece_boundary(
-            source_cell_count, request->piece, request->number_of_pieces);
-        end_cell = fviz_unstructured_piece_boundary(
-            source_cell_count, request->piece + 1u, request->number_of_pieces);
+        first_cell = fviz_unstructured_piece_boundary(source_cell_count, request->piece, request->number_of_pieces);
+        end_cell = fviz_unstructured_piece_boundary(source_cell_count, request->piece + 1u, request->number_of_pieces);
     }
     input_cells = fviz_unstructured_grid_cells(input);
     input_points = fviz_points_data(fviz_unstructured_grid_points(input));
@@ -492,8 +441,8 @@ static FVizResult fviz_unstructured_piece_process_request(
         FVizSize frontier_begin = 0u;
         FVizSize frontier_end = selected_cells;
         uint32_t level;
-        if (fviz_unstructured_piece_get_adjacency(
-                filter, (FVizCellArray*)input_cells, source_point_count, &adjacency) != FVIZ_OK)
+        if (fviz_unstructured_piece_get_adjacency(filter, (FVizCellArray*)input_cells, source_point_count,
+                                                  &adjacency) != FVIZ_OK)
         {
             result = fviz_last_error_code();
             goto done;
@@ -506,8 +455,8 @@ static FVizResult fviz_unstructured_piece_process_request(
             {
                 FVizSize neighbor_count = 0u;
                 FVizSize neighbor_index;
-                const FVizId* neighbors = fviz_cell_adjacency_neighbors(
-                    adjacency, source_cell_ids[frontier_index], &neighbor_count);
+                const FVizId* neighbors =
+                    fviz_cell_adjacency_neighbors(adjacency, source_cell_ids[frontier_index], &neighbor_count);
                 for (neighbor_index = 0u; neighbor_index < neighbor_count; ++neighbor_index)
                 {
                     const FVizSize source_id = (FVizSize)neighbors[neighbor_index];
@@ -543,9 +492,7 @@ static FVizResult fviz_unstructured_piece_process_request(
     if (fviz_unstructured_grid_create(&output) != FVIZ_OK ||
         fviz_hash_map_create_reserve(connectivity_count, &point_map) != FVIZ_OK ||
         fviz_unstructured_grid_reserve(
-            output,
-            connectivity_count < source_point_count ? connectivity_count : source_point_count,
-            selected_cells,
+            output, connectivity_count < source_point_count ? connectivity_count : source_point_count, selected_cells,
             connectivity_count) != FVIZ_OK)
     {
         result = fviz_last_error_code();
@@ -554,8 +501,7 @@ static FVizResult fviz_unstructured_piece_process_request(
     if (connectivity_count != 0u)
     {
         FVizSize bytes;
-        const FVizSize max_unique = connectivity_count < source_point_count
-            ? connectivity_count : source_point_count;
+        const FVizSize max_unique = connectivity_count < source_point_count ? connectivity_count : source_point_count;
         if (fviz_size_multiply(max_unique, sizeof(FVizId), &bytes) != FVIZ_OK)
         {
             result = FVIZ_ERROR_OVERFLOW;
@@ -583,8 +529,7 @@ static FVizResult fviz_unstructured_piece_process_request(
     {
         FVizCellView view;
         FVizSize local_point;
-        if (fviz_cell_array_cell_view(
-                input_cells, (FVizSize)source_cell_ids[selected_index], &view) != FVIZ_OK)
+        if (fviz_cell_array_cell_view(input_cells, (FVizSize)source_cell_ids[selected_index], &view) != FVIZ_OK)
         {
             result = fviz_last_error_code();
             goto done;
@@ -610,10 +555,9 @@ static FVizResult fviz_unstructured_piece_process_request(
                     result = FVIZ_ERROR_OVERFLOW;
                     goto done;
                 }
-                if (fviz_unstructured_grid_add_points_ids(
-                        output, &input_points[(FVizSize)source_id], 1u, &local_id) != FVIZ_OK ||
-                    fviz_hash_map_set(
-                        point_map, source_id, (void*)(uintptr_t)(local_id + 1u)) != FVIZ_OK)
+                if (fviz_unstructured_grid_add_points_ids(output, &input_points[(FVizSize)source_id], 1u, &local_id) !=
+                        FVIZ_OK ||
+                    fviz_hash_map_set(point_map, source_id, (void*)(uintptr_t)(local_id + 1u)) != FVIZ_OK)
                 {
                     result = fviz_last_error_code();
                     goto done;
@@ -622,43 +566,36 @@ static FVizResult fviz_unstructured_piece_process_request(
             }
             local_ids[local_point] = local_id;
         }
-        if (fviz_unstructured_grid_add_cell_ids(
-                output, view.type, view.point_count, local_ids) != FVIZ_OK)
+        if (fviz_unstructured_grid_add_cell_ids(output, view.type, view.point_count, local_ids) != FVIZ_OK)
         {
             result = fviz_last_error_code();
             goto done;
         }
     }
 
-    if ((request->number_of_pieces > 1u || request->ghost_levels != 0u) &&
-        source_point_count != 0u &&
-        fviz_unstructured_piece_get_point_owners(
-            filter, (FVizCellArray*)input_cells, source_point_count, source_cell_count,
-            request->number_of_pieces, &point_owners) != FVIZ_OK)
+    if ((request->number_of_pieces > 1u || request->ghost_levels != 0u) && source_point_count != 0u &&
+        fviz_unstructured_piece_get_point_owners(filter, (FVizCellArray*)input_cells, source_point_count,
+                                                 source_cell_count, request->number_of_pieces,
+                                                 &point_owners) != FVIZ_OK)
     {
         result = fviz_last_error_code();
         goto done;
     }
 
-    if (fviz_unstructured_piece_copy_indexed_attributes(
-            fviz_unstructured_grid_point_data(input),
-            fviz_unstructured_grid_point_data(output),
-            source_point_ids, unique_points, source_point_count) != FVIZ_OK ||
-        fviz_unstructured_piece_copy_indexed_attributes(
-            fviz_unstructured_grid_cell_data(input),
-            fviz_unstructured_grid_cell_data(output),
-            source_cell_ids, selected_cells, source_cell_count) != FVIZ_OK ||
-        fviz_unstructured_piece_copy_field_attributes(
-            fviz_unstructured_grid_field_data(input),
-            fviz_unstructured_grid_field_data(output)) != FVIZ_OK ||
-        fviz_unstructured_piece_add_provenance(
-            output, source_point_ids, unique_points, source_cell_ids, selected_cells) != FVIZ_OK ||
-        fviz_unstructured_piece_add_ghost_arrays(
-            output, source_point_ids, unique_points, point_owners,
-            request->piece, request->number_of_pieces,
-            selected_levels, selected_cells) != FVIZ_OK ||
-        fviz_algorithm_set_output_data(
-            algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
+    if (fviz_unstructured_piece_copy_indexed_attributes(fviz_unstructured_grid_point_data(input),
+                                                        fviz_unstructured_grid_point_data(output), source_point_ids,
+                                                        unique_points, source_point_count) != FVIZ_OK ||
+        fviz_unstructured_piece_copy_indexed_attributes(fviz_unstructured_grid_cell_data(input),
+                                                        fviz_unstructured_grid_cell_data(output), source_cell_ids,
+                                                        selected_cells, source_cell_count) != FVIZ_OK ||
+        fviz_unstructured_piece_copy_field_attributes(fviz_unstructured_grid_field_data(input),
+                                                      fviz_unstructured_grid_field_data(output)) != FVIZ_OK ||
+        fviz_unstructured_piece_add_provenance(output, source_point_ids, unique_points, source_cell_ids,
+                                               selected_cells) != FVIZ_OK ||
+        fviz_unstructured_piece_add_ghost_arrays(output, source_point_ids, unique_points, point_owners, request->piece,
+                                                 request->number_of_pieces, selected_levels,
+                                                 selected_cells) != FVIZ_OK ||
+        fviz_algorithm_set_output_data(algorithm, request->requested_output_port, (FVizDataObject*)output) != FVIZ_OK)
     {
         result = fviz_last_error_code();
         goto done;
@@ -685,8 +622,8 @@ FVizResult fviz_unstructured_grid_piece_filter_create(FVizUnstructuredGridPieceF
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_filter = NULL;
-    filter = (FVizUnstructuredGridPieceFilter*)fviz_internal_object_allocate(
-        sizeof(*filter), &g_fviz_unstructured_piece_class, NULL);
+    filter = (FVizUnstructuredGridPieceFilter*)fviz_internal_object_allocate(sizeof(*filter),
+                                                                             &g_fviz_unstructured_piece_class, NULL);
     if (filter == NULL) return fviz_last_error_code();
     fviz_algorithm_callbacks_initialize(&callbacks);
     callbacks.process_request = fviz_unstructured_piece_process_request;
@@ -694,10 +631,9 @@ FVizResult fviz_unstructured_grid_piece_filter_create(FVizUnstructuredGridPieceF
     callbacks.state_object = (FVizObject*)filter;
     callbacks.map_input_request = fviz_unstructured_piece_map_request;
     if (fviz_algorithm_create(1u, 1u, &callbacks, filter, &filter->algorithm) != FVIZ_OK ||
-        fviz_algorithm_configure_input_port(
-            filter->algorithm, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID, FVIZ_FALSE, FVIZ_FALSE) != FVIZ_OK ||
-        fviz_algorithm_configure_output_port(
-            filter->algorithm, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID) != FVIZ_OK)
+        fviz_algorithm_configure_input_port(filter->algorithm, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID, FVIZ_FALSE,
+                                            FVIZ_FALSE) != FVIZ_OK ||
+        fviz_algorithm_configure_output_port(filter->algorithm, 0u, FVIZ_TYPE_UNSTRUCTURED_GRID) != FVIZ_OK)
     {
         fviz_release(filter);
         return fviz_last_error_code();
@@ -706,20 +642,19 @@ FVizResult fviz_unstructured_grid_piece_filter_create(FVizUnstructuredGridPieceF
     return FVIZ_OK;
 }
 
-FVizResult fviz_unstructured_grid_piece_filter_set_input_data(
-    FVizUnstructuredGridPieceFilter* filter, FVizUnstructuredGrid* input)
+FVizResult fviz_unstructured_grid_piece_filter_set_input_data(FVizUnstructuredGridPieceFilter* filter,
+                                                              FVizUnstructuredGrid* input)
 {
     return filter != NULL && input != NULL
-        ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
-        : FVIZ_ERROR_INVALID_ARGUMENT;
+               ? fviz_algorithm_set_input_data(filter->algorithm, 0u, (FVizDataObject*)input)
+               : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizResult fviz_unstructured_grid_piece_filter_set_input_connection(
-    FVizUnstructuredGridPieceFilter* filter, FVizAlgorithmOutput* input)
+FVizResult fviz_unstructured_grid_piece_filter_set_input_connection(FVizUnstructuredGridPieceFilter* filter,
+                                                                    FVizAlgorithmOutput* input)
 {
-    return filter != NULL && input != NULL
-        ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
-        : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL && input != NULL ? fviz_algorithm_set_input_connection(filter->algorithm, 0u, input)
+                                           : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
 FVizAlgorithm* fviz_unstructured_grid_piece_filter_algorithm(FVizUnstructuredGridPieceFilter* filter)
@@ -734,9 +669,7 @@ FVizAlgorithmOutput* fviz_unstructured_grid_piece_filter_output_port(FVizUnstruc
 
 FVizUnstructuredGrid* fviz_unstructured_grid_piece_filter_output(FVizUnstructuredGridPieceFilter* filter)
 {
-    return filter != NULL
-        ? (FVizUnstructuredGrid*)fviz_algorithm_output_data(filter->algorithm, 0u)
-        : NULL;
+    return filter != NULL ? (FVizUnstructuredGrid*)fviz_algorithm_output_data(filter->algorithm, 0u) : NULL;
 }
 
 FVizResult fviz_unstructured_grid_piece_filter_update(FVizUnstructuredGridPieceFilter* filter)
@@ -744,15 +677,10 @@ FVizResult fviz_unstructured_grid_piece_filter_update(FVizUnstructuredGridPieceF
     return filter != NULL ? fviz_algorithm_update(filter->algorithm) : FVIZ_ERROR_INVALID_ARGUMENT;
 }
 
-FVizResult fviz_unstructured_grid_piece_filter_update_piece(
-    FVizUnstructuredGridPieceFilter* filter,
-    uint32_t piece,
-    uint32_t number_of_pieces,
-    uint32_t ghost_levels)
+FVizResult fviz_unstructured_grid_piece_filter_update_piece(FVizUnstructuredGridPieceFilter* filter, uint32_t piece,
+                                                            uint32_t number_of_pieces, uint32_t ghost_levels)
 {
-    return filter != NULL
-        ? fviz_executive_update_piece(
-            fviz_algorithm_executive(filter->algorithm), 0u,
-            piece, number_of_pieces, ghost_levels)
-        : FVIZ_ERROR_INVALID_ARGUMENT;
+    return filter != NULL ? fviz_executive_update_piece(fviz_algorithm_executive(filter->algorithm), 0u, piece,
+                                                        number_of_pieces, ghost_levels)
+                          : FVIZ_ERROR_INVALID_ARGUMENT;
 }

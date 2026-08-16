@@ -21,54 +21,29 @@ FVIZ_API FVizSelection* fviz_selection_model_hover_selection(FVizSelectionModel*
 FVIZ_API const FVizSelection* fviz_selection_model_const_hover_selection(const FVizSelectionModel* model);
 FVIZ_API void fviz_selection_model_clear(FVizSelectionModel* model);
 FVIZ_API void fviz_selection_model_clear_hover(FVizSelectionModel* model);
-FVIZ_API void fviz_selection_model_set_association(
-    FVizSelectionModel* model, FVizSelectionAssociation association);
+FVIZ_API void fviz_selection_model_set_association(FVizSelectionModel* model, FVizSelectionAssociation association);
 FVIZ_API FVizSelectionAssociation fviz_selection_model_association(const FVizSelectionModel* model);
-FVIZ_API void fviz_selection_model_set_modifier(
-    FVizSelectionModel* model, FVizSelectionModifier modifier);
+FVIZ_API void fviz_selection_model_set_modifier(FVizSelectionModel* model, FVizSelectionModifier modifier);
 FVIZ_API FVizSelectionModifier fviz_selection_model_modifier(const FVizSelectionModel* model);
 FVIZ_API FVizSelectionModifier fviz_selection_modifier_from_event(const FVizInteractionEvent* event);
-FVIZ_API FVizResult fviz_selection_model_apply(
-    FVizSelectionModel* model,
-    const FVizSelection* incoming,
-    FVizSelectionModifier modifier);
-FVIZ_API FVizResult fviz_selection_model_select_at(
-    FVizSelectionModel* model,
-    FVizRenderWindow* window,
-    int x,
-    int y,
-    FVizSelectionModifier modifier);
-FVIZ_API FVizResult fviz_selection_model_select_rectangle(
-    FVizSelectionModel* model,
-    FVizRenderWindow* window,
-    int start_x,
-    int start_y,
-    int end_x,
-    int end_y,
-    FVizSelectionModifier modifier);
-FVIZ_API FVizResult fviz_selection_model_select_polygon(
-    FVizSelectionModel* model,
-    FVizRenderWindow* window,
-    const int* xy_points,
-    FVizSize point_count,
-    FVizSelectionModifier modifier);
-FVIZ_API FVizResult fviz_selection_model_select_frustum(
-    FVizSelectionModel* model,
-    FVizRenderer* renderer,
-    const FVizFrustum* frustum,
-    FVizSelectionModifier modifier);
-FVIZ_API void fviz_selection_model_set_hover_update_rate(
-    FVizSelectionModel* model, float updates_per_second);
+FVIZ_API FVizResult fviz_selection_model_apply(FVizSelectionModel* model, const FVizSelection* incoming,
+                                               FVizSelectionModifier modifier);
+FVIZ_API FVizResult fviz_selection_model_select_at(FVizSelectionModel* model, FVizRenderWindow* window, int x, int y,
+                                                   FVizSelectionModifier modifier);
+FVIZ_API FVizResult fviz_selection_model_select_rectangle(FVizSelectionModel* model, FVizRenderWindow* window,
+                                                          int start_x, int start_y, int end_x, int end_y,
+                                                          FVizSelectionModifier modifier);
+FVIZ_API FVizResult fviz_selection_model_select_polygon(FVizSelectionModel* model, FVizRenderWindow* window,
+                                                        const int* xy_points, FVizSize point_count,
+                                                        FVizSelectionModifier modifier);
+FVIZ_API FVizResult fviz_selection_model_select_frustum(FVizSelectionModel* model, FVizRenderer* renderer,
+                                                        const FVizFrustum* frustum, FVizSelectionModifier modifier);
+FVIZ_API void fviz_selection_model_set_hover_update_rate(FVizSelectionModel* model, float updates_per_second);
 FVIZ_API float fviz_selection_model_hover_update_rate(const FVizSelectionModel* model);
-FVIZ_API FVizResult fviz_selection_model_process_hover_event(
-    FVizSelectionModel* model,
-    FVizRenderWindow* window,
-    const FVizInteractionEvent* event);
-FVIZ_API FVizResult fviz_selection_model_update_hover(
-    FVizSelectionModel* model,
-    FVizRenderWindow* window,
-    int x,
-    int y);
+FVIZ_API FVizResult fviz_selection_model_process_hover_event(FVizSelectionModel* model, FVizRenderWindow* window,
+                                                             const FVizInteractionEvent* event);
+FVIZ_API FVizResult fviz_selection_model_update_hover(FVizSelectionModel* model, FVizRenderWindow* window, int x,
+                                                      int y);
 
 FVIZ_EXTERN_C_END
 

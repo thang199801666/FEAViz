@@ -16,13 +16,9 @@
 static void fviz_volume_mapper_object_destroy(FVizObject* object);
 static FVizMTime fviz_volume_mapper_mtime(const FVizObject* object);
 
-static const FVizObjectClass g_fviz_volume_mapper_class = {
-    FVIZ_TYPE_VOLUME_MAPPER,
-    "FVizVolumeMapper",
-    &g_fviz_object_class,
-    fviz_volume_mapper_object_destroy,
-    fviz_volume_mapper_mtime
-};
+static const FVizObjectClass g_fviz_volume_mapper_class = {FVIZ_TYPE_VOLUME_MAPPER, "FVizVolumeMapper",
+                                                           &g_fviz_object_class, fviz_volume_mapper_object_destroy,
+                                                           fviz_volume_mapper_mtime};
 
 static FVizMTime fviz_volume_mapper_mtime(const FVizObject* object)
 {
@@ -44,26 +40,22 @@ static void fviz_volume_mapper_object_destroy(FVizObject* object)
     mapper->image = NULL;
 }
 
-static FVizResult fviz_volume_mapper_reserve_color_points(
-    FVizVolumeMapper* mapper, FVizSize capacity)
+static FVizResult fviz_volume_mapper_reserve_color_points(FVizVolumeMapper* mapper, FVizSize capacity)
 {
     FVizVolumeColorPoint* points;
     if (capacity <= mapper->color_capacity) return FVIZ_OK;
-    points = (FVizVolumeColorPoint*)fviz_realloc(
-        mapper->color_points, capacity * (FVizSize)sizeof(*points));
+    points = (FVizVolumeColorPoint*)fviz_realloc(mapper->color_points, capacity * (FVizSize)sizeof(*points));
     if (points == NULL) return fviz_last_error_code();
     mapper->color_points = points;
     mapper->color_capacity = capacity;
     return FVIZ_OK;
 }
 
-static FVizResult fviz_volume_mapper_reserve_opacity_points(
-    FVizVolumeMapper* mapper, FVizSize capacity)
+static FVizResult fviz_volume_mapper_reserve_opacity_points(FVizVolumeMapper* mapper, FVizSize capacity)
 {
     FVizVolumeOpacityPoint* points;
     if (capacity <= mapper->opacity_capacity) return FVIZ_OK;
-    points = (FVizVolumeOpacityPoint*)fviz_realloc(
-        mapper->opacity_points, capacity * (FVizSize)sizeof(*points));
+    points = (FVizVolumeOpacityPoint*)fviz_realloc(mapper->opacity_points, capacity * (FVizSize)sizeof(*points));
     if (points == NULL) return fviz_last_error_code();
     mapper->opacity_points = points;
     mapper->opacity_capacity = capacity;
@@ -94,8 +86,7 @@ FVizResult fviz_volume_mapper_create(FVizVolumeMapper** out_mapper)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_mapper = NULL;
-    mapper = (FVizVolumeMapper*)fviz_internal_object_allocate(
-        sizeof(*mapper), &g_fviz_volume_mapper_class, NULL);
+    mapper = (FVizVolumeMapper*)fviz_internal_object_allocate(sizeof(*mapper), &g_fviz_volume_mapper_class, NULL);
     if (mapper == NULL) return fviz_last_error_code();
     mapper->automatic_scalar_range = FVIZ_TRUE;
     mapper->contrast = 1.0f;
@@ -112,8 +103,7 @@ void fviz_volume_mapper_destroy(FVizVolumeMapper* mapper)
     if (mapper != NULL) fviz_release(mapper);
 }
 
-FVizResult fviz_volume_mapper_set_image_data(
-    FVizVolumeMapper* mapper, FVizImageData* image)
+FVizResult fviz_volume_mapper_set_image_data(FVizVolumeMapper* mapper, FVizImageData* image)
 {
     if (mapper == NULL)
     {
@@ -152,16 +142,14 @@ FVizImageData* fviz_volume_mapper_image_data(FVizVolumeMapper* mapper)
     return mapper != NULL ? mapper->image : NULL;
 }
 
-const FVizImageData* fviz_volume_mapper_const_image_data(
-    const FVizVolumeMapper* mapper)
+const FVizImageData* fviz_volume_mapper_const_image_data(const FVizVolumeMapper* mapper)
 {
     return mapper != NULL ? mapper->image : NULL;
 }
 
 FVizBounds fviz_volume_mapper_bounds(const FVizVolumeMapper* mapper)
 {
-    if (mapper != NULL && mapper->image != NULL)
-        return fviz_image_data_bounds(mapper->image);
+    if (mapper != NULL && mapper->image != NULL) return fviz_image_data_bounds(mapper->image);
     return fviz_bounds_empty();
 }
 
@@ -173,8 +161,8 @@ FVizBool fviz_volume_mapper_is_empty(const FVizVolumeMapper* mapper)
     return point_data == NULL || fviz_attribute_set_const_active(point_data, FVIZ_ATTRIBUTE_SCALARS) == NULL;
 }
 
-FVizResult fviz_volume_mapper_add_color_point(
-    FVizVolumeMapper* mapper, float scalar, float red, float green, float blue)
+FVizResult fviz_volume_mapper_add_color_point(FVizVolumeMapper* mapper, float scalar, float red, float green,
+                                              float blue)
 {
     FVizSize position;
     FVizSize index;
@@ -191,12 +179,10 @@ FVizResult fviz_volume_mapper_add_color_point(
     if (green > 1.0f) green = 1.0f;
     if (blue > 1.0f) blue = 1.0f;
     position = 0u;
-    while (position < mapper->color_count &&
-        mapper->color_points[position].scalar < scalar)
+    while (position < mapper->color_count && mapper->color_points[position].scalar < scalar)
         ++position;
     required = mapper->color_count + 1u;
-    if (fviz_volume_mapper_reserve_color_points(mapper, required) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_volume_mapper_reserve_color_points(mapper, required) != FVIZ_OK) return fviz_last_error_code();
     for (index = mapper->color_count; index > position; --index)
         mapper->color_points[index] = mapper->color_points[index - 1u];
     mapper->color_points[position].scalar = scalar;
@@ -220,11 +206,10 @@ FVizSize fviz_volume_mapper_color_point_count(const FVizVolumeMapper* mapper)
     return mapper != NULL ? mapper->color_count : 0u;
 }
 
-FVizResult fviz_volume_mapper_color_point_at(
-    const FVizVolumeMapper* mapper, FVizSize index, FVizVolumeColorPoint* out_point)
+FVizResult fviz_volume_mapper_color_point_at(const FVizVolumeMapper* mapper, FVizSize index,
+                                             FVizVolumeColorPoint* out_point)
 {
-    if (mapper == NULL || out_point == NULL)
-        return fviz_last_error_code();
+    if (mapper == NULL || out_point == NULL) return fviz_last_error_code();
     if (index >= mapper->color_count)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "color point index out of range");
@@ -234,8 +219,7 @@ FVizResult fviz_volume_mapper_color_point_at(
     return FVIZ_OK;
 }
 
-FVizResult fviz_volume_mapper_add_opacity_point(
-    FVizVolumeMapper* mapper, float scalar, float opacity)
+FVizResult fviz_volume_mapper_add_opacity_point(FVizVolumeMapper* mapper, float scalar, float opacity)
 {
     FVizSize position;
     FVizSize index;
@@ -248,12 +232,10 @@ FVizResult fviz_volume_mapper_add_opacity_point(
     if (opacity < 0.0f) opacity = 0.0f;
     if (opacity > 1.0f) opacity = 1.0f;
     position = 0u;
-    while (position < mapper->opacity_count &&
-        mapper->opacity_points[position].scalar < scalar)
+    while (position < mapper->opacity_count && mapper->opacity_points[position].scalar < scalar)
         ++position;
     required = mapper->opacity_count + 1u;
-    if (fviz_volume_mapper_reserve_opacity_points(mapper, required) != FVIZ_OK)
-        return fviz_last_error_code();
+    if (fviz_volume_mapper_reserve_opacity_points(mapper, required) != FVIZ_OK) return fviz_last_error_code();
     for (index = mapper->opacity_count; index > position; --index)
         mapper->opacity_points[index] = mapper->opacity_points[index - 1u];
     mapper->opacity_points[position].scalar = scalar;
@@ -275,11 +257,10 @@ FVizSize fviz_volume_mapper_opacity_point_count(const FVizVolumeMapper* mapper)
     return mapper != NULL ? mapper->opacity_count : 0u;
 }
 
-FVizResult fviz_volume_mapper_opacity_point_at(
-    const FVizVolumeMapper* mapper, FVizSize index, FVizVolumeOpacityPoint* out_point)
+FVizResult fviz_volume_mapper_opacity_point_at(const FVizVolumeMapper* mapper, FVizSize index,
+                                               FVizVolumeOpacityPoint* out_point)
 {
-    if (mapper == NULL || out_point == NULL)
-        return fviz_last_error_code();
+    if (mapper == NULL || out_point == NULL) return fviz_last_error_code();
     if (index >= mapper->opacity_count)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "opacity point index out of range");
@@ -313,8 +294,7 @@ FVizBool fviz_volume_mapper_shading(const FVizVolumeMapper* mapper)
     return mapper != NULL && mapper->shading != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-void fviz_volume_mapper_set_scalar_range(
-    FVizVolumeMapper* mapper, float minimum, float maximum)
+void fviz_volume_mapper_set_scalar_range(FVizVolumeMapper* mapper, float minimum, float maximum)
 {
     if (mapper == NULL) return;
     mapper->scalar_range_minimum = minimum;
@@ -324,8 +304,7 @@ void fviz_volume_mapper_set_scalar_range(
     fviz_object_modified((FVizObject*)mapper);
 }
 
-void fviz_volume_mapper_get_scalar_range(
-    const FVizVolumeMapper* mapper, float* minimum, float* maximum)
+void fviz_volume_mapper_get_scalar_range(const FVizVolumeMapper* mapper, float* minimum, float* maximum)
 {
     if (mapper == NULL) return;
     if (minimum != NULL) *minimum = mapper->scalar_range_minimum;
@@ -364,8 +343,7 @@ FVizBool fviz_volume_mapper_scalar_range_valid(const FVizVolumeMapper* mapper)
     return mapper != NULL && mapper->scalar_range_valid != FVIZ_FALSE;
 }
 
-void fviz_volume_mapper_set_options(
-    FVizVolumeMapper* mapper, const FVizVolumeRenderOptions* options)
+void fviz_volume_mapper_set_options(FVizVolumeMapper* mapper, const FVizVolumeRenderOptions* options)
 {
     if (mapper == NULL || options == NULL) return;
     if (options->sampling_step > 0.0f) mapper->sampling_step = options->sampling_step;
@@ -389,15 +367,13 @@ void fviz_volume_mapper_set_options(
     fviz_object_modified((FVizObject*)mapper);
 }
 
-void fviz_volume_mapper_options(
-    const FVizVolumeMapper* mapper, FVizVolumeRenderOptions* out_options)
+void fviz_volume_mapper_options(const FVizVolumeMapper* mapper, FVizVolumeRenderOptions* out_options)
 {
     if (mapper == NULL || out_options == NULL) return;
     fviz_volume_render_options_initialize(out_options);
     out_options->sampling_step = mapper->sampling_step;
     out_options->shading = mapper->shading != FVIZ_FALSE ? 1.0f : 0.0f;
-    out_options->use_automatic_scalar_range =
-        mapper->automatic_scalar_range != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    out_options->use_automatic_scalar_range = mapper->automatic_scalar_range != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
     out_options->scalar_range_minimum = mapper->scalar_range_minimum;
     out_options->scalar_range_maximum = mapper->scalar_range_maximum;
     out_options->contrast = mapper->contrast;

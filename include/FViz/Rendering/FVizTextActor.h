@@ -30,7 +30,8 @@ typedef struct FVizTextMetrics
     FVizSize line_count;
 } FVizTextMetrics;
 
-FVIZ_API FVizResult fviz_text_measure_utf8(const FVizTextProperty* property, const char* utf8, FVizTextMetrics* out_metrics);
+FVIZ_API FVizResult fviz_text_measure_utf8(const FVizTextProperty* property, const char* utf8,
+                                           FVizTextMetrics* out_metrics);
 
 FVIZ_API FVizResult fviz_text_actor_2d_create(FVizTextActor2D** out_actor);
 FVIZ_API FVizResult fviz_text_actor_2d_set_text(FVizTextActor2D* actor, const char* utf8);
@@ -49,9 +50,11 @@ FVIZ_API FVizResult fviz_text_actor_2d_measure(const FVizTextActor2D* actor, FVi
 FVIZ_API FVizResult fviz_billboard_text_actor_3d_create(FVizBillboardTextActor3D** out_actor);
 FVIZ_API FVizResult fviz_billboard_text_actor_3d_set_text(FVizBillboardTextActor3D* actor, const char* utf8);
 FVIZ_API const char* fviz_billboard_text_actor_3d_text(const FVizBillboardTextActor3D* actor);
-FVIZ_API FVizResult fviz_billboard_text_actor_3d_set_text_property(FVizBillboardTextActor3D* actor, FVizTextProperty* property);
+FVIZ_API FVizResult fviz_billboard_text_actor_3d_set_text_property(FVizBillboardTextActor3D* actor,
+                                                                   FVizTextProperty* property);
 FVIZ_API FVizTextProperty* fviz_billboard_text_actor_3d_text_property(FVizBillboardTextActor3D* actor);
-FVIZ_API const FVizTextProperty* fviz_billboard_text_actor_3d_const_text_property(const FVizBillboardTextActor3D* actor);
+FVIZ_API const FVizTextProperty*
+fviz_billboard_text_actor_3d_const_text_property(const FVizBillboardTextActor3D* actor);
 FVIZ_API void fviz_billboard_text_actor_3d_set_world_position(FVizBillboardTextActor3D* actor, FVizVec3 position);
 FVIZ_API FVizVec3 fviz_billboard_text_actor_3d_world_position(const FVizBillboardTextActor3D* actor);
 FVIZ_API void fviz_billboard_text_actor_3d_set_pixel_offset(FVizBillboardTextActor3D* actor, float x, float y);

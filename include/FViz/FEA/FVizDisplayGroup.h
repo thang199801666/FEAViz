@@ -43,48 +43,41 @@ typedef struct FVizFEADisplayGroupStatistics
     FVizSize visible_cells;
 } FVizFEADisplayGroupStatistics;
 
-FVIZ_FEA_API FVizResult fviz_fea_display_group_create(
-    const char* name, FVizFEADisplayGroup** out_group);
+FVIZ_FEA_API FVizResult fviz_fea_display_group_create(const char* name, FVizFEADisplayGroup** out_group);
 FVIZ_FEA_API const char* fviz_fea_display_group_name(const FVizFEADisplayGroup* group);
 FVIZ_FEA_API void fviz_fea_display_group_clear(FVizFEADisplayGroup* group);
-FVIZ_FEA_API void fviz_fea_display_group_set_visible(
-    FVizFEADisplayGroup* group, FVizBool visible);
+FVIZ_FEA_API void fviz_fea_display_group_set_visible(FVizFEADisplayGroup* group, FVizBool visible);
 FVIZ_FEA_API FVizBool fviz_fea_display_group_visible(const FVizFEADisplayGroup* group);
 
 /* Adds entity labels (node/element/face native labels). Empty id arrays clear
  * the corresponding set. */
-FVIZ_FEA_API FVizResult fviz_fea_display_group_set_nodes(
-    FVizFEADisplayGroup* group, const uint64_t* node_labels, FVizSize count);
-FVIZ_FEA_API FVizResult fviz_fea_display_group_set_elements(
-    FVizFEADisplayGroup* group, const uint64_t* element_labels, FVizSize count);
-FVIZ_FEA_API FVizResult fviz_fea_display_group_set_faces(
-    FVizFEADisplayGroup* group, const uint64_t* face_labels, FVizSize count);
+FVIZ_FEA_API FVizResult fviz_fea_display_group_set_nodes(FVizFEADisplayGroup* group, const uint64_t* node_labels,
+                                                         FVizSize count);
+FVIZ_FEA_API FVizResult fviz_fea_display_group_set_elements(FVizFEADisplayGroup* group, const uint64_t* element_labels,
+                                                            FVizSize count);
+FVIZ_FEA_API FVizResult fviz_fea_display_group_set_faces(FVizFEADisplayGroup* group, const uint64_t* face_labels,
+                                                         FVizSize count);
 
 /* Applies a boolean operation from a source group into this group. */
-FVIZ_FEA_API FVizResult fviz_fea_display_group_combine(
-    FVizFEADisplayGroup* group,
-    const FVizFEADisplayGroup* source,
-    FVizFEADisplayGroupOperation operation);
+FVIZ_FEA_API FVizResult fviz_fea_display_group_combine(FVizFEADisplayGroup* group, const FVizFEADisplayGroup* source,
+                                                       FVizFEADisplayGroupOperation operation);
 
 /* Resolves visibility against a grid. Point and cell masks are returned as
  * UInt8 arrays (1 = in the group). */
-FVIZ_FEA_API FVizResult fviz_fea_display_group_create_masks(
-    const FVizFEADisplayGroup* group,
-    const FVizUnstructuredGrid* grid,
-    FVizDataArray** out_point_mask,
-    FVizDataArray** out_cell_mask);
+FVIZ_FEA_API FVizResult fviz_fea_display_group_create_masks(const FVizFEADisplayGroup* group,
+                                                            const FVizUnstructuredGrid* grid,
+                                                            FVizDataArray** out_point_mask,
+                                                            FVizDataArray** out_cell_mask);
 
 /* Copies visible points/cells of a PolyData surface based on cell ids present
  * in the group's face/element set. */
-FVIZ_FEA_API FVizResult fviz_fea_display_group_apply_to_surface(
-    const FVizFEADisplayGroup* group,
-    const FVizPolyData* surface,
-    FVizPolyData** out_surface);
+FVIZ_FEA_API FVizResult fviz_fea_display_group_apply_to_surface(const FVizFEADisplayGroup* group,
+                                                                const FVizPolyData* surface,
+                                                                FVizPolyData** out_surface);
 
-FVIZ_FEA_API void fviz_fea_display_group_get_statistics(
-    const FVizFEADisplayGroup* group,
-    const FVizUnstructuredGrid* grid,
-    FVizFEADisplayGroupStatistics* out_statistics);
+FVIZ_FEA_API void fviz_fea_display_group_get_statistics(const FVizFEADisplayGroup* group,
+                                                        const FVizUnstructuredGrid* grid,
+                                                        FVizFEADisplayGroupStatistics* out_statistics);
 
 FVIZ_EXTERN_C_END
 

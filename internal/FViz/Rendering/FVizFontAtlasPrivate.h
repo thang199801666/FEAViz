@@ -2,6 +2,7 @@
 #define FVIZ_INTERNAL_RENDERING_FONT_ATLAS_PRIVATE_H
 #include <FViz/Core/FVizObjectPrivate.h>
 #include <FViz/Rendering/FVizFontAtlas.h>
+
 struct FVizFontAtlas
 {
     FVizObject base;

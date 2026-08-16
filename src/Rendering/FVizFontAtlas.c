@@ -15,32 +15,27 @@
 #include <FViz/Rendering/FVizFontAtlasPrivate.h>
 
 static void fviz_font_atlas_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_font_atlas_class = {
-    FVIZ_TYPE_FONT_ATLAS, "FVizFontAtlas", &g_fviz_object_class,
-    fviz_font_atlas_destroy, NULL
-};
+static const FVizObjectClass g_fviz_font_atlas_class = {FVIZ_TYPE_FONT_ATLAS, "FVizFontAtlas", &g_fviz_object_class,
+                                                        fviz_font_atlas_destroy, NULL};
 
 static const uint8_t g_digits[10][7] = {
-    {14,17,19,21,25,17,14}, {4,12,4,4,4,4,14}, {14,17,1,2,4,8,31},
-    {30,1,1,14,1,1,30}, {2,6,10,18,31,2,2}, {31,16,16,30,1,1,30},
-    {14,16,16,30,17,17,14}, {31,1,2,4,8,8,8}, {14,17,17,14,17,17,14},
-    {14,17,17,15,1,1,14}
-};
+    {14, 17, 19, 21, 25, 17, 14}, {4, 12, 4, 4, 4, 4, 14},    {14, 17, 1, 2, 4, 8, 31},     {30, 1, 1, 14, 1, 1, 30},
+    {2, 6, 10, 18, 31, 2, 2},     {31, 16, 16, 30, 1, 1, 30}, {14, 16, 16, 30, 17, 17, 14}, {31, 1, 2, 4, 8, 8, 8},
+    {14, 17, 17, 14, 17, 17, 14}, {14, 17, 17, 15, 1, 1, 14}};
 static const uint8_t g_upper[26][7] = {
-    {14,17,17,31,17,17,17}, {30,17,17,30,17,17,30}, {14,17,16,16,16,17,14},
-    {30,17,17,17,17,17,30}, {31,16,16,30,16,16,31}, {31,16,16,30,16,16,16},
-    {14,17,16,23,17,17,15}, {17,17,17,31,17,17,17}, {14,4,4,4,4,4,14},
-    {7,2,2,2,2,18,12}, {17,18,20,24,20,18,17}, {16,16,16,16,16,16,31},
-    {17,27,21,21,17,17,17}, {17,25,21,19,17,17,17}, {14,17,17,17,17,17,14},
-    {30,17,17,30,16,16,16}, {14,17,17,17,21,18,13}, {30,17,17,30,20,18,17},
-    {15,16,16,14,1,1,30}, {31,4,4,4,4,4,4}, {17,17,17,17,17,17,14},
-    {17,17,17,17,17,10,4}, {17,17,17,21,21,21,10}, {17,17,10,4,10,17,17},
-    {17,17,10,4,4,4,4}, {31,1,2,4,8,16,31}
-};
+    {14, 17, 17, 31, 17, 17, 17}, {30, 17, 17, 30, 17, 17, 30}, {14, 17, 16, 16, 16, 17, 14},
+    {30, 17, 17, 17, 17, 17, 30}, {31, 16, 16, 30, 16, 16, 31}, {31, 16, 16, 30, 16, 16, 16},
+    {14, 17, 16, 23, 17, 17, 15}, {17, 17, 17, 31, 17, 17, 17}, {14, 4, 4, 4, 4, 4, 14},
+    {7, 2, 2, 2, 2, 18, 12},      {17, 18, 20, 24, 20, 18, 17}, {16, 16, 16, 16, 16, 16, 31},
+    {17, 27, 21, 21, 17, 17, 17}, {17, 25, 21, 19, 17, 17, 17}, {14, 17, 17, 17, 17, 17, 14},
+    {30, 17, 17, 30, 16, 16, 16}, {14, 17, 17, 17, 21, 18, 13}, {30, 17, 17, 30, 20, 18, 17},
+    {15, 16, 16, 14, 1, 1, 30},   {31, 4, 4, 4, 4, 4, 4},       {17, 17, 17, 17, 17, 17, 14},
+    {17, 17, 17, 17, 17, 10, 4},  {17, 17, 17, 21, 21, 21, 10}, {17, 17, 10, 4, 10, 17, 17},
+    {17, 17, 10, 4, 4, 4, 4},     {31, 1, 2, 4, 8, 16, 31}};
 
 static void fviz_builtin_rows(uint32_t cp, uint8_t rows[7])
 {
-    static const uint8_t question[7] = {14,17,1,2,4,0,4};
+    static const uint8_t question[7] = {14, 17, 1, 2, 4, 0, 4};
     unsigned i;
     (void)memset(rows, 0, 7u);
     if (cp >= '0' && cp <= '9')
@@ -56,32 +51,154 @@ static void fviz_builtin_rows(uint32_t cp, uint8_t rows[7])
     }
     switch (cp)
     {
-        case ' ': break;
-        case '.': rows[6] = 4; break;
-        case ',': rows[5] = 4; rows[6] = 8; break;
-        case ':': rows[2] = 4; rows[5] = 4; break;
-        case ';': rows[2] = 4; rows[5] = 4; rows[6] = 8; break;
-        case '-': rows[3] = 14; break;
-        case '_': rows[6] = 31; break;
-        case '+': rows[2] = 4; rows[3] = 14; rows[4] = 4; break;
-        case '=': rows[2] = 14; rows[4] = 14; break;
-        case '/': rows[0]=1; rows[1]=2; rows[2]=2; rows[3]=4; rows[4]=8; rows[5]=8; rows[6]=16; break;
-        case '\\': rows[0]=16; rows[1]=8; rows[2]=8; rows[3]=4; rows[4]=2; rows[5]=2; rows[6]=1; break;
-        case '(': rows[0]=2; rows[1]=4; rows[2]=8; rows[3]=8; rows[4]=8; rows[5]=4; rows[6]=2; break;
-        case ')': rows[0]=8; rows[1]=4; rows[2]=2; rows[3]=2; rows[4]=2; rows[5]=4; rows[6]=8; break;
-        case '[': rows[0]=14; rows[1]=8; rows[2]=8; rows[3]=8; rows[4]=8; rows[5]=8; rows[6]=14; break;
-        case ']': rows[0]=14; rows[1]=2; rows[2]=2; rows[3]=2; rows[4]=2; rows[5]=2; rows[6]=14; break;
-        case '<': rows[1]=2; rows[2]=4; rows[3]=8; rows[4]=4; rows[5]=2; break;
-        case '>': rows[1]=8; rows[2]=4; rows[3]=2; rows[4]=4; rows[5]=8; break;
-        case '!': rows[0]=4; rows[1]=4; rows[2]=4; rows[3]=4; rows[5]=4; break;
-        case '?': (void)memcpy(rows, question, 7u); break;
-        case '#': rows[1]=10; rows[2]=31; rows[3]=10; rows[4]=31; rows[5]=10; break;
-        case '%': rows[0]=17; rows[1]=2; rows[2]=4; rows[3]=4; rows[4]=8; rows[5]=17; break;
-        case '*': rows[1]=21; rows[2]=14; rows[3]=31; rows[4]=14; rows[5]=21; break;
-        case '|': for (i=0;i<7u;++i) rows[i]=4; break;
-        case '\'': rows[0]=4; rows[1]=4; break;
-        case '"': rows[0]=10; rows[1]=10; break;
-        default: (void)memcpy(rows, question, 7u); break;
+        case ' ':
+            break;
+        case '.':
+            rows[6] = 4;
+            break;
+        case ',':
+            rows[5] = 4;
+            rows[6] = 8;
+            break;
+        case ':':
+            rows[2] = 4;
+            rows[5] = 4;
+            break;
+        case ';':
+            rows[2] = 4;
+            rows[5] = 4;
+            rows[6] = 8;
+            break;
+        case '-':
+            rows[3] = 14;
+            break;
+        case '_':
+            rows[6] = 31;
+            break;
+        case '+':
+            rows[2] = 4;
+            rows[3] = 14;
+            rows[4] = 4;
+            break;
+        case '=':
+            rows[2] = 14;
+            rows[4] = 14;
+            break;
+        case '/':
+            rows[0] = 1;
+            rows[1] = 2;
+            rows[2] = 2;
+            rows[3] = 4;
+            rows[4] = 8;
+            rows[5] = 8;
+            rows[6] = 16;
+            break;
+        case '\\':
+            rows[0] = 16;
+            rows[1] = 8;
+            rows[2] = 8;
+            rows[3] = 4;
+            rows[4] = 2;
+            rows[5] = 2;
+            rows[6] = 1;
+            break;
+        case '(':
+            rows[0] = 2;
+            rows[1] = 4;
+            rows[2] = 8;
+            rows[3] = 8;
+            rows[4] = 8;
+            rows[5] = 4;
+            rows[6] = 2;
+            break;
+        case ')':
+            rows[0] = 8;
+            rows[1] = 4;
+            rows[2] = 2;
+            rows[3] = 2;
+            rows[4] = 2;
+            rows[5] = 4;
+            rows[6] = 8;
+            break;
+        case '[':
+            rows[0] = 14;
+            rows[1] = 8;
+            rows[2] = 8;
+            rows[3] = 8;
+            rows[4] = 8;
+            rows[5] = 8;
+            rows[6] = 14;
+            break;
+        case ']':
+            rows[0] = 14;
+            rows[1] = 2;
+            rows[2] = 2;
+            rows[3] = 2;
+            rows[4] = 2;
+            rows[5] = 2;
+            rows[6] = 14;
+            break;
+        case '<':
+            rows[1] = 2;
+            rows[2] = 4;
+            rows[3] = 8;
+            rows[4] = 4;
+            rows[5] = 2;
+            break;
+        case '>':
+            rows[1] = 8;
+            rows[2] = 4;
+            rows[3] = 2;
+            rows[4] = 4;
+            rows[5] = 8;
+            break;
+        case '!':
+            rows[0] = 4;
+            rows[1] = 4;
+            rows[2] = 4;
+            rows[3] = 4;
+            rows[5] = 4;
+            break;
+        case '?':
+            (void)memcpy(rows, question, 7u);
+            break;
+        case '#':
+            rows[1] = 10;
+            rows[2] = 31;
+            rows[3] = 10;
+            rows[4] = 31;
+            rows[5] = 10;
+            break;
+        case '%':
+            rows[0] = 17;
+            rows[1] = 2;
+            rows[2] = 4;
+            rows[3] = 4;
+            rows[4] = 8;
+            rows[5] = 17;
+            break;
+        case '*':
+            rows[1] = 21;
+            rows[2] = 14;
+            rows[3] = 31;
+            rows[4] = 14;
+            rows[5] = 21;
+            break;
+        case '|':
+            for (i = 0; i < 7u; ++i)
+                rows[i] = 4;
+            break;
+        case '\'':
+            rows[0] = 4;
+            rows[1] = 4;
+            break;
+        case '"':
+            rows[0] = 10;
+            rows[1] = 10;
+            break;
+        default:
+            (void)memcpy(rows, question, 7u);
+            break;
     }
 }
 
@@ -113,20 +230,16 @@ static const FVizFontGlyph* fviz_font_atlas_find_exact(const FVizFontAtlas* atla
         const FVizSize mid = lo + (hi - lo) / 2u;
         const uint32_t cp = atlas->glyphs[mid].codepoint;
         if (cp < codepoint) lo = mid + 1u;
-        else hi = mid;
+        else
+            hi = mid;
     }
     return lo < atlas->glyph_count && atlas->glyphs[lo].codepoint == codepoint ? &atlas->glyphs[lo] : NULL;
 }
 
-FVizResult fviz_font_atlas_create_from_coverage(
-    uint32_t width,
-    uint32_t height,
-    const uint8_t* coverage_pixels,
-    const FVizFontGlyph* glyphs,
-    FVizSize glyph_count,
-    float nominal_pixel_size,
-    uint32_t fallback_codepoint,
-    FVizFontAtlas** out_atlas)
+FVizResult fviz_font_atlas_create_from_coverage(uint32_t width, uint32_t height, const uint8_t* coverage_pixels,
+                                                const FVizFontGlyph* glyphs, FVizSize glyph_count,
+                                                float nominal_pixel_size, uint32_t fallback_codepoint,
+                                                FVizFontAtlas** out_atlas)
 {
     FVizFontAtlas* atlas;
     FVizSize pixel_count;
@@ -134,12 +247,10 @@ FVizResult fviz_font_atlas_create_from_coverage(
     FVizSize i;
     if (out_atlas == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_atlas = NULL;
-    if (coverage_pixels == NULL || glyphs == NULL ||
-        width == 0u || height == 0u || width > UINT16_MAX || height > UINT16_MAX ||
-        glyph_count == 0u || !isfinite(nominal_pixel_size) || nominal_pixel_size <= 0.0f)
+    if (coverage_pixels == NULL || glyphs == NULL || width == 0u || height == 0u || width > UINT16_MAX ||
+        height > UINT16_MAX || glyph_count == 0u || !isfinite(nominal_pixel_size) || nominal_pixel_size <= 0.0f)
         return FVIZ_ERROR_INVALID_ARGUMENT;
-    if ((FVizSize)width > SIZE_MAX / (FVizSize)height ||
-        glyph_count > SIZE_MAX / sizeof(FVizFontGlyph))
+    if ((FVizSize)width > SIZE_MAX / (FVizSize)height || glyph_count > SIZE_MAX / sizeof(FVizFontGlyph))
         return FVIZ_ERROR_OVERFLOW;
     pixel_count = (FVizSize)width * (FVizSize)height;
     glyph_bytes = glyph_count * sizeof(FVizFontGlyph);
@@ -147,8 +258,8 @@ FVizResult fviz_font_atlas_create_from_coverage(
     {
         const FVizFontGlyph* glyph = &glyphs[i];
         if ((uint32_t)glyph->x + (uint32_t)glyph->width > width ||
-            (uint32_t)glyph->y + (uint32_t)glyph->height > height ||
-            !isfinite(glyph->advance_x) || !isfinite(glyph->bearing_x) || !isfinite(glyph->bearing_y))
+            (uint32_t)glyph->y + (uint32_t)glyph->height > height || !isfinite(glyph->advance_x) ||
+            !isfinite(glyph->bearing_x) || !isfinite(glyph->bearing_y))
             return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     atlas = (FVizFontAtlas*)fviz_internal_object_allocate(sizeof(*atlas), &g_fviz_font_atlas_class, NULL);
@@ -242,8 +353,7 @@ FVizResult fviz_font_atlas_create_builtin(FVizFontAtlas** out_atlas)
     return FVIZ_OK;
 }
 
-FVizResult fviz_font_atlas_create_system(
-    const char* family, float pixel_size, FVizFontAtlas** out_atlas)
+FVizResult fviz_font_atlas_create_system(const char* family, float pixel_size, FVizFontAtlas** out_atlas)
 {
 #ifdef _WIN32
     HDC dc = NULL;
@@ -271,9 +381,9 @@ FVizResult fviz_font_atlas_create_system(
     if (pixels == NULL) return fviz_last_error_code();
     (void)memset(pixels, 0, (FVizSize)atlas_w * atlas_h);
     dc = CreateCompatibleDC(NULL);
-    font = CreateFontA(-(LONG)(pixel_size + 0.5f), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-        DEFAULT_PITCH | FF_DONTCARE, family);
+    font =
+        CreateFontA(-(LONG)(pixel_size + 0.5f), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                    OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, family);
     if (dc == NULL || font == NULL)
     {
         if (font != NULL) DeleteObject(font);
@@ -285,7 +395,7 @@ FVizResult fviz_font_atlas_create_system(
     for (cp = 32u; cp <= 127u; ++cp)
     {
         WCHAR wc = (WCHAR)cp;
-        MAT2 mat = {{0,1},{0,0},{0,0},{0,1}};
+        MAT2 mat = {{0, 1}, {0, 0}, {0, 0}, {0, 1}};
         GLYPHMETRICS gm;
         DWORD bytes = GetGlyphOutlineW(dc, wc, GGO_GRAY8_BITMAP, &gm, 0u, NULL, &mat);
         uint8_t* bitmap;
@@ -329,54 +439,75 @@ FVizResult fviz_font_atlas_create_system(
         fviz_free(pixels);
         return FVIZ_ERROR_NOT_SUPPORTED;
     }
-    result = fviz_font_atlas_create_from_coverage(
-        atlas_w, atlas_h, pixels, glyphs, glyph_count, pixel_size,
-        (uint32_t)'?', out_atlas);
+    result = fviz_font_atlas_create_from_coverage(atlas_w, atlas_h, pixels, glyphs, glyph_count, pixel_size,
+                                                  (uint32_t)'?', out_atlas);
     fviz_free(pixels);
     return result;
 #else
-    (void)family; (void)pixel_size; (void)out_atlas;
+    (void)family;
+    (void)pixel_size;
+    (void)out_atlas;
     return FVIZ_ERROR_NOT_SUPPORTED;
 #endif
 }
 
-FVizResult fviz_font_atlas_create_from_file(
-    const char* file_path, const char* family, float pixel_size, FVizFontAtlas** out_atlas)
+FVizResult fviz_font_atlas_create_from_file(const char* file_path, const char* family, float pixel_size,
+                                            FVizFontAtlas** out_atlas)
 {
 #ifdef _WIN32
     int added;
     FVizResult result;
-    if (file_path == NULL || family == NULL || out_atlas == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (file_path == NULL || family == NULL || out_atlas == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     added = AddFontResourceExA(file_path, FR_PRIVATE, NULL);
     if (added == 0) return FVIZ_ERROR_NOT_SUPPORTED;
     result = fviz_font_atlas_create_system(family, pixel_size, out_atlas);
     (void)RemoveFontResourceExA(file_path, FR_PRIVATE, NULL);
     return result;
 #else
-    (void)file_path; (void)family; (void)pixel_size; (void)out_atlas;
+    (void)file_path;
+    (void)family;
+    (void)pixel_size;
+    (void)out_atlas;
     return FVIZ_ERROR_NOT_SUPPORTED;
 #endif
 }
 
-uint32_t fviz_font_default_family_count(void) { return 4u; }
+uint32_t fviz_font_default_family_count(void)
+{
+    return 4u;
+}
 
 const char* fviz_font_default_family(uint32_t index)
 {
-    static const char* families[] = {
-        "Arial", "Times New Roman", "Segoe UI", "Consolas"
-    };
+    static const char* families[] = {"Arial", "Times New Roman", "Segoe UI", "Consolas"};
     return index < 4u ? families[index] : NULL;
 }
 
-uint32_t fviz_font_atlas_width(const FVizFontAtlas* atlas) { return atlas != NULL ? atlas->width : 0u; }
-uint32_t fviz_font_atlas_height(const FVizFontAtlas* atlas) { return atlas != NULL ? atlas->height : 0u; }
-const uint8_t* fviz_font_atlas_pixels(const FVizFontAtlas* atlas) { return atlas != NULL ? atlas->pixels : NULL; }
-FVizSize fviz_font_atlas_glyph_count(const FVizFontAtlas* atlas) { return atlas != NULL ? atlas->glyph_count : 0u; }
+uint32_t fviz_font_atlas_width(const FVizFontAtlas* atlas)
+{
+    return atlas != NULL ? atlas->width : 0u;
+}
+
+uint32_t fviz_font_atlas_height(const FVizFontAtlas* atlas)
+{
+    return atlas != NULL ? atlas->height : 0u;
+}
+
+const uint8_t* fviz_font_atlas_pixels(const FVizFontAtlas* atlas)
+{
+    return atlas != NULL ? atlas->pixels : NULL;
+}
+
+FVizSize fviz_font_atlas_glyph_count(const FVizFontAtlas* atlas)
+{
+    return atlas != NULL ? atlas->glyph_count : 0u;
+}
+
 const FVizFontGlyph* fviz_font_atlas_glyph_at(const FVizFontAtlas* atlas, FVizSize index)
 {
     return atlas != NULL && index < atlas->glyph_count ? &atlas->glyphs[index] : NULL;
 }
+
 const FVizFontGlyph* fviz_font_atlas_find_glyph(const FVizFontAtlas* atlas, uint32_t codepoint)
 {
     const FVizFontGlyph* glyph;
@@ -385,6 +516,7 @@ const FVizFontGlyph* fviz_font_atlas_find_glyph(const FVizFontAtlas* atlas, uint
     if (glyph != NULL) return glyph;
     return fviz_font_atlas_find_exact(atlas, atlas->fallback_codepoint);
 }
+
 float fviz_font_atlas_nominal_pixel_size(const FVizFontAtlas* atlas)
 {
     return atlas != NULL ? atlas->nominal_pixel_size : 0.0f;

@@ -5,13 +5,8 @@
 #include <FViz/Core/FVizErrorInternal.h>
 #include <FViz/Math/FVizTransformPrivate.h>
 
-static const FVizObjectClass g_fviz_transform_class = {
-    FVIZ_TYPE_TRANSFORM,
-    "FVizTransform",
-    &g_fviz_object_class,
-    NULL,
-    NULL
-};
+static const FVizObjectClass g_fviz_transform_class = {FVIZ_TYPE_TRANSFORM, "FVizTransform", &g_fviz_object_class, NULL,
+                                                       NULL};
 
 FVizResult fviz_transform_create(FVizTransform** out_transform)
 {
@@ -22,8 +17,7 @@ FVizResult fviz_transform_create(FVizTransform** out_transform)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_transform = NULL;
-    transform = (FVizTransform*)fviz_internal_object_allocate(
-        sizeof(FVizTransform), &g_fviz_transform_class, NULL);
+    transform = (FVizTransform*)fviz_internal_object_allocate(sizeof(FVizTransform), &g_fviz_transform_class, NULL);
     if (transform == NULL) return fviz_last_error_code();
     transform->matrix = fviz_mat4_identity();
     *out_transform = transform;
@@ -90,19 +84,13 @@ void fviz_transform_rotate(FVizTransform* transform, FVizQuat rotation)
     fviz_transform_concatenate(transform, matrix);
 }
 
-static FVizVec3 fviz_transform_apply(
-    const FVizTransform* transform,
-    FVizVec3 value,
-    float homogeneous)
+static FVizVec3 fviz_transform_apply(const FVizTransform* transform, FVizVec3 value, float homogeneous)
 {
     const FVizMat4 matrix = fviz_transform_matrix(transform);
     FVizVec3 result;
-    result.x = matrix.m[0] * value.x + matrix.m[4] * value.y +
-        matrix.m[8] * value.z + matrix.m[12] * homogeneous;
-    result.y = matrix.m[1] * value.x + matrix.m[5] * value.y +
-        matrix.m[9] * value.z + matrix.m[13] * homogeneous;
-    result.z = matrix.m[2] * value.x + matrix.m[6] * value.y +
-        matrix.m[10] * value.z + matrix.m[14] * homogeneous;
+    result.x = matrix.m[0] * value.x + matrix.m[4] * value.y + matrix.m[8] * value.z + matrix.m[12] * homogeneous;
+    result.y = matrix.m[1] * value.x + matrix.m[5] * value.y + matrix.m[9] * value.z + matrix.m[13] * homogeneous;
+    result.z = matrix.m[2] * value.x + matrix.m[6] * value.y + matrix.m[10] * value.z + matrix.m[14] * homogeneous;
     return result;
 }
 

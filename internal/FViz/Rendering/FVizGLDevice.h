@@ -63,86 +63,39 @@ void fviz_internal_gl_device_destroy(FVizGLDevice* device);
 void fviz_internal_gl_device_begin_frame(FVizGLDevice* device);
 void fviz_internal_gl_device_end_frame(FVizGLDevice* device);
 void fviz_internal_gl_device_bind_framebuffer(FVizGLDevice* device, uint32_t framebuffer);
-void fviz_internal_gl_device_capture_state(
-    FVizGLDevice* device, FVizGLStateSnapshot* out_snapshot);
-FVizResult fviz_internal_gl_device_restore_state(
-    FVizGLDevice* device, const FVizGLStateSnapshot* snapshot);
+void fviz_internal_gl_device_capture_state(FVizGLDevice* device, FVizGLStateSnapshot* out_snapshot);
+FVizResult fviz_internal_gl_device_restore_state(FVizGLDevice* device, const FVizGLStateSnapshot* snapshot);
 FVizBool fviz_internal_gl_device_fxaa_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_weighted_oit_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_depth_peeling_supported(const FVizGLDevice* device);
-FVizResult fviz_internal_gl_device_render_depth_peeling(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    int viewport_x,
-    int viewport_y,
-    int width,
-    int height,
-    uint32_t samples,
-    float aspect_ratio,
-    uint32_t target_framebuffer,
-    uint32_t max_layers);
+FVizResult fviz_internal_gl_device_render_depth_peeling(FVizGLDevice* device, FVizRenderer* renderer, int viewport_x,
+                                                        int viewport_y, int width, int height, uint32_t samples,
+                                                        float aspect_ratio, uint32_t target_framebuffer,
+                                                        uint32_t max_layers);
 FVizBool fviz_internal_gl_device_shader_lines_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_text_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_integer_selection_supported(const FVizGLDevice* device);
 FVizBool fviz_internal_gl_device_gpu_timing_supported(const FVizGLDevice* device);
-void fviz_internal_gl_device_get_frame_statistics(
-    const FVizGLDevice* device,
-    FVizGLFrameStatistics* out_statistics);
-void fviz_internal_gl_device_set_memory_options(
-    FVizGLDevice* device,
-    const FVizGPUMemoryOptions* options);
+void fviz_internal_gl_device_get_frame_statistics(const FVizGLDevice* device, FVizGLFrameStatistics* out_statistics);
+void fviz_internal_gl_device_set_memory_options(FVizGLDevice* device, const FVizGPUMemoryOptions* options);
 void fviz_internal_gl_device_release_mesh_resources(FVizGLDevice* device);
-FVizResult fviz_internal_gl_device_render_stage(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    float aspect_ratio,
-    int viewport_width,
-    int viewport_height,
-    FVizRenderPassStage stage);
-FVizResult fviz_internal_gl_device_render_weighted_oit(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    int viewport_x,
-    int viewport_y,
-    int width,
-    int height,
-    uint32_t samples,
-    float aspect_ratio,
-    uint32_t target_framebuffer);
-FVizResult fviz_internal_gl_device_apply_fxaa(
-    FVizGLDevice* device,
-    int width,
-    int height,
-    const FVizFXAAOptions* options,
-    FVizBool srgb,
-    uint32_t target_framebuffer);
-FVizResult fviz_internal_gl_device_render_gradient_background(
-    FVizGLDevice* device,
-    const float bottom_color[3],
-    const float top_color[3]);
-FVizResult fviz_internal_gl_device_render_text_actors(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    int width,
-    int height,
-    float content_scale);
-FVizResult fviz_internal_gl_device_render_legend(
-    FVizGLDevice* device,
-    const FVizScalarLegend* legend,
-    int width,
-    int height,
-    float content_scale);
-FVizResult fviz_internal_gl_device_select(
-    FVizGLDevice* device,
-    FVizRenderer* renderer,
-    float aspect_ratio,
-    int x,
-    int y,
-    int viewport_width,
-    int viewport_height,
-    FVizSelectionAssociation association,
-    FVizSize* out_actor_index,
-    FVizSize* out_primitive_id,
-    float* out_depth);
+FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRenderer* renderer, float aspect_ratio,
+                                                int viewport_width, int viewport_height, FVizRenderPassStage stage);
+FVizResult fviz_internal_gl_device_render_weighted_oit(FVizGLDevice* device, FVizRenderer* renderer, int viewport_x,
+                                                       int viewport_y, int width, int height, uint32_t samples,
+                                                       float aspect_ratio, uint32_t target_framebuffer);
+FVizResult fviz_internal_gl_device_apply_fxaa(FVizGLDevice* device, int width, int height,
+                                              const FVizFXAAOptions* options, FVizBool srgb,
+                                              uint32_t target_framebuffer);
+FVizResult fviz_internal_gl_device_render_gradient_background(FVizGLDevice* device, const float bottom_color[3],
+                                                              const float top_color[3]);
+FVizResult fviz_internal_gl_device_render_text_actors(FVizGLDevice* device, FVizRenderer* renderer, int width,
+                                                      int height, float content_scale);
+FVizResult fviz_internal_gl_device_render_legend(FVizGLDevice* device, const FVizScalarLegend* legend, int width,
+                                                 int height, float content_scale);
+FVizResult fviz_internal_gl_device_select(FVizGLDevice* device, FVizRenderer* renderer, float aspect_ratio, int x,
+                                          int y, int viewport_width, int viewport_height,
+                                          FVizSelectionAssociation association, FVizSize* out_actor_index,
+                                          FVizSize* out_primitive_id, float* out_depth);
 
 #endif /* FVIZ_INTERNAL_RENDERING_GL_DEVICE_H */

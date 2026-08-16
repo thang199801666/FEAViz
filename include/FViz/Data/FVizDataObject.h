@@ -26,9 +26,7 @@ typedef struct FVizDataObjectMemoryInfo
     FVizSize unique_object_count;
 } FVizDataObjectMemoryInfo;
 
-FVIZ_API FVizResult fviz_data_object_memory_info(
-    const FVizDataObject* data_object,
-    FVizDataObjectMemoryInfo* out_info);
+FVIZ_API FVizResult fviz_data_object_memory_info(const FVizDataObject* data_object, FVizDataObjectMemoryInfo* out_info);
 FVIZ_API FVizSize fviz_data_object_memory_size(const FVizDataObject* data_object);
 
 FVIZ_EXTERN_C_END

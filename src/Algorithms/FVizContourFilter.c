@@ -11,10 +11,8 @@
 #include <FViz/Algorithms/FVizContourFilterPrivate.h>
 
 static void fviz_contour_filter_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_contour_filter_class = {
-    FVIZ_TYPE_CONTOUR_FILTER, "FVizContourFilter", &g_fviz_object_class,
-    fviz_contour_filter_destroy, NULL
-};
+static const FVizObjectClass g_fviz_contour_filter_class = {FVIZ_TYPE_CONTOUR_FILTER, "FVizContourFilter",
+                                                            &g_fviz_object_class, fviz_contour_filter_destroy, NULL};
 
 static void fviz_contour_copy_scalar_name(char destination[128], const char* source)
 {
@@ -60,17 +58,28 @@ static float fviz_contour_scalar_value(const FVizContourRangeContext* context, F
 {
     switch (context->scalar_type)
     {
-        case FVIZ_DATA_INT8: return (float)((const int8_t*)context->scalars)[point_id];
-        case FVIZ_DATA_UINT8: return (float)((const uint8_t*)context->scalars)[point_id];
-        case FVIZ_DATA_INT16: return (float)((const int16_t*)context->scalars)[point_id];
-        case FVIZ_DATA_UINT16: return (float)((const uint16_t*)context->scalars)[point_id];
-        case FVIZ_DATA_INT32: return (float)((const int32_t*)context->scalars)[point_id];
-        case FVIZ_DATA_UINT32: return (float)((const uint32_t*)context->scalars)[point_id];
-        case FVIZ_DATA_INT64: return (float)((const int64_t*)context->scalars)[point_id];
-        case FVIZ_DATA_UINT64: return (float)((const uint64_t*)context->scalars)[point_id];
-        case FVIZ_DATA_FLOAT32: return ((const float*)context->scalars)[point_id];
-        case FVIZ_DATA_FLOAT64: return (float)((const double*)context->scalars)[point_id];
-        default: return 0.0f;
+        case FVIZ_DATA_INT8:
+            return (float)((const int8_t*)context->scalars)[point_id];
+        case FVIZ_DATA_UINT8:
+            return (float)((const uint8_t*)context->scalars)[point_id];
+        case FVIZ_DATA_INT16:
+            return (float)((const int16_t*)context->scalars)[point_id];
+        case FVIZ_DATA_UINT16:
+            return (float)((const uint16_t*)context->scalars)[point_id];
+        case FVIZ_DATA_INT32:
+            return (float)((const int32_t*)context->scalars)[point_id];
+        case FVIZ_DATA_UINT32:
+            return (float)((const uint32_t*)context->scalars)[point_id];
+        case FVIZ_DATA_INT64:
+            return (float)((const int64_t*)context->scalars)[point_id];
+        case FVIZ_DATA_UINT64:
+            return (float)((const uint64_t*)context->scalars)[point_id];
+        case FVIZ_DATA_FLOAT32:
+            return ((const float*)context->scalars)[point_id];
+        case FVIZ_DATA_FLOAT64:
+            return (float)((const double*)context->scalars)[point_id];
+        default:
+            return 0.0f;
     }
 }
 
@@ -87,12 +96,9 @@ static void fviz_contour_range(FVizSize begin, FVizSize end, void* user_data)
         const uint32_t ia = context->indices[triangle_id * 3u + 0u];
         const uint32_t ib = context->indices[triangle_id * 3u + 1u];
         const uint32_t ic = context->indices[triangle_id * 3u + 2u];
-        const float values[3] = {
-            fviz_contour_scalar_value(context, ia),
-            fviz_contour_scalar_value(context, ib),
-            fviz_contour_scalar_value(context, ic)};
-        const FVizVec3 corners[3] = {
-            context->points[ia], context->points[ib], context->points[ic]};
+        const float values[3] = {fviz_contour_scalar_value(context, ia), fviz_contour_scalar_value(context, ib),
+                                 fviz_contour_scalar_value(context, ic)};
+        const FVizVec3 corners[3] = {context->points[ia], context->points[ib], context->points[ic]};
         uint32_t vertex_count = 0u;
         uint32_t edge;
         for (edge = 0u; edge < 3u; ++edge)
@@ -102,31 +108,29 @@ static void fviz_contour_range(FVizSize begin, FVizSize end, void* user_data)
             if ((values[a] >= context->levels[level_id]) != (values[b] >= context->levels[level_id]))
             {
                 const float t = (context->levels[level_id] - values[a]) / (values[b] - values[a]);
-                const FVizVec3 point = fviz_vec3_add(
-                    corners[a], fviz_vec3_scale(fviz_vec3_sub(corners[b], corners[a]), t));
+                const FVizVec3 point =
+                    fviz_vec3_add(corners[a], fviz_vec3_scale(fviz_vec3_sub(corners[b], corners[a]), t));
                 if (vertex_count++ == 0u) segment->a = point;
-                else segment->b = point;
+                else
+                    segment->b = point;
             }
         }
         segment->valid = vertex_count == 2u ? FVIZ_TRUE : FVIZ_FALSE;
     }
 }
 
-FVizResult fviz_contour_filter_create(
-    const char* scalar_name,
-    const float* levels,
-    FVizSize level_count,
-    FVizContourFilter** out_filter)
+FVizResult fviz_contour_filter_create(const char* scalar_name, const float* levels, FVizSize level_count,
+                                      FVizContourFilter** out_filter)
 {
     FVizContourFilter* filter;
-    if (out_filter == NULL || scalar_name == NULL ||
-        level_count == 0u || levels == NULL)
+    if (out_filter == NULL || scalar_name == NULL || level_count == 0u || levels == NULL)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "contour filter requires scalar name and levels");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_filter = NULL;
-    filter = (FVizContourFilter*)fviz_internal_object_allocate(sizeof(FVizContourFilter), &g_fviz_contour_filter_class, NULL);
+    filter = (FVizContourFilter*)fviz_internal_object_allocate(sizeof(FVizContourFilter), &g_fviz_contour_filter_class,
+                                                               NULL);
     if (filter == NULL) return fviz_last_error_code();
     filter->levels = (float*)fviz_alloc(level_count * sizeof(float));
     if (filter->levels == NULL)
@@ -213,7 +217,7 @@ static FVizResult fviz_contour_execute(FVizContourFilter* filter)
         fviz_data_array_components(scalars) != 1u)
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
-            "contour scalar field must contain one component per input point");
+                                "contour scalar field must contain one component per input point");
         return FVIZ_ERROR_INVALID_STATE;
     }
     scalar_type = fviz_data_array_type(scalars);
@@ -232,8 +236,7 @@ static FVizResult fviz_contour_execute(FVizContourFilter* filter)
 
     if (triangle_count > 0u && filter->level_count > 0u)
     {
-        segments = (FVizContourSegment*)fviz_alloc(
-            triangle_count * filter->level_count * sizeof(*segments));
+        segments = (FVizContourSegment*)fviz_alloc(triangle_count * filter->level_count * sizeof(*segments));
         if (segments == NULL) goto fail;
         (void)memset(segments, 0, triangle_count * filter->level_count * sizeof(*segments));
         range_context.points = points;
@@ -243,8 +246,8 @@ static FVizResult fviz_contour_execute(FVizContourFilter* filter)
         range_context.levels = filter->levels;
         range_context.triangle_count = triangle_count;
         range_context.segments = segments;
-        if (fviz_parallel_for(0u, filter->level_count * triangle_count, 256u,
-                fviz_contour_range, &range_context) != FVIZ_OK)
+        if (fviz_parallel_for(0u, filter->level_count * triangle_count, 256u, fviz_contour_range, &range_context) !=
+            FVIZ_OK)
             goto fail;
     }
     if (segments != NULL)
@@ -300,8 +303,7 @@ static FVizResult fviz_contour_execute(FVizContourFilter* filter)
                 fviz_poly_data_add_lines(output, output_lines, valid_count) != FVIZ_OK ||
                 fviz_data_array_create(FVIZ_DATA_FLOAT32, 1u, &level_array) != FVIZ_OK ||
                 fviz_data_array_append_tuples(level_array, output_levels, valid_count * 2u) != FVIZ_OK ||
-                fviz_attribute_set_add(fviz_poly_data_point_data(output),
-                    "contour_level", level_array) != FVIZ_OK)
+                fviz_attribute_set_add(fviz_poly_data_point_data(output), "contour_level", level_array) != FVIZ_OK)
             {
                 fviz_release(level_array);
                 fviz_free(output_levels);

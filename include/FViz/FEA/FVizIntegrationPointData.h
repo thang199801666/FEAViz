@@ -24,18 +24,16 @@ typedef struct FVizIntegrationPointExtrapolationOptions
     FVizIntegrationPointFallbackPolicy fallback_policy;
 } FVizIntegrationPointExtrapolationOptions;
 
-FVIZ_FEA_API void fviz_integration_point_extrapolation_options_initialize(
-    FVizIntegrationPointExtrapolationOptions* options);
+FVIZ_FEA_API void
+fviz_integration_point_extrapolation_options_initialize(FVizIntegrationPointExtrapolationOptions* options);
 
 /* Returns standard FE/VTK-reference parametric integration coordinates for a
  * supported cell and integration-point count.  out_points may be NULL to
  * query the required count. */
-FVIZ_FEA_API FVizResult fviz_integration_point_standard_coordinates(
-    FVizCellType cell_type,
-    FVizSize integration_point_count,
-    FVizVec3* out_points,
-    FVizSize capacity,
-    FVizSize* out_point_count);
+FVIZ_FEA_API FVizResult fviz_integration_point_standard_coordinates(FVizCellType cell_type,
+                                                                    FVizSize integration_point_count,
+                                                                    FVizVec3* out_points, FVizSize capacity,
+                                                                    FVizSize* out_point_count);
 
 /* Extrapolates concatenated cell integration-point tuples to global nodes.
  * cell_offsets has cell_count+1 entries and indexes integration_values.
@@ -45,11 +43,8 @@ FVIZ_FEA_API FVizResult fviz_integration_point_standard_coordinates(
  * averaged across contributing cells.  The output is Float64 and preserves
  * the input component count. */
 FVIZ_FEA_API FVizResult fviz_unstructured_grid_extrapolate_integration_point_data(
-    const FVizUnstructuredGrid* grid,
-    const FVizDataArray* integration_values,
-    const FVizSize* cell_offsets,
-    const FVizVec3* parametric_coordinates,
-    const FVizIntegrationPointExtrapolationOptions* options,
+    const FVizUnstructuredGrid* grid, const FVizDataArray* integration_values, const FVizSize* cell_offsets,
+    const FVizVec3* parametric_coordinates, const FVizIntegrationPointExtrapolationOptions* options,
     FVizDataArray** out_point_values);
 
 /* Extrapolates integration-point tuples independently inside each cell and
@@ -58,11 +53,8 @@ FVIZ_FEA_API FVizResult fviz_unstructured_grid_extrapolate_integration_point_dat
  * field blocks to preserve unaveraged element-node values before a separate
  * nodal averaging policy is applied. */
 FVIZ_FEA_API FVizResult fviz_unstructured_grid_extrapolate_integration_point_data_element_nodal(
-    const FVizUnstructuredGrid* grid,
-    const FVizDataArray* integration_values,
-    const FVizSize* cell_offsets,
-    const FVizVec3* parametric_coordinates,
-    const FVizIntegrationPointExtrapolationOptions* options,
+    const FVizUnstructuredGrid* grid, const FVizDataArray* integration_values, const FVizSize* cell_offsets,
+    const FVizVec3* parametric_coordinates, const FVizIntegrationPointExtrapolationOptions* options,
     FVizDataArray** out_element_nodal_values);
 
 FVIZ_EXTERN_C_END

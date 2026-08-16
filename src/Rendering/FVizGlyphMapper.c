@@ -16,23 +16,20 @@
 static void fviz_glyph_mapper_destroy(FVizObject* object);
 static FVizMTime fviz_glyph_mapper_mtime(const FVizObject* object);
 
-static void fviz_glyph_mapper_record_dirty(
-    FVizGlyphMapper* mapper, FVizSize first, FVizSize count, FVizBool full)
+static void fviz_glyph_mapper_record_dirty(FVizGlyphMapper* mapper, FVizSize first, FVizSize count, FVizBool full)
 {
     uint32_t slot;
     FVizGlyphDirtyRecord* record;
     fviz_object_modified((FVizObject*)mapper->instances);
     if (mapper->dirty_history_count < FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY)
     {
-        slot = (mapper->dirty_history_begin + mapper->dirty_history_count) %
-            FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
+        slot = (mapper->dirty_history_begin + mapper->dirty_history_count) % FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
         ++mapper->dirty_history_count;
     }
     else
     {
         slot = mapper->dirty_history_begin;
-        mapper->dirty_history_begin = (mapper->dirty_history_begin + 1u) %
-            FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
+        mapper->dirty_history_begin = (mapper->dirty_history_begin + 1u) % FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
     }
     record = &mapper->dirty_history[slot];
     record->mtime = fviz_object_mtime((const FVizObject*)mapper->instances);
@@ -42,13 +39,9 @@ static void fviz_glyph_mapper_record_dirty(
     fviz_object_modified((FVizObject*)mapper);
 }
 
-static const FVizObjectClass g_fviz_glyph_mapper_class = {
-    FVIZ_TYPE_GLYPH_MAPPER,
-    "FVizGlyphMapper",
-    &g_fviz_object_class,
-    fviz_glyph_mapper_destroy,
-    fviz_glyph_mapper_mtime
-};
+static const FVizObjectClass g_fviz_glyph_mapper_class = {FVIZ_TYPE_GLYPH_MAPPER, "FVizGlyphMapper",
+                                                          &g_fviz_object_class, fviz_glyph_mapper_destroy,
+                                                          fviz_glyph_mapper_mtime};
 
 static FVizMTime fviz_glyph_mapper_mtime(const FVizObject* object)
 {
@@ -66,11 +59,10 @@ FVizMTime fviz_internal_glyph_mapper_instances_mtime(const FVizGlyphMapper* mapp
     return mapper != NULL ? fviz_object_mtime((const FVizObject*)mapper->instances) : 0u;
 }
 
-FVizResult fviz_internal_glyph_mapper_dirty_range_since(
-    const FVizGlyphMapper* mapper, FVizMTime since_mtime, FVizDirtyRange* out_range)
+FVizResult fviz_internal_glyph_mapper_dirty_range_since(const FVizGlyphMapper* mapper, FVizMTime since_mtime,
+                                                        FVizDirtyRange* out_range)
 {
-    const FVizMTime current_mtime =
-        fviz_internal_glyph_mapper_instances_mtime(mapper);
+    const FVizMTime current_mtime = fviz_internal_glyph_mapper_instances_mtime(mapper);
     uint32_t offset;
     FVizBool found = FVIZ_FALSE;
     if (mapper == NULL || out_range == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -80,19 +72,17 @@ FVizResult fviz_internal_glyph_mapper_dirty_range_since(
     if (since_mtime >= current_mtime) return FVIZ_OK;
     if (since_mtime == 0u || mapper->dirty_history_count == 0u) goto full;
     {
-        const FVizGlyphDirtyRecord* oldest =
-            &mapper->dirty_history[mapper->dirty_history_begin];
-        const uint32_t newest_slot = (mapper->dirty_history_begin +
-            mapper->dirty_history_count - 1u) % FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
+        const FVizGlyphDirtyRecord* oldest = &mapper->dirty_history[mapper->dirty_history_begin];
+        const uint32_t newest_slot =
+            (mapper->dirty_history_begin + mapper->dirty_history_count - 1u) % FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
         const FVizGlyphDirtyRecord* newest = &mapper->dirty_history[newest_slot];
         if (newest->mtime != current_mtime ||
-            (mapper->dirty_history_count == FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY &&
-             since_mtime < oldest->mtime)) goto full;
+            (mapper->dirty_history_count == FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY && since_mtime < oldest->mtime))
+            goto full;
     }
     for (offset = 0u; offset < mapper->dirty_history_count; ++offset)
     {
-        const uint32_t slot = (mapper->dirty_history_begin + offset) %
-            FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
+        const uint32_t slot = (mapper->dirty_history_begin + offset) % FVIZ_GLYPH_DIRTY_HISTORY_CAPACITY;
         const FVizGlyphDirtyRecord* record = &mapper->dirty_history[slot];
         FVizSize end;
         FVizSize current_end;
@@ -168,8 +158,7 @@ FVizResult fviz_glyph_mapper_create(FVizGlyphMapper** out_mapper)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_mapper = NULL;
-    mapper = (FVizGlyphMapper*)fviz_internal_object_allocate(
-        sizeof(*mapper), &g_fviz_glyph_mapper_class, NULL);
+    mapper = (FVizGlyphMapper*)fviz_internal_object_allocate(sizeof(*mapper), &g_fviz_glyph_mapper_class, NULL);
     if (mapper == NULL) return fviz_last_error_code();
     if (fviz_array_create(sizeof(FVizGlyphInstance), &mapper->instances) != FVIZ_OK)
     {
@@ -180,8 +169,7 @@ FVizResult fviz_glyph_mapper_create(FVizGlyphMapper** out_mapper)
     return FVIZ_OK;
 }
 
-FVizResult fviz_glyph_mapper_set_source_poly_data(
-    FVizGlyphMapper* mapper, FVizPolyData* source)
+FVizResult fviz_glyph_mapper_set_source_poly_data(FVizGlyphMapper* mapper, FVizPolyData* source)
 {
     if (mapper == NULL)
     {
@@ -211,8 +199,7 @@ FVizResult fviz_glyph_mapper_reserve_instances(FVizGlyphMapper* mapper, FVizSize
     return fviz_array_reserve(mapper->instances, capacity);
 }
 
-void fviz_glyph_mapper_set_gpu_residency_pinned(
-    FVizGlyphMapper* mapper, FVizBool pinned)
+void fviz_glyph_mapper_set_gpu_residency_pinned(FVizGlyphMapper* mapper, FVizBool pinned)
 {
     const FVizBool normalized = pinned != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
     if (mapper == NULL || mapper->gpu_residency_pinned == normalized) return;
@@ -243,21 +230,18 @@ static FVizGlyphInstance fviz_glyph_instance_sanitize(const FVizGlyphInstance* s
     return instance;
 }
 
-FVizResult fviz_glyph_mapper_add_instance(
-    FVizGlyphMapper* mapper, const FVizGlyphInstance* instance)
+FVizResult fviz_glyph_mapper_add_instance(FVizGlyphMapper* mapper, const FVizGlyphInstance* instance)
 {
     FVizGlyphInstance sanitized;
     if (mapper == NULL || instance == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     sanitized = fviz_glyph_instance_sanitize(instance);
     if (fviz_array_push(mapper->instances, &sanitized) != FVIZ_OK) return fviz_last_error_code();
     if (sanitized.color[3] < 0.999999f) mapper->has_translucent_instances = FVIZ_TRUE;
-    fviz_glyph_mapper_record_dirty(
-        mapper, fviz_array_count(mapper->instances) - 1u, 1u, FVIZ_FALSE);
+    fviz_glyph_mapper_record_dirty(mapper, fviz_array_count(mapper->instances) - 1u, 1u, FVIZ_FALSE);
     return FVIZ_OK;
 }
 
-FVizResult fviz_glyph_mapper_add_instances(
-    FVizGlyphMapper* mapper, const FVizGlyphInstance* instances, FVizSize count)
+FVizResult fviz_glyph_mapper_add_instances(FVizGlyphMapper* mapper, const FVizGlyphInstance* instances, FVizSize count)
 {
     FVizGlyphInstance* destination;
     FVizSize i;
@@ -270,8 +254,7 @@ FVizResult fviz_glyph_mapper_add_instances(
         destination[i] = fviz_glyph_instance_sanitize(&instances[i]);
         if (destination[i].color[3] < 0.999999f) mapper->has_translucent_instances = FVIZ_TRUE;
     }
-    fviz_glyph_mapper_record_dirty(
-        mapper, fviz_array_count(mapper->instances) - count, count, FVIZ_FALSE);
+    fviz_glyph_mapper_record_dirty(mapper, fviz_array_count(mapper->instances) - count, count, FVIZ_FALSE);
     return FVIZ_OK;
 }
 
@@ -290,17 +273,14 @@ static void fviz_glyph_mapper_recompute_translucency(FVizGlyphMapper* mapper)
     }
 }
 
-FVizResult fviz_glyph_mapper_set_instances(
-    FVizGlyphMapper* mapper,
-    FVizSize first,
-    const FVizGlyphInstance* instances,
-    FVizSize count)
+FVizResult fviz_glyph_mapper_set_instances(FVizGlyphMapper* mapper, FVizSize first, const FVizGlyphInstance* instances,
+                                           FVizSize count)
 {
     FVizGlyphInstance* destination;
     FVizSize i;
     const FVizSize instance_count = fviz_glyph_mapper_instance_count(mapper);
-    if (mapper == NULL || (instances == NULL && count != 0u) ||
-        first > instance_count || count > instance_count - first)
+    if (mapper == NULL || (instances == NULL && count != 0u) || first > instance_count ||
+        count > instance_count - first)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     if (count == 0u) return FVIZ_OK;
     destination = (FVizGlyphInstance*)fviz_array_data(mapper->instances) + first;
@@ -311,8 +291,7 @@ FVizResult fviz_glyph_mapper_set_instances(
     return FVIZ_OK;
 }
 
-FVizResult fviz_glyph_mapper_set_instance(
-    FVizGlyphMapper* mapper, FVizSize index, const FVizGlyphInstance* instance)
+FVizResult fviz_glyph_mapper_set_instance(FVizGlyphMapper* mapper, FVizSize index, const FVizGlyphInstance* instance)
 {
     return fviz_glyph_mapper_set_instances(mapper, index, instance, 1u);
 }
@@ -337,13 +316,11 @@ FVizBool fviz_glyph_mapper_has_translucent_instances(const FVizGlyphMapper* mapp
 
 const FVizGlyphInstance* fviz_glyph_mapper_instances(const FVizGlyphMapper* mapper)
 {
-    return mapper != NULL
-        ? (const FVizGlyphInstance*)fviz_array_const_data(mapper->instances)
-        : NULL;
+    return mapper != NULL ? (const FVizGlyphInstance*)fviz_array_const_data(mapper->instances) : NULL;
 }
 
-FVizResult fviz_glyph_mapper_get_instance(
-    const FVizGlyphMapper* mapper, FVizSize index, FVizGlyphInstance* out_instance)
+FVizResult fviz_glyph_mapper_get_instance(const FVizGlyphMapper* mapper, FVizSize index,
+                                          FVizGlyphInstance* out_instance)
 {
     const FVizGlyphInstance* instance;
     if (mapper == NULL || out_instance == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
@@ -364,17 +341,14 @@ static FVizQuat fviz_glyph_orientation_from_x(FVizVec3 direction)
     unit = fviz_vec3_scale(direction, 1.0f / length);
     dot = fviz_vec3_dot(x_axis, unit);
     if (dot >= 0.999999f) return fviz_quat_identity();
-    if (dot <= -0.999999f)
-        return fviz_quat_from_axis_angle(fviz_vec3(0.0f, 1.0f, 0.0f), 3.14159265358979323846f);
+    if (dot <= -0.999999f) return fviz_quat_from_axis_angle(fviz_vec3(0.0f, 1.0f, 0.0f), 3.14159265358979323846f);
     axis = fviz_vec3_normalize(fviz_vec3_cross(x_axis, unit));
     return fviz_quat_from_axis_angle(axis, acosf(fmaxf(-1.0f, fminf(1.0f, dot))));
 }
 
-FVizResult fviz_glyph_mapper_build_from_point_vectors(
-    FVizGlyphMapper* mapper,
-    const FVizPolyData* input,
-    const char* vector_array_name,
-    const FVizVectorGlyphOptions* options)
+FVizResult fviz_glyph_mapper_build_from_point_vectors(FVizGlyphMapper* mapper, const FVizPolyData* input,
+                                                      const char* vector_array_name,
+                                                      const FVizVectorGlyphOptions* options)
 {
     FVizVectorGlyphOptions defaults;
     const FVizVectorGlyphOptions* resolved = options;
@@ -400,16 +374,14 @@ FVizResult fviz_glyph_mapper_build_from_point_vectors(
         resolved = &defaults;
     }
     else if (resolved->struct_size < offsetof(FVizVectorGlyphOptions, opacity) + sizeof(resolved->opacity) ||
-             !isfinite(resolved->scale_factor) || resolved->scale_factor < 0.0f ||
-             !isfinite(resolved->opacity))
+             !isfinite(resolved->scale_factor) || resolved->scale_factor < 0.0f || !isfinite(resolved->opacity))
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "vector glyph options are invalid or truncated");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     point_data = fviz_poly_data_const_point_data(input);
-    vectors = vector_array_name != NULL
-        ? fviz_attribute_set_const_get(point_data, vector_array_name)
-        : fviz_attribute_set_const_active(point_data, FVIZ_ATTRIBUTE_VECTORS);
+    vectors = vector_array_name != NULL ? fviz_attribute_set_const_get(point_data, vector_array_name)
+                                        : fviz_attribute_set_const_active(point_data, FVIZ_ATTRIBUTE_VECTORS);
     if (vectors == NULL || fviz_data_array_components(vectors) < 3u)
     {
         fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "a three-component point vector array is required");
@@ -466,11 +438,9 @@ FVizResult fviz_glyph_mapper_build_from_point_vectors(
             if (t < 0.0f) t = 0.0f;
             if (t > 1.0f) t = 1.0f;
             for (c = 0u; c < 3u; ++c)
-                instance.color[c] = resolved->low_color[c] +
-                    (resolved->high_color[c] - resolved->low_color[c]) * t;
+                instance.color[c] = resolved->low_color[c] + (resolved->high_color[c] - resolved->low_color[c]) * t;
         }
-        instance.color[3] = resolved->opacity < 0.0f ? 0.0f :
-            (resolved->opacity > 1.0f ? 1.0f : resolved->opacity);
+        instance.color[3] = resolved->opacity < 0.0f ? 0.0f : (resolved->opacity > 1.0f ? 1.0f : resolved->opacity);
         instance = fviz_glyph_instance_sanitize(&instance);
         if (fviz_array_push(generated, &instance) != FVIZ_OK)
         {
@@ -484,8 +454,7 @@ FVizResult fviz_glyph_mapper_build_from_point_vectors(
     mapper->has_translucent_instances = translucent;
     mapper->dirty_history_begin = 0u;
     mapper->dirty_history_count = 0u;
-    fviz_glyph_mapper_record_dirty(
-        mapper, 0u, fviz_array_count(generated), FVIZ_TRUE);
+    fviz_glyph_mapper_record_dirty(mapper, 0u, fviz_array_count(generated), FVIZ_TRUE);
     return FVIZ_OK;
 }
 
@@ -508,24 +477,20 @@ FVizBounds fviz_glyph_mapper_bounds(const FVizGlyphMapper* mapper)
     for (i = 0u; i < instance_count; ++i)
     {
         const FVizGlyphInstance* instance = &instances[i];
-        FVizVec3 center = fviz_vec3(
-            source_center.x * instance->scale.x,
-            source_center.y * instance->scale.y,
-            source_center.z * instance->scale.z);
+        FVizVec3 center = fviz_vec3(source_center.x * instance->scale.x, source_center.y * instance->scale.y,
+                                    source_center.z * instance->scale.z);
         FVizVec3 ex = fviz_quat_rotate_vec3(instance->orientation,
-            fviz_vec3(fabsf(source_half_extent.x * instance->scale.x), 0.0f, 0.0f));
+                                            fviz_vec3(fabsf(source_half_extent.x * instance->scale.x), 0.0f, 0.0f));
         FVizVec3 ey = fviz_quat_rotate_vec3(instance->orientation,
-            fviz_vec3(0.0f, fabsf(source_half_extent.y * instance->scale.y), 0.0f));
+                                            fviz_vec3(0.0f, fabsf(source_half_extent.y * instance->scale.y), 0.0f));
         FVizVec3 ez = fviz_quat_rotate_vec3(instance->orientation,
-            fviz_vec3(0.0f, 0.0f, fabsf(source_half_extent.z * instance->scale.z)));
+                                            fviz_vec3(0.0f, 0.0f, fabsf(source_half_extent.z * instance->scale.z)));
         FVizVec3 extent;
         FVizVec3 minimum;
         FVizVec3 maximum;
         center = fviz_vec3_add(fviz_quat_rotate_vec3(instance->orientation, center), instance->position);
-        extent = fviz_vec3(
-            fabsf(ex.x) + fabsf(ey.x) + fabsf(ez.x),
-            fabsf(ex.y) + fabsf(ey.y) + fabsf(ez.y),
-            fabsf(ex.z) + fabsf(ey.z) + fabsf(ez.z));
+        extent = fviz_vec3(fabsf(ex.x) + fabsf(ey.x) + fabsf(ez.x), fabsf(ex.y) + fabsf(ey.y) + fabsf(ez.y),
+                           fabsf(ex.z) + fabsf(ey.z) + fabsf(ez.z));
         minimum = fviz_vec3_sub(center, extent);
         maximum = fviz_vec3_add(center, extent);
         fviz_bounds_include_point(&result, minimum);

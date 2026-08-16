@@ -35,10 +35,8 @@ struct FVizObject
 extern const FVizObjectClass g_fviz_object_class;
 const FVizObjectClass* fviz_internal_object_base_class(void);
 
-FVIZ_API FVizObject* fviz_internal_object_allocate(
-    FVizSize object_size,
-    const FVizObjectClass* object_class,
-    const FVizAllocator* allocator);
+FVIZ_API FVizObject* fviz_internal_object_allocate(FVizSize object_size, const FVizObjectClass* object_class,
+                                                   const FVizAllocator* allocator);
 FVIZ_API FVizMTime fviz_internal_object_local_mtime(const FVizObject* object);
 
 #endif /* FVIZ_INTERNAL_CORE_OBJECT_PRIVATE_H */

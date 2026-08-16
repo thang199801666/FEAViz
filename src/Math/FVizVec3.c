@@ -30,10 +30,7 @@ float fviz_vec3_dot(FVizVec3 a, FVizVec3 b)
 
 FVizVec3 fviz_vec3_cross(FVizVec3 a, FVizVec3 b)
 {
-    return fviz_vec3(
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x);
+    return fviz_vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
 }
 
 float fviz_vec3_length(FVizVec3 v)

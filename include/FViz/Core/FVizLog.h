@@ -17,11 +17,7 @@ typedef enum FVizLogLevel
     FVIZ_LOG_OFF = 6
 } FVizLogLevel;
 
-typedef void (*FVizLogCallback)(
-    FVizLogLevel level,
-    const char* category,
-    const char* message,
-    void* user_data);
+typedef void (*FVizLogCallback)(FVizLogLevel level, const char* category, const char* message, void* user_data);
 
 FVIZ_API const char* fviz_log_level_string(FVizLogLevel level);
 FVIZ_API FVizResult fviz_log_set_level(FVizLogLevel level);

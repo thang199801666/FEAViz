@@ -21,10 +21,9 @@ FVizMat3 fviz_mat3_multiply(FVizMat3 a, FVizMat3 b)
     {
         for (row = 0; row < 3; ++row)
         {
-            result.m[column * 3 + row] =
-                a.m[0 * 3 + row] * b.m[column * 3 + 0] +
-                a.m[1 * 3 + row] * b.m[column * 3 + 1] +
-                a.m[2 * 3 + row] * b.m[column * 3 + 2];
+            result.m[column * 3 + row] = a.m[0 * 3 + row] * b.m[column * 3 + 0] +
+                                         a.m[1 * 3 + row] * b.m[column * 3 + 1] +
+                                         a.m[2 * 3 + row] * b.m[column * 3 + 2];
         }
     }
     return result;

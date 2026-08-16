@@ -11,18 +11,18 @@
 
 static void fviz_structured_grid_destroy(FVizObject* object);
 static FVizMTime fviz_structured_grid_mtime(const FVizObject* object);
-static const FVizObjectClass g_fviz_structured_grid_class = {
-    FVIZ_TYPE_STRUCTURED_GRID, "FVizStructuredGrid", &g_fviz_data_object_class,
-    fviz_structured_grid_destroy, fviz_structured_grid_mtime
-};
+static const FVizObjectClass g_fviz_structured_grid_class = {FVIZ_TYPE_STRUCTURED_GRID, "FVizStructuredGrid",
+                                                             &g_fviz_data_object_class, fviz_structured_grid_destroy,
+                                                             fviz_structured_grid_mtime};
 
-static FVizBool fviz_structured_grid_dependency_modified(
-    FVizObject* caller, FVizEventId event_id, void* call_data, void* client_data)
+static FVizBool fviz_structured_grid_dependency_modified(FVizObject* caller, FVizEventId event_id, void* call_data,
+                                                         void* client_data)
 {
     FVizStructuredGrid* grid = (FVizStructuredGrid*)client_data;
-    (void)caller; (void)event_id; (void)call_data;
-    if (grid != NULL && grid->dependency_suppression == 0u)
-        fviz_object_modified((FVizObject*)grid);
+    (void)caller;
+    (void)event_id;
+    (void)call_data;
+    if (grid != NULL && grid->dependency_suppression == 0u) fviz_object_modified((FVizObject*)grid);
     return FVIZ_FALSE;
 }
 
@@ -67,8 +67,7 @@ static FVizResult fviz_structured_extent_dimensions(const int64_t extent[6], FVi
     return FVIZ_OK;
 }
 
-static FVizResult fviz_structured_counts(
-    const int64_t extent[6], FVizSize* out_points, FVizSize* out_cells)
+static FVizResult fviz_structured_counts(const int64_t extent[6], FVizSize* out_points, FVizSize* out_cells)
 {
     FVizSize dims[3] = {0u, 0u, 0u};
     FVizSize points;
@@ -77,7 +76,8 @@ static FVizResult fviz_structured_counts(
     if (fviz_structured_extent_dimensions(extent, dims) != FVIZ_OK) return fviz_last_error_code();
     if (dims[0] == 0u || dims[1] == 0u || dims[2] == 0u)
     {
-        *out_points = 0u; *out_cells = 0u;
+        *out_points = 0u;
+        *out_cells = 0u;
         return FVIZ_OK;
     }
     if (fviz_size_multiply(dims[0], dims[1], &points) != FVIZ_OK ||
@@ -112,8 +112,8 @@ FVizResult fviz_structured_grid_create(FVizStructuredGrid** out_grid)
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     *out_grid = NULL;
-    grid = (FVizStructuredGrid*)fviz_internal_object_allocate(
-        sizeof(FVizStructuredGrid), &g_fviz_structured_grid_class, NULL);
+    grid = (FVizStructuredGrid*)fviz_internal_object_allocate(sizeof(FVizStructuredGrid), &g_fviz_structured_grid_class,
+                                                              NULL);
     if (grid == NULL) return fviz_last_error_code();
     (void)memcpy(grid->extent, empty_extent, sizeof(empty_extent));
     if (fviz_points_create(&grid->points) != FVIZ_OK || fviz_data_set_create(&grid->data_set) != FVIZ_OK)
@@ -121,12 +121,12 @@ FVizResult fviz_structured_grid_create(FVizStructuredGrid** out_grid)
         fviz_release(grid);
         return fviz_last_error_code();
     }
-    if (fviz_object_add_observer(
-            (FVizObject*)grid->points, FVIZ_EVENT_MODIFIED, 0.0f,
-            fviz_structured_grid_dependency_modified, grid, &grid->points_modified_tag) != FVIZ_OK ||
-        fviz_object_add_observer(
-            (FVizObject*)grid->data_set, FVIZ_EVENT_MODIFIED, 0.0f,
-            fviz_structured_grid_dependency_modified, grid, &grid->data_set_modified_tag) != FVIZ_OK)
+    if (fviz_object_add_observer((FVizObject*)grid->points, FVIZ_EVENT_MODIFIED, 0.0f,
+                                 fviz_structured_grid_dependency_modified, grid,
+                                 &grid->points_modified_tag) != FVIZ_OK ||
+        fviz_object_add_observer((FVizObject*)grid->data_set, FVIZ_EVENT_MODIFIED, 0.0f,
+                                 fviz_structured_grid_dependency_modified, grid,
+                                 &grid->data_set_modified_tag) != FVIZ_OK)
     {
         fviz_release(grid);
         return fviz_last_error_code();
@@ -141,9 +141,11 @@ void fviz_structured_grid_clear(FVizStructuredGrid* grid)
     FVizBool changed;
     if (grid == NULL) return;
     changed = fviz_points_count(grid->points) != 0u ||
-        fviz_attribute_set_count(fviz_data_set_point_data(grid->data_set)) != 0u ||
-        fviz_attribute_set_count(fviz_data_set_cell_data(grid->data_set)) != 0u ||
-        fviz_attribute_set_count(fviz_data_set_field_data(grid->data_set)) != 0u ? FVIZ_TRUE : FVIZ_FALSE;
+                      fviz_attribute_set_count(fviz_data_set_point_data(grid->data_set)) != 0u ||
+                      fviz_attribute_set_count(fviz_data_set_cell_data(grid->data_set)) != 0u ||
+                      fviz_attribute_set_count(fviz_data_set_field_data(grid->data_set)) != 0u
+                  ? FVIZ_TRUE
+                  : FVIZ_FALSE;
     ++grid->dependency_suppression;
     fviz_points_clear(grid->points);
     fviz_attribute_set_clear(fviz_data_set_point_data(grid->data_set));
@@ -207,7 +209,8 @@ uint32_t fviz_structured_grid_dimension(const FVizStructuredGrid* grid)
     FVizSize dims[3];
     uint32_t dimension = 0u, axis;
     fviz_structured_grid_dimensions(grid, dims);
-    for (axis = 0u; axis < 3u; ++axis) if (dims[axis] > 1u) ++dimension;
+    for (axis = 0u; axis < 3u; ++axis)
+        if (dims[axis] > 1u) ++dimension;
     return dimension;
 }
 
@@ -225,16 +228,20 @@ FVizCellType fviz_structured_grid_cell_type(const FVizStructuredGrid* grid)
 {
     switch (fviz_structured_grid_dimension(grid))
     {
-        case 0u: return fviz_structured_grid_point_count(grid) != 0u ? FVIZ_CELL_VERTEX : (FVizCellType)0;
-        case 1u: return FVIZ_CELL_LINE;
-        case 2u: return FVIZ_CELL_QUAD;
-        case 3u: return FVIZ_CELL_HEXAHEDRON;
-        default: return (FVizCellType)0;
+        case 0u:
+            return fviz_structured_grid_point_count(grid) != 0u ? FVIZ_CELL_VERTEX : (FVizCellType)0;
+        case 1u:
+            return FVIZ_CELL_LINE;
+        case 2u:
+            return FVIZ_CELL_QUAD;
+        case 3u:
+            return FVIZ_CELL_HEXAHEDRON;
+        default:
+            return (FVizCellType)0;
     }
 }
 
-FVizResult fviz_structured_grid_set_points(
-    FVizStructuredGrid* grid, const FVizVec3* points, FVizSize point_count)
+FVizResult fviz_structured_grid_set_points(FVizStructuredGrid* grid, const FVizVec3* points, FVizSize point_count)
 {
     const FVizSize expected = fviz_structured_grid_point_count(grid);
     FVizResult result = FVIZ_OK;
@@ -271,8 +278,7 @@ const FVizVec3* fviz_structured_grid_points(const FVizStructuredGrid* grid)
     return grid != NULL ? fviz_points_data(grid->points) : NULL;
 }
 
-FVizResult fviz_structured_grid_point(
-    const FVizStructuredGrid* grid, FVizId point_id, FVizVec3* out_point)
+FVizResult fviz_structured_grid_point(const FVizStructuredGrid* grid, FVizId point_id, FVizVec3* out_point)
 {
     if (grid == NULL || out_point == NULL || point_id >= (FVizId)fviz_points_count(grid->points))
     {
@@ -288,29 +294,30 @@ FVizBounds fviz_structured_grid_bounds(const FVizStructuredGrid* grid)
     return grid != NULL ? fviz_points_bounds(grid->points) : fviz_bounds_empty();
 }
 
-FVizResult fviz_structured_grid_point_id(
-    const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k, FVizId* out_point_id)
+FVizResult fviz_structured_grid_point_id(const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k,
+                                         FVizId* out_point_id)
 {
     FVizSize dims[3], plane, id;
     FVizSize x, y, z;
     if (out_point_id != NULL) *out_point_id = FVIZ_INVALID_ID;
-    if (grid == NULL || out_point_id == NULL || i < grid->extent[0] || i > grid->extent[1] ||
-        j < grid->extent[2] || j > grid->extent[3] || k < grid->extent[4] || k > grid->extent[5])
+    if (grid == NULL || out_point_id == NULL || i < grid->extent[0] || i > grid->extent[1] || j < grid->extent[2] ||
+        j > grid->extent[3] || k < grid->extent[4] || k > grid->extent[5])
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "structured point index is outside extent");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     fviz_structured_grid_dimensions(grid, dims);
-    x = (FVizSize)(i - grid->extent[0]); y = (FVizSize)(j - grid->extent[2]); z = (FVizSize)(k - grid->extent[4]);
-    if (fviz_size_multiply(dims[0], dims[1], &plane) != FVIZ_OK ||
-        fviz_size_multiply(z, plane, &id) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
+    x = (FVizSize)(i - grid->extent[0]);
+    y = (FVizSize)(j - grid->extent[2]);
+    z = (FVizSize)(k - grid->extent[4]);
+    if (fviz_size_multiply(dims[0], dims[1], &plane) != FVIZ_OK || fviz_size_multiply(z, plane, &id) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
     id += y * dims[0] + x;
     *out_point_id = (FVizId)id;
     return FVIZ_OK;
 }
 
-FVizResult fviz_structured_grid_point_ijk(
-    const FVizStructuredGrid* grid, FVizId point_id, int64_t out_ijk[3])
+FVizResult fviz_structured_grid_point_ijk(const FVizStructuredGrid* grid, FVizId point_id, int64_t out_ijk[3])
 {
     FVizSize dims[3], plane, id;
     if (grid == NULL || out_ijk == NULL || point_id >= (FVizId)fviz_structured_grid_point_count(grid))
@@ -328,8 +335,8 @@ FVizResult fviz_structured_grid_point_ijk(
     return FVIZ_OK;
 }
 
-FVizResult fviz_structured_grid_cell_id(
-    const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k, FVizId* out_cell_id)
+FVizResult fviz_structured_grid_cell_id(const FVizStructuredGrid* grid, int64_t i, int64_t j, int64_t k,
+                                        FVizId* out_cell_id)
 {
     FVizSize cell_dims[3], x, y, z, plane, id;
     if (out_cell_id != NULL) *out_cell_id = FVIZ_INVALID_ID;
@@ -339,23 +346,25 @@ FVizResult fviz_structured_grid_cell_id(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     fviz_structured_cell_dimensions(grid, cell_dims);
-    if (i < grid->extent[0] || (FVizSize)(i - grid->extent[0]) >= cell_dims[0] ||
-        j < grid->extent[2] || (FVizSize)(j - grid->extent[2]) >= cell_dims[1] ||
-        k < grid->extent[4] || (FVizSize)(k - grid->extent[4]) >= cell_dims[2])
+    if (i < grid->extent[0] || (FVizSize)(i - grid->extent[0]) >= cell_dims[0] || j < grid->extent[2] ||
+        (FVizSize)(j - grid->extent[2]) >= cell_dims[1] || k < grid->extent[4] ||
+        (FVizSize)(k - grid->extent[4]) >= cell_dims[2])
     {
         fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "structured cell index is outside extent");
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
-    x = (FVizSize)(i - grid->extent[0]); y = (FVizSize)(j - grid->extent[2]); z = (FVizSize)(k - grid->extent[4]);
+    x = (FVizSize)(i - grid->extent[0]);
+    y = (FVizSize)(j - grid->extent[2]);
+    z = (FVizSize)(k - grid->extent[4]);
     if (fviz_size_multiply(cell_dims[0], cell_dims[1], &plane) != FVIZ_OK ||
-        fviz_size_multiply(z, plane, &id) != FVIZ_OK) return FVIZ_ERROR_OVERFLOW;
+        fviz_size_multiply(z, plane, &id) != FVIZ_OK)
+        return FVIZ_ERROR_OVERFLOW;
     id += y * cell_dims[0] + x;
     *out_cell_id = (FVizId)id;
     return FVIZ_OK;
 }
 
-FVizResult fviz_structured_grid_cell_ijk(
-    const FVizStructuredGrid* grid, FVizId cell_id, int64_t out_ijk[3])
+FVizResult fviz_structured_grid_cell_ijk(const FVizStructuredGrid* grid, FVizId cell_id, int64_t out_ijk[3])
 {
     FVizSize cell_dims[3], plane, id;
     if (grid == NULL || out_ijk == NULL || cell_id >= (FVizId)fviz_structured_grid_cell_count(grid))
@@ -364,7 +373,8 @@ FVizResult fviz_structured_grid_cell_ijk(
         return FVIZ_ERROR_INVALID_ARGUMENT;
     }
     fviz_structured_cell_dimensions(grid, cell_dims);
-    if (fviz_size_multiply(cell_dims[0], cell_dims[1], &plane) != FVIZ_OK || plane == 0u) return FVIZ_ERROR_INVALID_STATE;
+    if (fviz_size_multiply(cell_dims[0], cell_dims[1], &plane) != FVIZ_OK || plane == 0u)
+        return FVIZ_ERROR_INVALID_STATE;
     id = (FVizSize)cell_id;
     out_ijk[2] = grid->extent[4] + (int64_t)(id / plane);
     id %= plane;
@@ -373,8 +383,8 @@ FVizResult fviz_structured_grid_cell_ijk(
     return FVIZ_OK;
 }
 
-FVizResult fviz_structured_grid_cell_point_ids(
-    const FVizStructuredGrid* grid, FVizId cell_id, FVizId out_point_ids[8], uint32_t* out_point_count)
+FVizResult fviz_structured_grid_cell_point_ids(const FVizStructuredGrid* grid, FVizId cell_id, FVizId out_point_ids[8],
+                                               uint32_t* out_point_count)
 {
     int64_t ijk[3];
     FVizSize dims[3];
@@ -385,7 +395,8 @@ FVizResult fviz_structured_grid_cell_point_ids(
         fviz_structured_grid_cell_ijk(grid, cell_id, ijk) != FVIZ_OK)
         return fviz_last_error_code();
     fviz_structured_grid_dimensions(grid, dims);
-    for (axis = 0u; axis < 3u; ++axis) if (dims[axis] > 1u) active[active_count++] = axis;
+    for (axis = 0u; axis < 3u; ++axis)
+        if (dims[axis] > 1u) active[active_count++] = axis;
     corner_count = 1u << active_count;
     for (corner = 0u; corner < corner_count; ++corner)
     {
@@ -405,17 +416,34 @@ FVizResult fviz_structured_grid_cell_point_ids(
 }
 
 FVizAttributeSet* fviz_structured_grid_point_data(FVizStructuredGrid* grid)
-{ return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL;
+}
+
 FVizAttributeSet* fviz_structured_grid_cell_data(FVizStructuredGrid* grid)
-{ return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL;
+}
+
 FVizAttributeSet* fviz_structured_grid_field_data(FVizStructuredGrid* grid)
-{ return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL;
+}
+
 const FVizAttributeSet* fviz_structured_grid_const_point_data(const FVizStructuredGrid* grid)
-{ return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_point_data(grid->data_set) : NULL;
+}
+
 const FVizAttributeSet* fviz_structured_grid_const_cell_data(const FVizStructuredGrid* grid)
-{ return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_cell_data(grid->data_set) : NULL;
+}
+
 const FVizAttributeSet* fviz_structured_grid_const_field_data(const FVizStructuredGrid* grid)
-{ return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL; }
+{
+    return grid != NULL ? fviz_data_set_field_data(grid->data_set) : NULL;
+}
 
 FVizResult fviz_structured_grid_validate(const FVizStructuredGrid* grid)
 {

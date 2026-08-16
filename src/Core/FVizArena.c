@@ -34,8 +34,8 @@ static FVizBool fviz_arena_power_of_two(FVizSize value)
     return value != 0u && (value & (value - 1u)) == 0u ? FVIZ_TRUE : FVIZ_FALSE;
 }
 
-static FVizResult fviz_arena_new_block(
-    FVizArena* arena, FVizSize minimum_payload, FVizSize alignment, FVizArenaBlock** out_block)
+static FVizResult fviz_arena_new_block(FVizArena* arena, FVizSize minimum_payload, FVizSize alignment,
+                                       FVizArenaBlock** out_block)
 {
     FVizSize storage = arena->block_size;
     FVizSize padding = alignment > 1u ? alignment - 1u : 0u;
@@ -51,7 +51,8 @@ static FVizResult fviz_arena_new_block(
     block->storage_bytes = storage;
     block->used = 0u;
     if (arena->first == NULL) arena->first = block;
-    else arena->last->next = block;
+    else
+        arena->last->next = block;
     arena->last = block;
     arena->current = block;
     ++arena->block_count;
@@ -109,8 +110,7 @@ void* fviz_arena_allocate(FVizArena* arena, FVizSize size, FVizSize alignment)
     void* memory;
     if (arena == NULL || size == 0u)
     {
-        if (arena == NULL)
-            fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "arena must not be NULL");
+        if (arena == NULL) fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "arena must not be NULL");
         return NULL;
     }
     if (alignment == 0u) alignment = sizeof(void*);
@@ -151,7 +151,8 @@ void fviz_arena_reset(FVizArena* arena)
 {
     FVizArenaBlock* block;
     if (arena == NULL) return;
-    for (block = arena->first; block != NULL; block = block->next) block->used = 0u;
+    for (block = arena->first; block != NULL; block = block->next)
+        block->used = 0u;
     arena->current = arena->first;
     arena->used_bytes = 0u;
 }
@@ -196,22 +197,23 @@ static void* fviz_arena_allocator_allocate(void* user_data, FVizSize size, FVizS
     return fviz_arena_allocate((FVizArena*)user_data, size, alignment);
 }
 
-static void* fviz_arena_allocator_reallocate(
-    void* user_data, void* memory, FVizSize old_size, FVizSize new_size, FVizSize alignment)
+static void* fviz_arena_allocator_reallocate(void* user_data, void* memory, FVizSize old_size, FVizSize new_size,
+                                             FVizSize alignment)
 {
     void* replacement;
     if (memory == NULL) return fviz_arena_allocate((FVizArena*)user_data, new_size, alignment);
     if (new_size == 0u) return NULL;
     replacement = fviz_arena_allocate((FVizArena*)user_data, new_size, alignment);
-    if (replacement != NULL)
-        (void)memcpy(replacement, memory, old_size < new_size ? old_size : new_size);
+    if (replacement != NULL) (void)memcpy(replacement, memory, old_size < new_size ? old_size : new_size);
     return replacement;
 }
 
-static void fviz_arena_allocator_deallocate(
-    void* user_data, void* memory, FVizSize size, FVizSize alignment)
+static void fviz_arena_allocator_deallocate(void* user_data, void* memory, FVizSize size, FVizSize alignment)
 {
-    (void)user_data; (void)memory; (void)size; (void)alignment;
+    (void)user_data;
+    (void)memory;
+    (void)size;
+    (void)alignment;
 }
 
 FVizAllocator fviz_arena_allocator(FVizArena* arena)

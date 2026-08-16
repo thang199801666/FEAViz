@@ -11,13 +11,8 @@
 #define FVIZ_BIT_ARRAY_INITIAL_WORDS 4u
 
 static void fviz_bit_array_destroy(FVizObject* object);
-static const FVizObjectClass g_fviz_bit_array_class = {
-    FVIZ_TYPE_BIT_ARRAY,
-    "FVizBitArray",
-    &g_fviz_object_class,
-    fviz_bit_array_destroy,
-    NULL
-};
+static const FVizObjectClass g_fviz_bit_array_class = {FVIZ_TYPE_BIT_ARRAY, "FVizBitArray", &g_fviz_object_class,
+                                                       fviz_bit_array_destroy, NULL};
 
 static void fviz_bit_array_destroy(FVizObject* object)
 {
@@ -49,8 +44,7 @@ static FVizResult fviz_bit_array_reserve_words(FVizBitArray* bit_array, FVizSize
     {
         return FVIZ_ERROR_OVERFLOW;
     }
-    memory = fviz_allocator_reallocate(
-        &bit_array->base.allocator, bit_array->words, old_bytes, new_bytes, 0u);
+    memory = fviz_allocator_reallocate(&bit_array->base.allocator, bit_array->words, old_bytes, new_bytes, 0u);
     if (memory == NULL)
     {
         return fviz_last_error_code();

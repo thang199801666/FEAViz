@@ -13,10 +13,8 @@ static FVizMTime fviz_widget_mtime(const FVizObject* object)
     return child > mtime ? child : mtime;
 }
 
-static FVizBool fviz_widget_interactor_observer(
-    FVizRenderWindowInteractor* interactor,
-    const FVizInteractionEvent* event,
-    void* user_data)
+static FVizBool fviz_widget_interactor_observer(FVizRenderWindowInteractor* interactor,
+                                                const FVizInteractionEvent* event, void* user_data)
 {
     FVizWidget* widget = (FVizWidget*)user_data;
     FVizWidget* guard;
@@ -43,25 +41,14 @@ static void fviz_widget_destroy(FVizObject* object)
     widget->interactor = NULL;
 }
 
-static const FVizObjectClass g_fviz_widget_class = {
-    FVIZ_TYPE_WIDGET,
-    "FVizWidget",
-    &g_fviz_object_class,
-    fviz_widget_destroy,
-    fviz_widget_mtime
-};
+static const FVizObjectClass g_fviz_widget_class = {FVIZ_TYPE_WIDGET, "FVizWidget", &g_fviz_object_class,
+                                                    fviz_widget_destroy, fviz_widget_mtime};
 
 static FVizResult fviz_widget_attach_observer(FVizWidget* widget)
 {
-    if (widget->observer_id != FVIZ_OBSERVER_ID_INVALID || widget->interactor == NULL)
-        return FVIZ_OK;
-    return fviz_render_window_interactor_add_observer(
-        widget->interactor,
-        FVIZ_INTERACTION_EVENT_ANY,
-        widget->priority,
-        fviz_widget_interactor_observer,
-        widget,
-        &widget->observer_id);
+    if (widget->observer_id != FVIZ_OBSERVER_ID_INVALID || widget->interactor == NULL) return FVIZ_OK;
+    return fviz_render_window_interactor_add_observer(widget->interactor, FVIZ_INTERACTION_EVENT_ANY, widget->priority,
+                                                      fviz_widget_interactor_observer, widget, &widget->observer_id);
 }
 
 static void fviz_widget_detach_observer(FVizWidget* widget)
@@ -71,20 +58,15 @@ static void fviz_widget_detach_observer(FVizWidget* widget)
     widget->observer_id = FVIZ_OBSERVER_ID_INVALID;
 }
 
-FVizResult fviz_widget_create(
-    FVizRenderWindowInteractor* interactor,
-    FVizRenderer* renderer,
-    FVizWidgetRepresentation* representation,
-    FVizWidget** out_widget)
+FVizResult fviz_widget_create(FVizRenderWindowInteractor* interactor, FVizRenderer* renderer,
+                              FVizWidgetRepresentation* representation, FVizWidget** out_widget)
 {
     FVizWidget* widget;
-    if (renderer == NULL || out_widget == NULL)
-        return FVIZ_ERROR_INVALID_ARGUMENT;
+    if (renderer == NULL || out_widget == NULL) return FVIZ_ERROR_INVALID_ARGUMENT;
     *out_widget = NULL;
     if (representation != NULL && fviz_widget_representation_renderer(representation) != renderer)
         return FVIZ_ERROR_INVALID_ARGUMENT;
-    widget = (FVizWidget*)fviz_internal_object_allocate(
-        sizeof(*widget), &g_fviz_widget_class, NULL);
+    widget = (FVizWidget*)fviz_internal_object_allocate(sizeof(*widget), &g_fviz_widget_class, NULL);
     if (widget == NULL) return fviz_last_error_code();
     widget->interactor = (FVizRenderWindowInteractor*)fviz_retain(interactor);
     widget->renderer = (FVizRenderer*)fviz_retain(renderer);
@@ -94,16 +76,13 @@ FVizResult fviz_widget_create(
     widget->enabled = FVIZ_TRUE;
     widget->process_events = FVIZ_TRUE;
     widget->observer_id = FVIZ_OBSERVER_ID_INVALID;
-    if (widget->renderer == NULL ||
-        (interactor != NULL && widget->interactor == NULL) ||
-        (representation != NULL && widget->representation == NULL) ||
-        fviz_widget_attach_observer(widget) != FVIZ_OK)
+    if (widget->renderer == NULL || (interactor != NULL && widget->interactor == NULL) ||
+        (representation != NULL && widget->representation == NULL) || fviz_widget_attach_observer(widget) != FVIZ_OK)
     {
         fviz_release(widget);
         return fviz_last_error_code();
     }
-    if (widget->representation != NULL)
-        fviz_widget_representation_set_visible(widget->representation, FVIZ_TRUE);
+    if (widget->representation != NULL) fviz_widget_representation_set_visible(widget->representation, FVIZ_TRUE);
     *out_widget = widget;
     return FVIZ_OK;
 }
@@ -152,28 +131,23 @@ FVizWidgetRepresentation* fviz_widget_representation(FVizWidget* widget)
     return widget != NULL ? widget->representation : NULL;
 }
 
-FVizResult fviz_widget_set_representation(
-    FVizWidget* widget, FVizWidgetRepresentation* representation)
+FVizResult fviz_widget_set_representation(FVizWidget* widget, FVizWidgetRepresentation* representation)
 {
-    if (widget == NULL || (representation != NULL &&
-        fviz_widget_representation_renderer(representation) != widget->renderer))
+    if (widget == NULL ||
+        (representation != NULL && fviz_widget_representation_renderer(representation) != widget->renderer))
         return FVIZ_ERROR_INVALID_ARGUMENT;
-    if (representation != NULL && fviz_retain(representation) == NULL)
-        return fviz_last_error_code();
-    if (widget->representation != NULL)
-        fviz_widget_representation_set_visible(widget->representation, FVIZ_FALSE);
+    if (representation != NULL && fviz_retain(representation) == NULL) return fviz_last_error_code();
+    if (widget->representation != NULL) fviz_widget_representation_set_visible(widget->representation, FVIZ_FALSE);
     fviz_release(widget->representation);
     widget->representation = representation;
-    if (representation != NULL)
-        fviz_widget_representation_set_visible(representation, widget->enabled);
+    if (representation != NULL) fviz_widget_representation_set_visible(representation, widget->enabled);
     fviz_object_modified((FVizObject*)widget);
     return FVIZ_OK;
 }
 
 void fviz_internal_widget_notify(FVizWidget* widget, FVizWidgetNotification notification)
 {
-    if (widget != NULL && widget->callback != NULL)
-        widget->callback(widget, notification, widget->callback_user_data);
+    if (widget != NULL && widget->callback != NULL) widget->callback(widget, notification, widget->callback_user_data);
 }
 
 FVizResult fviz_widget_set_enabled(FVizWidget* widget, FVizBool enabled)
@@ -191,19 +165,16 @@ FVizResult fviz_widget_set_enabled(FVizWidget* widget, FVizBool enabled)
             widget->state = FVIZ_WIDGET_STATE_DISABLED;
             return fviz_last_error_code();
         }
-        if (widget->representation != NULL)
-            fviz_widget_representation_set_visible(widget->representation, FVIZ_TRUE);
+        if (widget->representation != NULL) fviz_widget_representation_set_visible(widget->representation, FVIZ_TRUE);
         fviz_internal_widget_notify(widget, FVIZ_WIDGET_ENABLED);
     }
     else
     {
-        if (widget->state == FVIZ_WIDGET_STATE_ACTIVE)
-            fviz_widget_cancel_interaction(widget);
+        if (widget->state == FVIZ_WIDGET_STATE_ACTIVE) fviz_widget_cancel_interaction(widget);
         widget->enabled = FVIZ_FALSE;
         widget->state = FVIZ_WIDGET_STATE_DISABLED;
         fviz_widget_detach_observer(widget);
-        if (widget->representation != NULL)
-            fviz_widget_representation_set_visible(widget->representation, FVIZ_FALSE);
+        if (widget->representation != NULL) fviz_widget_representation_set_visible(widget->representation, FVIZ_FALSE);
         fviz_internal_widget_notify(widget, FVIZ_WIDGET_DISABLED);
     }
     fviz_object_modified((FVizObject*)widget);
@@ -261,16 +232,14 @@ FVizWidgetState fviz_widget_state(const FVizWidget* widget)
     return widget != NULL ? widget->state : FVIZ_WIDGET_STATE_DISABLED;
 }
 
-void fviz_widget_set_event_handler(
-    FVizWidget* widget, FVizWidgetEventHandlerFn handler, void* user_data)
+void fviz_widget_set_event_handler(FVizWidget* widget, FVizWidgetEventHandlerFn handler, void* user_data)
 {
     if (widget == NULL) return;
     widget->event_handler = handler;
     widget->event_user_data = user_data;
 }
 
-void fviz_widget_set_callback(
-    FVizWidget* widget, FVizWidgetCallbackFn callback, void* user_data)
+void fviz_widget_set_callback(FVizWidget* widget, FVizWidgetCallbackFn callback, void* user_data)
 {
     if (widget == NULL) return;
     widget->callback = callback;
@@ -279,29 +248,25 @@ void fviz_widget_set_callback(
 
 static FVizBool fviz_widget_event_is_positional(FVizInteractionEventType type)
 {
-    return type == FVIZ_INTERACTION_MOUSE_BUTTON_DOWN ||
-        type == FVIZ_INTERACTION_MOUSE_BUTTON_UP ||
-        type == FVIZ_INTERACTION_MOUSE_MOVE ||
-        type == FVIZ_INTERACTION_MOUSE_WHEEL ||
-        type == FVIZ_INTERACTION_DOUBLE_CLICK;
+    return type == FVIZ_INTERACTION_MOUSE_BUTTON_DOWN || type == FVIZ_INTERACTION_MOUSE_BUTTON_UP ||
+           type == FVIZ_INTERACTION_MOUSE_MOVE || type == FVIZ_INTERACTION_MOUSE_WHEEL ||
+           type == FVIZ_INTERACTION_DOUBLE_CLICK;
 }
 
 FVizBool fviz_widget_process_event(FVizWidget* widget, const FVizInteractionEvent* event)
 {
     FVizRenderWindow* window;
     FVizRenderer* renderer;
-    if (widget == NULL || event == NULL || widget->enabled == FVIZ_FALSE ||
-        widget->process_events == FVIZ_FALSE || widget->event_handler == NULL)
+    if (widget == NULL || event == NULL || widget->enabled == FVIZ_FALSE || widget->process_events == FVIZ_FALSE ||
+        widget->event_handler == NULL)
         return FVIZ_FALSE;
     if (event->type == FVIZ_INTERACTION_FOCUS_OUT ||
         (event->type == FVIZ_INTERACTION_KEY_DOWN && event->key == FVIZ_KEY_ESCAPE))
     {
         if (widget->state == FVIZ_WIDGET_STATE_ACTIVE)
         {
-            const FVizBool handled = widget->event_handler(
-                widget, event, widget->event_user_data);
-            if (widget->state == FVIZ_WIDGET_STATE_ACTIVE)
-                fviz_widget_cancel_interaction(widget);
+            const FVizBool handled = widget->event_handler(widget, event, widget->event_user_data);
+            if (widget->state == FVIZ_WIDGET_STATE_ACTIVE) fviz_widget_cancel_interaction(widget);
             (void)handled;
             return FVIZ_TRUE;
         }

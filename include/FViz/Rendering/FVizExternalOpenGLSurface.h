@@ -12,10 +12,7 @@ FVIZ_EXTERN_C_BEGIN
 typedef FVizResult (*FVizExternalOpenGLMakeCurrentFn)(void* user_data);
 typedef void (*FVizExternalOpenGLDoneCurrentFn)(void* user_data);
 typedef FVizResult (*FVizExternalOpenGLPresentFn)(void* user_data);
-typedef FVizResult (*FVizExternalOpenGLGetFramebufferSizeFn)(
-    void* user_data,
-    int* out_width,
-    int* out_height);
+typedef FVizResult (*FVizExternalOpenGLGetFramebufferSizeFn)(void* user_data, int* out_width, int* out_height);
 typedef uint32_t (*FVizExternalOpenGLGetDefaultFramebufferFn)(void* user_data);
 typedef void (*FVizExternalOpenGLRequestRenderFn)(void* user_data);
 

@@ -28,10 +28,8 @@ typedef struct FVizVTUWriterOptions
 } FVizVTUWriterOptions;
 
 FVIZ_API void fviz_vtu_writer_options_initialize(FVizVTUWriterOptions* options);
-FVIZ_API FVizResult fviz_vtu_write(
-    const char* file_path,
-    const FVizUnstructuredGrid* grid,
-    const FVizVTUWriterOptions* options);
+FVIZ_API FVizResult fviz_vtu_write(const char* file_path, const FVizUnstructuredGrid* grid,
+                                   const FVizVTUWriterOptions* options);
 
 FVIZ_EXTERN_C_END
 
