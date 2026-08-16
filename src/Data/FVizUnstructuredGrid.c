@@ -15,6 +15,8 @@
 #include <FViz/Mesh/FVizPointsPrivate.h>
 #include <FViz/Mesh/FVizCellTypeTraits.h>
 #include <FViz/Mesh/FVizCellArrayPrivate.h>
+#include <FViz/Mesh/FVizCellLinks.h>
+#include <FViz/Algorithms/FVizFieldOperations.h>
 
 typedef struct FVizSurfaceDefinition
 {
@@ -2620,5 +2622,203 @@ fail:
     }
     fviz_release(fields);
     fviz_release(slice);
+    return fviz_last_error_code();
+}
+
+/* Point gradient via the VTK vtkGradientFilter Green-Gauss method:
+ * 1. For each cell, fit the linear field over the cell's own points (least
+ *    squares) and record the cell gradient.
+ * 2. Each point gradient is the (unweighted) average of its incident cells'
+ *    gradients.
+ * This is exact for linear fields on affine cells, including at boundary
+ * points where a direct per-point LSQ is underdetermined. */
+FVizResult fviz_unstructured_grid_gradient(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    const char* output_name,
+    FVizUnstructuredGrid** out_grid)
+{
+    const FVizDataArray* scalars;
+    const FVizVec3* points;
+    FVizCellLinks* links = NULL;
+    FVizUnstructuredGrid* result = NULL;
+    FVizDataArray* gradient = NULL;
+    FVizDataArray* cell_gradients = NULL;
+    FVizSize point_count;
+    FVizSize cell_count;
+    FVizSize components;
+    FVizSize i;
+    if (out_grid != NULL) *out_grid = NULL;
+    if (grid == NULL || scalar_array_name == NULL || scalar_array_name[0] == '\0' ||
+        output_name == NULL || output_name[0] == '\0' || out_grid == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT,
+            "gradient requires a grid, input array name, and output name");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    scalars = fviz_attribute_set_const_get(
+        fviz_unstructured_grid_point_data((FVizUnstructuredGrid*)grid), scalar_array_name);
+    if (scalars == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND,
+            "gradient input array was not found on point data");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    point_count = fviz_unstructured_grid_point_count(grid);
+    cell_count = fviz_unstructured_grid_cell_count(grid);
+    components = fviz_data_array_components(scalars);
+    if (components == 0u || components > 3u || fviz_data_array_tuple_count(scalars) != point_count)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE,
+            "gradient input array must have one tuple per point with 1-3 components");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    if (fviz_cell_links_build(grid->cells, point_count, &links) != FVIZ_OK)
+        return fviz_last_error_code();
+    if (fviz_data_array_create(FVIZ_DATA_FLOAT64, (uint32_t)(3u * components), &gradient) != FVIZ_OK ||
+        fviz_data_array_resize(gradient, point_count) != FVIZ_OK ||
+        fviz_data_array_create(FVIZ_DATA_FLOAT64, (uint32_t)(3u * components), &cell_gradients) != FVIZ_OK ||
+        fviz_data_array_resize(cell_gradients, cell_count) != FVIZ_OK)
+        goto fail;
+    points = fviz_points_data(grid->points);
+
+    /* Pass 1: per-cell gradients. For a linear (affine) cell the least-squares
+     * fit over the cell's own points reproduces the true gradient. */
+    for (i = 0u; i < cell_count; ++i)
+    {
+        FVizCellView view;
+        FVizSize point_count_in_cell;
+        FVizSize s;
+        FVizSize component;
+        double basis[64 * 4];
+        double values[64 * 3];
+        double normal[4 * 4];
+        double rhs[4 * 3];
+        double a[16];
+        double b[12];
+        double coefficients[4 * 3];
+        FVizSize row, col, r, c, rr;
+        double grad_tuple[9];
+        if (fviz_cell_array_cell_view(grid->cells, i, &view) != FVIZ_OK) continue;
+        point_count_in_cell = view.point_count;
+        if (point_count_in_cell == 0u || point_count_in_cell > 64u) continue;
+        for (s = 0u; s < point_count_in_cell; ++s)
+        {
+            const FVizId pid = fviz_cell_view_point_id(&view, s);
+            basis[s * 4u + 0u] = 1.0;
+            basis[s * 4u + 1u] = (double)points[(FVizSize)pid].x;
+            basis[s * 4u + 2u] = (double)points[(FVizSize)pid].y;
+            basis[s * 4u + 3u] = (double)points[(FVizSize)pid].z;
+            for (component = 0u; component < components; ++component)
+            {
+                double value = 0.0;
+                (void)fviz_data_array_get_component(scalars, (FVizSize)pid, (uint32_t)component, &value);
+                values[s * components + component] = value;
+            }
+        }
+        for (row = 0u; row < 4u; ++row)
+            for (col = 0u; col < 4u; ++col)
+            {
+                double sum = 0.0;
+                for (s = 0u; s < point_count_in_cell; ++s) sum += basis[s * 4u + row] * basis[s * 4u + col];
+                normal[row * 4u + col] = sum;
+            }
+        for (row = 0u; row < 4u; ++row)
+            for (component = 0u; component < components; ++component)
+            {
+                double sum = 0.0;
+                for (s = 0u; s < point_count_in_cell; ++s)
+                    sum += basis[s * 4u + row] * values[s * components + component];
+                rhs[row * components + component] = sum;
+            }
+        (void)memcpy(a, normal, sizeof(a));
+        (void)memset(b, 0, sizeof(b));
+        (void)memset(coefficients, 0, sizeof(coefficients));
+        for (r = 0u; r < 4u; ++r)
+            for (c = 0u; c < components; ++c)
+                b[r * components + c] = rhs[r * components + c];
+        for (r = 0u; r < 4u; ++r)
+        {
+            FVizSize pivot = r;
+            double pivot_value;
+            for (rr = r + 1u; rr < 4u; ++rr)
+                if (fabs(a[rr * 4u + r]) > fabs(a[pivot * 4u + r])) pivot = rr;
+            if (pivot != r)
+            {
+                for (c = 0u; c < 4u; ++c)
+                {
+                    const double t = a[r * 4u + c]; a[r * 4u + c] = a[pivot * 4u + c]; a[pivot * 4u + c] = t;
+                }
+                for (c = 0u; c < components; ++c)
+                {
+                    const double t = b[r * components + c]; b[r * components + c] = b[pivot * components + c]; b[pivot * components + c] = t;
+                }
+            }
+            pivot_value = a[r * 4u + r];
+            if (fabs(pivot_value) < 1.0e-12) continue;
+            for (c = r; c < 4u; ++c) a[r * 4u + c] /= pivot_value;
+            for (c = 0u; c < components; ++c) b[r * components + c] /= pivot_value;
+            for (rr = r + 1u; rr < 4u; ++rr)
+            {
+                const double factor = a[rr * 4u + r];
+                if (factor == 0.0) continue;
+                for (c = r; c < 4u; ++c) a[rr * 4u + c] -= factor * a[r * 4u + c];
+                for (c = 0u; c < components; ++c) b[rr * components + c] -= factor * b[r * components + c];
+            }
+        }
+        for (r = 4u; r-- > 0u;)
+            for (c = 0u; c < components; ++c)
+            {
+                double sum = b[r * components + c];
+                for (rr = r + 1u; rr < 4u; ++rr) sum -= a[r * 4u + rr] * coefficients[rr * components + c];
+                coefficients[r * components + c] = sum;
+            }
+        for (component = 0u; component < components; ++component)
+        {
+            grad_tuple[component * 3u + 0u] = coefficients[1 * components + component];
+            grad_tuple[component * 3u + 1u] = coefficients[2 * components + component];
+            grad_tuple[component * 3u + 2u] = coefficients[3 * components + component];
+        }
+        if (fviz_data_array_set_tuple(cell_gradients, i, grad_tuple) != FVIZ_OK) goto fail;
+    }
+
+    /* Pass 2: average incident cell gradients at each point. */
+    for (i = 0u; i < point_count; ++i)
+    {
+        FVizSize count_for_point = 0u;
+        const FVizId* incident_cells = fviz_cell_links_cells_for_point(links, i, &count_for_point);
+        double sum[9];
+        double grad_tuple[9];
+        FVizSize component;
+        FVizSize c;
+        for (component = 0u; component < 3u * components; ++component) sum[component] = 0.0;
+        for (c = 0u; c < count_for_point; ++c)
+        {
+            FVizSize k;
+            for (k = 0u; k < 3u * components; ++k)
+            {
+                double value = 0.0;
+                if (fviz_data_array_get_component(cell_gradients, (FVizSize)incident_cells[c], (uint32_t)k, &value) == FVIZ_OK)
+                    sum[k] += value;
+            }
+        }
+        for (component = 0u; component < 3u * components; ++component)
+            grad_tuple[component] = count_for_point != 0u ? sum[component] / (double)count_for_point : 0.0;
+        if (fviz_data_array_set_tuple(gradient, i, grad_tuple) != FVIZ_OK) goto fail;
+    }
+
+    /* Build the shallow copy result and attach the gradient. */
+    if (fviz_unstructured_grid_shallow_copy(grid, &result) != FVIZ_OK) goto fail;
+    if (fviz_attribute_set_add(fviz_unstructured_grid_point_data(result), output_name, gradient) != FVIZ_OK) goto fail;
+    fviz_release(cell_gradients);
+    fviz_release(gradient);
+    fviz_release(links);
+    *out_grid = result;
+    return FVIZ_OK;
+fail:
+    fviz_release(cell_gradients);
+    fviz_release(gradient);
+    fviz_release(links);
+    fviz_release(result);
     return fviz_last_error_code();
 }

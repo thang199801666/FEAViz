@@ -720,8 +720,8 @@ FVizResult fviz_cell_type_shape_weights(
         }
         case FVIZ_CELL_QUADRATIC_WEDGE:
         case FVIZ_CELL_BIQUADRATIC_QUADRATIC_WEDGE:
-            /* 15-node and 18-node wedges: topology is defined, but the
-             * higher-order shape functions are not yet implemented. */
+            /* 15-node and 18-node wedges: topology is defined, but their
+             * serendipity shape functions are not yet implemented. */
             fviz_internal_set_error(FVIZ_ERROR_NOT_SUPPORTED,
                 "higher-order wedge shape weights are not yet available");
             return FVIZ_ERROR_NOT_SUPPORTED;

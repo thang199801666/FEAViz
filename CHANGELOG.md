@@ -129,6 +129,16 @@
 - Added `FVizTestCellTypesVTK` (`FViz.Mesh.CellTypesVTK`) covering topology
   tables, partition-of-unity and delta interpolation, cell-array append/validate,
   and VTU round-trip, plus a matching C++ binding case in `FViz.Cpp.Binding`.
+- Added the point-gradient filter (VTK `vtkGradientFilter` compatible):
+  `fviz_unstructured_grid_gradient()` computes per-point gradients of a point
+  scalar or vector field via the Green-Gauss method (per-cell least-squares fit
+  over the cell's own points, then averaging incident cell gradients at each
+  point). Scalar input yields 3 components (dx,dy,dz); vector input yields the
+  full 3xN Jacobian. Exact for linear fields including at boundary points.
+  C++ wrapper `UnstructuredGrid::gradient()`.
+- Added `FVizTestUnstructuredGridGradient` (`FViz.Data.UnstructuredGridGradient`)
+  covering exact gradients of linear scalar and vector fields plus error cases,
+  and a matching case in `FViz.Cpp.Binding`.
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 

@@ -47,6 +47,7 @@ fviz_add_test(FVizTestCellTypesVTK Mesh/test_cell_types_vtk.c FViz.Mesh.CellType
 fviz_add_test(FVizTestCellLinks Mesh/test_cell_links.c FViz.Mesh.CellLinks)
 fviz_add_test(FVizTestPolyDataNativeIds Mesh/test_polydata_native_ids.c FViz.Mesh.PolyDataNativeIds)
 fviz_add_test(FVizTestUnstructuredGrid Data/test_unstructured_grid.c FViz.Data.UnstructuredGrid)
+fviz_add_test(FVizTestUnstructuredGridGradient Data/test_unstructured_grid_gradient.c FViz.Data.UnstructuredGridGradient)
 fviz_add_test(FVizTestSurfaceExtraction Algorithms/test_surface_extraction.c FViz.Algorithms.SurfaceExtraction)
 fviz_add_test(FVizTestHighOrder Algorithms/test_high_order.c FViz.Algorithms.HighOrderCells)
 fviz_add_test(FVizTestMixedGeometry Algorithms/test_mixed_geometry.c FViz.Algorithms.MixedGeometry)

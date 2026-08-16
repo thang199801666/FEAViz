@@ -277,6 +277,15 @@ public:
     {
         if (ptr_ != nullptr) fviz_unstructured_grid_clear(ptr_);
     }
+
+    // Computes per-point gradients (VTK vtkGradientFilter compatible). Returns
+    // a shallow grid with the gradient array added to point data.
+    UnstructuredGrid gradient(const std::string& scalar_array_name, const std::string& output_name) const
+    {
+        FVizUnstructuredGrid* result = nullptr;
+        detail::checkResult(fviz_unstructured_grid_gradient(ptr_, scalar_array_name.c_str(), output_name.c_str(), &result));
+        return UnstructuredGrid(result);
+    }
 };
 
 // ---------------------------------------------------------------------------

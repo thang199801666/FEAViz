@@ -84,6 +84,18 @@ FVIZ_API FVizResult fviz_unstructured_grid_transform(
     const FVizTransform* transform,
     FVizUnstructuredGrid** out_grid);
 
+/* Computes per-point gradients of a point scalar or vector field using a
+ * least-squares fit over the points' incident cells (VTK vtkGradientFilter
+ * compatible). For a scalar field the output has 3 components (dx,dy,dz); for
+ * a vector field with components N the output has 3*N components (the full
+ * Jacobian). The gradient array is added to the output grid's point data under
+ * output_name; the grid topology is shared. */
+FVIZ_API FVizResult fviz_unstructured_grid_gradient(
+    const FVizUnstructuredGrid* grid,
+    const char* scalar_array_name,
+    const char* output_name,
+    FVizUnstructuredGrid** out_grid);
+
 FVIZ_EXTERN_C_END
 
 #endif /* FVIZ_DATA_UNSTRUCTURED_GRID_H */

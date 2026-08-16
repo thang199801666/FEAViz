@@ -331,6 +331,48 @@ static int test_cell_types_vtk()
     return 0;
 }
 
+static int test_gradient_cpp()
+{
+    // Hex beam with a linear scalar phi = 2x + 3y - z + 5; gradient (2,3,-1).
+    UnstructuredGrid grid = UnstructuredGrid::create();
+    const uint32_t nx = 2u, ny = 2u, nz = 2u;
+    for (uint32_t z = 0u; z <= nz; ++z)
+        for (uint32_t y = 0u; y <= ny; ++y)
+            for (uint32_t x = 0u; x <= nx; ++x)
+                grid.addPoint(Vec3((float)x, (float)y, (float)z));
+    const auto pid = [&](uint32_t x, uint32_t y, uint32_t z) { return x + (nx + 1u) * (y + (ny + 1u) * z); };
+    for (uint32_t z = 0u; z < nz; ++z)
+        for (uint32_t y = 0u; y < ny; ++y)
+            for (uint32_t x = 0u; x < nx; ++x)
+            {
+                const uint32_t ids[8] = {
+                    pid(x, y, z), pid(x + 1u, y, z), pid(x + 1u, y + 1u, z), pid(x, y + 1u, z),
+                    pid(x, y, z + 1u), pid(x + 1u, y, z + 1u), pid(x + 1u, y + 1u, z + 1u), pid(x, y + 1u, z + 1u)};
+                grid.addCell(FVIZ_CELL_HEXAHEDRON, 8u, ids);
+            }
+    DataArray phi = DataArray::createFloat64();
+    phi.resize(grid.pointCount());
+    {
+        const FVizVec3* p = fviz_points_data(fviz_unstructured_grid_points(grid.get()));
+        for (FVizSize i = 0u; i < grid.pointCount(); ++i)
+            phi.setComponent(i, 0u, 2.0 * p[i].x + 3.0 * p[i].y - (double)p[i].z + 5.0);
+    }
+    grid.pointData().add("phi", phi.get());
+
+    UnstructuredGrid result = grid.gradient("phi", "grad_phi");
+    CHECK(result.get() != nullptr);
+    DataArray grad = result.pointData().get("grad_phi");
+    CHECK(grad.get() != nullptr);
+    CHECK(grad.components() == 3u);
+    for (FVizSize i = 0u; i < result.pointCount(); ++i)
+    {
+        CHECK(std::fabs(grad.component(i, 0u) - 2.0) < 1.0e-6);
+        CHECK(std::fabs(grad.component(i, 1u) - 3.0) < 1.0e-6);
+        CHECK(std::fabs(grad.component(i, 2u) + 1.0) < 1.0e-6);
+    }
+    return 0;
+}
+
 int main(void)
 {
     int result = 0;
@@ -341,6 +383,7 @@ int main(void)
     if ((result = test_readers()) != 0) { std::printf("test_readers failed at line %d\n", result); return result; }
     if ((result = test_rendering_objects()) != 0) { std::printf("test_rendering_objects failed at line %d\n", result); return result; }
     if ((result = test_cell_types_vtk()) != 0) { std::printf("test_cell_types_vtk failed at line %d\n", result); return result; }
+    if ((result = test_gradient_cpp()) != 0) { std::printf("test_gradient_cpp failed at line %d\n", result); return result; }
     std::printf("FVizCpp binding tests passed\n");
     return 0;
 }
