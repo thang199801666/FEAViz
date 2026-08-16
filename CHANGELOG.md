@@ -51,6 +51,19 @@
   `fviz_temporal_prefetch_queue_wait_idle()` / `destroy()` forever. The drain
   task always runs, observes the token, and clears the active flag; a fresh
   kick resets the token so a cancelled queue can still prefetch later.
+- Added the header-only C++17 binding under `bindings/cpp`. It wraps the C ABI
+  with RAII ownership (`fviz::Object<T>` retaining/releasing through
+  `fviz_retain`/`fviz_release`), typed math value types (Vec2/Vec3/Vec4, Mat4,
+  Quat, Bounds, Plane, Ray), and ergonomic wrappers for data (DataArray,
+  AttributeSet, UnstructuredGrid, PolyData, Points, CellArray), rendering
+  (Camera, LookupTable, Mapper, Actor, Scene, Renderer, ScalarLegend,
+  RendererWidget) and IO (`readVtu`, `readVtkLegacy`, `readObj`, `readStl`).
+  Include `<FVizCpp/FVizCpp.hpp>` and link `FEAViz::Core`; failures throw
+  `fviz::Error`. The C ABI remains the source of truth.
+- Added `FVizTestCppBinding` (`FViz.Cpp.Binding`) covering math operators,
+  RAII refcounting, grid construction, data arrays, readers, and headless
+  rendering-object assembly. The binding builds in both the full and
+  `FVIZ_BUILD_FEA=OFF` configurations.
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 

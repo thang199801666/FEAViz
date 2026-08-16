@@ -195,3 +195,20 @@ foreach(_fviz_header IN LISTS _fviz_public_headers)
         target_compile_options("FVizHeaderCpp_${_fviz_header_id}" PRIVATE -Wall -Wextra -Wpedantic -Werror)
     endif()
 endforeach()
+
+# ---- C++ binding test -----------------------------------------------------
+# The header-only C++ binding is compiled as a full C++17 test against the C
+# core, mirroring how application code consumes <FVizCpp/FVizCpp.hpp>.
+add_executable(FVizTestCppBinding Cpp/test_cpp_binding.cpp)
+target_link_libraries(FVizTestCppBinding PRIVATE FEAViz::Core)
+target_compile_features(FVizTestCppBinding PRIVATE cxx_std_17)
+target_compile_definitions(FVizTestCppBinding PRIVATE FVIZ_TESTDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../assets/testdata")
+target_include_directories(FVizTestCppBinding PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../bindings/cpp/include")
+fviz_apply_compiler_options(FVizTestCppBinding)
+fviz_apply_sanitizers(FVizTestCppBinding)
+if(MSVC)
+    target_compile_options(FVizTestCppBinding PRIVATE /W4 /WX /permissive-)
+else()
+    target_compile_options(FVizTestCppBinding PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME FViz.Cpp.Binding COMMAND FVizTestCppBinding)
