@@ -196,8 +196,8 @@ foreach(_fviz_header IN LISTS _fviz_public_headers)
     endif()
 endforeach()
 
-# ---- C++ binding test -----------------------------------------------------
-# The header-only C++ binding is compiled as a full C++17 test against the C
+# ---- C++ binding tests ----------------------------------------------------
+# The header-only C++ binding is compiled as full C++17 tests against the C
 # core, mirroring how application code consumes <FVizCpp/FVizCpp.hpp>.
 add_executable(FVizTestCppBinding Cpp/test_cpp_binding.cpp)
 target_link_libraries(FVizTestCppBinding PRIVATE FEAViz::Core)
@@ -212,3 +212,19 @@ else()
     target_compile_options(FVizTestCppBinding PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 add_test(NAME FViz.Cpp.Binding COMMAND FVizTestCppBinding)
+
+# FEA-module C++ binding test (only when the FEA module is built).
+if(TARGET FEAVizFEA)
+    add_executable(FVizTestCppFEABinding Cpp/test_cpp_fea.cpp)
+    target_link_libraries(FVizTestCppFEABinding PRIVATE FEAViz::FEA)
+    target_compile_features(FVizTestCppFEABinding PRIVATE cxx_std_17)
+    target_include_directories(FVizTestCppFEABinding PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../bindings/cpp/include")
+    fviz_apply_compiler_options(FVizTestCppFEABinding)
+    fviz_apply_sanitizers(FVizTestCppFEABinding)
+    if(MSVC)
+        target_compile_options(FVizTestCppFEABinding PRIVATE /W4 /WX /permissive-)
+    else()
+        target_compile_options(FVizTestCppFEABinding PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+    add_test(NAME FViz.Cpp.FEABinding COMMAND FVizTestCppFEABinding)
+endif()

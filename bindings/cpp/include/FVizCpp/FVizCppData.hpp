@@ -11,12 +11,17 @@
 #include <FViz/Data/FVizDataArray.h>
 #include <FViz/Data/FVizAttributeSet.h>
 #include <FViz/Data/FVizUnstructuredGrid.h>
+#include <FViz/Data/FVizImageData.h>
+#include <FViz/Data/FVizStructuredGrid.h>
+#include <FViz/Data/FVizRectilinearGrid.h>
 #include <FViz/Mesh/FVizPolyData.h>
 #include <FViz/Mesh/FVizPoints.h>
 #include <FViz/Mesh/FVizCellArray.h>
+#include <FViz/Math/FVizTransform.h>
 
 #include "FVizCppObject.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -42,6 +47,8 @@ public:
     static DataArray createFloat32(uint32_t components = 1u) { return create(FVIZ_DATA_FLOAT32, components); }
     static DataArray createFloat64(uint32_t components = 1u) { return create(FVIZ_DATA_FLOAT64, components); }
     static DataArray createInt32(uint32_t components = 1u) { return create(FVIZ_DATA_INT32, components); }
+    static DataArray createUint32(uint32_t components = 1u) { return create(FVIZ_DATA_UINT32, components); }
+    static DataArray createUint64(uint32_t components = 1u) { return create(FVIZ_DATA_UINT64, components); }
 
     FVizDataType type() const noexcept { return ptr_ != nullptr ? fviz_data_array_type(ptr_) : FVIZ_DATA_FLOAT32; }
     uint32_t components() const noexcept { return ptr_ != nullptr ? fviz_data_array_components(ptr_) : 0u; }
@@ -344,6 +351,205 @@ public:
     {
         if (ptr_ != nullptr) fviz_poly_data_clear(ptr_);
     }
+};
+
+// ---------------------------------------------------------------------------
+// Transform
+// ---------------------------------------------------------------------------
+class Transform : public Object<FVizTransform> {
+public:
+    Transform() = default;
+    explicit Transform(FVizTransform* owned) : Object<FVizTransform>(owned) {}
+    explicit Transform(void* owned) : Object<FVizTransform>(owned) {}
+
+    static Transform create()
+    {
+        FVizTransform* transform = nullptr;
+        detail::checkResult(fviz_transform_create(&transform));
+        return Transform(transform);
+    }
+
+    void identity() noexcept { if (ptr_) fviz_transform_identity(ptr_); }
+    void setMatrix(const Mat4& matrix) noexcept { if (ptr_) fviz_transform_set_matrix(ptr_, matrix); }
+    Mat4 matrix() const noexcept { return ptr_ ? Mat4(fviz_transform_matrix(ptr_)) : Mat4(); }
+    void translate(Vec3 translation) noexcept { if (ptr_) fviz_transform_translate(ptr_, translation); }
+    void scale(Vec3 scale_) noexcept { if (ptr_) fviz_transform_scale(ptr_, scale_); }
+    void rotate(Quat rotation) noexcept { if (ptr_) fviz_transform_rotate(ptr_, rotation); }
+    Vec3 transformPoint(Vec3 point) const noexcept { return ptr_ ? Vec3(fviz_transform_point(ptr_, point)) : Vec3(); }
+    Vec3 transformVector(Vec3 vector) const noexcept { return ptr_ ? Vec3(fviz_transform_vector(ptr_, vector)) : Vec3(); }
+};
+
+// ---------------------------------------------------------------------------
+// ImageData - rectilinear voxel grid on a regular lattice.
+// ---------------------------------------------------------------------------
+class ImageData : public Object<FVizImageData> {
+public:
+    ImageData() = default;
+    explicit ImageData(FVizImageData* owned) : Object<FVizImageData>(owned) {}
+    explicit ImageData(void* owned) : Object<FVizImageData>(owned) {}
+
+    static ImageData create()
+    {
+        FVizImageData* image = nullptr;
+        detail::checkResult(fviz_image_data_create(&image));
+        return ImageData(image);
+    }
+
+    // Extent is inclusive [xmin,xmax,ymin,ymax,zmin,zmax].
+    void setExtent(const int64_t extent[6]) { detail::checkResult(fviz_image_data_set_extent(ptr_, extent)); }
+    void setExtent(int64_t xmin, int64_t xmax, int64_t ymin, int64_t ymax, int64_t zmin, int64_t zmax)
+    {
+        const int64_t extent[6] = {xmin, xmax, ymin, ymax, zmin, zmax};
+        setExtent(extent);
+    }
+    std::array<int64_t, 6> extent() const noexcept
+    {
+        std::array<int64_t, 6> out{};
+        if (ptr_) fviz_image_data_extent(ptr_, out.data());
+        return out;
+    }
+    std::array<FVizSize, 3> dimensions() const noexcept
+    {
+        std::array<FVizSize, 3> out{};
+        if (ptr_) fviz_image_data_dimensions(ptr_, out.data());
+        return out;
+    }
+    uint32_t dimension() const noexcept { return ptr_ ? fviz_image_data_dimension(ptr_) : 0u; }
+
+    void setOrigin(double x, double y, double z) { const double o[3] = {x, y, z}; detail::checkResult(fviz_image_data_set_origin(ptr_, o)); }
+    void setSpacing(double x, double y, double z) { const double s[3] = {x, y, z}; detail::checkResult(fviz_image_data_set_spacing(ptr_, s)); }
+
+    FVizSize pointCount() const noexcept { return ptr_ ? fviz_image_data_point_count(ptr_) : 0u; }
+    FVizSize cellCount() const noexcept { return ptr_ ? fviz_image_data_cell_count(ptr_) : 0u; }
+    FVizCellType cellType() const noexcept { return ptr_ ? fviz_image_data_cell_type(ptr_) : FVIZ_CELL_HEXAHEDRON; }
+    Bounds bounds() const noexcept { return ptr_ ? Bounds(fviz_image_data_bounds(ptr_)) : Bounds(); }
+
+    AttributeSet pointData() const
+    {
+        FVizAttributeSet* set = ptr_ ? fviz_image_data_point_data(ptr_) : nullptr;
+        return AttributeSet(set != nullptr ? static_cast<FVizAttributeSet*>(fviz_retain(set)) : nullptr);
+    }
+    AttributeSet cellData() const
+    {
+        FVizAttributeSet* set = ptr_ ? fviz_image_data_cell_data(ptr_) : nullptr;
+        return AttributeSet(set != nullptr ? static_cast<FVizAttributeSet*>(fviz_retain(set)) : nullptr);
+    }
+
+    // Allocates a point-scalar array of the given size and returns a retained view.
+    DataArray allocatePointScalars(const char* name, FVizDataType type, uint32_t components)
+    {
+        FVizDataArray* array = nullptr;
+        detail::checkResult(fviz_image_data_allocate_point_scalars(ptr_, name, type, components, &array));
+        return DataArray(array);
+    }
+
+    void validate() { detail::checkResult(fviz_image_data_validate(ptr_)); }
+    void clear() noexcept { if (ptr_) fviz_image_data_clear(ptr_); }
+};
+
+// ---------------------------------------------------------------------------
+// StructuredGrid - explicit points on an implicit structured extent.
+// ---------------------------------------------------------------------------
+class StructuredGrid : public Object<FVizStructuredGrid> {
+public:
+    StructuredGrid() = default;
+    explicit StructuredGrid(FVizStructuredGrid* owned) : Object<FVizStructuredGrid>(owned) {}
+    explicit StructuredGrid(void* owned) : Object<FVizStructuredGrid>(owned) {}
+
+    static StructuredGrid create()
+    {
+        FVizStructuredGrid* grid = nullptr;
+        detail::checkResult(fviz_structured_grid_create(&grid));
+        return StructuredGrid(grid);
+    }
+
+    void setExtent(const int64_t extent[6]) { detail::checkResult(fviz_structured_grid_set_extent(ptr_, extent)); }
+    std::array<int64_t, 6> extent() const noexcept
+    {
+        std::array<int64_t, 6> out{};
+        if (ptr_) fviz_structured_grid_extent(ptr_, out.data());
+        return out;
+    }
+    std::array<FVizSize, 3> dimensions() const noexcept
+    {
+        std::array<FVizSize, 3> out{};
+        if (ptr_) fviz_structured_grid_dimensions(ptr_, out.data());
+        return out;
+    }
+    uint32_t dimension() const noexcept { return ptr_ ? fviz_structured_grid_dimension(ptr_) : 0u; }
+    FVizSize pointCount() const noexcept { return ptr_ ? fviz_structured_grid_point_count(ptr_) : 0u; }
+    FVizSize cellCount() const noexcept { return ptr_ ? fviz_structured_grid_cell_count(ptr_) : 0u; }
+    FVizCellType cellType() const noexcept { return ptr_ ? fviz_structured_grid_cell_type(ptr_) : FVIZ_CELL_HEXAHEDRON; }
+
+    void setPoints(const FVizVec3* points, FVizSize point_count)
+    {
+        detail::checkResult(fviz_structured_grid_set_points(ptr_, points, point_count));
+    }
+    void setPoint(FVizSize point_id, Vec3 point) { detail::checkResult(fviz_structured_grid_set_point(ptr_, point_id, point)); }
+    const FVizVec3* points() const noexcept { return ptr_ ? fviz_structured_grid_points(ptr_) : nullptr; }
+    Vec3 point(FVizId point_id) const
+    {
+        FVizVec3 out;
+        detail::checkResult(fviz_structured_grid_point(ptr_, point_id, &out));
+        return out;
+    }
+    Bounds bounds() const noexcept { return ptr_ ? Bounds(fviz_structured_grid_bounds(ptr_)) : Bounds(); }
+
+    AttributeSet pointData() const
+    {
+        FVizAttributeSet* set = ptr_ ? fviz_structured_grid_point_data(ptr_) : nullptr;
+        return AttributeSet(set != nullptr ? static_cast<FVizAttributeSet*>(fviz_retain(set)) : nullptr);
+    }
+
+    void validate() { detail::checkResult(fviz_structured_grid_validate(ptr_)); }
+    void clear() noexcept { if (ptr_) fviz_structured_grid_clear(ptr_); }
+};
+
+// ---------------------------------------------------------------------------
+// RectilinearGrid - axis-aligned coordinates along each axis.
+// ---------------------------------------------------------------------------
+class RectilinearGrid : public Object<FVizRectilinearGrid> {
+public:
+    RectilinearGrid() = default;
+    explicit RectilinearGrid(FVizRectilinearGrid* owned) : Object<FVizRectilinearGrid>(owned) {}
+    explicit RectilinearGrid(void* owned) : Object<FVizRectilinearGrid>(owned) {}
+
+    static RectilinearGrid create()
+    {
+        FVizRectilinearGrid* grid = nullptr;
+        detail::checkResult(fviz_rectilinear_grid_create(&grid));
+        return RectilinearGrid(grid);
+    }
+
+    void setExtent(const int64_t extent[6]) { detail::checkResult(fviz_rectilinear_grid_set_extent(ptr_, extent)); }
+    std::array<FVizSize, 3> dimensions() const noexcept
+    {
+        std::array<FVizSize, 3> out{};
+        if (ptr_) fviz_rectilinear_grid_dimensions(ptr_, out.data());
+        return out;
+    }
+    uint32_t dimension() const noexcept { return ptr_ ? fviz_rectilinear_grid_dimension(ptr_) : 0u; }
+    FVizSize pointCount() const noexcept { return ptr_ ? fviz_rectilinear_grid_point_count(ptr_) : 0u; }
+    FVizSize cellCount() const noexcept { return ptr_ ? fviz_rectilinear_grid_cell_count(ptr_) : 0u; }
+    FVizCellType cellType() const noexcept { return ptr_ ? fviz_rectilinear_grid_cell_type(ptr_) : FVIZ_CELL_HEXAHEDRON; }
+
+    void setCoordinates(uint32_t axis, FVizDataArray* coordinates)
+    {
+        detail::checkResult(fviz_rectilinear_grid_set_coordinates(ptr_, axis, coordinates));
+    }
+    void setCoordinateValues(uint32_t axis, const double* values, FVizSize count)
+    {
+        detail::checkResult(fviz_rectilinear_grid_set_coordinate_values(ptr_, axis, values, count));
+    }
+    DataArray coordinates(uint32_t axis) const
+    {
+        FVizDataArray* array = ptr_ ? fviz_rectilinear_grid_coordinates(ptr_, axis) : nullptr;
+        return DataArray(array != nullptr ? static_cast<FVizDataArray*>(fviz_retain(array)) : nullptr);
+    }
+    Bounds bounds() const noexcept { return ptr_ ? Bounds(fviz_rectilinear_grid_bounds(ptr_)) : Bounds(); }
+
+    void validate() { detail::checkResult(fviz_rectilinear_grid_validate(ptr_)); }
+    void clear() noexcept { if (ptr_) fviz_rectilinear_grid_clear(ptr_); }
 };
 
 } // namespace fviz

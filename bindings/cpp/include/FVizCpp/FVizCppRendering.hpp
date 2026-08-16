@@ -17,6 +17,9 @@
 #include <FViz/Rendering/FVizRendererWidget.h>
 #include <FViz/Rendering/FVizScalarLegend.h>
 #include <FViz/Rendering/FVizRenderWindow.h>
+#include <FViz/Rendering/FVizLight.h>
+#include <FViz/Rendering/FVizTextActor.h>
+#include <FViz/Rendering/FVizLabelSet.h>
 
 #include "FVizCppObject.hpp"
 #include "FVizCppData.hpp"
@@ -425,6 +428,169 @@ public:
     void* nativeHandle() const noexcept { return ptr_ ? fviz_renderer_widget_native_handle(ptr_) : nullptr; }
     void* hostNativeHandle() const noexcept { return ptr_ ? fviz_renderer_widget_host_native_handle(ptr_) : nullptr; }
     bool isAttached() const noexcept { return ptr_ ? fviz_renderer_widget_is_attached(ptr_) != FVIZ_FALSE : false; }
+};
+
+// ---------------------------------------------------------------------------
+// Light
+// ---------------------------------------------------------------------------
+class Light : public Object<FVizLight> {
+public:
+    Light() = default;
+    explicit Light(FVizLight* owned) : Object<FVizLight>(owned) {}
+    explicit Light(void* owned) : Object<FVizLight>(owned) {}
+
+    static Light create()
+    {
+        FVizLight* light = nullptr;
+        detail::checkResult(fviz_light_create(&light));
+        return Light(light);
+    }
+
+    void setType(FVizLightType type) noexcept { if (ptr_) fviz_light_set_type(ptr_, type); }
+    FVizLightType type() const noexcept { return ptr_ ? fviz_light_type(ptr_) : FVIZ_LIGHT_SCENE; }
+    void setEnabled(bool enabled) noexcept { if (ptr_) fviz_light_set_enabled(ptr_, detail::fbool(enabled)); }
+    bool enabled() const noexcept { return ptr_ ? fviz_light_enabled(ptr_) != FVIZ_FALSE : false; }
+    void setPosition(Vec3 position) noexcept { if (ptr_) fviz_light_set_position(ptr_, position); }
+    Vec3 position() const noexcept { return ptr_ ? Vec3(fviz_light_position(ptr_)) : Vec3(); }
+    void setColor(float red, float green, float blue) noexcept { if (ptr_) fviz_light_set_color(ptr_, red, green, blue); }
+    void setIntensity(float intensity) noexcept { if (ptr_) fviz_light_set_intensity(ptr_, intensity); }
+    float intensity() const noexcept { return ptr_ ? fviz_light_intensity(ptr_) : 1.0f; }
+};
+
+// ---------------------------------------------------------------------------
+// TextActor2D - screen-space text.
+// ---------------------------------------------------------------------------
+class TextActor2D : public Object<FVizTextActor2D> {
+public:
+    TextActor2D() = default;
+    explicit TextActor2D(FVizTextActor2D* owned) : Object<FVizTextActor2D>(owned) {}
+    explicit TextActor2D(void* owned) : Object<FVizTextActor2D>(owned) {}
+
+    static TextActor2D create()
+    {
+        FVizTextActor2D* actor = nullptr;
+        detail::checkResult(fviz_text_actor_2d_create(&actor));
+        return TextActor2D(actor);
+    }
+
+    void setText(const char* utf8) { detail::checkResult(fviz_text_actor_2d_set_text(ptr_, utf8)); }
+    const char* text() const noexcept { return ptr_ ? fviz_text_actor_2d_text(ptr_) : nullptr; }
+    void setPosition(float x, float y) noexcept { if (ptr_) fviz_text_actor_2d_set_position(ptr_, x, y); }
+    void getPosition(float& x, float& y) const noexcept { if (ptr_) fviz_text_actor_2d_get_position(ptr_, &x, &y); }
+    void setCoordinateSystem(FVizTextCoordinateSystem system) noexcept { if (ptr_) fviz_text_actor_2d_set_coordinate_system(ptr_, system); }
+    void setVisible(bool visible) noexcept { if (ptr_) fviz_text_actor_2d_set_visible(ptr_, detail::fbool(visible)); }
+    bool isVisible() const noexcept { return ptr_ ? fviz_text_actor_2d_is_visible(ptr_) != FVIZ_FALSE : false; }
+};
+
+// ---------------------------------------------------------------------------
+// BillboardTextActor3D - world-space text facing the camera.
+// ---------------------------------------------------------------------------
+class BillboardTextActor3D : public Object<FVizBillboardTextActor3D> {
+public:
+    BillboardTextActor3D() = default;
+    explicit BillboardTextActor3D(FVizBillboardTextActor3D* owned) : Object<FVizBillboardTextActor3D>(owned) {}
+    explicit BillboardTextActor3D(void* owned) : Object<FVizBillboardTextActor3D>(owned) {}
+
+    static BillboardTextActor3D create()
+    {
+        FVizBillboardTextActor3D* actor = nullptr;
+        detail::checkResult(fviz_billboard_text_actor_3d_create(&actor));
+        return BillboardTextActor3D(actor);
+    }
+
+    void setText(const char* utf8) { detail::checkResult(fviz_billboard_text_actor_3d_set_text(ptr_, utf8)); }
+    const char* text() const noexcept { return ptr_ ? fviz_billboard_text_actor_3d_text(ptr_) : nullptr; }
+    void setWorldPosition(Vec3 position) noexcept { if (ptr_) fviz_billboard_text_actor_3d_set_world_position(ptr_, position); }
+    Vec3 worldPosition() const noexcept { return ptr_ ? Vec3(fviz_billboard_text_actor_3d_world_position(ptr_)) : Vec3(); }
+    void setPixelOffset(float x, float y) noexcept { if (ptr_) fviz_billboard_text_actor_3d_set_pixel_offset(ptr_, x, y); }
+    void setVisible(bool visible) noexcept { if (ptr_) fviz_billboard_text_actor_3d_set_visible(ptr_, detail::fbool(visible)); }
+    bool isVisible() const noexcept { return ptr_ ? fviz_billboard_text_actor_3d_is_visible(ptr_) != FVIZ_FALSE : false; }
+};
+
+// ---------------------------------------------------------------------------
+// LabelSet3D - batched world-space labels.
+// ---------------------------------------------------------------------------
+class LabelSet3D : public Object<FVizLabelSet3D> {
+public:
+    LabelSet3D() = default;
+    explicit LabelSet3D(FVizLabelSet3D* owned) : Object<FVizLabelSet3D>(owned) {}
+    explicit LabelSet3D(void* owned) : Object<FVizLabelSet3D>(owned) {}
+
+    static LabelSet3D create()
+    {
+        FVizLabelSet3D* set = nullptr;
+        detail::checkResult(fviz_label_set_3d_create(&set));
+        return LabelSet3D(set);
+    }
+
+    void add(Vec3 position, const char* utf8)
+    {
+        detail::checkResult(fviz_label_set_3d_add(ptr_, position, utf8, nullptr));
+    }
+    FVizSize count() const noexcept { return ptr_ ? fviz_label_set_3d_count(ptr_) : 0u; }
+    Vec3 positionAt(FVizSize index) const noexcept
+    {
+        return ptr_ ? Vec3(fviz_label_set_3d_position_at(ptr_, index)) : Vec3();
+    }
+    const char* textAt(FVizSize index) const noexcept { return ptr_ ? fviz_label_set_3d_text_at(ptr_, index) : nullptr; }
+    void setVisible(bool visible) noexcept { if (ptr_) fviz_label_set_3d_set_visible(ptr_, detail::fbool(visible)); }
+    bool visible() const noexcept { return ptr_ ? fviz_label_set_3d_visible(ptr_) != FVIZ_FALSE : false; }
+    void clear() noexcept { if (ptr_) fviz_label_set_3d_clear(ptr_); }
+};
+
+// ---------------------------------------------------------------------------
+// RenderWindow - native window (optionally offscreen) hosting renderers.
+// ---------------------------------------------------------------------------
+class RenderWindow : public Object<FVizRenderWindow> {
+public:
+    RenderWindow() = default;
+    explicit RenderWindow(FVizRenderWindow* owned) : Object<FVizRenderWindow>(owned) {}
+    explicit RenderWindow(void* owned) : Object<FVizRenderWindow>(owned) {}
+
+    static RenderWindow create(int width, int height, const char* title = "FEAViz")
+    {
+        FVizRenderWindow* window = nullptr;
+        detail::checkResult(fviz_render_window_create(width, height, title, &window));
+        return RenderWindow(window);
+    }
+
+    static RenderWindow createOffscreen(int width, int height)
+    {
+        FVizRenderWindow* window = nullptr;
+        detail::checkResult(fviz_render_window_create_offscreen(width, height, &window));
+        return RenderWindow(window);
+    }
+
+    static RenderWindow createAttached(void* host_native_handle, int width, int height)
+    {
+        FVizRenderWindow* window = nullptr;
+        detail::checkResult(fviz_render_window_create_attached(host_native_handle, width, height, &window));
+        return RenderWindow(window);
+    }
+
+    static bool supported() noexcept { return fviz_render_window_supported() != FVIZ_FALSE; }
+
+    void setRenderer(Renderer& renderer) { detail::checkResult(fviz_render_window_set_renderer(ptr_, renderer.get())); }
+    void addRenderer(Renderer& renderer) { detail::checkResult(fviz_render_window_add_renderer(ptr_, renderer.get())); }
+    Renderer rendererAt(FVizSize index) const
+    {
+        FVizRenderer* renderer = ptr_ ? fviz_render_window_renderer_at(ptr_, index) : nullptr;
+        return Renderer(renderer != nullptr ? static_cast<FVizRenderer*>(fviz_retain(renderer)) : nullptr);
+    }
+    FVizSize rendererCount() const noexcept { return ptr_ ? fviz_render_window_renderer_count(ptr_) : 0u; }
+
+    void show() { detail::checkResult(fviz_render_window_show(ptr_)); }
+    void render() { detail::checkResult(fviz_render_window_render(ptr_)); }
+    void requestRender() noexcept { if (ptr_) fviz_render_window_request_render(ptr_); }
+    void resize(int width, int height) { detail::checkResult(fviz_render_window_resize(ptr_, width, height)); }
+    void getSize(int& width, int& height) const noexcept { if (ptr_) fviz_render_window_get_size(ptr_, &width, &height); }
+    void initialize() { detail::checkResult(fviz_render_window_initialize(ptr_)); }
+    void finalize() noexcept { if (ptr_) fviz_render_window_finalize(ptr_); }
+    void requestClose() noexcept { if (ptr_) fviz_render_window_request_close(ptr_); }
+    FVizRenderWindowState state() const noexcept { return ptr_ ? fviz_render_window_state(ptr_) : FVIZ_RENDER_WINDOW_CREATED; }
+    uint32_t dpi() const noexcept { return ptr_ ? fviz_render_window_dpi(ptr_) : 96u; }
+    float contentScale() const noexcept { return ptr_ ? fviz_render_window_content_scale(ptr_) : 1.0f; }
+    void* nativeHandle() const noexcept { return ptr_ ? fviz_render_window_native_handle(ptr_) : nullptr; }
 };
 
 } // namespace fviz

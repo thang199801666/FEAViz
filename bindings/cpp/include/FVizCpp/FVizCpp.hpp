@@ -9,7 +9,8 @@
 //
 //   #include <FVizCpp/FVizCpp.hpp>
 //
-// Link against the FEAViz core library (FEAViz::Core / libFEAViz).
+// Link against the FEAViz core library (FEAViz::Core / libFEAViz). The FEA
+// wrappers (FVizCppFEA.hpp) additionally require FEAViz::FEA / libFEAVizFEA.
 
 #ifndef FVIZ_CPP_HPP
 #define FVIZ_CPP_HPP
@@ -18,6 +19,10 @@
 #include "FVizCppObject.hpp"
 #include "FVizCppData.hpp"
 #include "FVizCppRendering.hpp"
+#include "FVizCppInteraction.hpp"
+#include "FVizCppFilter.hpp"
+#include "FVizCppParallel.hpp"
 #include "FVizCppIO.hpp"
+#include "FVizCppFEA.hpp"
 
 #endif // FVIZ_CPP_HPP

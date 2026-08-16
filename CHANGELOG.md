@@ -64,6 +64,16 @@
   RAII refcounting, grid construction, data arrays, readers, and headless
   rendering-object assembly. The binding builds in both the full and
   `FVIZ_BUILD_FEA=OFF` configurations.
+- Extended the C++ binding to the full upper API layer: additional data
+  objects (ImageData, StructuredGrid, RectilinearGrid, Transform), rendering
+  (RenderWindow, Light, TextActor2D, BillboardTextActor3D, LabelSet3D),
+  interaction (InteractorStyle, RenderWindowInteractor), pipeline filters
+  (Threshold/Warp/CellDataToPoint/Surface/Slice/Transform), the parallel
+  runtime (Executor, Future, CancellationToken, `parallel::forEach`), IO
+  writers (VTP/PLY/PVD + VTU writers) and the full FEA module wrappers
+  (HistorySeries/Region, Frame, Field, Step, ResultDatabase, PrimaryVariable,
+  DeformedShape, ScalarBarActor, `fea::*` helpers). Added `FVizTestCppFEABinding`
+  (`FViz.Cpp.FEABinding`), built only when `FEAViz::FEA` is enabled.
 
 ## 0.41.0 - Dual-track deformation Core and FEA Deformed Shape controller
 

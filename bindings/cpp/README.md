@@ -13,20 +13,33 @@ include/FVizCpp/
   FVizCppMath.hpp      Vec2/Vec3/Vec4, Mat4, Quat, Bounds, Plane, Ray
   FVizCppObject.hpp    fviz::Error, RAII Object<T> (refcounted)
   FVizCppData.hpp      DataArray, AttributeSet, Points, CellArray,
-                       UnstructuredGrid, PolyData
+                       UnstructuredGrid, PolyData, ImageData, StructuredGrid,
+                       RectilinearGrid, Transform
   FVizCppRendering.hpp Camera, LookupTable, Mapper, Actor, Scene, Renderer,
-                       ScalarLegend, RendererWidget
-  FVizCppIO.hpp        readVtu / readVtkLegacy / readObj / readStl
+                       ScalarLegend, RendererWidget, RenderWindow, Light,
+                       TextActor2D, BillboardTextActor3D, LabelSet3D
+  FVizCppInteraction.hpp InteractionEvent, InteractorStyle, RenderWindowInteractor
+  FVizCppFilter.hpp    Filter + Threshold / Warp / CellDataToPoint / Surface /
+                       Slice / Transform filters
+  FVizCppParallel.hpp  CancellationToken, Future, Executor, parallel::forEach
+  FVizCppIO.hpp        readVtu / readVtkLegacy / readObj / readStl / readVtp,
+                       writeVtu / writeVtp / writePly, PVDCollection
+  FVizCppFEA.hpp       FEA module: HistorySeries/Region, Frame, Field, Step,
+                       ResultDatabase, PrimaryVariable, DeformedShape,
+                       ScalarBarActor, fea contour/edges helpers
 ```
+
+The FEA wrappers (`FVizCppFEA.hpp`) link against `FEAViz::FEA`; everything else
+links against `FEAViz::Core`.
 
 ## Usage
 
 Add the include directory and link the C core (shared or static):
 
 ```cmake
-find_package(FEAViz 0.41 REQUIRED COMPONENTS Core)
+find_package(FEAViz 0.41 REQUIRED COMPONENTS Core FEA)   # FEA only if needed
 target_include_directories(my_app PRIVATE path/to/bindings/cpp/include)
-target_link_libraries(my_app PRIVATE FEAViz::Core)
+target_link_libraries(my_app PRIVATE FEAViz::FEA)        # or FEAViz::Core
 ```
 
 Then:
@@ -86,6 +99,10 @@ Functions throw `fviz::Error` on failure; `Error::code()` returns the C
 
 ## Testing
 
-The binding is exercised by `FVizTestCppBinding` (registered with CTest as
-`FViz.Cpp.Binding`), which covers math operators, RAII refcounting, grid
-construction, data arrays, readers, and headless rendering-object assembly.
+The binding is exercised by two CTest targets:
+
+- `FViz.Cpp.Binding` (`FVizTestCppBinding`) — math operators, RAII refcounting,
+  grid construction, data arrays, readers, and headless rendering assembly.
+- `FViz.Cpp.FEABinding` (`FVizTestCppFEABinding`, only when `FEAViz::FEA` is
+  built) — result database/step/frame/field, primary-variable invariants,
+  deformed-shape control, and the Abaqus-style scalar bar.
