@@ -2592,6 +2592,154 @@ static void fviz_slice_classify_range(FVizSize begin, FVizSize end, void* user_d
     }
 }
 
+/* A single intersecting cell's slice polygon, computed independently so the
+ * construction phase can run in parallel. The value pool holds
+ * polygon_count * field_count floats per cell. */
+typedef struct FVizSlicePolygonResult
+{
+    FVizSize polygon_count;
+    FVizBool overflow;
+    FVizVec3 positions[FVIZ_SLICE_MAX_VERTICES];
+    FVizSize order[FVIZ_SLICE_MAX_VERTICES];
+    float* values;
+} FVizSlicePolygonResult;
+
+typedef struct FVizSliceConstructionContext
+{
+    const FVizUnstructuredGrid* grid;
+    const FVizVec3* points;
+    const uint8_t* intersects;
+    const FVizSliceField* fields;
+    FVizSize field_count;
+    FVizPlane plane;
+    FVizVec3 u_basis;
+    FVizVec3 v_basis;
+    FVizSlicePolygonResult* results;
+} FVizSliceConstructionContext;
+
+static void fviz_slice_construct_range(FVizSize begin, FVizSize end, void* user_data)
+{
+    FVizSliceConstructionContext* context = (FVizSliceConstructionContext*)user_data;
+    const FVizUnstructuredGrid* grid = context->grid;
+    const FVizVec3* points = context->points;
+    FVizSize cell_id;
+    for (cell_id = begin; cell_id < end; ++cell_id)
+    {
+        const FVizCellType type = fviz_cell_array_type(grid->cells, cell_id);
+        FVizCellView view;
+        FVizId cell_ids[8];
+        const FVizSize cell_point_count = fviz_cell_array_point_count(grid->cells, cell_id);
+        uint32_t edge_count;
+        const uint32_t* edges = fviz_cell_edge_table(type, &edge_count);
+        float distances[8];
+        FVizVec3 polygon_positions[FVIZ_SLICE_MAX_VERTICES];
+        FVizSize polygon_count = 0u;
+        FVizSize k;
+        FVizSlicePolygonResult* result = &context->results[cell_id];
+        result->polygon_count = 0u;
+        result->overflow = FVIZ_FALSE;
+        if (context->intersects != NULL && context->intersects[cell_id] == FVIZ_FALSE) continue;
+        if (edges == NULL || cell_point_count > 8u || fviz_cell_array_cell_view(grid->cells, cell_id, &view) != FVIZ_OK)
+            continue;
+        for (k = 0u; k < cell_point_count; ++k)
+            cell_ids[k] = fviz_cell_view_point_id(&view, k);
+
+        for (k = 0u; k < cell_point_count; ++k)
+        {
+            distances[k] = fviz_plane_distance_to_point(context->plane, points[(FVizSize)cell_ids[k]]);
+        }
+        {
+            FVizBool has_nonnegative = FVIZ_FALSE;
+            FVizBool has_nonpositive = FVIZ_FALSE;
+            FVizBool all_on_plane = FVIZ_TRUE;
+            for (k = 0u; k < cell_point_count; ++k)
+            {
+                if (distances[k] >= -FVIZ_SLICE_EPSILON) has_nonnegative = FVIZ_TRUE;
+                if (distances[k] <= FVIZ_SLICE_EPSILON) has_nonpositive = FVIZ_TRUE;
+                if (distances[k] > FVIZ_SLICE_EPSILON || distances[k] < -FVIZ_SLICE_EPSILON)
+                {
+                    all_on_plane = FVIZ_FALSE;
+                }
+            }
+            if (all_on_plane == FVIZ_TRUE || has_nonnegative == FVIZ_FALSE || has_nonpositive == FVIZ_FALSE)
+            {
+                continue;
+            }
+        }
+
+        for (k = 0u; k < cell_point_count; ++k)
+        {
+            if (fabsf(distances[k]) <= FVIZ_SLICE_EPSILON)
+            {
+                FVizSize f;
+                if (polygon_count >= FVIZ_SLICE_MAX_VERTICES)
+                {
+                    result->overflow = FVIZ_TRUE;
+                    return;
+                }
+                polygon_positions[polygon_count] = points[(FVizSize)cell_ids[k]];
+                for (f = 0u; f < context->field_count; ++f)
+                {
+                    double value = 0.0;
+                    (void)fviz_scalar_value(context->fields[f].array, (FVizSize)cell_ids[k], &value);
+                    result->values[polygon_count * context->field_count + f] = (float)value;
+                }
+                ++polygon_count;
+            }
+        }
+        for (k = 0u; k < edge_count; ++k)
+        {
+            const FVizId a = cell_ids[edges[k * 2u + 0u]];
+            const FVizId b = cell_ids[edges[k * 2u + 1u]];
+            const float da = distances[edges[k * 2u + 0u]];
+            const float db = distances[edges[k * 2u + 1u]];
+            const float t = da / (da - db);
+            FVizSize f;
+            if ((da >= 0.0f && db >= 0.0f) || (da <= 0.0f && db <= 0.0f)) continue;
+            if (polygon_count >= FVIZ_SLICE_MAX_VERTICES)
+            {
+                result->overflow = FVIZ_TRUE;
+                return;
+            }
+            polygon_positions[polygon_count] = fviz_vec3_add(
+                points[(FVizSize)a], fviz_vec3_scale(fviz_vec3_sub(points[(FVizSize)b], points[(FVizSize)a]), t));
+            for (f = 0u; f < context->field_count; ++f)
+            {
+                double va = 0.0;
+                double vb = 0.0;
+                (void)fviz_scalar_value(context->fields[f].array, (FVizSize)a, &va);
+                (void)fviz_scalar_value(context->fields[f].array, (FVizSize)b, &vb);
+                result->values[polygon_count * context->field_count + f] = (float)(va + (vb - va) * t);
+            }
+            ++polygon_count;
+        }
+
+        result->polygon_count = polygon_count;
+        if (polygon_count >= 3u)
+        {
+            FVizVec3 centroid = fviz_vec3(0.0f, 0.0f, 0.0f);
+            float angles[FVIZ_SLICE_MAX_VERTICES];
+            FVizSize i;
+            for (i = 0u; i < polygon_count; ++i)
+            {
+                centroid = fviz_vec3_add(centroid, polygon_positions[i]);
+            }
+            centroid = fviz_vec3_scale(centroid, 1.0f / (float)polygon_count);
+            for (i = 0u; i < polygon_count; ++i)
+            {
+                const FVizVec3 rel = fviz_vec3_sub(polygon_positions[i], centroid);
+                angles[i] = atan2f(fviz_vec3_dot(context->v_basis, rel), fviz_vec3_dot(context->u_basis, rel));
+                result->order[i] = i;
+            }
+            fviz_slice_sort_angles(angles, result->order, polygon_count);
+            for (i = 0u; i < polygon_count; ++i)
+            {
+                result->positions[i] = polygon_positions[result->order[i]];
+            }
+        }
+    }
+}
+
 FVizResult fviz_unstructured_grid_slice(const FVizUnstructuredGrid* grid, FVizPlane plane, FVizPolyData** out_slice)
 {
     FVizArray* fields = NULL;
@@ -2668,142 +2816,99 @@ FVizResult fviz_unstructured_grid_slice(const FVizUnstructuredGrid* grid, FVizPl
         v_basis = fviz_vec3_cross(plane.normal, u_basis);
     }
 
-    for (cell_id = 0u; cell_id < fviz_cell_array_count(grid->cells); ++cell_id)
     {
-        const FVizCellType type = fviz_cell_array_type(grid->cells, cell_id);
-        FVizCellView view;
-        FVizId cell_ids[8];
-        const FVizSize cell_point_count = fviz_cell_array_point_count(grid->cells, cell_id);
-        uint32_t edge_count;
-        const uint32_t* edges = fviz_cell_edge_table(type, &edge_count);
-        float distances[8];
-        FVizVec3 polygon_positions[FVIZ_SLICE_MAX_VERTICES];
-        FVizSize polygon_count = 0u;
-        FVizSize k;
-        if (intersects != NULL && intersects[cell_id] == FVIZ_FALSE) continue;
-        if (edges == NULL || cell_point_count > 8u || fviz_cell_array_cell_view(grid->cells, cell_id, &view) != FVIZ_OK)
-            continue;
-        for (k = 0u; k < cell_point_count; ++k)
-            cell_ids[k] = fviz_cell_view_point_id(&view, k);
-
-        for (k = 0u; k < cell_point_count; ++k)
+        FVizSliceConstructionContext construction;
+        FVizSlicePolygonResult* results = NULL;
+        float* value_pool = NULL;
+        FVizSize cell_count = fviz_cell_array_count(grid->cells);
+        if (cell_count > 0u)
         {
-            distances[k] = fviz_plane_distance_to_point(plane, points[(FVizSize)cell_ids[k]]);
-        }
-        {
-            FVizBool has_nonnegative = FVIZ_FALSE;
-            FVizBool has_nonpositive = FVIZ_FALSE;
-            FVizBool all_on_plane = FVIZ_TRUE;
-            for (k = 0u; k < cell_point_count; ++k)
+            results = (FVizSlicePolygonResult*)fviz_alloc(cell_count * sizeof(FVizSlicePolygonResult));
+            if (results == NULL) goto fail;
+            (void)memset(results, 0, cell_count * sizeof(FVizSlicePolygonResult));
+            if (field_count > 0u)
             {
-                if (distances[k] >= -FVIZ_SLICE_EPSILON) has_nonnegative = FVIZ_TRUE;
-                if (distances[k] <= FVIZ_SLICE_EPSILON) has_nonpositive = FVIZ_TRUE;
-                if (distances[k] > FVIZ_SLICE_EPSILON || distances[k] < -FVIZ_SLICE_EPSILON)
+                FVizSize pool_bytes = 0u;
+                if (fviz_size_multiply(cell_count * FVIZ_SLICE_MAX_VERTICES, field_count * sizeof(float), &pool_bytes) !=
+                    FVIZ_OK)
                 {
-                    all_on_plane = FVIZ_FALSE;
+                    fviz_free(results);
+                    goto fail;
                 }
-            }
-            if (all_on_plane == FVIZ_TRUE || has_nonnegative == FVIZ_FALSE || has_nonpositive == FVIZ_FALSE)
-            {
-                continue;
-            }
-        }
-
-        if (field_count > 0u)
-        {
-            polygon_values = (float*)fviz_alloc(FVIZ_SLICE_MAX_VERTICES * field_count * sizeof(float));
-            if (polygon_values == NULL) goto fail;
-        }
-
-        for (k = 0u; k < cell_point_count; ++k)
-        {
-            if (fabsf(distances[k]) <= FVIZ_SLICE_EPSILON)
-            {
-                FVizSize f;
-                if (polygon_count >= FVIZ_SLICE_MAX_VERTICES) goto free_values_fail;
-                polygon_positions[polygon_count] = points[(FVizSize)cell_ids[k]];
-                for (f = 0u; f < field_count; ++f)
+                value_pool = (float*)fviz_alloc(pool_bytes);
+                if (value_pool == NULL)
                 {
-                    const FVizSliceField* field = (const FVizSliceField*)fviz_array_const_at(fields, f);
-                    double value = 0.0;
-                    (void)fviz_scalar_value(field->array, (FVizSize)cell_ids[k], &value);
-                    polygon_values[polygon_count * field_count + f] = (float)value;
+                    fviz_free(results);
+                    goto fail;
                 }
-                ++polygon_count;
+                for (cell_id = 0u; cell_id < cell_count; ++cell_id)
+                    results[cell_id].values = value_pool + cell_id * FVIZ_SLICE_MAX_VERTICES * field_count;
             }
-        }
-        for (k = 0u; k < edge_count; ++k)
-        {
-            const FVizId a = cell_ids[edges[k * 2u + 0u]];
-            const FVizId b = cell_ids[edges[k * 2u + 1u]];
-            const float da = distances[edges[k * 2u + 0u]];
-            const float db = distances[edges[k * 2u + 1u]];
-            const float t = da / (da - db);
-            FVizSize f;
-            if ((da >= 0.0f && db >= 0.0f) || (da <= 0.0f && db <= 0.0f)) continue;
-            if (polygon_count >= FVIZ_SLICE_MAX_VERTICES) goto free_values_fail;
-            polygon_positions[polygon_count] = fviz_vec3_add(
-                points[(FVizSize)a], fviz_vec3_scale(fviz_vec3_sub(points[(FVizSize)b], points[(FVizSize)a]), t));
-            for (f = 0u; f < field_count; ++f)
+            construction.grid = grid;
+            construction.points = points;
+            construction.intersects = intersects;
+            construction.fields = (const FVizSliceField*)fviz_array_const_data(fields);
+            construction.field_count = field_count;
+            construction.plane = plane;
+            construction.u_basis = u_basis;
+            construction.v_basis = v_basis;
+            construction.results = results;
+            if (fviz_parallel_for(0u, cell_count, 32u, fviz_slice_construct_range, &construction) != FVIZ_OK)
             {
-                const FVizSliceField* field = (const FVizSliceField*)fviz_array_const_at(fields, f);
-                double va = 0.0;
-                double vb = 0.0;
-                (void)fviz_scalar_value(field->array, (FVizSize)a, &va);
-                (void)fviz_scalar_value(field->array, (FVizSize)b, &vb);
-                polygon_values[polygon_count * field_count + f] = (float)(va + (vb - va) * t);
+                fviz_free(value_pool);
+                fviz_free(results);
+                goto fail;
             }
-            ++polygon_count;
-        }
-
-        if (polygon_count >= 3u)
-        {
-            FVizVec3 centroid = fviz_vec3(0.0f, 0.0f, 0.0f);
-            float angles[FVIZ_SLICE_MAX_VERTICES];
-            FVizSize order[FVIZ_SLICE_MAX_VERTICES];
-            uint32_t new_ids[FVIZ_SLICE_MAX_VERTICES];
-            FVizSize i;
-            for (i = 0u; i < polygon_count; ++i)
+            for (cell_id = 0u; cell_id < cell_count; ++cell_id)
             {
-                centroid = fviz_vec3_add(centroid, polygon_positions[i]);
-            }
-            centroid = fviz_vec3_scale(centroid, 1.0f / (float)polygon_count);
-            for (i = 0u; i < polygon_count; ++i)
-            {
-                const FVizVec3 rel = fviz_vec3_sub(polygon_positions[i], centroid);
-                angles[i] = atan2f(fviz_vec3_dot(v_basis, rel), fviz_vec3_dot(u_basis, rel));
-                order[i] = i;
-            }
-            fviz_slice_sort_angles(angles, order, polygon_count);
-            for (i = 0u; i < polygon_count; ++i)
-            {
-                if (fviz_poly_data_add_point(slice, polygon_positions[order[i]], &new_ids[i]) != FVIZ_OK)
+                FVizSlicePolygonResult* result = &results[cell_id];
+                FVizSize i;
+                if (result->overflow != FVIZ_FALSE)
                 {
+                    fviz_free(value_pool);
+                    fviz_free(results);
                     goto free_values_fail;
                 }
-            }
-            for (i = 1u; i + 1u < polygon_count; ++i)
-            {
-                if (fviz_poly_data_add_triangle(slice, new_ids[0], new_ids[i], new_ids[i + 1u]) != FVIZ_OK)
+                if (result->polygon_count < 3u) continue;
                 {
-                    goto free_values_fail;
-                }
-            }
-            for (field_id = 0u; field_id < field_count; ++field_id)
-            {
-                FVizSize v;
-                for (v = 0u; v < polygon_count; ++v)
-                {
-                    const float value = polygon_values[order[v] * field_count + field_id];
-                    if (fviz_data_array_append_tuple(outputs[field_id], &value) != FVIZ_OK) goto free_values_fail;
+                    uint32_t new_ids[FVIZ_SLICE_MAX_VERTICES];
+                    for (i = 0u; i < result->polygon_count; ++i)
+                    {
+                        if (fviz_poly_data_add_point(slice, result->positions[i], &new_ids[i]) != FVIZ_OK)
+                        {
+                            fviz_free(value_pool);
+                            fviz_free(results);
+                            goto free_values_fail;
+                        }
+                    }
+                    for (i = 1u; i + 1u < result->polygon_count; ++i)
+                    {
+                        if (fviz_poly_data_add_triangle(slice, new_ids[0], new_ids[i], new_ids[i + 1u]) != FVIZ_OK)
+                        {
+                            fviz_free(value_pool);
+                            fviz_free(results);
+                            goto free_values_fail;
+                        }
+                    }
+                    for (field_id = 0u; field_id < field_count; ++field_id)
+                    {
+                        FVizSize v;
+                        for (v = 0u; v < result->polygon_count; ++v)
+                        {
+                            const float value = result->values[result->order[v] * field_count + field_id];
+                            if (fviz_data_array_append_tuple(outputs[field_id], &value) != FVIZ_OK)
+                            {
+                                fviz_free(value_pool);
+                                fviz_free(results);
+                                goto free_values_fail;
+                            }
+                        }
+                    }
                 }
             }
         }
-        if (polygon_values != NULL)
-        {
-            fviz_free(polygon_values);
-            polygon_values = NULL;
-        }
+        fviz_free(value_pool);
+        fviz_free(results);
     }
 
     for (field_id = 0u; field_id < field_count; ++field_id)

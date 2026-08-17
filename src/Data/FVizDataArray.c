@@ -653,3 +653,98 @@ FVizResult fviz_data_array_get_range(const FVizDataArray* array, int32_t compone
     fviz_data_array_store_range_cache(array, current_mtime, component, normalized_ignore, minimum, maximum);
     return FVIZ_OK;
 }
+
+FVizResult fviz_data_array_iter_begin(const FVizDataArray* array, FVizDataArrayTupleIterator* out_iter)
+{
+    if (out_iter == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "data array iterator output is required");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    out_iter->array = array;
+    out_iter->tuple_index = 0u;
+    if (array == NULL || fviz_data_array_tuple_count(array) == 0u)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "data array iterator has no tuples");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    return FVIZ_OK;
+}
+
+FVizBool fviz_data_array_iter_next(FVizDataArrayTupleIterator* iter)
+{
+    if (iter == NULL || iter->array == NULL) return FVIZ_FALSE;
+    if (iter->tuple_index >= fviz_data_array_tuple_count(iter->array)) return FVIZ_FALSE;
+    ++iter->tuple_index;
+    return iter->tuple_index < fviz_data_array_tuple_count(iter->array) ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+FVizBool fviz_data_array_iter_valid(const FVizDataArrayTupleIterator* iter)
+{
+    return iter != NULL && iter->array != NULL && iter->tuple_index < fviz_data_array_tuple_count(iter->array)
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
+}
+
+FVizSize fviz_data_array_iter_index(const FVizDataArrayTupleIterator* iter)
+{
+    return iter != NULL ? iter->tuple_index : 0u;
+}
+
+const void* fviz_data_array_iter_tuple(const FVizDataArrayTupleIterator* iter)
+{
+    const unsigned char* base;
+    if (!fviz_data_array_iter_valid(iter)) return NULL;
+    base = (const unsigned char*)fviz_data_array_const_data(iter->array);
+    return base != NULL ? (const void*)(base + iter->tuple_index * iter->array->tuple_stride) : NULL;
+}
+
+FVizResult fviz_data_array_mut_iter_begin(FVizDataArray* array, FVizDataArrayMutableIterator* out_iter)
+{
+    if (out_iter == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "data array iterator output is required");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    out_iter->array = array;
+    out_iter->tuple_index = 0u;
+    if (array == NULL || fviz_data_array_tuple_count(array) == 0u)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_NOT_FOUND, "data array iterator has no tuples");
+        return FVIZ_ERROR_NOT_FOUND;
+    }
+    if (array->mutable_data == FVIZ_FALSE)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_STATE, "data array storage is not writable");
+        return FVIZ_ERROR_INVALID_STATE;
+    }
+    return FVIZ_OK;
+}
+
+FVizBool fviz_data_array_mut_iter_next(FVizDataArrayMutableIterator* iter)
+{
+    if (iter == NULL || iter->array == NULL) return FVIZ_FALSE;
+    if (iter->tuple_index >= fviz_data_array_tuple_count(iter->array)) return FVIZ_FALSE;
+    ++iter->tuple_index;
+    return iter->tuple_index < fviz_data_array_tuple_count(iter->array) ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+FVizBool fviz_data_array_mut_iter_valid(const FVizDataArrayMutableIterator* iter)
+{
+    return iter != NULL && iter->array != NULL && iter->tuple_index < fviz_data_array_tuple_count(iter->array)
+               ? FVIZ_TRUE
+               : FVIZ_FALSE;
+}
+
+FVizSize fviz_data_array_mut_iter_index(const FVizDataArrayMutableIterator* iter)
+{
+    return iter != NULL ? iter->tuple_index : 0u;
+}
+
+void* fviz_data_array_mut_iter_tuple(FVizDataArrayMutableIterator* iter)
+{
+    unsigned char* base;
+    if (!fviz_data_array_mut_iter_valid(iter)) return NULL;
+    base = (unsigned char*)fviz_data_array_data(iter->array);
+    return base != NULL ? (void*)(base + iter->tuple_index * iter->array->tuple_stride) : NULL;
+}

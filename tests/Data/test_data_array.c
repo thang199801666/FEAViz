@@ -123,6 +123,50 @@ int main(void)
         CHECK(fviz_data_array_dirty_range_since(dirty, mtime, &dirty_range) == FVIZ_OK);
         CHECK(dirty_range.full != FVIZ_FALSE && dirty_range.count == 4u);
     }
+    {
+        FVizDataArrayTupleIterator it;
+        FVizDataArrayMutableIterator mit;
+        FVizSize count = 0u;
+        double sum = 0.0;
+        CHECK(fviz_data_array_iter_begin(array, &it) == FVIZ_OK);
+        for (; fviz_data_array_iter_valid(&it); fviz_data_array_iter_next(&it))
+        {
+            const double* t = (const double*)fviz_data_array_iter_tuple(&it);
+            CHECK(t != NULL);
+            CHECK(fviz_data_array_iter_index(&it) == count);
+            sum += t[0] + t[1] + t[2] + t[3] + t[4] + t[5];
+            ++count;
+        }
+        CHECK(count == fviz_data_array_tuple_count(array));
+        CHECK(sum == 25.0);
+        CHECK(fviz_data_array_iter_next(&it) == FVIZ_FALSE);
+        CHECK(fviz_data_array_iter_valid(&it) == FVIZ_FALSE);
+        CHECK(fviz_data_array_iter_tuple(&it) == NULL);
+
+        CHECK(fviz_data_array_mut_iter_begin(dirty, &mit) == FVIZ_OK);
+        {
+            float* t = (float*)fviz_data_array_mut_iter_tuple(&mit);
+            CHECK(t != NULL);
+            t[0] = 42.0f;
+            CHECK(fviz_data_array_mut_iter_index(&mit) == 0u);
+        }
+        CHECK(fviz_data_array_mut_iter_next(&mit) != FVIZ_FALSE);
+        CHECK(fviz_data_array_mut_iter_valid(&mit) != FVIZ_FALSE);
+        CHECK(fviz_data_array_mark_dirty(dirty, 0u, 1u) == FVIZ_OK);
+        CHECK(((const float*)fviz_data_array_const_tuple(dirty, 0u))[0] == 42.0f);
+
+        {
+            float ro_backing[2] = {5.0f, 6.0f};
+            FVizDataArray* read_only = NULL;
+            CHECK(fviz_data_array_create_external(FVIZ_DATA_FLOAT32, 1u, ro_backing, 2u,
+                                                  FVIZ_DATA_ARRAY_EXTERNAL_IMMUTABLE, NULL, NULL,
+                                                  &read_only) == FVIZ_OK);
+            CHECK(fviz_data_array_mut_iter_begin(read_only, &mit) == FVIZ_ERROR_INVALID_STATE);
+            CHECK(fviz_data_array_iter_begin(read_only, &it) == FVIZ_OK);
+            CHECK(((const float*)fviz_data_array_iter_tuple(&it))[0] == 5.0f);
+            fviz_release(read_only);
+        }
+    }
     fviz_release(dirty);
     fviz_release(copy);
     fviz_release(array);

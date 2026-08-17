@@ -103,6 +103,56 @@ public:
             out = static_cast<T>(component(index, 0u));
         return out;
     }
+
+    // Read-only forward iterator over tuples. Copies are cheap (two pointers).
+    class TupleIterator
+    {
+    public:
+        TupleIterator() = default;
+        TupleIterator(const DataArray* owner, FVizDataArrayTupleIterator it) : owner_(owner), it_(it) {}
+
+        const void* operator*() const noexcept { return fviz_data_array_iter_tuple(&it_); }
+        const void* tuple() const noexcept { return fviz_data_array_iter_tuple(&it_); }
+        FVizSize index() const noexcept { return it_.tuple_index; }
+        bool valid() const noexcept { return fviz_data_array_iter_valid(&it_) != FVIZ_FALSE; }
+        explicit operator bool() const noexcept { return valid(); }
+
+        TupleIterator& operator++() noexcept
+        {
+            fviz_data_array_iter_next(&it_);
+            return *this;
+        }
+        TupleIterator operator++(int) noexcept
+        {
+            TupleIterator copy = *this;
+            fviz_data_array_iter_next(&it_);
+            return copy;
+        }
+        friend bool operator==(const TupleIterator& a, const TupleIterator& b) noexcept
+        {
+            return a.it_.array == b.it_.array && a.it_.tuple_index == b.it_.tuple_index;
+        }
+        friend bool operator!=(const TupleIterator& a, const TupleIterator& b) noexcept { return !(a == b); }
+
+    private:
+        const DataArray* owner_ = nullptr;
+        FVizDataArrayTupleIterator it_{};
+    };
+
+    // begin()/end() for range-for over read-only tuples.
+    TupleIterator begin() const
+    {
+        FVizDataArrayTupleIterator it;
+        fviz_data_array_iter_begin(ptr_, &it);
+        return TupleIterator(this, it);
+    }
+    TupleIterator end() const
+    {
+        FVizDataArrayTupleIterator it{};
+        it.array = ptr_;
+        it.tuple_index = size();
+        return TupleIterator(this, it);
+    }
 };
 
 // ---------------------------------------------------------------------------

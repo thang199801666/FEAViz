@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Added allocation-free tuple iteration over `FVizDataArray`: the read-only
+  `FVizDataArrayTupleIterator` and the writable `FVizDataArrayMutableIterator`
+  (begin/next/valid/index/tuple), covering both internal and external storage.
+  The C++ binding exposes `DataArray::TupleIterator` with `begin()`/`end()` so
+  arrays support range-for loops.
+- Parallelized the unstructured-grid slice polygon construction: each
+  intersecting cell now computes its clipped polygon (edge intersections,
+  field interpolation, and angular fan ordering) independently into per-cell
+  slots through `fviz_parallel_for`, with a deterministic serial gather into
+  the output. Output topology is unchanged from the previous serial path.
+- Parallelized BVH tree-construction bounds: the per-node bounds reduction
+  over the primitive range now uses a fixed-block parallel reduction
+  (`FVizBVHBoundsReduce`) with a serial merge, restricted to shallow recursion
+  depths because the parallel dispatch is not reentrant. Deterministic results
+  are identical to the serial bounds computation.
 - Added topology and rendering flags on `FVizActor`, mirroring VTK's
   `vtkProperty`/coincident-topology handling: `FVizCoincidentTopologyMode`
   (Off, Polygon Offset, Shift Z-Buffer, Default), per-actor polygon/line/point

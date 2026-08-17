@@ -158,6 +158,32 @@ static void fviz_bvh_quickselect(uint32_t* indices, int32_t begin, int32_t end, 
     }
 }
 
+typedef struct FVizBVHBoundsReduce
+{
+    const FVizBounds* bounds;
+    const uint32_t* primitive_ids;
+    FVizBounds* partials;
+    int32_t range_begin;
+    int32_t range_end;
+    FVizSize block_size;
+} FVizBVHBoundsReduce;
+
+static void fviz_bvh_bounds_block(FVizSize block_id, FVizSize block_end, void* user_data)
+{
+    FVizBVHBoundsReduce* reduce = (FVizBVHBoundsReduce*)user_data;
+    FVizBounds partial = fviz_bounds_empty();
+    int32_t k;
+    (void)block_end;
+    const int32_t b = reduce->range_begin + (int32_t)(block_id * reduce->block_size);
+    const int32_t e = b + (int32_t)reduce->block_size < reduce->range_end ? b + (int32_t)reduce->block_size
+                                                                           : reduce->range_end;
+    for (k = b; k < e; ++k)
+    {
+        fviz_bounds_include_bounds(&partial, &reduce->bounds[reduce->primitive_ids[k]]);
+    }
+    reduce->partials[block_id] = partial;
+}
+
 static FVizResult fviz_bvh_build_recursive(FVizBVH* bvh, uint32_t* primitive_ids, int32_t begin, int32_t end, int depth,
                                            int32_t* out_node)
 {
@@ -167,9 +193,48 @@ static FVizResult fviz_bvh_build_recursive(FVizBVH* bvh, uint32_t* primitive_ids
     int32_t k;
     int axis;
 
-    for (k = begin; k < end; ++k)
+    /* Parallel bounds reduction over [begin, end) at shallow recursion depths
+     * only: fviz_parallel_for is not reentrant, so deep nested dispatches are
+     * avoided. Each fixed block writes a partial bounds to its own scratch slot
+     * (indexed by block id), so the reduction is deterministic and race-free;
+     * the merge is serial. */
+    if (depth < 4 && (uint32_t)(end - begin) > FVIZ_BVH_LEAF_SIZE)
     {
-        fviz_bounds_include_bounds(&bounds, &bvh->triangle_bounds_cache[primitive_ids[k]]);
+        FVizBounds* partials = NULL;
+        const FVizSize count = (FVizSize)(end - begin);
+        const FVizSize block_size = 512u;
+        const FVizSize block_count = (count + block_size - 1u) / block_size;
+        FVizBVHBoundsReduce reduce;
+        FVizSize block_id;
+        partials = (FVizBounds*)fviz_alloc(block_count * sizeof(FVizBounds));
+        if (partials == NULL) return fviz_last_error_code();
+        for (block_id = 0u; block_id < block_count; ++block_id)
+        {
+            partials[block_id] = fviz_bounds_empty();
+        }
+        reduce.bounds = bvh->triangle_bounds_cache;
+        reduce.primitive_ids = primitive_ids;
+        reduce.partials = partials;
+        reduce.range_begin = begin;
+        reduce.range_end = end;
+        reduce.block_size = block_size;
+        if (fviz_parallel_for(0u, block_count, 1u, fviz_bvh_bounds_block, &reduce) != FVIZ_OK)
+        {
+            fviz_free(partials);
+            return fviz_last_error_code();
+        }
+        for (block_id = 0u; block_id < block_count; ++block_id)
+        {
+            fviz_bounds_include_bounds(&bounds, &partials[block_id]);
+        }
+        fviz_free(partials);
+    }
+    else
+    {
+        for (k = begin; k < end; ++k)
+        {
+            fviz_bounds_include_bounds(&bounds, &bvh->triangle_bounds_cache[primitive_ids[k]]);
+        }
     }
     node.bounds = bounds;
     node.left = -1;
