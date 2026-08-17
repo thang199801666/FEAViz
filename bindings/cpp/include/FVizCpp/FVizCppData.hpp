@@ -394,6 +394,15 @@ public:
     FVizSize lineCount() const noexcept { return ptr_ != nullptr ? fviz_poly_data_line_count(ptr_) : 0u; }
     FVizSize cellCount() const noexcept { return ptr_ != nullptr ? fviz_poly_data_cell_count(ptr_) : 0u; }
 
+    // Topology / connectivity / classification snapshot.
+    FVizTopologySummary topologySummary() const
+    {
+        FVizTopologySummary summary;
+        fviz_topology_summary_initialize(&summary);
+        detail::checkResult(fviz_poly_data_topology_summary(ptr_, &summary));
+        return summary;
+    }
+
     void addPoint(Vec3 point)
     {
         detail::checkResult(fviz_poly_data_add_point(ptr_, point, nullptr));

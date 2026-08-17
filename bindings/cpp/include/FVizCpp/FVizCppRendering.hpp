@@ -374,6 +374,62 @@ public:
         return PolyData(data != nullptr ? static_cast<FVizPolyData*>(fviz_retain(data)) : nullptr);
     }
     float lineDepthBias() const noexcept { return ptr_ ? fviz_actor_line_depth_bias(ptr_) : 0.0f; }
+
+    // Topology / rendering flags.
+    void setTopologyRenderOptions(const FVizTopologyRenderOptions& options) noexcept
+    {
+        if (ptr_) fviz_actor_set_topology_render_options(ptr_, &options);
+    }
+    FVizTopologyRenderOptions topologyRenderOptions() const noexcept
+    {
+        FVizTopologyRenderOptions options;
+        fviz_topology_render_options_initialize(&options);
+        if (ptr_) fviz_actor_topology_render_options(ptr_, &options);
+        return options;
+    }
+    void setCoincidentTopologyMode(FVizCoincidentTopologyMode mode) noexcept
+    {
+        if (ptr_) fviz_actor_set_coincident_topology_mode(ptr_, mode);
+    }
+    FVizCoincidentTopologyMode coincidentTopologyMode() const noexcept
+    {
+        return ptr_ ? fviz_actor_coincident_topology_mode(ptr_) : FVIZ_COINCIDENT_TOPOLOGY_DEFAULT;
+    }
+    void setPolygonOffset(float factor, float units) noexcept { if (ptr_) fviz_actor_set_polygon_offset(ptr_, factor, units); }
+    void setLineOffset(float factor, float units) noexcept { if (ptr_) fviz_actor_set_line_offset(ptr_, factor, units); }
+    void setPointOffset(float units) noexcept { if (ptr_) fviz_actor_set_point_offset(ptr_, units); }
+    void setZShift(float z_shift) noexcept { if (ptr_) fviz_actor_set_z_shift(ptr_, z_shift); }
+    float zShift() const noexcept { return ptr_ ? fviz_actor_z_shift(ptr_) : 0.0f; }
+    void setDepthTest(bool enabled) noexcept { if (ptr_) fviz_actor_set_depth_test(ptr_, detail::fbool(enabled)); }
+    bool depthTest() const noexcept { return ptr_ ? fviz_actor_depth_test(ptr_) != FVIZ_FALSE : true; }
+    void setDepthWrite(bool enabled) noexcept { if (ptr_) fviz_actor_set_depth_write(ptr_, detail::fbool(enabled)); }
+    bool depthWrite() const noexcept { return ptr_ ? fviz_actor_depth_write(ptr_) != FVIZ_FALSE : true; }
+    void setDepthFunction(FVizDepthFunction function) noexcept { if (ptr_) fviz_actor_set_depth_function(ptr_, function); }
+    FVizDepthFunction depthFunction() const noexcept
+    {
+        return ptr_ ? fviz_actor_depth_function(ptr_) : FVIZ_DEPTH_FUNCTION_LEQUAL;
+    }
+    void setDepthRange(float minimum, float maximum) noexcept { if (ptr_) fviz_actor_set_depth_range(ptr_, minimum, maximum); }
+    void getDepthRange(float& minimum, float& maximum) const noexcept
+    {
+        if (ptr_) fviz_actor_get_depth_range(ptr_, &minimum, &maximum);
+    }
+    void setRenderLayer(int32_t layer) noexcept { if (ptr_) fviz_actor_set_render_layer(ptr_, layer); }
+    int32_t renderLayer() const noexcept { return ptr_ ? fviz_actor_render_layer(ptr_) : 0; }
+    void setRenderPriority(int32_t priority) noexcept { if (ptr_) fviz_actor_set_render_priority(ptr_, priority); }
+    int32_t renderPriority() const noexcept { return ptr_ ? fviz_actor_render_priority(ptr_) : 0; }
+    void setPassOrder(FVizRenderPassStage pass_order) noexcept { if (ptr_) fviz_actor_set_pass_order(ptr_, pass_order); }
+    FVizRenderPassStage passOrder() const noexcept
+    {
+        return ptr_ ? fviz_actor_pass_order(ptr_) : FVIZ_RENDER_PASS_OPAQUE;
+    }
+    void setOverlayTopologyMode(FVizOverlayTopologyMode mode) noexcept { if (ptr_) fviz_actor_set_overlay_topology_mode(ptr_, mode); }
+    FVizOverlayTopologyMode overlayTopologyMode() const noexcept
+    {
+        return ptr_ ? fviz_actor_overlay_topology_mode(ptr_) : FVIZ_OVERLAY_TOPOLOGY_SURFACE_EDGES;
+    }
+    void setTopologyDataFlags(uint32_t flags) noexcept { if (ptr_) fviz_actor_set_topology_data_flags(ptr_, flags); }
+    uint32_t topologyDataFlags() const noexcept { return ptr_ ? fviz_actor_topology_data_flags(ptr_) : 0u; }
 };
 
 // ---------------------------------------------------------------------------

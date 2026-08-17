@@ -124,6 +124,24 @@ FVizResult fviz_actor_create(FVizActor** out_actor)
     actor->specular_power = 32.0f;
     actor->shading_mode = FVIZ_SHADING_SMOOTH;
     actor->cull_mode = FVIZ_CULL_BACK;
+    actor->coincident_mode = FVIZ_COINCIDENT_TOPOLOGY_DEFAULT;
+    actor->offset_faces = FVIZ_TRUE;
+    actor->polygon_offset_factor = 1.0f;
+    actor->polygon_offset_units = 1.0f;
+    actor->line_offset_factor = 1.0f;
+    actor->line_offset_units = 1.0f;
+    actor->point_offset_units = 0.5f;
+    actor->z_shift = 0.0f;
+    actor->depth_test = FVIZ_TRUE;
+    actor->depth_write = FVIZ_TRUE;
+    actor->depth_function = FVIZ_DEPTH_FUNCTION_LEQUAL;
+    actor->depth_range_minimum = 0.0f;
+    actor->depth_range_maximum = 1.0f;
+    actor->render_layer = 0;
+    actor->render_priority = 0;
+    actor->pass_order = FVIZ_RENDER_PASS_OPAQUE;
+    actor->overlay_mode = FVIZ_OVERLAY_TOPOLOGY_SURFACE_EDGES;
+    actor->topology_data_flags = FVIZ_TOPOLOGY_DATA_CONNECTIVITY | FVIZ_TOPOLOGY_DATA_CELL_CLASSIFICATION;
     actor->position = fviz_vec3(0.0f, 0.0f, 0.0f);
     actor->orientation = fviz_quat_identity();
     actor->scale = fviz_vec3(1.0f, 1.0f, 1.0f);
@@ -805,4 +823,267 @@ FVizResult fviz_actor_set_user_transform(FVizActor* actor, FVizTransform* transf
 FVizTransform* fviz_actor_user_transform(FVizActor* actor)
 {
     return actor != NULL ? actor->user_transform : NULL;
+}
+
+
+void fviz_topology_render_options_initialize(FVizTopologyRenderOptions* options)
+{
+    if (options == NULL) return;
+    (void)memset(options, 0, sizeof(*options));
+    options->struct_size = (uint32_t)sizeof(*options);
+    options->coincident_mode = FVIZ_COINCIDENT_TOPOLOGY_DEFAULT;
+    options->offset_faces = FVIZ_TRUE;
+    options->polygon_offset_factor = 1.0f;
+    options->polygon_offset_units = 1.0f;
+    options->line_offset_factor = 1.0f;
+    options->line_offset_units = 1.0f;
+    options->point_offset_units = 0.5f;
+    options->z_shift = 0.0f;
+    options->depth_test = FVIZ_TRUE;
+    options->depth_write = FVIZ_TRUE;
+    options->depth_function = FVIZ_DEPTH_FUNCTION_LEQUAL;
+    options->depth_range_minimum = 0.0f;
+    options->depth_range_maximum = 1.0f;
+    options->render_layer = 0;
+    options->render_priority = 0;
+    options->pass_order = FVIZ_RENDER_PASS_OPAQUE;
+    options->overlay_mode = FVIZ_OVERLAY_TOPOLOGY_SURFACE_EDGES;
+    options->topology_data_flags = FVIZ_TOPOLOGY_DATA_CONNECTIVITY | FVIZ_TOPOLOGY_DATA_CELL_CLASSIFICATION;
+}
+
+void fviz_actor_set_topology_render_options(FVizActor* actor, const FVizTopologyRenderOptions* options)
+{
+    if (actor == NULL || options == NULL) return;
+    actor->coincident_mode = options->coincident_mode;
+    actor->offset_faces = options->offset_faces != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    actor->polygon_offset_factor = options->polygon_offset_factor;
+    actor->polygon_offset_units = options->polygon_offset_units;
+    actor->line_offset_factor = options->line_offset_factor;
+    actor->line_offset_units = options->line_offset_units;
+    actor->point_offset_units = options->point_offset_units;
+    actor->z_shift = options->z_shift;
+    actor->depth_test = options->depth_test != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    actor->depth_write = options->depth_write != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    actor->depth_function = options->depth_function;
+    actor->depth_range_minimum = options->depth_range_minimum;
+    actor->depth_range_maximum = options->depth_range_maximum;
+    actor->render_layer = options->render_layer;
+    actor->render_priority = options->render_priority;
+    actor->pass_order = options->pass_order;
+    actor->overlay_mode = options->overlay_mode;
+    actor->topology_data_flags = options->topology_data_flags;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+void fviz_actor_topology_render_options(const FVizActor* actor, FVizTopologyRenderOptions* out_options)
+{
+    if (actor == NULL || out_options == NULL) return;
+    fviz_topology_render_options_initialize(out_options);
+    out_options->coincident_mode = actor->coincident_mode;
+    out_options->offset_faces = actor->offset_faces;
+    out_options->polygon_offset_factor = actor->polygon_offset_factor;
+    out_options->polygon_offset_units = actor->polygon_offset_units;
+    out_options->line_offset_factor = actor->line_offset_factor;
+    out_options->line_offset_units = actor->line_offset_units;
+    out_options->point_offset_units = actor->point_offset_units;
+    out_options->z_shift = actor->z_shift;
+    out_options->depth_test = actor->depth_test;
+    out_options->depth_write = actor->depth_write;
+    out_options->depth_function = actor->depth_function;
+    out_options->depth_range_minimum = actor->depth_range_minimum;
+    out_options->depth_range_maximum = actor->depth_range_maximum;
+    out_options->render_layer = actor->render_layer;
+    out_options->render_priority = actor->render_priority;
+    out_options->pass_order = actor->pass_order;
+    out_options->overlay_mode = actor->overlay_mode;
+    out_options->topology_data_flags = actor->topology_data_flags;
+}
+
+void fviz_actor_set_coincident_topology_mode(FVizActor* actor, FVizCoincidentTopologyMode mode)
+{
+    if (actor == NULL) return;
+    actor->coincident_mode = mode;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizCoincidentTopologyMode fviz_actor_coincident_topology_mode(const FVizActor* actor)
+{
+    return actor != NULL ? actor->coincident_mode : FVIZ_COINCIDENT_TOPOLOGY_DEFAULT;
+}
+
+void fviz_actor_set_polygon_offset(FVizActor* actor, float factor, float units)
+{
+    if (actor == NULL) return;
+    actor->polygon_offset_factor = factor;
+    actor->polygon_offset_units = units;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+void fviz_actor_set_line_offset(FVizActor* actor, float factor, float units)
+{
+    if (actor == NULL) return;
+    actor->line_offset_factor = factor;
+    actor->line_offset_units = units;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+void fviz_actor_set_point_offset(FVizActor* actor, float units)
+{
+    if (actor == NULL) return;
+    actor->point_offset_units = units;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+void fviz_actor_set_z_shift(FVizActor* actor, float z_shift)
+{
+    if (actor == NULL) return;
+    actor->z_shift = z_shift;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+float fviz_actor_z_shift(const FVizActor* actor)
+{
+    return actor != NULL ? actor->z_shift : 0.0f;
+}
+
+void fviz_actor_set_depth_test(FVizActor* actor, FVizBool enabled)
+{
+    if (actor == NULL) return;
+    actor->depth_test = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizBool fviz_actor_depth_test(const FVizActor* actor)
+{
+    return actor != NULL && actor->depth_test != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+void fviz_actor_set_depth_write(FVizActor* actor, FVizBool enabled)
+{
+    if (actor == NULL) return;
+    actor->depth_write = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizBool fviz_actor_depth_write(const FVizActor* actor)
+{
+    return actor != NULL && actor->depth_write != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+}
+
+void fviz_actor_set_depth_function(FVizActor* actor, FVizDepthFunction function)
+{
+    if (actor == NULL) return;
+    actor->depth_function = function;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizDepthFunction fviz_actor_depth_function(const FVizActor* actor)
+{
+    return actor != NULL ? actor->depth_function : FVIZ_DEPTH_FUNCTION_LEQUAL;
+}
+
+void fviz_actor_set_depth_range(FVizActor* actor, float minimum, float maximum)
+{
+    if (actor == NULL) return;
+    actor->depth_range_minimum = minimum;
+    actor->depth_range_maximum = maximum;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+void fviz_actor_get_depth_range(const FVizActor* actor, float* minimum, float* maximum)
+{
+    if (actor == NULL) return;
+    if (minimum != NULL) *minimum = actor->depth_range_minimum;
+    if (maximum != NULL) *maximum = actor->depth_range_maximum;
+}
+
+void fviz_actor_set_render_layer(FVizActor* actor, int32_t layer)
+{
+    if (actor == NULL) return;
+    actor->render_layer = layer;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+int32_t fviz_actor_render_layer(const FVizActor* actor)
+{
+    return actor != NULL ? actor->render_layer : 0;
+}
+
+void fviz_actor_set_render_priority(FVizActor* actor, int32_t priority)
+{
+    if (actor == NULL) return;
+    actor->render_priority = priority;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+int32_t fviz_actor_render_priority(const FVizActor* actor)
+{
+    return actor != NULL ? actor->render_priority : 0;
+}
+
+void fviz_actor_set_pass_order(FVizActor* actor, FVizRenderPassStage pass_order)
+{
+    if (actor == NULL) return;
+    actor->pass_order = pass_order;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizRenderPassStage fviz_actor_pass_order(const FVizActor* actor)
+{
+    return actor != NULL ? actor->pass_order : FVIZ_RENDER_PASS_OPAQUE;
+}
+
+void fviz_actor_set_overlay_topology_mode(FVizActor* actor, FVizOverlayTopologyMode mode)
+{
+    if (actor == NULL) return;
+    actor->overlay_mode = mode;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizOverlayTopologyMode fviz_actor_overlay_topology_mode(const FVizActor* actor)
+{
+    return actor != NULL ? actor->overlay_mode : FVIZ_OVERLAY_TOPOLOGY_SURFACE_EDGES;
+}
+
+void fviz_actor_set_topology_data_flags(FVizActor* actor, uint32_t flags)
+{
+    if (actor == NULL) return;
+    actor->topology_data_flags = flags;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+uint32_t fviz_actor_topology_data_flags(const FVizActor* actor)
+{
+    return actor != NULL ? actor->topology_data_flags : 0u;
+}
+
+void fviz_actor_polygon_offset(const FVizActor* actor, float* factor, float* units)
+{
+    if (actor == NULL) return;
+    if (factor != NULL) *factor = actor->polygon_offset_factor;
+    if (units != NULL) *units = actor->polygon_offset_units;
+}
+
+void fviz_actor_line_offset(const FVizActor* actor, float* factor, float* units)
+{
+    if (actor == NULL) return;
+    if (factor != NULL) *factor = actor->line_offset_factor;
+    if (units != NULL) *units = actor->line_offset_units;
+}
+
+float fviz_actor_point_offset(const FVizActor* actor)
+{
+    return actor != NULL ? actor->point_offset_units : 0.0f;
+}
+
+void fviz_actor_set_offset_faces(FVizActor* actor, FVizBool enabled)
+{
+    if (actor == NULL) return;
+    actor->offset_faces = enabled != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
+    fviz_object_modified((FVizObject*)actor);
+}
+
+FVizBool fviz_actor_offset_faces(const FVizActor* actor)
+{
+    return actor != NULL && actor->offset_faces != FVIZ_FALSE ? FVIZ_TRUE : FVIZ_FALSE;
 }

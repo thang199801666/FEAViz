@@ -12,6 +12,7 @@
 #include <FViz/Math/FVizVec3.h>
 #include <FViz/Mesh/FVizPolyData.h>
 #include <FViz/Rendering/FVizMapper.h>
+#include <FViz/Rendering/FVizRenderPass.h>
 #include <FViz/Rendering/FVizVolumeMapper.h>
 
 FVIZ_EXTERN_C_BEGIN
@@ -53,6 +54,101 @@ typedef enum FVizPointShape
     FVIZ_POINT_CIRCLE = 1,
     FVIZ_POINT_SPHERE_IMPOSTOR = 2
 } FVizPointShape;
+
+/* How coincident topology (e.g. mesh edges drawn over a filled surface) is
+ * separated in depth to avoid z-fighting. */
+typedef enum FVizCoincidentTopologyMode
+{
+    FVIZ_COINCIDENT_TOPOLOGY_OFF = 0,
+    FVIZ_COINCIDENT_TOPOLOGY_POLYGON_OFFSET = 1,
+    FVIZ_COINCIDENT_TOPOLOGY_SHIFT_Z_BUFFER = 2,
+    FVIZ_COINCIDENT_TOPOLOGY_DEFAULT = 3
+} FVizCoincidentTopologyMode;
+
+/* OpenGL depth comparison functions. */
+typedef enum FVizDepthFunction
+{
+    FVIZ_DEPTH_FUNCTION_NEVER = 0,
+    FVIZ_DEPTH_FUNCTION_LESS = 1,
+    FVIZ_DEPTH_FUNCTION_EQUAL = 2,
+    FVIZ_DEPTH_FUNCTION_LEQUAL = 3,
+    FVIZ_DEPTH_FUNCTION_GREATER = 4,
+    FVIZ_DEPTH_FUNCTION_NOTEQUAL = 5,
+    FVIZ_DEPTH_FUNCTION_GEQUAL = 6,
+    FVIZ_DEPTH_FUNCTION_ALWAYS = 7
+} FVizDepthFunction;
+
+/* Overlay topology display modes: which secondary representations are drawn
+ * on top of the filled surface. */
+typedef enum FVizOverlayTopologyMode
+{
+    FVIZ_OVERLAY_TOPOLOGY_SURFACE_ONLY = 0,
+    FVIZ_OVERLAY_TOPOLOGY_SURFACE_EDGES = 1,
+    FVIZ_OVERLAY_TOPOLOGY_SURFACE_WIREFRAME = 2,
+    FVIZ_OVERLAY_TOPOLOGY_SURFACE_POINTS = 3,
+    FVIZ_OVERLAY_TOPOLOGY_SURFACE_CONTOUR = 4,
+    FVIZ_OVERLAY_TOPOLOGY_SURFACE_LABELS = 5,
+    FVIZ_OVERLAY_TOPOLOGY_SURFACE_ANNOTATIONS = 6
+} FVizOverlayTopologyMode;
+
+/* Bit flags selecting which topology data is published on the actor. */
+typedef enum FVizTopologyDataFlag
+{
+    FVIZ_TOPOLOGY_DATA_NONE = 0,
+    FVIZ_TOPOLOGY_DATA_CONNECTIVITY = 1 << 0,
+    FVIZ_TOPOLOGY_DATA_ADJACENCY = 1 << 1,
+    FVIZ_TOPOLOGY_DATA_CELL_CLASSIFICATION = 1 << 2,
+    FVIZ_TOPOLOGY_DATA_POINT_CELL_IDS = 1 << 3,
+    FVIZ_TOPOLOGY_DATA_GLOBAL_IDS = 1 << 4,
+    FVIZ_TOPOLOGY_DATA_PEDIGREE_IDS = 1 << 5,
+    FVIZ_TOPOLOGY_DATA_EDGE_FLAGS = 1 << 6
+} FVizTopologyDataFlag;
+
+/* Per-actor topology / rendering flags. The struct is passed by value to the
+ * setter and mirrors VTK's actor coincident-topology and depth controls. */
+typedef struct FVizTopologyRenderOptions
+{
+    uint32_t struct_size;
+
+    /* Coincident topology resolution. */
+    FVizCoincidentTopologyMode coincident_mode;
+    FVizBool offset_faces;
+
+    /* GL_POLYGON_OFFSET parameters for surfaces. */
+    float polygon_offset_factor;
+    float polygon_offset_units;
+
+    /* GL_POLYGON_OFFSET parameters for lines. */
+    float line_offset_factor;
+    float line_offset_units;
+
+    /* Point offset (fraction of one depth unit). */
+    float point_offset_units;
+
+    /* Depth-buffer Z shift applied after the projection transform (VTK-style
+     * "ShiftZBuffer"): positive values pull the actor toward the camera. */
+    float z_shift;
+
+    /* Depth buffer controls. */
+    FVizBool depth_test;
+    FVizBool depth_write;
+    FVizDepthFunction depth_function;
+    float depth_range_minimum;
+    float depth_range_maximum;
+
+    /* Render ordering. */
+    int32_t render_layer;
+    int32_t render_priority;
+    FVizRenderPassStage pass_order;
+
+    /* Overlay topology mode. */
+    FVizOverlayTopologyMode overlay_mode;
+
+    /* Topology data published on the actor. */
+    uint32_t topology_data_flags;
+} FVizTopologyRenderOptions;
+
+FVIZ_API void fviz_topology_render_options_initialize(FVizTopologyRenderOptions* options);
 
 #define FVIZ_TYPE_ACTOR UINT64_C(0x0A99A2B9935E483C)
 
@@ -126,6 +222,40 @@ FVIZ_RENDERING_API FVizVec3 fviz_actor_scale(const FVizActor* actor);
 FVIZ_RENDERING_API FVizMat4 fviz_actor_transform_matrix(const FVizActor* actor);
 FVIZ_RENDERING_API FVizResult fviz_actor_set_user_transform(FVizActor* actor, FVizTransform* transform);
 FVIZ_RENDERING_API FVizTransform* fviz_actor_user_transform(FVizActor* actor);
+
+/* ---- Topology / rendering flags ----------------------------------------- */
+FVIZ_RENDERING_API void fviz_actor_set_topology_render_options(FVizActor* actor, const FVizTopologyRenderOptions* options);
+FVIZ_RENDERING_API void fviz_actor_topology_render_options(const FVizActor* actor, FVizTopologyRenderOptions* out_options);
+FVIZ_RENDERING_API void fviz_actor_set_coincident_topology_mode(FVizActor* actor, FVizCoincidentTopologyMode mode);
+FVIZ_RENDERING_API FVizCoincidentTopologyMode fviz_actor_coincident_topology_mode(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_polygon_offset(FVizActor* actor, float factor, float units);
+FVIZ_RENDERING_API void fviz_actor_polygon_offset(const FVizActor* actor, float* factor, float* units);
+FVIZ_RENDERING_API void fviz_actor_set_line_offset(FVizActor* actor, float factor, float units);
+FVIZ_RENDERING_API void fviz_actor_line_offset(const FVizActor* actor, float* factor, float* units);
+FVIZ_RENDERING_API void fviz_actor_set_point_offset(FVizActor* actor, float units);
+FVIZ_RENDERING_API float fviz_actor_point_offset(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_offset_faces(FVizActor* actor, FVizBool enabled);
+FVIZ_RENDERING_API FVizBool fviz_actor_offset_faces(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_z_shift(FVizActor* actor, float z_shift);
+FVIZ_RENDERING_API float fviz_actor_z_shift(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_depth_test(FVizActor* actor, FVizBool enabled);
+FVIZ_RENDERING_API FVizBool fviz_actor_depth_test(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_depth_write(FVizActor* actor, FVizBool enabled);
+FVIZ_RENDERING_API FVizBool fviz_actor_depth_write(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_depth_function(FVizActor* actor, FVizDepthFunction function);
+FVIZ_RENDERING_API FVizDepthFunction fviz_actor_depth_function(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_depth_range(FVizActor* actor, float minimum, float maximum);
+FVIZ_RENDERING_API void fviz_actor_get_depth_range(const FVizActor* actor, float* minimum, float* maximum);
+FVIZ_RENDERING_API void fviz_actor_set_render_layer(FVizActor* actor, int32_t layer);
+FVIZ_RENDERING_API int32_t fviz_actor_render_layer(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_render_priority(FVizActor* actor, int32_t priority);
+FVIZ_RENDERING_API int32_t fviz_actor_render_priority(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_pass_order(FVizActor* actor, FVizRenderPassStage pass_order);
+FVIZ_RENDERING_API FVizRenderPassStage fviz_actor_pass_order(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_overlay_topology_mode(FVizActor* actor, FVizOverlayTopologyMode mode);
+FVIZ_RENDERING_API FVizOverlayTopologyMode fviz_actor_overlay_topology_mode(const FVizActor* actor);
+FVIZ_RENDERING_API void fviz_actor_set_topology_data_flags(FVizActor* actor, uint32_t flags);
+FVIZ_RENDERING_API uint32_t fviz_actor_topology_data_flags(const FVizActor* actor);
 
 FVIZ_EXTERN_C_END
 

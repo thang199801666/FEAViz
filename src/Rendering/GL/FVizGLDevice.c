@@ -3124,7 +3124,8 @@ static FVizResult fviz_gl_render_shader_edges(FVizGLDevice* device, FVizRenderer
             float b;
             GLint scalar_coloring;
             if (actor == NULL || fviz_actor_is_visible(actor) == FVIZ_FALSE ||
-                fviz_actor_point_visibility(actor) == FVIZ_FALSE)
+                (fviz_actor_point_visibility(actor) == FVIZ_FALSE &&
+                 fviz_actor_overlay_topology_mode(actor) != FVIZ_OVERLAY_TOPOLOGY_SURFACE_POINTS))
                 continue;
             if (use_frustum != FVIZ_FALSE &&
                 fviz_frustum_intersects_bounds(&culling_frustum, fviz_actor_bounds(actor)) == FVIZ_FALSE)
@@ -3151,11 +3152,20 @@ static FVizResult fviz_gl_render_shader_edges(FVizGLDevice* device, FVizRenderer
             glDepthMask(fviz_gl_actor_is_translucent(actor) == FVIZ_FALSE ? GL_TRUE : GL_FALSE);
             gl->glBindVertexArray(resource->vao);
             gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->point_index_buffer);
+            if (fviz_actor_point_offset(actor) != 0.0f)
+            {
+                glEnable(GL_POLYGON_OFFSET_POINT);
+                glPolygonOffset(1.0f, fviz_actor_point_offset(actor));
+            }
             if (resource->instance_count > 0)
                 gl->glDrawElementsInstanced(FVIZ_GL_POINTS, resource->point_index_count, GL_UNSIGNED_INT,
                                             (const void*)0, resource->instance_count);
             else
                 glDrawElements(FVIZ_GL_POINTS, resource->point_index_count, GL_UNSIGNED_INT, (const void*)0);
+            if (fviz_actor_point_offset(actor) != 0.0f)
+            {
+                glDisable(GL_POLYGON_OFFSET_POINT);
+            }
             ++device->frame_statistics.draw_calls;
         }
         gl->glBindVertexArray(0u);
@@ -3172,6 +3182,22 @@ static FVizResult fviz_gl_render_shader_edges(FVizGLDevice* device, FVizRenderer
     else
         glDisable(GL_CULL_FACE);
     return glGetError() == GL_NO_ERROR ? FVIZ_OK : FVIZ_ERROR_GRAPHICS;
+}
+
+static GLenum fviz_gl_depth_function(FVizDepthFunction function)
+{
+    switch (function)
+    {
+        case FVIZ_DEPTH_FUNCTION_NEVER: return GL_NEVER;
+        case FVIZ_DEPTH_FUNCTION_LESS: return GL_LESS;
+        case FVIZ_DEPTH_FUNCTION_EQUAL: return GL_EQUAL;
+        case FVIZ_DEPTH_FUNCTION_LEQUAL: return GL_LEQUAL;
+        case FVIZ_DEPTH_FUNCTION_GREATER: return GL_GREATER;
+        case FVIZ_DEPTH_FUNCTION_NOTEQUAL: return GL_NOTEQUAL;
+        case FVIZ_DEPTH_FUNCTION_GEQUAL: return GL_GEQUAL;
+        case FVIZ_DEPTH_FUNCTION_ALWAYS:
+        default: return GL_ALWAYS;
+    }
 }
 
 FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRenderer* renderer, float aspect_ratio,
@@ -3283,6 +3309,9 @@ FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRender
         float edge_blue;
         float opacity;
         FVizBool actor_translucent;
+        FVizBool overlay_edge_visible;
+        FVizBool overlay_wireframe;
+        FVizBool overlay_point_visible;
         FVizBool frustum_culled = FVIZ_FALSE;
         FVizBool small_object_culled = FVIZ_FALSE;
         FVizMapper* mapper;
@@ -3318,6 +3347,13 @@ FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRender
         if (frustum_culled != FVIZ_FALSE || small_object_culled != FVIZ_FALSE) continue;
         if (stage == FVIZ_RENDER_PASS_OPAQUE && actor_translucent != FVIZ_FALSE) continue;
 
+        /* Render ordering: an actor with an explicit pass order is drawn only
+         * in that stage. The default (OPAQUE) preserves the classic behavior. */
+        {
+            const FVizRenderPassStage pass_order = fviz_actor_pass_order(actor);
+            if (pass_order != FVIZ_RENDER_PASS_OPAQUE && pass_order != stage) continue;
+        }
+
         if (stage == FVIZ_RENDER_PASS_TRANSLUCENT && fviz_actor_const_volume_mapper(actor) != NULL &&
             device->volume_program_ready != FVIZ_FALSE)
         {
@@ -3328,6 +3364,42 @@ FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRender
         }
         model = fviz_actor_transform_matrix(actor);
         opacity = fviz_actor_opacity(actor);
+        {
+            /* Overlay topology mode overrides the classic edge/wireframe/point
+             * visibility flags for this frame. */
+            const FVizOverlayTopologyMode overlay_mode = fviz_actor_overlay_topology_mode(actor);
+            switch (overlay_mode)
+            {
+                case FVIZ_OVERLAY_TOPOLOGY_SURFACE_ONLY:
+                    overlay_edge_visible = FVIZ_FALSE;
+                    overlay_wireframe = FVIZ_FALSE;
+                    overlay_point_visible = FVIZ_FALSE;
+                    break;
+                case FVIZ_OVERLAY_TOPOLOGY_SURFACE_EDGES:
+                    overlay_edge_visible = FVIZ_TRUE;
+                    overlay_wireframe = FVIZ_FALSE;
+                    overlay_point_visible = FVIZ_FALSE;
+                    break;
+                case FVIZ_OVERLAY_TOPOLOGY_SURFACE_WIREFRAME:
+                    overlay_edge_visible = FVIZ_FALSE;
+                    overlay_wireframe = FVIZ_TRUE;
+                    overlay_point_visible = FVIZ_FALSE;
+                    break;
+                case FVIZ_OVERLAY_TOPOLOGY_SURFACE_POINTS:
+                    overlay_edge_visible = FVIZ_FALSE;
+                    overlay_wireframe = FVIZ_FALSE;
+                    overlay_point_visible = FVIZ_TRUE;
+                    break;
+                case FVIZ_OVERLAY_TOPOLOGY_SURFACE_CONTOUR:
+                case FVIZ_OVERLAY_TOPOLOGY_SURFACE_LABELS:
+                case FVIZ_OVERLAY_TOPOLOGY_SURFACE_ANNOTATIONS:
+                default:
+                    overlay_edge_visible = fviz_actor_edge_visibility(actor);
+                    overlay_wireframe = fviz_actor_wireframe(actor);
+                    overlay_point_visible = fviz_actor_point_visibility(actor);
+                    break;
+            }
+        }
         if (fviz_gl_ensure_actor_resource(device, actor) != FVIZ_OK) continue;
         resource = fviz_gl_find_actor_resource(device, actor);
         if (resource == NULL || (resource->index_count == 0 && resource->line_index_count == 0)) continue;
@@ -3398,14 +3470,59 @@ FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRender
         }
 
         gl->glBindVertexArray(resource->vao);
-        if (stage != FVIZ_RENDER_PASS_EDGE && resource->index_count > 0 && fviz_actor_wireframe(actor) == FVIZ_FALSE)
+        if (stage != FVIZ_RENDER_PASS_EDGE && resource->index_count > 0 && overlay_wireframe == FVIZ_FALSE)
         {
+            const FVizCoincidentTopologyMode coincident_mode = fviz_actor_coincident_topology_mode(actor);
+            const FVizBool offset_faces = fviz_actor_offset_faces(actor);
+            const float z_shift = fviz_actor_z_shift(actor);
+            const FVizBool depth_test = fviz_actor_depth_test(actor);
+            const FVizBool depth_write = fviz_actor_depth_write(actor);
+            const GLenum depth_function = fviz_gl_depth_function(fviz_actor_depth_function(actor));
+            float depth_minimum = 0.0f;
+            float depth_maximum = 1.0f;
+            fviz_actor_get_depth_range(actor, &depth_minimum, &depth_maximum);
+            /* Per-actor depth controls. Values differing from the defaults are
+             * applied for the draw and reverted immediately afterwards so the
+             * surrounding render pass state stays unchanged. */
+            if (depth_test == FVIZ_FALSE)
+            {
+                glDisable(GL_DEPTH_TEST);
+            }
+            if (depth_write == FVIZ_FALSE)
+            {
+                glDepthMask(GL_FALSE);
+            }
+            if (depth_function != GL_LEQUAL)
+            {
+                glDepthFunc(depth_function);
+            }
+            if (fabsf(depth_minimum) > 1.0e-7f || fabsf(depth_maximum - 1.0f) > 1.0e-7f)
+            {
+                glDepthRange((GLclampd)depth_minimum, (GLclampd)depth_maximum);
+            }
             gl->glBindBuffer(FVIZ_GL_ELEMENT_ARRAY_BUFFER, resource->index_buffer);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            if (fviz_actor_edge_visibility(actor) != FVIZ_FALSE)
+            /* Coincident topology resolution: polygon offset pulls the filled
+             * surface back so overlay edges/lines drawn on top do not z-fight.
+             * The offset faces the surface when edges are visible. */
+            if (coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_POLYGON_OFFSET ||
+                (coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_DEFAULT &&
+                 overlay_edge_visible != FVIZ_FALSE))
             {
-                glEnable(GL_POLYGON_OFFSET_FILL);
-                glPolygonOffset(1.0f, 1.0f);
+                if (offset_faces != FVIZ_FALSE || overlay_edge_visible != FVIZ_FALSE)
+                {
+                    float polygon_factor = 1.0f;
+                    float polygon_units = 1.0f;
+                    fviz_actor_polygon_offset(actor, &polygon_factor, &polygon_units);
+                    glEnable(GL_POLYGON_OFFSET_FILL);
+                    glPolygonOffset(polygon_factor, polygon_units);
+                }
+            }
+            /* ShiftZBuffer mode: apply a uniform clip-space Z shift by nudging
+             * the near value of the depth range, pulling the actor forward. */
+            if (coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_SHIFT_Z_BUFFER && z_shift != 0.0f)
+            {
+                glDepthRange((GLclampd)(depth_minimum - z_shift), (GLclampd)(depth_maximum - z_shift));
             }
             if (resource->instance_count > 0)
                 gl->glDrawElementsInstanced(GL_TRIANGLES, resource->index_count, GL_UNSIGNED_INT, (const void*)0,
@@ -3416,17 +3533,57 @@ FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRender
             device->frame_statistics.triangles +=
                 ((uint64_t)resource->index_count / 3u) *
                 (uint64_t)(resource->instance_count > 0 ? resource->instance_count : 1);
-            if (fviz_actor_edge_visibility(actor) != FVIZ_FALSE)
+            if (coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_POLYGON_OFFSET ||
+                (coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_DEFAULT &&
+                 overlay_edge_visible != FVIZ_FALSE))
             {
-                glDisable(GL_POLYGON_OFFSET_FILL);
+                if (offset_faces != FVIZ_FALSE || overlay_edge_visible != FVIZ_FALSE)
+                {
+                    glDisable(GL_POLYGON_OFFSET_FILL);
+                }
+            }
+            if (coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_SHIFT_Z_BUFFER && z_shift != 0.0f)
+            {
+                glDepthRange((GLclampd)depth_minimum, (GLclampd)depth_maximum);
+            }
+            /* Restore the depth controls that were overridden for this draw. */
+            if (depth_test == FVIZ_FALSE)
+            {
+                glEnable(GL_DEPTH_TEST);
+            }
+            if (depth_write == FVIZ_FALSE)
+            {
+                glDepthMask(GL_TRUE);
+            }
+            if (depth_function != GL_LEQUAL)
+            {
+                glDepthFunc(GL_LEQUAL);
+            }
+            if (fabsf(depth_minimum) > 1.0e-7f || fabsf(depth_maximum - 1.0f) > 1.0e-7f)
+            {
+                glDepthRange(0.0, 1.0);
             }
         }
         if (stage == FVIZ_RENDER_PASS_EDGE)
         {
+            /* Line offset pulls overlay edges in depth so they win against the
+             * coincident filled surface. */
+            {
+                const FVizCoincidentTopologyMode coincident_mode = fviz_actor_coincident_topology_mode(actor);
+                if (coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_POLYGON_OFFSET ||
+                    coincident_mode == FVIZ_COINCIDENT_TOPOLOGY_DEFAULT)
+                {
+                    float line_factor = 1.0f;
+                    float line_units = 1.0f;
+                    fviz_actor_line_offset(actor, &line_factor, &line_units);
+                    glEnable(GL_POLYGON_OFFSET_LINE);
+                    glPolygonOffset(line_factor, line_units);
+                }
+            }
             /* Wireframe mode uses per-vertex scalar colors so the mesh is
              * clearly visible; plain edges keep the actor edge color. */
             const GLint edge_scalar_coloring =
-                resource->has_color != FVIZ_FALSE && (fviz_actor_wireframe(actor) != FVIZ_FALSE ||
+                resource->has_color != FVIZ_FALSE && (overlay_wireframe != FVIZ_FALSE ||
                                                       fviz_actor_line_scalar_coloring(actor) != FVIZ_FALSE)
                     ? 1
                     : 0;
@@ -3464,6 +3621,7 @@ FVizResult fviz_internal_gl_device_render_stage(FVizGLDevice* device, FVizRender
                     ((uint64_t)resource->triangle_edge_index_count / 2u) *
                     (uint64_t)(resource->instance_count > 0 ? resource->instance_count : 1);
             }
+            glDisable(GL_POLYGON_OFFSET_LINE);
         }
         gl->glBindVertexArray(0u);
     }

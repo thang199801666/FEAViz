@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Added topology and rendering flags on `FVizActor`, mirroring VTK's
+  `vtkProperty`/coincident-topology handling: `FVizCoincidentTopologyMode`
+  (Off, Polygon Offset, Shift Z-Buffer, Default), per-actor polygon/line/point
+  offsets, z-shift, depth test/write/function/range, render layer/priority/pass
+  order, `FVizOverlayTopologyMode` (surface+edges, wireframe, surface points),
+  and `FVizTopologyDataFlag` bits. Options are grouped in
+  `FVizTopologyRenderOptions` with bulk get/set plus individual accessors, and
+  the GL device honors polygon/line/point offsets, z-shift, pass order, and
+  overlay mode (restoring depth state after each draw so classic passes stay
+  unchanged).
+- Added `fviz_poly_data_topology_summary` / `FVizTopologySummary` producing a
+  topology snapshot (point/cell counts by type, connectivity validity, presence
+  of global/pedigree/original IDs and edge flags, cell-classification validity).
+  Covered by `tests/Rendering/test_topology_flags.c` and C++ binding wrappers
+  `Actor` topology accessors plus `PolyData::topologySummary`.
 - Added four VTK-style geometry sources closing the "geometry sources" gap in
   the feature matrix: `FVizConeSource`, `FVizCylinderSource`, `FVizDiskSource`,
   and `FVizLineSource`. Each exposes center/direction/radius/height (or

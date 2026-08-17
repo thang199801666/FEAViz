@@ -120,6 +120,33 @@ FVIZ_DATA_API FVizResult fviz_poly_data_glyph_3d(const FVizPolyData* input, cons
  * arrays are retained. Cell attributes of `other` are copied when present. */
 FVIZ_DATA_API FVizResult fviz_poly_data_append(FVizPolyData* target, const FVizPolyData* other);
 
+/* Topology summary: a snapshot of the connectivity / adjacency / classification
+ * and identity metadata present on the PolyData. Filled by
+ * fviz_poly_data_topology_summary(); the *valid flags report which fields carry
+ * real data. */
+typedef struct FVizTopologySummary
+{
+    uint32_t struct_size;
+    FVizSize point_count;
+    FVizSize cell_count;
+    FVizSize triangle_count;
+    FVizSize line_count;
+    FVizSize vertex_count;
+    FVizSize strip_count;
+    FVizBool connectivity_valid;
+    FVizBool adjacency_valid;
+    FVizBool cell_classification_valid;
+    FVizBool has_global_ids;
+    FVizBool has_pedigree_ids;
+    FVizBool has_point_ids;
+    FVizBool has_cell_ids;
+    FVizBool has_edge_flags;
+    uint32_t distinct_cell_type_count;
+} FVizTopologySummary;
+
+FVIZ_API void fviz_topology_summary_initialize(FVizTopologySummary* summary);
+FVIZ_DATA_API FVizResult fviz_poly_data_topology_summary(const FVizPolyData* poly_data, FVizTopologySummary* out_summary);
+
 FVIZ_EXTERN_C_END
 
 #endif /* FVIZ_MESH_POLY_DATA_H */

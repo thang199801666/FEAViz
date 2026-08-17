@@ -5,6 +5,7 @@
 
 #include <FViz/Core/FVizError.h>
 #include <FViz/Core/FVizMemory.h>
+#include <FViz/Data/FVizProvenance.h>
 #include <FViz/Mesh/FVizPolyData.h>
 #include <FViz/Mesh/FVizCellTypeTraits.h>
 
@@ -1878,5 +1879,62 @@ FVizResult fviz_poly_data_append(FVizPolyData* target, const FVizPolyData* other
         }
     }
     if (fviz_poly_data_validate(target) != FVIZ_OK) return fviz_last_error_code();
+    return FVIZ_OK;
+}
+
+
+void fviz_topology_summary_initialize(FVizTopologySummary* summary)
+{
+    if (summary == NULL) return;
+    (void)memset(summary, 0, sizeof(*summary));
+    summary->struct_size = (uint32_t)sizeof(*summary);
+}
+
+FVizResult fviz_poly_data_topology_summary(const FVizPolyData* poly_data, FVizTopologySummary* out_summary)
+{
+    const FVizAttributeSet* point_data;
+    const FVizAttributeSet* cell_data;
+    FVizSize i;
+    if (poly_data == NULL || out_summary == NULL)
+    {
+        fviz_internal_set_error(FVIZ_ERROR_INVALID_ARGUMENT, "poly data and summary must not be NULL");
+        return FVIZ_ERROR_INVALID_ARGUMENT;
+    }
+    fviz_topology_summary_initialize(out_summary);
+    out_summary->point_count = fviz_poly_data_point_count(poly_data);
+    out_summary->cell_count = fviz_poly_data_cell_count(poly_data);
+    out_summary->triangle_count = fviz_poly_data_triangle_count(poly_data);
+    out_summary->line_count = fviz_poly_data_line_count(poly_data);
+    out_summary->vertex_count = fviz_poly_data_vert_cell_count(poly_data);
+    out_summary->strip_count = fviz_poly_data_strip_cell_count(poly_data);
+    out_summary->connectivity_valid = out_summary->cell_count > 0u ? FVIZ_TRUE : FVIZ_FALSE;
+    out_summary->adjacency_valid = FVIZ_FALSE; /* built on demand by FVizCellAdjacency. */
+    point_data = fviz_poly_data_const_point_data(poly_data);
+    cell_data = fviz_poly_data_const_cell_data(poly_data);
+    if (point_data != NULL)
+    {
+        for (i = 0u; i < fviz_attribute_set_count(point_data); ++i)
+        {
+            const char* name = fviz_attribute_set_name_at(point_data, i);
+            if (name == NULL) continue;
+            if (strcmp(name, "GlobalNodeIds") == 0 || strcmp(name, "GlobalCellIds") == 0) out_summary->has_global_ids = FVIZ_TRUE;
+            else if (strcmp(name, "PedigreeNodeIds") == 0 || strcmp(name, "PedigreeCellIds") == 0) out_summary->has_pedigree_ids = FVIZ_TRUE;
+            else if (strcmp(name, FVIZ_ORIGINAL_POINT_IDS_ARRAY_NAME) == 0) out_summary->has_point_ids = FVIZ_TRUE;
+            else if (strcmp(name, "EdgeFlags") == 0) out_summary->has_edge_flags = FVIZ_TRUE;
+        }
+    }
+    if (cell_data != NULL)
+    {
+        for (i = 0u; i < fviz_attribute_set_count(cell_data); ++i)
+        {
+            const char* name = fviz_attribute_set_name_at(cell_data, i);
+            if (name == NULL) continue;
+            if (strcmp(name, "GlobalNodeIds") == 0 || strcmp(name, "GlobalCellIds") == 0) out_summary->has_global_ids = FVIZ_TRUE;
+            else if (strcmp(name, "PedigreeNodeIds") == 0 || strcmp(name, "PedigreeCellIds") == 0) out_summary->has_pedigree_ids = FVIZ_TRUE;
+            else if (strcmp(name, FVIZ_ORIGINAL_CELL_IDS_ARRAY_NAME) == 0) out_summary->has_cell_ids = FVIZ_TRUE;
+        }
+    }
+    out_summary->cell_classification_valid = out_summary->cell_count > 0u ? FVIZ_TRUE : FVIZ_FALSE;
+    out_summary->distinct_cell_type_count = 0u;
     return FVIZ_OK;
 }

@@ -127,6 +127,7 @@ fviz_add_test(FVizTestRenderTarget Rendering/test_render_target.c FViz.Rendering
   fviz_add_test(FVizTestVisualRegression Rendering/test_visual_regression.c FViz.Rendering.VisualRegression)
   fviz_add_test(FVizTestImageComparison Rendering/test_image_comparison.c FViz.Rendering.ImageComparison)
 fviz_add_test(FVizTestTransparency Rendering/test_transparency.c FViz.Rendering.Transparency)
+fviz_add_test(FVizTestTopologyFlags Rendering/test_topology_flags.c FViz.Rendering.TopologyFlags)
 fviz_add_test(FVizTestVolumeRendering Rendering/test_volume_rendering.c FViz.Rendering.VolumeRendering)
 fviz_add_test(FVizTestAbaqusScene Rendering/test_abaqus_scene.c FViz.Rendering.AbaqusScene)
 fviz_add_test(FVizTestObserverGraph Rendering/test_observer_graph.c FViz.Rendering.ObserverGraph)
